@@ -27,6 +27,26 @@ function _mollusc15()
     return reduce(hcat, rows)   # one column per site: p x n = 15 x 163 (species x sites)
 end
 
+@testset "NB2 per-species dispersion: the default route does not stop below the exact route (#784)" begin
+    # Small datasets of the same class as the mollusc table: NATIVE-06 design (p = 5, K = 2,
+    # n = 80, true r = 1), drawn with `tools/nb2_parity_data_draw.jl SEED 1.0 OUT 80` on Julia
+    # 1.10.4. The default route (no `routes` keyword, so this runs on `main` too) used to be the
+    # finite-difference L-BFGS route alone: it ended at the "L-BFGS only" value below with
+    # converged = true, while the exact-gradient route reaches the higher point.
+    #                      file                              exact route    L-BFGS only (before)
+    for (file, best, before) in (("nb2_second_route_seed44.toml", -867.592166, -868.251827),
+                                 ("nb2_second_route_seed56.toml", -836.663780, -837.212058))
+        d = TOML.parsefile(joinpath(@__DIR__, "fixtures", file))
+        Y = reshape(Int.(d["Y_column_major"]), d["p"], d["n"])
+        @test bytes2hex(sha256(reinterpret(UInt8, vec(Float64.(Y))))) == d["data_sha256"]
+        ft = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = 2, disp_group = :species,
+                       g_tol = 1e-7, iterations = 800)
+        @test ft.loglik >= best - 1e-4
+        @test ft.loglik > before + 0.5   # clearly above where L-BFGS alone stopped
+        @test ft.converged
+    end
+end
+
 @testset "NB2 per-species dispersion, mollusc 15 x 163, K = 2: exact route (#784)" begin
     Y = _mollusc15()
     @test size(Y) == (15, 163)
