@@ -1,7 +1,10 @@
-# #730: the Poisson / Binomial / Beta / Gamma Laplace fitters must reject out-of-support or
-# non-finite OBSERVED responses with an ArgumentError that names the fitter and the cell,
-# instead of returning a fit with loglik = -Inf. Masked and `missing` cells stay legal.
+# #730: the Poisson / Binomial / Beta / Gamma Laplace fitters (and the grouped-dispersion
+# Beta / Gamma twins, which `fit_gllvm(Y; family = Beta())` always uses) must reject
+# out-of-support or non-finite OBSERVED responses with an ArgumentError that names the
+# fitter and the cell, instead of returning a fit with loglik = -Inf. Masked and `missing`
+# cells stay legal.
 using Test, GLLVModels, Random
+using Distributions: Beta, Gamma
 
 @testset "#730 response-domain validation" begin
     rng = MersenneTwister(1)
@@ -70,6 +73,33 @@ using Test, GLLVModels, Random
         @test isfinite(fit_gamma_gllvm(Zm; K = 1).loglik)
         Zc = Matrix{Union{Missing, Int}}(Yp); Zc[2, 3] = missing
         @test isfinite(fit_poisson_gllvm(Zc; K = 1).loglik)
+    end
+
+    @testset "the grouped Beta and Gamma twins" begin
+        one_ = ones(Int, p)
+        X = reshape(Float64[((7s + 3t) % 11) / 5 - 1 for t in 1:p, s in 1:n], p, n, 1)
+        @test msg_ok(thrown(() -> fit_beta_gllvm_grouped(with_cell(Yb, 1.5); K = 1, group = one_)),
+                     "fit_beta_gllvm_grouped")
+        @test msg_ok(thrown(() -> fit_gamma_gllvm_grouped(with_cell(Yg, 0.0); K = 1, group = one_)),
+                     "fit_gamma_gllvm_grouped")
+        @test msg_ok(thrown(() -> fit_beta_gllvm_grouped_cov(with_cell(Yb, NaN); X = X, K = 1, group = one_)),
+                     "fit_beta_gllvm_grouped_cov")
+        @test msg_ok(thrown(() -> fit_gamma_gllvm_grouped_cov(with_cell(Yg, -1.0); X = X, K = 1, group = one_)),
+                     "fit_gamma_gllvm_grouped_cov")
+        # The public routes: Beta always goes to the grouped fitter, Gamma with disp_group.
+        @test msg_ok(thrown(() -> fit_gllvm(with_cell(Yb, 0.0); family = Beta(), K = 1)),
+                     "fit_beta_gllvm_grouped")
+        @test msg_ok(thrown(() -> fit_gllvm(with_cell(Yg, Inf); family = Gamma(), K = 1, disp_group = :species)),
+                     "fit_gamma_gllvm_grouped")
+        # A masked cell stays legal and has no effect on the fit.
+        mask = trues(p, n); mask[1, 1] = false
+        for (f, Y, bad) in ((fit_beta_gllvm_grouped, Yb, NaN), (fit_beta_gllvm_grouped, Yb, 1.5),
+                            (fit_gamma_gllvm_grouped, Yg, NaN), (fit_gamma_gllvm_grouped, Yg, -1.0))
+            Z = copy(Y); Z[1, 1] = bad
+            fit = f(Z; K = 1, group = one_, mask = mask)
+            ref = f(Y; K = 1, group = one_, mask = mask)
+            @test isfinite(fit.loglik) && fit.β == ref.β && fit.Λ == ref.Λ && fit.loglik == ref.loglik
+        end
     end
 
     @testset "clean data fits as before" begin
