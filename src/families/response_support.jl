@@ -21,15 +21,13 @@ function _support_text(kind::Symbol)
     return "Poisson support, a non-negative integer"
 end
 
-"""
-    _check_response_support(kind, Y, mask; caller, N = nothing)
-
-Throw an `ArgumentError` naming `caller`, the first offending cell, the number of
-offending cells and the allowed support when an observed cell of `Y` is outside the
-support for `kind` (`:count`, `:binomial` with trials `N`, `:beta` or `:positive`).
-Non-finite cells count as offending; mask them or use `missing` for unobserved cells.
-`mask = nothing` means every non-`missing` cell is observed.
-"""
+# _check_response_support(kind, Y, mask; caller, N = nothing)
+#
+# Throw an `ArgumentError` naming `caller`, the first offending cell, the number of
+# offending cells and the allowed support when an observed cell of `Y` is outside the
+# support for `kind` (`:count`, `:binomial` with trials `N`, `:beta` or `:positive`).
+# Non-finite cells count as offending; mask them or use `missing` for unobserved cells.
+# `mask = nothing` means every non-`missing` cell is observed.
 function _check_response_support(kind::Symbol, Y::AbstractMatrix, mask;
         caller::AbstractString, N = nothing)
     p, n = size(Y)
