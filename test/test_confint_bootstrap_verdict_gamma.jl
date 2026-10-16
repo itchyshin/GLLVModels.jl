@@ -47,9 +47,9 @@ function _gamma504_routes(Y)
     )
 end
 
-# A draw no Gamma fit can evaluate: one zero cell (log-density -Inf), so the
-# grouped fitters end on their failure sentinel. `fit_gamma_gllvm` (the shared route)
-# refuses it up front with an ArgumentError (#730). Data-driven, not RNG-driven.
+# A draw outside the Gamma support: one zero cell. Before #730 each fitter ended on its
+# failure sentinel (log-density -Inf); every route now refuses it up front with an
+# ArgumentError. Data-driven, not RNG-driven.
 function _gamma504_bad(Y)
     B = copy(Y)
     B[1, 1] = 0.0
@@ -75,20 +75,17 @@ end
     @testset "a failed refit is rejected ($route)" for (route, fit, ad, direct, pack) in routes
         Y_bad = _gamma504_bad(Y)
         m = length(ad.θ)
-        if route === :shared
-            # #730: the out-of-support draw is refused before fitting; the adapter's own
-            # try/catch turns that into `nothing`, which the bootstrap screen rejects.
-            @test_throws ArgumentError direct(Y_bad)
-            @test ad.refit(Y_bad) === nothing
-            @test !GM._bootstrap_refit_ok(ad.refit(Y_bad), m)[2]
-        else
-            fb_bad = direct(Y_bad)
-            @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
-            raw_bad = ad.refit(Y_bad)
-            @test raw_bad isa NamedTuple && raw_bad.converged == false
-            @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]    # the old contract accepts it
-            @test !GM._bootstrap_refit_ok(raw_bad, m)[2]     # the migrated one does not
-        end
+        # #730: the out-of-support draw is refused before fitting; the adapter's own
+        # try/catch turns that into `nothing`, which the bootstrap screen rejects.
+        @test_throws ArgumentError direct(Y_bad)
+        @test ad.refit(Y_bad) === nothing
+        @test !GM._bootstrap_refit_ok(ad.refit(Y_bad), m)[2]
+        # A refit that reports a failed verdict is still screened out. No draw in the
+        # support reliably makes these fitters fail, so take a real refit and mark it
+        # failed the way `_fit_verdict` does (`converged = false`, `loglik = -Inf`).
+        raw_bad = merge(ad.refit(Y), (converged = false, loglik = -Inf))
+        @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]    # the old contract accepts it
+        @test !GM._bootstrap_refit_ok(raw_bad, m)[2]     # the migrated one does not
     end
 
     @testset "end to end: n_converged counts only converged replicates ($route)" for (route, fit, ad, direct, pack) in routes
