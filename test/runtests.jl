@@ -417,6 +417,7 @@ println(_SHARD === nothing ?
     _shard_include("test_weights.jl")
     _shard_include("test_weights_byte_identity.jl")
     _shard_include("test_fd_hessian.jl")
+    _shard_include("test_nb_grouped_wald_speed_552.jl")
     _shard_include("test_confint_family.jl")
     _shard_include("test_confint_offset.jl")
     _shard_include("test_predict_offset.jl")

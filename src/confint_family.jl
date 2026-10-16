@@ -60,6 +60,10 @@ const _CIFit = Union{_FamilyFit, _TwoPartFit, _GroupedDispersionFit, _GroupedDis
 #              (grouped NB2/NB1/Beta/Gamma). Defaults to all-`false` via the
 #              6-arg constructor below, so every pre-existing `_FamilyCI(...)`
 #              call site is unaffected.
+#   grad     — optional exact ∇nll (θ -> vector, or `nothing` where it fails).
+#              When set, the Wald Hessian is the central difference of this
+#              gradient (2m gradient calls) instead of the O(m²)-call
+#              `_fd_hessian` of `nll` (#552). `nothing` by default.
 # ---------------------------------------------------------------------------
 struct _FamilyCI
     θ::Vector{Float64}
@@ -69,10 +73,13 @@ struct _FamilyCI
     simulate::Function
     refit::Function
     boundary::Vector{Bool}
+    grad::Union{Nothing, Function}
 end
 
 _FamilyCI(θ, nll, names, kinds, simulate, refit) =
     _FamilyCI(θ, nll, names, kinds, simulate, refit, falses(length(θ)))
+_FamilyCI(θ, nll, names, kinds, simulate, refit, boundary) =
+    _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary, nothing)
 
 # Shared GLM term names: β[t] for t in 1:p, then Λ[i,k] in pack_lambda order.
 _glm_lin_names(p::Integer, K::Integer) =
@@ -872,7 +879,18 @@ function _family_ci(fit::NBGroupedFit, Y::AbstractMatrix;
     names = _grouped_dispersion_names(p, K, "r", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
     boundary = vcat(falses(p + rr), fit.dispersion_boundary)   # T14 F1: trailing G entries are r[1..G]
-    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
+    # Exact ∇nll for the Wald Hessian (#552); the fitter's no-covariate case (q = 0).
+    X0 = zeros(p, n, 0)
+    # Only a p×n offset (what the stored-offset route passes) is used; any other
+    # form keeps the `_fd_hessian` route the objective above already handles.
+    grad_ok = link isa LogLink && (offset === nothing ||
+                                   (offset isa AbstractMatrix && size(offset) == (p, n)))
+    O0 = offset === nothing ? nothing : offset
+    grad = grad_ok ?
+        (θv -> _nb_grouped_cov_negll_grad(Yi, X0, θv, p, 0, K, rr, G, group, link, M,
+                                          fit.hessian, newton_maxiter, newton_tol;
+                                          offset = O0)) : nothing
+    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary, grad)
 end
 
 function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
@@ -1029,7 +1047,11 @@ function _family_ci(fit::NBGroupedCovFit, Y::AbstractMatrix;
                  ["r[$g]" for g in 1:G])
     kinds = vcat(fill(:linear, p + q + rr), fill(:log, G))
     boundary = vcat(falses(p + q + rr), fit.dispersion_boundary)   # T14 F1
-    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
+    # Exact ∇nll (the fitter's own gradient) for the Wald Hessian (#552).
+    grad = link isa LogLink ?
+        (θv -> _nb_grouped_cov_negll_grad(Yi, Xfit, θv, p, q, K, rr, G, group, link, M,
+                                          fit.hessian, newton_maxiter, newton_tol)) : nothing
+    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary, grad)
 end
 
 function _family_ci(fit::NB1GroupedCovFit, Y::AbstractMatrix;
@@ -2992,6 +3014,37 @@ function _fd_hessian(f, x::AbstractVector)
     return H
 end
 
+# Observed information from an exact gradient: central difference of `g` (∇nll),
+# column by column, symmetrised. 2m gradient calls, against the 2m² objective calls
+# of `_fd_hessian`; on the #552 NB2 + covariates fit (m = 71) that is 142 calls
+# instead of about 10,000 Laplace evaluations. Step ∝ eps^(1/3), the optimum for a
+# central first difference. Returns `nothing` when any gradient call fails (returns
+# `nothing` or a non-finite entry), so the caller falls back to `_fd_hessian`.
+function _grad_fd_hessian(g, x::AbstractVector)
+    m = length(x)
+    H = Matrix{Float64}(undef, m, m)
+    @inbounds for i in 1:m
+        h = cbrt(eps()) * max(abs(x[i]), 1.0)
+        xp = copy(x); xp[i] += h
+        xm = copy(x); xm[i] -= h
+        gp = g(xp); gp === nothing && return nothing
+        gm = g(xm); gm === nothing && return nothing
+        (all(isfinite, gp) && all(isfinite, gm)) || return nothing
+        H[:, i] .= (gp .- gm) ./ (2h)
+    end
+    return (H .+ H') ./ 2
+end
+
+# The Wald Hessian of an adapter: from its exact gradient when it has one (falling
+# back to `_fd_hessian` if that fails), else `_fd_hessian` of its objective.
+function _family_hessian(ad::_FamilyCI)
+    if ad.grad !== nothing
+        H = _grad_fd_hessian(ad.grad, ad.θ)
+        H === nothing || return H
+    end
+    return _fd_hessian(ad.nll, ad.θ)
+end
+
 # Resolve a `parm` selector against the term names. `nothing` → all; an exact
 # name, a group prefix ("beta", "Lambda"), a dispersion name ("r"/"phi"/"alpha"),
 # or a vector of any of these.
@@ -3064,7 +3117,7 @@ end
 # bit-identical to the squared SEs reported here.
 function _family_wald(ad::_FamilyCI, sel::Vector{Int}, level::Real; hessian=nothing, covariance::Bool=false)
     m = length(ad.θ)
-    H = hessian===nothing ? _fd_hessian(ad.nll, ad.θ) : hessian
+    H = hessian===nothing ? _family_hessian(ad) : hessian
     size(H)==(m,m) || throw(DimensionMismatch("Wald Hessian dimension mismatch"))
     se=fill(NaN,m);pd=false
     V=fill(NaN,m,m)
@@ -3200,7 +3253,7 @@ function _family_profile(ad::_FamilyCI, sel::Vector{Int}, level::Real;
     cutoff = quantile(Chisq(1), level)
     ll_full = -ad.nll(ad.θ)
     # Wald SEs to seed the bracket steps (cheap relative to the refits).
-    H = _fd_hessian(ad.nll, ad.θ)
+    H = _family_hessian(ad)
     se_all = fill(NaN, m)
     if all(isfinite, H)
         Σ = try inv(Symmetric((H .+ H') ./ 2)) catch; nothing end
