@@ -536,6 +536,7 @@ println(_SHARD === nothing ?
     _shard_include("test_derived_ci_surfaces.jl")
     _shard_include("test_extractors.jl")
     _shard_include("test_postfit_tables.jl")
+    _shard_include("test_docs_snippets_734_738.jl")
     # P1 numeric twins of six gllvmTMB namespace rows (loadings, rotated table, lv effects, communality, Sigma_B/W).
     _shard_include("test_namespace_numeric_p1_twin.jl")
     # P1 numeric twins of three more namespace rows (tidy fixed effects, Beta, nbinom2).
