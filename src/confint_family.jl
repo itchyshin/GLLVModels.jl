@@ -665,6 +665,29 @@ function _family_ci(fit::StudentTFit, Y::AbstractMatrix;
     return _FamilyCI(θ, nll, names, kinds, simulate, refit)
 end
 
+# Exact zero-truncated Poisson draw with no unbounded loop (#782). For μ ≥ 1 the
+# zero mass e^-μ ≤ 0.37, so invert the CDF on the remaining (1 - e^-μ) mass; for
+# μ < 1 (where 1 - e^-μ loses precision) walk the truncated pmf
+# P(Y=k | Y≥1) = μ^k / (k! expm1(μ)) from k = 1 (tail beyond k = 64 is < 1e-80).
+function _rand_truncpois(rng::AbstractRNG, μ::Real)
+    μ = max(μ, 1e-12)
+    if μ >= 1
+        p0 = exp(-μ)
+        u = min(p0 + rand(rng) * (1 - p0), prevfloat(1.0))
+        return max(1, Int(quantile(Poisson(μ), u)))
+    end
+    u = rand(rng)
+    pk = μ / expm1(μ)
+    c = pk
+    k = 1
+    while c < u && k < 64
+        k += 1
+        pk *= μ / k
+        c += pk
+    end
+    return k
+end
+
 # Zero-truncated Poisson: packing [β; pack(Λ)]; Laplace NLL via
 # truncated_poisson_marginal_loglik_laplace. Bridge ci_method guard stays
 # until after foreign #357.
@@ -692,12 +715,7 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
             η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
-                # Reject-sample zeros (support y ≥ 1).
-                y = 0
-                while y < 1
-                    y = rand(rng, Poisson(μ))
-                end
-                Yb[t, s] = y
+                Yb[t, s] = _rand_truncpois(rng, μ)
             end
         end
         return Yb
