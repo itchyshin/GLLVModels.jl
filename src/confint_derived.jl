@@ -1264,9 +1264,9 @@ Profile-likelihood CI for the RAW reduced-rank loading entry `Λ[t, k]` on an
 tier; `component = :W` for the within tier). On an exploratory fit the
 lower-triangular packing convention (`src/packing.jl`) is the identifiability
 device. On a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`
-whose `M` pins a loading, it throws an `ArgumentError`, because the profile
-refits would drop the pins; [`loading_profile`](@ref) profiles the free loadings
-of such a fit with the pins held.
+whose `M` pins a loading, it throws an `ArgumentError` for an entry with
+`k ≤ t`, because the profile refits would drop the pins; [`loading_profile`](@ref)
+profiles the free loadings of such a fit with the pins held.
 
 **Estimand scope (Core070 D3, 2026-09-04):** this is **not** R's
 `loading_profile()`, which profiles a Λ entry on a **confirmatory
