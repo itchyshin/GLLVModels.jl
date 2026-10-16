@@ -562,8 +562,9 @@ exceptions rather than open items: GP-1 sits in `DEFERRED_BY_DECISION` with
 its evidence recorded, and Binomial/cloglog's runaway is an intrinsic Laplace
 saturation pathology (link FD-verified correct; diagnostic guard shipped in
 PR #272), not a weight bug. **Still open: the TWO-PART families** — only
-DeltaGamma has a specialised observed count-part weight, so the selector is
-currently inert for the other nine (`TWOPART_KNOWN_OPEN`).
+DeltaGamma and ZIPoisson (since #739) have a specialised observed count-part
+weight, so the selector is currently inert for the other eight
+(`TWOPART_KNOWN_OPEN`).
 
 **This is a PARITY goal, not an accuracy improvement — and that distinction is
 load-bearing.** Measured against high-resolution numerical quadrature over 12
