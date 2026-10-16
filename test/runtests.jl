@@ -602,5 +602,6 @@ println(_SHARD === nothing ?
     _shard_include("test_n_lt_p.jl")
     _shard_include("test_wtier_crosscov.jl")
     _shard_include("test_spde_projector_validation.jl")
+    _shard_include("test_nb_grouped_second_route_784.jl")
 end
 include("test_readme_quickstart.jl")
