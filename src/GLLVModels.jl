@@ -72,6 +72,7 @@ include("relaxed_clock.jl")              # Relaxed-clock per-branch evolution ra
 # Response families (Phase 3): Distributions types as markers + link functions
 include("families/links.jl")
 include("families/laplace.jl")           # generic family-dispatched Laplace marginal core
+include("families/response_support.jl")  # response-domain checks shared by the Laplace fitters (#730)
 include("families/aghq_grid.jl")         # Stage-1a/1b live-pin AGHQ grid + Liu–Pierce site (not a public knob)
 include("families/aghq_outer.jl")        # Internal unpenalized outer adaptation; public fit wiring pending
 include("families/aghq_fit_info.jl")
