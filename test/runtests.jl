@@ -290,6 +290,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_pervar_design.jl")
     _shard_include("test_gaussian_fixed_residual.jl")
     _shard_include("test_gaussian_pervar_fallback.jl")
+    _shard_include("test_gaussian_pervar_heywood_736.jl")   # #736
     _shard_include("test_formula_pervar.jl")
     _shard_include("test_aicbic_newfits.jl")
     _shard_include("test_postfit.jl")
