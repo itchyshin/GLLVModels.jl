@@ -116,8 +116,9 @@ and the y-scale `loglik` run over every cell.
 `lambda_constraint` is not supported either (passing one throws an `ArgumentError`): a
 `LognormalFit` does not record the pins, so its confidence intervals would treat the pinned
 loadings as free parameters. Fit the confirmatory model on the log scale with
-`fit_gaussian_gllvm(Z .- β; K, lambda_constraint = M)`, `Z = log.(Y)` and `β` its trait
-means, which gives the same `Λ` and `σ` and the Wald intervals of the free parameters.
+`fit_gaussian_gllvm(Z .- β; K, lambda_constraint = M)`, `Z = log.(Y)` (minus the offset,
+if any) and `β` its trait means, which gives the same `Λ` and `σ`, with Wald intervals
+for `Λ` and `σ` from the free-parameter information.
 """
 function fit_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(), offset = nothing, kwargs...)
@@ -136,8 +137,8 @@ function fit_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         "fit_lognormal_gllvm: lambda_constraint is not supported (a LognormalFit does not " *
         "carry the pins, so its confidence intervals would treat the pinned loadings as " *
         "parameters). Fit the confirmatory model on the log scale instead: " *
-        "fit_gaussian_gllvm(Z .- β; K, lambda_constraint = M) with Z = log.(Y) and β the " *
-        "trait means of Z, which gives the same Λ and σ"))
+        "fit_gaussian_gllvm(Z .- β; K, lambda_constraint = M) with Z = log.(Y) (minus " *
+        "the offset, if any) and β the trait means of Z, which gives the same Λ and σ"))
     p, n = size(Y)
     # `offset` is made a p×n matrix here (see `_normalize_offset`); with no mask every cell is
     # observed, so a non-finite offset anywhere is refused.

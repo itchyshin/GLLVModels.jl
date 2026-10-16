@@ -21,7 +21,8 @@ reports. `raw_loading_wald_ci` is the identity-scale analogue on `Λ[t,k]`
 itself. Above the diagonal (`k > t`), where the lower-triangular packing fixes
 the loading at 0, `raw_loading_wald_ci` returns that structural zero exactly
 (`method = :pinned`), and `standardized_loading_wald_ci` delta-methods it to an
-estimate and standard error of 0.
+estimate and standard error of 0, both when the observed information is positive
+definite; otherwise they fail with `NaN` bounds as the free entries do.
 `loading_ci` is the full per-entry table wrapping both, plus
 `loading_profile_exploratory` for the profile-likelihood route on an
 exploratory (unpinned) fit.
@@ -40,8 +41,11 @@ standardized scale a pinned entry keeps `pinned = true` but has a delta-method
 parameters; R likewise keeps the flag without forcing that SE to 0. All of this
 holds while the information of the free parameters is positive definite. When it
 is not, every Wald route reports `NaN` se and bounds for every entry, the pinned
-and structural ones included, with `pd_hessian = false`, as R's `loading_ci()`
-returns `NA` for every row when `pdHess` is `FALSE`.
+and structural ones included (`vcov` is all `NaN`), as R's `loading_ci()` returns
+`NA` for every row when `pdHess` is `FALSE`; the routes that return a
+`pd_hessian` field (`confint`, `raw_loading_wald_ci`,
+`standardized_loading_wald_ci`, `flag_unreliable_loadings` and the derived
+intervals) set it to `false`, while `loading_ci` rows carry no such field.
 `loading_ci(...; method = :profile)` is refused on a pinned fit, because its
 refits do not hold the pins; `loading_profile(fit; y)` profiles the
 confirmatory model. Unlike R, `loading_ci` and `loading_profile_exploratory`

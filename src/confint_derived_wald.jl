@@ -671,7 +671,10 @@ per `(trait, axis)` — the Julia analogue of R's `loading_ci()`.
 
   - `level`: `:unit` (default, R's shared/between tier) or `:unit_obs` (the
     within tier; requires the fit to carry a `Λ_W` block).
-  - `method`: `:wald` (default) — symmetric Wald on `loading_scale`;
+  - `method`: `:wald` (default) — symmetric Wald on the raw scale; on the
+    standardised scale it returns the Fisher-z interval of `:wald_asym`, with
+    `se` on the atanh scale (R's standardised `"wald"` is symmetric on the rho
+    scale);
     `:wald_asym` — Fisher-z asymmetric Wald, only defined for
     `loading_scale = :standardized`; `:profile` — profile-likelihood via
     [`loading_profile_exploratory`](@ref), only defined for `loading_scale = :raw`
