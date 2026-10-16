@@ -1,3 +1,8 @@
+# Masked/offset Gaussian refit: `converged` needs the (exact, ForwardDiff) gradient at the stop
+# to meet `g_tol` outright; an x/f-only stop does not count (#735).
+const _MASKED_GAUSSIAN_POLISH_RESTARTS=5
+_masked_gaussian_g_met(res,g_tol)=(g=Optim.g_residual(res);isfinite(g)&&g<=g_tol)
+
 """
     fit_gaussian_gllvm(Y; K, aghq=false, aghq_control=(;), mask=nothing,
                        offset=nothing, hessian=:observed,
@@ -171,11 +176,25 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
     if any(!,data.mask) || offset!==nothing
         nll=_gaussian_data_nll(data,K,fixed)
         start=base.pars.θ_packed
-        res=Optim.optimize(nll,start,Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3)),
-            Optim.Options(iterations=get(kwargs,:iterations,500),g_tol=get(kwargs,:g_tol,1e-6),
+        g_tol=get(kwargs,:g_tol,1e-6);iters=get(kwargs,:iterations,500)
+        ls=Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3))
+        res=Optim.optimize(nll,start,ls,
+            Optim.Options(iterations=iters,g_tol=g_tol,
                 x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,0.0));autodiff=:forward)
+        # An x or f stop is not a stationary point (#735): continue on the gradient test alone,
+        # restarting L-BFGS from the stop, and report converged only if the gradient is met.
+        total_iters=Optim.iterations(res)
+        for _ in 1:_MASKED_GAUSSIAN_POLISH_RESTARTS
+            (_masked_gaussian_g_met(res,g_tol) || total_iters>=iters) && break
+            nxt=Optim.optimize(nll,Optim.minimizer(res),Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3)),
+                Optim.Options(iterations=iters-total_iters,g_tol=g_tol,x_abstol=0.0,f_reltol=0.0);autodiff=:forward)
+            total_iters+=Optim.iterations(nxt)
+            Optim.minimum(nxt)<=Optim.minimum(res) || break
+            res=nxt
+        end
         t=Optim.minimizer(res)
-        base=_gaussian_update(base,t,-nll(t),Optim.iterations(res),_fit_verdict(res)[2],res,time()-t0,fixed)
+        base=_gaussian_update(base,t,-nll(t),total_iters,
+            _fit_verdict(res)[2] && _masked_gaussian_g_met(res,g_tol),res,time()-t0,fixed)
     end
     problem=aghq_gaussian_problem(Y,K;k=reason===:eligible ? k : 1,X=Xfree,
         mask=data.mask,offset=data.offset,mode_gradient_tol=c.mode_gradient_tol)
