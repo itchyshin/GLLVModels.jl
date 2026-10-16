@@ -47,8 +47,9 @@ function _gamma504_routes(Y)
     )
 end
 
-# A draw no Gamma fit can evaluate: one zero cell (log-density -Inf), so each
-# fitter ends on its failure sentinel. Data-driven, not RNG-driven.
+# A draw no Gamma fit can evaluate: one zero cell (log-density -Inf), so the
+# grouped fitters end on their failure sentinel. `fit_gamma_gllvm` (the shared route)
+# refuses it up front with an ArgumentError (#730). Data-driven, not RNG-driven.
 function _gamma504_bad(Y)
     B = copy(Y)
     B[1, 1] = 0.0
@@ -73,13 +74,21 @@ end
 
     @testset "a failed refit is rejected ($route)" for (route, fit, ad, direct, pack) in routes
         Y_bad = _gamma504_bad(Y)
-        fb_bad = direct(Y_bad)
-        @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
-        raw_bad = ad.refit(Y_bad)
         m = length(ad.θ)
-        @test raw_bad isa NamedTuple && raw_bad.converged == false
-        @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]    # the old contract accepts it
-        @test !GM._bootstrap_refit_ok(raw_bad, m)[2]     # the migrated one does not
+        if route === :shared
+            # #730: the out-of-support draw is refused before fitting; the adapter's own
+            # try/catch turns that into `nothing`, which the bootstrap screen rejects.
+            @test_throws ArgumentError direct(Y_bad)
+            @test ad.refit(Y_bad) === nothing
+            @test !GM._bootstrap_refit_ok(ad.refit(Y_bad), m)[2]
+        else
+            fb_bad = direct(Y_bad)
+            @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
+            raw_bad = ad.refit(Y_bad)
+            @test raw_bad isa NamedTuple && raw_bad.converged == false
+            @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]    # the old contract accepts it
+            @test !GM._bootstrap_refit_ok(raw_bad, m)[2]     # the migrated one does not
+        end
     end
 
     @testset "end to end: n_converged counts only converged replicates ($route)" for (route, fit, ad, direct, pack) in routes
