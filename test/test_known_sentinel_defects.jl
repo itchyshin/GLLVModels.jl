@@ -30,7 +30,8 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
     @testset "the sentinel never escapes as a converged log-likelihood" begin
         # FIXED 2026-08-26 by `_fit_verdict` (src/fit_verdict.jl), applied at 68 return
         # sites. Both cases below were reproduced BEFORE the fix and returned
-        # converged=true with loglik=-1.0e12 and aic=2.0e12.
+        # converged=true with loglik=-1.0e12 and aic=2.0e12 (case 1 then used the Gamma
+        # zero cell, which #730 now refuses before fitting).
         #
         # A sentinel INSIDE an objective closure is correct — it is a barrier keeping the
         # line search out of a bad region. The defect was only ever that
@@ -38,14 +39,21 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
         # exactly zero, so `g_converged` fires at iteration 0 and the constructor stores
         # the plateau as a log-likelihood.
 
-        # (1) One zero cell in Gamma data — no y > 0 validation, an ordinary user slip.
+        # (1) One zero cell in Gamma data — an ordinary user slip. Since #730 it is
+        # refused up front, before any objective is evaluated.
         Random.seed!(7)
         Yg = abs.(randn(6, 40)) .+ 0.5
         Yg[2, 3] = 0.0
-        fg = GLLVModels.fit_gamma_gllvm(Yg; K = 1)
-        @test !fg.converged                 # was true
-        @test fg.loglik == -Inf             # was -1.0e12
-        @test !isfinite(GLLVModels.aic(fg))      # was a clean-looking 2.0e12
+        @test_throws ArgumentError GLLVModels.fit_gamma_gllvm(Yg; K = 1)
+        # The screen itself, on a plateau no support check can catch: one in-support
+        # count that no mean inside the η clamp (μ ≤ e^30 ≈ 1.1e13) can approach, so
+        # the objective is above the failure threshold for every θ.
+        Yc = fill(5, 6, 40)
+        Yc[2, 3] = 10^15
+        fg = GLLVModels.fit_poisson_gllvm(Yc; K = 1)
+        @test !fg.converged
+        @test fg.loglik == -Inf
+        @test !isfinite(GLLVModels.aic(fg))
 
         # (2) NB grouped_cov with a non-LogLink. This failed 100% of calls under the
         # DOCUMENTED DEFAULT `hessian = :observed`, and the package's own informative
