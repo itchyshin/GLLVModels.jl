@@ -1,0 +1,12 @@
+ZINBFit(p=10, K=2, r=2.809, loglik=-2036.127)  converged = true  pd_hessian = true
+betaz[1]  -0.514  (-1.083, 0.056)  truth -1.386  covers: false    betac[1] 0.866  covers 0.5: false
+betaz[2]  -1.584  (-3.274, 0.106)  truth -1.386  covers: true    betac[2] 0.459  covers 0.611: true
+betaz[3]  -1.063  (-1.789, -0.337)  truth -1.386  covers: true    betac[3] 0.708  covers 0.722: true
+betaz[4]  -1.208  (-2.238, -0.179)  truth -1.386  covers: true    betac[4] 0.451  covers 0.833: true
+betaz[5]  -1.124  (-1.879, -0.37)  truth -1.386  covers: true    betac[5] 0.872  covers 0.944: true
+betaz[6]  -1.402  (-2.298, -0.506)  truth -1.386  covers: true    betac[6] 1.062  covers 1.056: true
+betaz[7]  -0.779  (-1.307, -0.252)  truth -1.386  covers: false    betac[7] 1.394  covers 1.167: true
+betaz[8]  -0.693  (-1.222, -0.164)  truth -1.386  covers: false    betac[8] 1.288  covers 1.278: true
+betaz[9]  -1.38  (-2.034, -0.726)  truth -1.386  covers: true    betac[9] 1.347  covers 1.389: true
+betaz[10] -0.75  (-1.249, -0.251)  truth -1.386  covers: false    betac[10] 1.367  covers 1.5: true
+LLt: 44/55 unique entries covered; diag covered 8/10
