@@ -37,6 +37,9 @@ outer optimizer used by the Poisson and binomial candidates.
 Masks/missing responses and offsets are admitted for the ordinary Gaussian block.
 The masked exact marginal is used for baseline fitting; omitted entries are never
 included in the target likelihood. Structured masked/offset routes remain separate.
+On a masked or offset fit, `converged` is `true` only if the final gradient meets `g_tol`
+(`Optim.g_residual(fit.optim_result) <= g_tol`); an `x_tol` or `f_tol` stop alone does not
+count, and the optimiser continues on the gradient test (up to 5 restarts) before giving up.
 A masked fit with `X = nothing` is still a zero-mean model; pass a one-hot trait design
 (`X[t, :, t] .= 1`) for per-trait intercepts. [`predict_missing`](@ref) needs the same
 `mask` passed again (`predict_missing(fit, Y; mask = mask)`).
