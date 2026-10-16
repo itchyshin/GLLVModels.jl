@@ -182,7 +182,8 @@ For `Normal()`, `pervar=true` instead selects
 `y ~ 0 + x` or `y ~ -1 + x` removes those intercepts. `y ~ 0` is zero mean.
 `fixed_residual_sd=c` passes an explicit fixed residual scale to this route;
 it does not choose R's data-dependent scale automatically. Categorical contrasts
-follow StatsModels' rank rules. Do not also supply `X` with a formula.
+follow StatsModels' rank rules. Do not also supply `X` with a formula; every route
+throws an `ArgumentError` if you do.
 The default shared-variance route uses the same design when the formula has
 covariates.
 With no covariates it reduces to the intercept-only fit. Supplied table columns
@@ -267,6 +268,10 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             coefficient_names=coefficient_names, kwargs...)
     end
     K === _FORMULA_K_UNSET && throw(UndefKeywordError(:K))
+    # The formula builds the design below and splats `kwargs...` after it, so a caller `X`
+    # would silently win over the formula covariates (#742).
+    haskey(kwargs, :X) && throw(ArgumentError(
+        "the formula defines the complete mean; do not supply X"))
     if pervar
         family isa Normal || throw(ArgumentError("pervar=true requires family=Normal()"))
         haskey(kwargs, :X) && throw(ArgumentError("do not supply X with a pervar formula; the formula defines the complete mean"))
