@@ -691,7 +691,7 @@ cheaper at large p). `:both` costs the L-BFGS fit plus the exact-route fit: on
 machine, about 4 minutes more, while `:exact` alone took 32 s; almost all of the time is the
 finite-difference L-BFGS fit, so `routes = :exact` is the cheap choice at large p when the
 L-BFGS route has not been seen to end higher. If the L-BFGS route is later given an exact
-gradient (open PR #867), `:both` gets cheaper in step. With another link or an `offset`,
+gradient, `:both` gets cheaper in step. With another link or an `offset`,
 `:both` is the L-BFGS route alone and `:exact` raises an `ArgumentError`.
 On small data the likelihood can have several maxima, so this improves the local search
 but does not guarantee the global maximum. The per-site mode search is damped and falls back to
