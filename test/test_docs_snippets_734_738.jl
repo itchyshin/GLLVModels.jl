@@ -12,16 +12,16 @@ end
 @testset "docs snippets are self-contained (#734)" begin
     wf = join(_julia_blocks("working-with-a-fit.md"), "\n")
     @test occursin("using Distributions", wf)
-    @test occursin(r"^\s*Yb\s*=" m, wf)
+    @test occursin(r"^\s*Yb\s*="m, wf)
 
     sd = join(_julia_blocks("structured-dependence.md"), "\n")
-    @test !occursin(r"=\s*\.\.\.\s*(#.*)?$" m, sd)
+    @test !occursin(r"=\s*\.\.\.\s*(#.*)?$"m, sd)
     @test !occursin("my_tree.tre", sd)
 
     tp = _julia_blocks("temporal.md")
-    @test any(b -> occursin(r"^\s*data\s*=" m, b), tp)
+    @test any(b -> occursin(r"^\s*data\s*="m, b), tp)
     first_use = findfirst(b -> occursin("fit_temporal_gllvm(data", b), tp)
-    first_def = findfirst(b -> occursin(r"^\s*data\s*=" m, b), tp)
+    first_def = findfirst(b -> occursin(r"^\s*data\s*="m, b), tp)
     @test first_def !== nothing && first_use !== nothing && first_def < first_use
 
     pb = _julia_blocks("precision-bridge-development.md")
