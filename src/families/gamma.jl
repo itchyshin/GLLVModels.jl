@@ -221,6 +221,7 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
+    _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm")
     Yc  = _sanitize_missing(Y, 1.0)                   # positive placeholder
 
     # link-scale warm start (η = g(y)); for the default log link this is exactly `log.(max.(Yc, 1e-6))`
