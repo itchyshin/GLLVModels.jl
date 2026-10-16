@@ -1,0 +1,4 @@
+ZIP, pi = 0.2, truth betaz = -1.3863, n = 10000 sites, seed = 777, direction = common loading scale (1+δ)Λ
+package Laplace (expected info)   mean score/site = 0.00814   implied loading scale δ* = 0.00303
+Laplace, observed curvature       mean score/site = 0.0151    implied loading scale δ* = 0.00559
+AGHQ 20x20 (≈ exact)              mean score/site = 0.0184    implied loading scale δ* = 0.00679
