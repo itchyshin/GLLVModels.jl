@@ -52,9 +52,13 @@ function _check_response_support(kind::Symbol, Y::AbstractMatrix, mask;
 end
 
 # Like `_sanitize_missing`, but also replaces the cells that `mask` marks unobserved, so a
-# `NaN` placeholder in a masked-out cell never reaches an `Integer.(...)` conversion.
+# `NaN` (or any out-of-support) value in a masked-out cell never reaches an
+# `Integer.(...)` conversion, the warm start or the objective. The element type is
+# promoted explicitly so mixing, say, `Int` data with a `Float64` placeholder gives a
+# concrete matrix rather than `Matrix{Real}`.
 function _sanitize_unobserved(Y::AbstractMatrix, mask, placeholder)
     mask === nothing && return _sanitize_missing(Y, placeholder)
-    return [(mask[t, i] && !ismissing(Y[t, i])) ? Y[t, i] : placeholder
-            for t in axes(Y, 1), i in axes(Y, 2)]
+    T = promote_type(nonmissingtype(eltype(Y)), typeof(placeholder))
+    return T[(mask[t, i] && !ismissing(Y[t, i])) ? Y[t, i] : placeholder
+             for t in axes(Y, 1), i in axes(Y, 2)]
 end
