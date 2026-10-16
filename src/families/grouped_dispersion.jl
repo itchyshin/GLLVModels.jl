@@ -686,7 +686,13 @@ keeps whichever of the two ends higher by more than `1e-6`; a tie keeps the L-BF
 (#784: on `ade4::mollusc`, 15 taxa × 163 sites, K = 2, L-BFGS alone stopped 8.37 below
 gllvmTMB's optimum). `:lbfgs` runs only the finite-difference L-BFGS route (the behaviour
 before #784) and `:exact` only the exact-gradient route (log link, no `offset`; far
-cheaper at large p). With another link or an `offset`, `:both` is the L-BFGS route alone.
+cheaper at large p). `:both` costs the L-BFGS fit plus the exact-route fit: on
+`ade4::mollusc` (15 × 163, K = 2) 2365 s against 2113 s for `:lbfgs` on a loaded 4-core
+machine, about 4 minutes more, while `:exact` alone took 32 s; almost all of the time is the
+finite-difference L-BFGS fit, so `routes = :exact` is the cheap choice at large p when the
+L-BFGS route has not been seen to end higher. If the L-BFGS route is later given an exact
+gradient (open PR #867), `:both` gets cheaper in step. With another link or an `offset`,
+`:both` is the L-BFGS route alone and `:exact` raises an `ArgumentError`.
 On small data the likelihood can have several maxima, so this improves the local search
 but does not guarantee the global maximum. The per-site mode search is damped and falls back to
 an exact observed-curvature Newton search where Fisher scoring does not converge; a
