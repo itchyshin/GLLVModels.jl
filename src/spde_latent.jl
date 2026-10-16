@@ -138,13 +138,16 @@ function _spde_latent_mode(family, Y::AbstractMatrix, Ntr::AbstractMatrix,
         end
 
         # Step halving: accept the first step that does not decrease φ (up to
-        # round-off), so the iterates never move away from the mode.
+        # round-off), so the iterates never move away from the mode. When φ is
+        # not finite at the current iterate (data impossible under the model,
+        # e.g. y > n trials) there is nothing to compare against, so the full
+        # step is taken; the marginal is -Inf there anyway.
         step = 1.0
         accepted = false
         for _half in 1:30
             Ut = U .+ step .* Δ
             φ1 = _spde_latent_phi(family, Y, Ntr, Λ, β, link, A, Qs, Ut)
-            if isfinite(φ1) && φ1 >= φ0 - 1e-12 * (1 + abs(φ0))
+            if !isfinite(φ0) || (isfinite(φ1) && φ1 >= φ0 - 1e-12 * (1 + abs(φ0)))
                 U = Ut
                 φ0 = φ1
                 accepted = true
