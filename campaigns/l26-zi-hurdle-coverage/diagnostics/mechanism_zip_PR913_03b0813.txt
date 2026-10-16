@@ -1,0 +1,12 @@
+ZIP, pi = 0.2, truth betaz = -1.3863, n = 10000 sites, seed = 777, direction = common betaz shift
+package Laplace (expected info)   mean score/site = 0.00661   implied betaz shift δ* = 0.00629
+Laplace, observed curvature       mean score/site = 0.00661   implied betaz shift δ* = 0.00629
+AGHQ 20x20 (≈ exact)              mean score/site = 0.00496   implied betaz shift δ* = 0.00473
+ZIP, pi = 0.5, truth betaz = 0.0, n = 10000 sites, seed = 777, direction = common betaz shift
+package Laplace (expected info)   mean score/site = 0.000701  implied betaz shift δ* = 0.000355
+Laplace, observed curvature       mean score/site = 0.000701  implied betaz shift δ* = 0.000355
+AGHQ 20x20 (≈ exact)              mean score/site = 0.000819  implied betaz shift δ* = 0.000417
+ZIP, pi = 0.5, truth betaz = 0.0, n = 10000 sites, seed = 777, direction = common loading scale (1+δ)Λ
+package Laplace (expected info)   mean score/site = 0.0215    implied loading scale δ* = 0.00995
+Laplace, observed curvature       mean score/site = 0.0215    implied loading scale δ* = 0.00995
+AGHQ 20x20 (≈ exact)              mean score/site = 0.0235    implied loading scale δ* = 0.0111
