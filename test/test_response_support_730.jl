@@ -55,6 +55,16 @@ using Test, GLLVModels, Random
             Z = copy(Y); Z[1, 1] = bad
             fit = f(Z; K = 1, mask = mask)
             @test isfinite(fit.loglik) && fit.converged
+            if f === fit_gamma_gllvm || f === fit_beta_gllvm
+                # Neither fit type has a `theta` field and `theta_packed` is empty without
+                # X_lv, so check the estimates themselves: β, Λ and the dispersion.
+                θ = vcat(fit.β, vec(fit.Λ), f === fit_gamma_gllvm ? fit.α : fit.φ)
+                @test !isempty(θ) && all(isfinite, θ)
+                # The masked value never reaches the warm start or the objective: the fit
+                # is identical to one with the ordinary value left in the masked cell.
+                ref = f(Y; K = 1, mask = mask)
+                @test fit.β == ref.β && fit.Λ == ref.Λ && fit.loglik == ref.loglik
+            end
         end
         Zm = Matrix{Union{Missing, Float64}}(Yg); Zm[1, 1] = missing
         @test isfinite(fit_gamma_gllvm(Zm; K = 1).loglik)
