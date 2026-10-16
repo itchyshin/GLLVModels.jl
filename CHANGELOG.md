@@ -2,6 +2,15 @@
 
 ## Development
 
+- **Phylogenetic xlv point fitters (binomial, NB2, Gamma): `converged` now requires a small
+  gradient (refs #505).** `_fit_phylo_binomial_xlv`, `_fit_phylo_nb_xlv` and `_fit_phylo_gamma_xlv`
+  took `converged` from `Optim.converged`, which also fires on a zero-length line-search step, and
+  reported `converged = true` at finite-difference gradients of order 1-100 (a huge `sigma2_phy`
+  start, a species with all-zero counts). A new `_phylo_xlv_verdict` adds the stall test
+  `fit_phylo_gaussian` uses (a relative gradient bound, not the optimiser's own `g_tol`), and the
+  fits gain a `stop_reason` field (`:converged`, `:not_converged`, `:gradient_not_small`,
+  `:gradient_at_failure_value`, `:objective_failure`).
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight

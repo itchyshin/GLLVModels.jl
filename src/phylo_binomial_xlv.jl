@@ -292,6 +292,31 @@ function _phylo_binomial_xlv_theta0(Y::AbstractMatrix, N::AbstractMatrix,
     return vcat(beta0, vec(alpha0), pack_lambda(Lambda0), log(float(sigma2_phy_init)))
 end
 
+# Verdict shared by the phylogenetic xlv point fitters (binomial, NB2, Gamma). #505 class:
+# `Optim.converged(res)` also fires on a zero-length line-search step or an f/x stop, so the
+# `_fit_verdict(res)` pass-through reported `converged = true` at finite-difference gradients
+# of order 1-100. This adds the same stall test `fit_phylo_gaussian` uses (`_phylo_g_met`:
+# a loose relative bound, not the optimiser's own `g_tol`). A gradient at or near the 1e12
+# failure value (a finite-difference step landing on the objective sentinel) is its own
+# reason, not a generic "gradient not small".
+function _phylo_xlv_verdict(res, g_tol::Real)
+    loglik, optim_converged, iterations = _fit_verdict(res)
+    gres = Optim.g_residual(res)
+    reason = if !isfinite(loglik)
+        :objective_failure
+    elseif !isfinite(gres) || gres >= _NLL_FAIL_THRESHOLD
+        :gradient_at_failure_value
+    elseif !_phylo_g_met(res, g_tol)
+        :gradient_not_small
+    elseif !optim_converged
+        :not_converged
+    else
+        :converged
+    end
+    return (loglik = loglik, converged = reason === :converged,
+            iterations = iterations, reason = reason)
+end
+
 """
     _fit_phylo_binomial_xlv(Y, N, phy; K, X_lv, kwargs...) -> NamedTuple
 
@@ -328,10 +353,12 @@ function _fit_phylo_binomial_xlv(Y::AbstractMatrix, N::AbstractMatrix,
     theta_hat = Optim.minimizer(res)
     beta_hat, Lambda_hat, alpha_hat, sigma2_hat =
         _phylo_binomial_xlv_unpack_packed(theta_hat, p, K, q_lv)
+    verdict = _phylo_xlv_verdict(res, g_tol)
     return (beta = collect(beta_hat), Lambda = Matrix(Lambda_hat),
             alpha_lv = Matrix(alpha_hat), sigma2_phy = sigma2_hat,
-            loglik = _fit_verdict(res)[1], converged = _fit_verdict(res)[2],
-            iterations = Optim.iterations(res), theta_packed = collect(theta_hat))
+            loglik = verdict.loglik, converged = verdict.converged,
+            iterations = Optim.iterations(res), theta_packed = collect(theta_hat),
+            stop_reason = verdict.reason)
 end
 
 function _phylo_binomial_xlv_profile_indices(indices, nb::Integer)

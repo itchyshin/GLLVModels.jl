@@ -381,6 +381,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_latent_binomial_trials.jl")
     _shard_include("test_phylo_glm.jl")
     _shard_include("test_phylo_poisson_xlv.jl")
+    _shard_include("test_phylo_xlv_verdict.jl")
     _shard_include("test_twopart_substrate.jl")
     _shard_include("test_twopart_alloc_equiv.jl")
     _shard_include("test_twopart_mode_search.jl")
