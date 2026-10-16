@@ -1,0 +1,4 @@
+n = 10000 sites, family ZINB, pi = 0.2, truth betaz = -1.3863
+package Laplace (expected W)     mean score/site = 0.09952   curvature/site = -0.6222   implied shift δ* = 0.16   (2.5 s)
+observed-W Laplace               mean score/site = -0.006787   curvature/site = -0.737   implied shift δ* = -0.009209   (7.0 s)
+exact AGHQ 20x20                 mean score/site = -0.01037   curvature/site = -0.7381   implied shift δ* = -0.01405   (82.4 s)

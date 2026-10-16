@@ -1,0 +1,4 @@
+n = 10000 sites, family HurdlePoisson, pi = 0.05, truth betaz = 2.9444
+package Laplace (expected W)     mean score/site = 0.0088   curvature/site = -0.475   implied shift δ* = 0.01853   (0.9 s)
+observed-W Laplace               mean score/site = 0.0088   curvature/site = -0.475   implied shift δ* = 0.01853   (8.1 s)
+exact AGHQ 20x20                 mean score/site = 0.0088   curvature/site = -0.475   implied shift δ* = 0.01853   (78.9 s)
