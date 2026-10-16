@@ -1261,7 +1261,7 @@ The same post-fit extractors (`communality`, `correlation`, `sigma_y_site`, …)
 work for all implemented families. Only the Gaussian fit supports the
 one-argument `communality(fit)` / `correlation(fit)` / `sigma_y_site(fit)`; the
 non-Gaussian fits take the response matrix too, as `(fit, Y)`, and `getLV` takes
-`Y` for every family:
+`Y` for every response family on this page:
 
 ```julia
 communality(fit, Y)   # shared-variance fraction per response
