@@ -97,10 +97,15 @@ positive-definiteness check) are conditioned out; the rest of the parameters
 Hessian's inverse. The extra `boundary_terms::Vector{String}` names exactly
 which terms were conditioned out (empty when `pd_hessian == true`). This
 mirrors R's `sdreport()`, which NaNs only the degenerate block rather than the
-whole covariance matrix. Note this per-parameter degradation applies to the
+whole covariance matrix. Note this boundary conditioning applies to the
 family/grouped-dispersion route (`confint(fit::_CIFit, Y; ...)`,
-`src/confint_family.jl`); the Gaussian path (`confint(fit::GllvmFit; ...)`,
-`src/confint.jl`) is unchanged and still reports all-NaN on a non-PD Hessian.
+`src/confint_family.jl`). The Gaussian path (`confint(fit::GllvmFit; ...)`,
+`src/confint.jl`) does not condition out boundary terms. It reports every
+bound as NaN, with `pd_hessian = false`, only when the Hessian cannot be
+computed, is non-finite, or fails a Cholesky factorisation (so an indefinite
+Hessian is all-NaN). If the Hessian is positive definite but a diagonal entry
+of its inverse is non-finite or non-positive, only that entry's bounds are NaN
+and `pd_hessian = false`; the other parameters are still reported.
 
 ### Profile likelihood — `method = :profile`
 
