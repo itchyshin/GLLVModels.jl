@@ -55,6 +55,26 @@ if new_file:
     rw.writerow(FIELDS)
 
 queue = [(c, r) for c, R in PLAN for r in range(1, R + 1) if (c, r) not in done]
+PLAN_FILE = os.path.join(args.out, "plan.txt")
+plan_mtime = os.path.getmtime(PLAN_FILE) if os.path.exists(PLAN_FILE) else None
+
+def maybe_reload_plan():
+    """Re-read plan.txt when it changes: re-queue (cell, rep) pairs that are neither done nor in flight."""
+    global PLAN, queue, plan_mtime
+    if not os.path.exists(PLAN_FILE):
+        return
+    m = os.path.getmtime(PLAN_FILE)
+    if m == plan_mtime:
+        return
+    plan_mtime = m
+    try:
+        PLAN = [(int(a), int(b)) for a, b in (x.split(":") for x in open(PLAN_FILE).read().strip().split(","))]
+    except Exception as e:
+        log(f"plan reload failed: {e}"); return
+    inflight = {w["task"] for w in workers.values() if w["task"] is not None}
+    queue = [(c, r) for c, R in PLAN for r in range(1, R + 1) if (c, r) not in done and (c, r) not in inflight]
+    log(f"plan reloaded: {len(queue)} tasks pending")
+
 log(f"start: {len(queue)} tasks pending, {len(done)} already done, workers={args.workers}, timeouts={TIMEOUT}")
 
 ENV = dict(os.environ, JULIA_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1")
@@ -83,6 +103,7 @@ def write_row(cell, rep, status, err="", t=float("nan")):
                n_nan_se=-1, n_boundary_terms=-1, grad_maxabs="NaN", r_hat="NaN", prop_zero="NaN",
                t_fit_s="NaN", t_wald_s="NaN", t_total_s=t, error=err, pkg_sha=SHA, julia=JV)
     rw.writerow([row[k] for k in FIELDS])
+    done.add((cell, rep))
 
 def kill(wid):
     w = workers.pop(wid)
@@ -114,6 +135,7 @@ for _ in range(args.workers):
 
 ndone = 0
 while not stop:
+    maybe_reload_plan()
     if not queue and all(w["task"] is None and w["ready"] for w in workers.values()):
         break
     for key, _ in sel.select(timeout=1.0):
@@ -137,6 +159,7 @@ while not stop:
                 vals = line.split("\t")[1:]
                 if len(vals) == len(FIELDS) - 2:
                     rw.writerow(vals + [SHA, JV])
+                    done.add((int(vals[0]), int(vals[6])))
                 else:
                     c, r = w["task"]; write_row(c, r, "badresult", err=line[:200])
                 ndone += 1

@@ -1,0 +1,4 @@
+ZINB, pi = 0.5, truth betaz = 0.0, n = 10000 sites, seed = 777
+package Laplace (expected info)   mean score/site = 0.264     implied betaz shift δ* = 0.172
+Laplace, observed curvature       mean score/site = 0.00688   implied betaz shift δ* = 0.00421
+AGHQ 20x20 (≈ exact)              mean score/site = 0.00439   implied betaz shift δ* = 0.0027
