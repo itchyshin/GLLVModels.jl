@@ -1,3 +1,16 @@
+## 2026-10-16: land #931 red-proof default-route mollusc test on #914 (Closes #784)
+
+- Branch `claude/magical-newton-5h3i9c` (PR #914). Fix commit `a45b2ae25` was already on this
+  head (`5bb2aa23`); no cherry-pick needed.
+- Copied `test/test_nb_grouped_mollusc_default_784.jl` from `cursor/red-proof-784-914-43af`
+  (PR #931, head `4291f22f`) and added one `_shard_include` at the end of `test/runtests.jl`
+  (shard 4). Fixture `test/fixtures/mollusc15.csv` was already byte-identical
+  (`3ce2a4933`). No `src/` change.
+- Call: `fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)` with no
+  `routes` keyword; assert `logLik >= -3121.17`. Failed on base in CI run `38970253410`
+  (`-3129.53 >= -3121.17`); passed 3/3 locally on `a45b2ae25` (29m22s).
+- PR body: `Closes #784` plus current head SHA.
+
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
 
 - Branch `claude/true-parity-cov-postfit-family-twins` from `origin/main` (`3fcf20698`). New:
