@@ -1,0 +1,6 @@
+ZINB pi=0.2 n=5000 seed=777  converged=true iterations=51 loglik=-104829.76644788469  fit time 1607.0 s
+betaz − truth: mean 0.1246  per species [0.069, 0.084, 0.085, 0.163, 0.087, 0.103, 0.192, 0.169, 0.187, 0.108]
+betac − truth: mean -0.034  per species [-0.06, -0.049, -0.013, -0.03, -0.065, -0.007, -0.013, -0.048, -0.028, -0.027]
+r̂ = 2.0311 (truth 2)
+ΛΛ' diag − truth: mean -0.0232; relative -0.0537
+ΛΛ' offdiag − truth: mean abs 0.0189
