@@ -2154,6 +2154,9 @@ end
     confint_speciescov(fit::GllvmSpeciesCovFit, Y, X; level=0.95, parm=nothing, N=nothing) -> NamedTuple
 
 Wald CIs for the species-specific-covariate GLLVM. `X` is the p×n×q design used in the fit.
+
+The result carries `converged::Bool`, the supplied fit's own `converged` flag; when it is `false` a
+warning is issued, because the Wald standard errors are then not at a stationary point.
 """
 function confint_speciescov(fit::GllvmSpeciesCovFit, Y::AbstractMatrix, X::AbstractArray{<:Real,3};
         level::Real = 0.95, parm = nothing, N::Union{Nothing,AbstractMatrix} = nothing,
@@ -2191,6 +2194,9 @@ end
     confint_fourthcorner(fit::FourthCornerFit, Y, Xenv, TR; level=0.95, parm=nothing, N=nothing) -> NamedTuple
 
 Wald CIs for the fourth-corner trait–environment GLLVM (`Xenv` n×q, `TR` p×r).
+
+The result carries `converged::Bool`, the supplied fit's own `converged` flag; when it is `false` a
+warning is issued, because the Wald standard errors are then not at a stationary point.
 """
 function confint_fourthcorner(fit::FourthCornerFit, Y::AbstractMatrix,
         Xenv::AbstractMatrix, TR::AbstractMatrix;
@@ -2230,6 +2236,9 @@ end
     confint_rrr(fit::RRRFit, Y, X; level=0.95, parm=nothing, N=nothing) -> NamedTuple
 
 Wald CIs for the reduced-rank-regression (constrained) ordination (`X` n×q).
+
+The result carries `converged::Bool`, the supplied fit's own `converged` flag; when it is `false` a
+warning is issued, because the Wald standard errors are then not at a stationary point.
 """
 function confint_rrr(fit::RRRFit, Y::AbstractMatrix, X::AbstractMatrix;
         level::Real = 0.95, parm = nothing, N::Union{Nothing,AbstractMatrix} = nothing)
@@ -2263,6 +2272,9 @@ end
     confint_constrained(fit::ConstrainedOrdinationFit, Y, X; level=0.95, parm=nothing, N=nothing) -> NamedTuple
 
 Wald CIs for the concurrent / constrained ordination (`X` n×q).
+
+The result carries `converged::Bool`, the supplied fit's own `converged` flag; when it is `false` a
+warning is issued, because the Wald standard errors are then not at a stationary point.
 """
 function confint_constrained(fit::ConstrainedOrdinationFit, Y::AbstractMatrix, X::AbstractMatrix;
         level::Real = 0.95, parm = nothing, N::Union{Nothing,AbstractMatrix} = nothing,
@@ -3569,7 +3581,9 @@ power `p ∈ (1,2)` is held fixed at its fitted value, so only `phi` is profiled
                    rejected).
 
 All methods return `term`, `estimate` (dispersion on its natural scale),
-`lower`, `upper`, and `method`. Dispersion parameters (`r`, `phi`, `alpha`) are
+`lower`, `upper`, `method`, and `converged` (the supplied fit's own `converged` flag; a `false` value
+also issues a warning, since the intervals are then computed at a point that is not a stationary
+point of the objective). `pd_hessian` only describes the Hessian, not the fit. Dispersion parameters (`r`, `phi`, `alpha`) are
 parameterised on the log scale internally; their bounds are reported on the
 natural (positive) scale.
 
@@ -3688,6 +3702,9 @@ Wald confidence intervals for the SPDE-latent GLLVM. `Y` (p×M) and `locs` (M×2
 match the fit. β and Λ are reported on their natural scale; κ, τ, and any dispersion
 on the positive scale. SEs come from the observed information (finite-difference
 Hessian of the θ-marginal, which rebuilds the Matérn precision each evaluation).
+
+The result carries `converged::Bool`, the supplied fit's own `converged` flag; when it is `false` a
+warning is issued, because the Wald standard errors are then not at a stationary point.
 """
 function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::AbstractMatrix;
                              level::Real = 0.95, parm = nothing, α::Integer = 2,
