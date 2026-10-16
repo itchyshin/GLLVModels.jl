@@ -306,7 +306,12 @@ replicates, 20 traits, `d = 2`, objective about 7372) L-BFGS alone stops at
 gradient `2e-4`; after the polish the fit reports `converged = true` with
 gradient `6e-6` and matches R's logLik to `3e-13`. A fit that is genuinely not
 stationary still reports `converged = false`; inspect `gradient_norm` and
-`stopping_reason` rather than raising `g_tol` blindly. Returns a
+`stopping_reason` rather than raising `g_tol` blindly. A fit that stops at the
+objective's rounding floor is also reported `converged = true`, with
+`stopping_reason = :rounding_floor`, when its finite-difference Hessian is
+positive definite, its Newton decrement `g' H^-1 g / 2` is at most
+`1000 * eps() * max(1, |nll|)`, and `max |gradient| <= 100 * max(g_tol, 1e-5)`
+(#822); nothing weaker is accepted. Returns a
 [`PrecisionMultivariateFit`](@ref) with `residual_mode = :shared`; use
 `extract_Sigma(fit; level = :phy)` and [`extract_phylo_signal`](@ref).
 """
@@ -387,6 +392,7 @@ function fit_phylo_latent_gllvm(Y::AbstractMatrix{<:Real}, species::AbstractVect
         species_id = species_id, X = X, start = s, g_tol = g_tol,
         iterations = iterations)
     fit = _phylo_latent_newton_polish(run(start), run, g_tol)
+    fit = _phylo_latent_accept_rounding_floor(fit, g_tol)
     return _pmv_with_labels(fit, obs_labels, tip_names)
 end
 
@@ -428,4 +434,66 @@ function _phylo_latent_newton_polish(fit::PrecisionMultivariateFit, run, g_tol::
     moved || return fit
     polished = run(theta)
     return isfinite(polished.loglik) && polished.loglik >= fit.loglik ? polished : fit
+end
+
+# Rounding-floor acceptance (#822). On some fits (DEP, d = 4, 120 tips; the
+# folded-unique fit on Linux) the objective is flat to rounding: the Newton
+# decrement g' H^-1 g / 2 is about 1e-12 to 1e-11, no descent step is
+# resolvable, yet the finite-difference gradient on a poorly scaled coordinate
+# sits above `g_tol` (about 4e-5 against 1e-5), so the unchanged gate reports
+# `converged = false` on a correct optimum, and which side of the line a fit
+# lands on depends on the platform's BLAS. The criterion, all three required:
+#   1. the finite-difference Hessian at the returned parameters is positive
+#      definite (a saddle or ridge never qualifies);
+#   2. the Newton decrement is at most `_PHYLO_LATENT_FLOOR_ULPS * eps() *
+#      max(1, |nll|)`, i.e. the objective reduction any step could still buy is
+#      within a stated multiple of the objective's own rounding unit;
+#   3. max |gradient| is at most `_PHYLO_LATENT_FLOOR_GRAD_FACTOR * max(g_tol,
+#      1e-5)` (a tighter `g_tol` cannot be resolved by the FD stencil), so a
+#      tiny decrement from a huge curvature cannot hide a gradient that is far
+#      from zero.
+# A fit that meets them reports `converged = true` and
+# `stopping_reason = :rounding_floor`; every other fit is returned untouched.
+const _PHYLO_LATENT_FLOOR_ULPS = 1000.0
+const _PHYLO_LATENT_FLOOR_GRAD_FACTOR = 100.0
+
+# Returns (accepted, decrement, gradient_max) at `fit.parameters`.
+function _phylo_latent_floor_check(fit::PrecisionMultivariateFit, g_tol::Real)
+    objective = theta -> _precision_multivariate_nll(fit.response, fit.phy, theta;
+        rank = fit.rank, mode = fit.mode, residual_mode = fit.residual_mode,
+        species_id = fit.species_id, mean_design = fit.mean_design)
+    theta = fit.parameters
+    value = objective(theta)
+    _pmv_valid_objective(value) || return (false, Inf, Inf)
+    gradient = similar(theta)
+    _pmv_fd_gradient!(gradient, objective, theta)
+    all(isfinite, gradient) || return (false, Inf, Inf)
+    gmax = maximum(abs, gradient)
+    H = try
+        _fd_hessian(objective, theta)
+    catch err
+        err isa InterruptException && rethrow()
+        return (false, Inf, gmax)
+    end
+    all(isfinite, H) || return (false, Inf, gmax)
+    F = cholesky(Symmetric(H); check = false)
+    issuccess(F) || return (false, Inf, gmax)
+    decrement = dot(gradient, F \ gradient) / 2
+    accepted = isfinite(decrement) &&
+        decrement <= _PHYLO_LATENT_FLOOR_ULPS * eps(Float64) * max(1.0, abs(value)) &&
+        gmax <= _PHYLO_LATENT_FLOOR_GRAD_FACTOR * max(g_tol, 1e-5)
+    return (accepted, decrement, gmax)
+end
+
+function _phylo_latent_accept_rounding_floor(fit::PrecisionMultivariateFit, g_tol::Real)
+    (fit.converged || fit.stopping_reason !== :gradient_not_converged ||
+        !isfinite(fit.loglik)) && return fit
+    accepted, _, _ = _phylo_latent_floor_check(fit, g_tol)
+    accepted || return fit
+    return PrecisionMultivariateFit(fit.beta, fit.loading, fit.phylo_unique_variance,
+        fit.residual_variance, fit.mode, fit.rank, fit.phy, fit.species_id,
+        fit.parameters, fit.loglik, true, fit.gradient_norm, fit.hessian_min_eigenvalue,
+        fit.hessian_positive_definite, fit.hessian_condition_number, fit.iterations,
+        :rounding_floor, fit.response, fit.mean_design, fit.response_shape,
+        fit.coefficient_names, fit.residual_mode, fit.parameter_labels)
 end
