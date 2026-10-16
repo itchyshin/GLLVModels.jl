@@ -59,7 +59,17 @@ function _laplace_prediction_offset(stored, Y::AbstractMatrix, offset, mask,
                                                  caller = caller, maskable = maskable))
     end
     stored === nothing && return nothing
-    size(stored) == (p, n) && return stored
+    if size(stored) == (p, n)
+        # A masked fit may hold a non-finite offset at an unobserved cell (the engine never
+        # reads it). Without the mask that cell is read as observed: its site gets a zero latent
+        # score and the other traits wrong predictions (#788). Refuse rather than return those.
+        maskable && mask === nothing && !all(isfinite, stored) && throw(ArgumentError(
+            "$caller: the stored training offset is non-finite at some cells (the unobserved " *
+            "cells of a masked fit), so it cannot be used without the mask. Pass the fit's " *
+            "observation mask (mask = M, where $caller takes one), or an explicit finite " *
+            "offset = O."))
+        return stored
+    end
     any(v -> isfinite(v) && !iszero(v), stored) || return nothing
     throw(ArgumentError(
         "$caller: this fit was made with an offset, and Y ($(p)×$(n)) is not the training " *
@@ -2085,6 +2095,21 @@ end
 @inline _delta_disp_sq(d::Union{Float64, Vector{Float64}}) =
     d isa Real ? d^2 : (d .^ 2)
 
+# Delta fits made with `predictor = :shared` drive both parts from one linear predictor
+# η = β + Λ z (+ offset): the occurrence part loads on the latent scores (Λz ≡ Λc, βz ≡ βc)
+# and carries the offset (#820; see the `DeltaLogNormalFit` docstring). A `:separate` fit has an
+# intercept-only occurrence part (Λz = 0, no offset on it).
+_delta_is_shared(fit) = fit.predictor === :shared
+_delta_Λz(fit, p::Integer, K::Integer) = _delta_is_shared(fit) ? fit.Λc : zeros(p, K)
+_delta_offsetz(fit, O, s::Integer) =
+    (_delta_is_shared(fit) && O !== nothing) ? view(O, :, s) : nothing
+# Occurrence probability, p×n, given the positive-part linear predictor `ηc` (which already
+# holds β + Λ ẑ + offset). Shared: logistic(ηz) with ηz ≡ ηc. Separate: logistic(βz), per unit.
+function _delta_occurrence(fit, ηc::AbstractMatrix)
+    _delta_is_shared(fit) && return inv.(1 .+ exp.(-ηc))
+    return repeat(inv.(1 .+ exp.(-fit.βz)), 1, size(ηc, 2))
+end
+
 _loadings(fit::DeltaLogNormalFit) = fit.Λc
 _loglik(fit::DeltaLogNormalFit)   = fit.loglik
 
@@ -2101,9 +2126,10 @@ Conditional latent scores for a Delta-lognormal fit: the per-site two-part Lapla
 mode `ẑₛ` (occurrence intercept-only, so only the positive part loads on `z`).
 
 On a fit made with an `offset` the mode search adds it to the count / positive-part
-predictor `η^c`, as a `predictor = :separate` fit did at fit time (a `:shared` fit also put
-it on the occurrence part, and its post-fit mode is not yet exact; see #788): the stored training offset (`fit.offset`) when `Y` has
-the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
+predictor `η^c`, as a `predictor = :separate` fit did at fit time. A `predictor = :shared` fit
+puts the offset, and the latent loadings, on the occurrence part too (one `η = β + Λz + offset`
+drives both parts), and the mode search does the same (#820). The stored training offset
+(`fit.offset`) is used when `Y` has the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
 vector). New units from an offset fit without an `offset` are refused.
 """
 function getLV(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
@@ -2112,10 +2138,11 @@ function getLV(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; rotate::Bool =
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
     K = size(fit.Λc, 2)
     fam = _delta_lognormal_twopart_fam(fit.σ)
-    Λz = zeros(p, K)
+    Λz = _delta_Λz(fit, p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
         Z[:, s] = _twopart_mode(fam, view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc;
+                                offsetz = _delta_offsetz(fit, O, s),
                                 offsetc = O === nothing ? nothing : view(O, :, s))
     end
     Zt = permutedims(Z)
@@ -2126,7 +2153,7 @@ end
     predict(fit::DeltaLogNormalFit, Y; type=:response) -> p×n matrix
 
 In-sample predictions at the Laplace mode. `type=:link` is the positive-part linear
-predictor `η^c = β^c + Λ_c ẑ`; `:occurrence` the presence probability `π = logistic(β^z)`;
+predictor `η^c = β^c + Λ_c ẑ`; `:occurrence` the presence probability `π = logistic(β^z)` (`predictor = :shared`: `logistic(η^c)`, which varies by unit);
 `:positive` the conditional positive mean `exp(η^c + σ²/2)`; `:response` the
 unconditional mean `π · exp(η^c + σ²/2)`.
 
@@ -2144,8 +2171,8 @@ function predict(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; type::Symbol
     ηc = fit.βc .+ fit.Λc * Z'                       # p×n
     O === nothing || (ηc .+= O)
     type === :link && return ηc
-    π = inv.(1 .+ exp.(-fit.βz))                     # length p
-    type === :occurrence && return repeat(π, 1, n)
+    π = _delta_occurrence(fit, ηc)                   # p×n
+    type === :occurrence && return π
     posmean = exp.(ηc .+ _delta_disp_sq(fit.σ) ./ 2)
     type === :positive && return posmean
     return π .* posmean
@@ -2168,11 +2195,11 @@ function residuals(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real};
     Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
     O === nothing || (ηc .+= O)
-    π = inv.(1 .+ exp.(-fit.βz))
+    π = _delta_occurrence(fit, ηc)
     R = Matrix{Float64}(undef, p, n)
     σ = fit.σ
     @inbounds for s in 1:n, t in 1:p
-        πt = π[t]
+        πt = π[t, s]
         σt = σ isa Real ? σ : σ[t]
         if Y[t, s] > 0
             dl = LogNormal(ηc[t, s], σt)
@@ -2436,9 +2463,10 @@ Conditional latent scores for a Delta-Gamma fit: the per-site two-part Laplace m
 `ẑₛ` (occurrence intercept-only, so only the positive part loads on `z`).
 
 On a fit made with an `offset` the mode search adds it to the count / positive-part
-predictor `η^c`, as a `predictor = :separate` fit did at fit time (a `:shared` fit also put
-it on the occurrence part, and its post-fit mode is not yet exact; see #788): the stored training offset (`fit.offset`) when `Y` has
-the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
+predictor `η^c`, as a `predictor = :separate` fit did at fit time. A `predictor = :shared` fit
+puts the offset, and the latent loadings, on the occurrence part too (one `η = β + Λz + offset`
+drives both parts), and the mode search does the same (#820). The stored training offset
+(`fit.offset`) is used when `Y` has the training size, otherwise the `offset` you pass (a p×n matrix, a scalar or a length-p
 vector). New units from an offset fit without an `offset` are refused.
 """
 function getLV(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
@@ -2446,10 +2474,11 @@ function getLV(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real}; rotate::Bool = tru
     p, n = size(Y); K = size(fit.Λc, 2)
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
     fam = _delta_gamma_twopart_fam(fit.α)
-    Λz = zeros(p, K)
+    Λz = _delta_Λz(fit, p, K)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
         Z[:, s] = _twopart_mode(fam, view(Y, :, s), Λz, fit.Λc, fit.βz, fit.βc;
+                                offsetz = _delta_offsetz(fit, O, s),
                                 offsetc = O === nothing ? nothing : view(O, :, s))
     end
     Zt = permutedims(Z)
@@ -2460,7 +2489,7 @@ end
     predict(fit::DeltaGammaFit, Y; type=:response) -> p×n matrix
 
 `:link` = positive-part log-mean predictor `η^c`; `:occurrence` = presence
-probability `π = logistic(β^z)`; `:positive` = conditional positive mean `μ = exp(η^c)`
+probability `π = logistic(β^z)` (`predictor = :shared`: `logistic(η^c)`, which varies by unit); `:positive` = conditional positive mean `μ = exp(η^c)`
 (the Gamma mean); `:response` = unconditional mean `π · μ`.
 
 On a fit made with an `offset`, `η^c` includes it: the stored training offset
@@ -2477,8 +2506,8 @@ function predict(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :
     ηc = fit.βc .+ fit.Λc * Z'                       # p×n
     O === nothing || (ηc .+= O)
     type === :link && return ηc
-    π = inv.(1 .+ exp.(-fit.βz))                     # length p
-    type === :occurrence && return repeat(π, 1, n)
+    π = _delta_occurrence(fit, ηc)                   # p×n
+    type === :occurrence && return π
     μ = exp.(ηc)
     type === :positive && return μ
     return π .* μ
@@ -2501,10 +2530,10 @@ function residuals(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real};
     Z = getLV(fit, Y; rotate = false, offset = O)
     ηc = fit.βc .+ fit.Λc * Z'
     O === nothing || (ηc .+= O)
-    π = inv.(1 .+ exp.(-fit.βz))
+    π = _delta_occurrence(fit, ηc)
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
-        πt = π[t]
+        πt = π[t, s]
         αt = α isa Real ? α : α[t]
         if Y[t, s] > 0
             μ = exp(ηc[t, s])
