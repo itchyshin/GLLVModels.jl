@@ -394,6 +394,61 @@ Response-scale in-sample fitted values — `predict(fit, data; type=:response, k
 """
 StatsAPI.fitted(fit::AnyGllvmFit, data; kwargs...) = predict(fit, data; type = :response, kwargs...)
 
+# ---------------------------------------------------------------------------
+# Dunn–Smyth randomized quantile residuals: tail-safe normal quantile (#767)
+#
+# The residual is z = Φ⁻¹(u) with u = lo + (hi - lo)·v, v ~ U(0, 1), where [lo, hi] is
+# the CDF interval of the observed cell. Forming u from `cdf` and clamping it to
+# [1e-12, 1 - 1e-12] capped |z| at 7.034 for every cell whose tail probability fell
+# below 1e-12: a count of 40 and a count of 100000 under a mean near 1 received the
+# same residual. `_ds_z` takes the complementary interval [clo, chi] = [1 - lo, 1 - hi]
+# too, from `ccdf` (so it keeps full relative precision in the upper tail), and computes
+# the quantile in whichever tail is nearer, so no clamp is needed. When even the tail
+# probability underflows (below `floatmin`), the tail is taken as `lmass`, the log mass
+# of the observed cell, plus the jitter, and the quantile is found on the log scale
+# (`_norm_upper_z`). Since P(Y ≥ y) ≥ P(Y = y) with near equality this far out, the
+# residual stays finite and increases with the observation. Continuous families
+# (`lmass = -Inf`) have no such fallback and are floored at `floatmin`, |z| ≈ 37.5.
+# ---------------------------------------------------------------------------
+
+# z > 0 with log Q(z) = lt, Q(z) = P(N(0, 1) > z); finite for any lt < 0, including
+# lt below log(floatmin) where exp(lt) underflows. For those, the fixed point of the
+# asymptotic log Q(z) = -z²/2 - log z - ½log(2π) + log1p(-1/z²) (error O(z⁻⁴)).
+function _norm_upper_z(lt::Real)
+    lt >= log(floatmin(Float64)) && return -quantile(Normal(), exp(lt))
+    z = sqrt(-2 * lt)
+    for _ in 1:100
+        zn = sqrt(-2 * (lt + log(z) + 0.5 * log(2π) - log1p(-inv(z * z))))
+        abs(zn - z) <= 1e-14 * zn && return zn
+        z = zn
+    end
+    return z
+end
+
+# Φ⁻¹ of u = lo + (hi - lo)·v, with the complementary interval [clo, chi] (clo = 1 - lo,
+# chi = 1 - hi, each computed from an upper-tail CDF) and `lmass` the log mass of the cell.
+function _ds_z(lo::Real, hi::Real, clo::Real, chi::Real, v::Real; lmass::Real = -Inf)
+    u = lo + (hi - lo) * v
+    isnan(u) && return NaN
+    if u <= 0.5
+        u > 0 && return quantile(Normal(), u)
+        lmass == -Inf && return quantile(Normal(), floatmin(Float64))
+        return -_norm_upper_z(lmass + log(max(v, eps())))
+    end
+    uc = chi + (clo - chi) * (1 - v)
+    isnan(uc) && return NaN
+    uc > 0 && return -quantile(Normal(), uc)
+    lmass == -Inf && return -quantile(Normal(), floatmin(Float64))
+    return _norm_upper_z(lmass + log(max(1 - v, eps())))
+end
+
+# Plain discrete distribution (a Distributions.jl object with `cdf`/`ccdf`/`logpdf`).
+_ds_z_discrete(d, y, v) =
+    _ds_z(cdf(d, y - 1), cdf(d, y), ccdf(d, y - 1), ccdf(d, y), v; lmass = logpdf(d, y))
+
+# Continuous distribution: u = F(y), no jitter (v = 1).
+_ds_z_continuous(d, y) = _ds_z(0.0, cdf(d, y), 1.0, ccdf(d, y), 1.0)
+
 """
     residuals(fit::GllvmFit, y; type=:dunnsmyth, X=nothing, X_lv=nothing) -> p×n matrix
 
@@ -550,8 +605,8 @@ function residuals(fit::BinomialFit, Y::AbstractMatrix;
                 variance=nt*prob*(1-prob)
                 result[j]=variance>0 ? (y-nt*prob)/sqrt(variance) : NaN
             else
-                d=Binomial(Int(nt),prob);lo=cdf(d,y-1);hi=cdf(d,y)
-                result[j]=quantile(Normal(),clamp(lo+(hi-lo)*rand(rng),1e-12,1-1e-12))
+                d=Binomial(Int(nt),prob)
+                result[j]=_ds_z_discrete(d,y,rand(rng))
             end
         end
         return result
@@ -565,10 +620,7 @@ function residuals(fit::BinomialFit, Y::AbstractMatrix;
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         d = Binomial(Int(Nm[t, s]), μ[t, s])
-        Flo = cdf(d, Y[t, s] - 1)
-        Fhi = cdf(d, Y[t, s])
-        u = Flo + (Fhi - Flo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z_discrete(d, Y[t, s], rand(rng))
     end
     return R
 end
@@ -1064,8 +1116,8 @@ function residuals(fit::PoissonFit, Y::AbstractMatrix;
             if type===:pearson
                 result[t,s]=(y-mu)/sqrt(mu)
             else
-                d=Poisson(mu);lo=cdf(d,y-1);hi=cdf(d,y)
-                result[t,s]=quantile(Normal(),clamp(lo+(hi-lo)*rand(rng),1e-12,1-1e-12))
+                d=Poisson(mu)
+                result[t,s]=_ds_z_discrete(d,y,rand(rng))
             end
         end
         return result
@@ -1076,10 +1128,7 @@ function residuals(fit::PoissonFit, Y::AbstractMatrix;
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         d = Poisson(μ[t, s])
-        Flo = cdf(d, Y[t, s] - 1)
-        Fhi = cdf(d, Y[t, s])
-        u = Flo + (Fhi - Flo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z_discrete(d, Y[t, s], rand(rng))
     end
     return R
 end
@@ -1211,10 +1260,7 @@ function residuals(fit::NBFit, Y::AbstractMatrix{<:Integer};
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         d = NegativeBinomial(r, r / (r + μ[t, s]))
-        Flo = cdf(d, Y[t, s] - 1)
-        Fhi = cdf(d, Y[t, s])
-        u = Flo + (Fhi - Flo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z_discrete(d, Y[t, s], rand(rng))
     end
     return R
 end
@@ -1325,10 +1371,7 @@ function residuals(fit::NB1Fit, Y::AbstractMatrix{<:Integer};
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         d = NegativeBinomial(μ[t, s] / φ, 1 / (1 + φ))
-        Flo = cdf(d, Y[t, s] - 1)
-        Fhi = cdf(d, Y[t, s])
-        u = Flo + (Fhi - Flo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z_discrete(d, Y[t, s], rand(rng))
     end
     return R
 end
@@ -1440,8 +1483,13 @@ function residuals(fit::GP1Fit, Y::AbstractMatrix{<:Integer};
     @inbounds for s in 1:n, t in 1:p
         Flo = _gp1_cdf(fam, μ[t, s], Y[t, s] - 1)
         Fhi = _gp1_cdf(fam, μ[t, s], Y[t, s])
-        u = Flo + (Fhi - Flo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        # GP-1 has no upper-tail CDF: 1 - F cannot resolve a tail below about 1e-12, where
+        # the log-pmf stands in for the log tail (see `_ds_z`).
+        clo = 1 - Flo; chi = 1 - Fhi
+        clo < 1e-12 && (clo = 0.0)
+        chi < 1e-12 && (chi = 0.0)
+        R[t, s] = _ds_z(Flo, Fhi, clo, chi, rand(rng);
+                        lmass = _glm_logpdf(fam, μ[t, s], 1, Y[t, s]))
     end
     return R
 end
@@ -1565,8 +1613,7 @@ function residuals(fit::BetaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunn
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         d = Beta(μ[t, s] * φ, (1 - μ[t, s]) * φ)
-        u = cdf(d, clamp(float(Y[t, s]), 1e-12, 1 - 1e-12))
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z_continuous(d, clamp(float(Y[t, s]), 1e-12, 1 - 1e-12))
     end
     return R
 end
@@ -1765,8 +1812,10 @@ function residuals(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
         c = Int(Y[t, s])
         Fhi = c >= C ? 1.0 : _ord_F(fit.τ[c] - η[t, s], fit.link)
         Flo = c <= 1 ? 0.0 : _ord_F(fit.τ[c - 1] - η[t, s], fit.link)
-        u = Flo + (Fhi - Flo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        # 1 - F(x) = F(-x) for the logit and probit links, so the upper tail is exact.
+        chi = c >= C ? 0.0 : _ord_F(η[t, s] - fit.τ[c], fit.link)
+        clo = c <= 1 ? 1.0 : _ord_F(η[t, s] - fit.τ[c - 1], fit.link)
+        R[t, s] = _ds_z(Flo, Fhi, clo, chi, rand(rng))
     end
     return R
 end
@@ -1783,8 +1832,9 @@ function residuals(fit::OrdinalPerTraitFit, Y::AbstractMatrix{<:Integer};
         c = Int(Y[t, s])
         Fhi = c >= fit.C[t] ? 1.0 : _ord_F(τt[c] - η[t, s], fit.link)
         Flo = c <= 1 ? 0.0 : _ord_F(τt[c - 1] - η[t, s], fit.link)
-        u = Flo + (Fhi - Flo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        chi = c >= fit.C[t] ? 0.0 : _ord_F(η[t, s] - τt[c], fit.link)
+        clo = c <= 1 ? 1.0 : _ord_F(η[t, s] - τt[c - 1], fit.link)
+        R[t, s] = _ds_z(Flo, Fhi, clo, chi, rand(rng))
     end
     return R
 end
@@ -1915,8 +1965,7 @@ function residuals(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dun
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         d = Gamma(α, μ[t, s] / α)
-        u = cdf(d, max(float(Y[t, s]), 1e-300))
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z_continuous(d, max(float(Y[t, s]), 1e-300))
     end
     return R
 end
@@ -1999,8 +2048,7 @@ function residuals(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; type::Symbol 
     type === :pearson && return (Y .- μ) ./ μ
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
-        u = cdf(Exponential(μ[t, s]), max(float(Y[t, s]), 1e-300))
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z_continuous(Exponential(μ[t, s]), max(float(Y[t, s]), 1e-300))
     end
     return R
 end
@@ -2127,11 +2175,13 @@ function residuals(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real};
         πt = π[t]
         σt = σ isa Real ? σ : σ[t]
         if Y[t, s] > 0
-            u = (1 - πt) + πt * cdf(LogNormal(ηc[t, s], σt), Y[t, s])
+            dl = LogNormal(ηc[t, s], σt)
+            u = (1 - πt) + πt * cdf(dl, Y[t, s])
+            cu = πt * ccdf(dl, Y[t, s])
+            R[t, s] = _ds_z(u, u, cu, cu, 1.0)
         else
-            u = (1 - πt) * rand(rng)
+            R[t, s] = _ds_z(0.0, 1 - πt, 1.0, πt, rand(rng); lmass = log1p(-πt))
         end
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
     end
     return R
 end
@@ -2227,15 +2277,18 @@ function residuals(fit::HurdlePoissonFit, Y::AbstractMatrix{<:Real};
         πt = π[t]; y = Int(Y[t, s])
         if y == 0
             lo = 0.0; hi = 1 - πt
+            clo = 1.0; chi = πt; lm = log1p(-πt)
         else
             μ = exp(ηc[t, s]); p0 = exp(-μ)
             Flo = y == 1 ? 0.0 : (cdf(Poisson(μ), y - 1) - p0) / (1 - p0)
             Fhi = (cdf(Poisson(μ), y) - p0) / (1 - p0)
             lo = (1 - πt) + πt * Flo
             hi = (1 - πt) + πt * Fhi
+            clo = πt * ccdf(Poisson(μ), y - 1) / (1 - p0)
+            chi = πt * ccdf(Poisson(μ), y) / (1 - p0)
+            lm = log(πt) + logpdf(Poisson(μ), y) - log1p(-p0)
         end
-        u = lo + (hi - lo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z(lo, hi, clo, chi, rand(rng); lmass = lm)
     end
     return R
 end
@@ -2336,6 +2389,7 @@ function residuals(fit::HurdleNBFit, Y::AbstractMatrix{<:Real};
         πt = π[t]; y = Int(Y[t, s])
         if y == 0
             lo = 0.0; hi = 1 - πt
+            clo = 1.0; chi = πt; lm = log1p(-πt)
         else
             μ = exp(ηc[t, s]); p0 = (r / (r + μ))^r
             nb = NegativeBinomial(r, r / (r + μ))
@@ -2343,9 +2397,11 @@ function residuals(fit::HurdleNBFit, Y::AbstractMatrix{<:Real};
             Fhi = (cdf(nb, y) - p0) / (1 - p0)
             lo = (1 - πt) + πt * Flo
             hi = (1 - πt) + πt * Fhi
+            clo = πt * ccdf(nb, y - 1) / (1 - p0)
+            chi = πt * ccdf(nb, y) / (1 - p0)
+            lm = log(πt) + logpdf(nb, y) - log1p(-p0)
         end
-        u = lo + (hi - lo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z(lo, hi, clo, chi, rand(rng); lmass = lm)
     end
     return R
 end
@@ -2452,11 +2508,13 @@ function residuals(fit::DeltaGammaFit, Y::AbstractMatrix{<:Real};
         αt = α isa Real ? α : α[t]
         if Y[t, s] > 0
             μ = exp(ηc[t, s])
-            u = (1 - πt) + πt * cdf(Gamma(αt, μ / αt), Y[t, s])
+            dg = Gamma(αt, μ / αt)
+            u = (1 - πt) + πt * cdf(dg, Y[t, s])
+            cu = πt * ccdf(dg, Y[t, s])
+            R[t, s] = _ds_z(u, u, cu, cu, 1.0)
         else
-            u = (1 - πt) * rand(rng)
+            R[t, s] = _ds_z(0.0, 1 - πt, 1.0, πt, rand(rng); lmass = log1p(-πt))
         end
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
     end
     return R
 end
@@ -2667,12 +2725,17 @@ function _zi_residuals(π::AbstractVector, ηc::AbstractMatrix, Y::AbstractMatri
         if y == 0
             lo = 0.0
             hi = πt + (1 - πt) * cdf(d, 0)
+            clo = 1.0
+            chi = (1 - πt) * ccdf(d, 0)
+            lm = log(hi)
         else
             lo = πt + (1 - πt) * cdf(d, y - 1)
             hi = πt + (1 - πt) * cdf(d, y)
+            clo = (1 - πt) * ccdf(d, y - 1)
+            chi = (1 - πt) * ccdf(d, y)
+            lm = log1p(-πt) + logpdf(d, y)
         end
-        u = lo + (hi - lo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z(lo, hi, clo, chi, rand(rng); lmass = lm)
     end
     return R
 end
@@ -2855,12 +2918,17 @@ function residuals(fit::ZIBFit, Y::AbstractMatrix{<:Real};
         if y == 0
             lo = 0.0
             hi = πt + (1 - πt) * cdf(d, 0)
+            clo = 1.0
+            chi = (1 - πt) * ccdf(d, 0)
+            lm = log(hi)
         else
             lo = πt + (1 - πt) * cdf(d, y - 1)
             hi = πt + (1 - πt) * cdf(d, y)
+            clo = (1 - πt) * ccdf(d, y - 1)
+            chi = (1 - πt) * ccdf(d, y)
+            lm = log1p(-πt) + logpdf(d, y)
         end
-        u = lo + (hi - lo) * rand(rng)
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        R[t, s] = _ds_z(lo, hi, clo, chi, rand(rng); lmass = lm)
     end
     return R
 end
@@ -2953,6 +3021,9 @@ function residuals(fit::TweedieFit, Y::AbstractMatrix{<:Real};
         else
             u = tweedie_cdf(float(Y[t, s]), μ[t, s], φ, pw) # atom + positive-part CDF
         end
+        # Deliberately still capped at +-7.034 (#767): `tweedie_cdf` is a 200-point Simpson
+        # quadrature with no upper-tail CDF, so a tail below about 1e-12 is under its
+        # resolution and a larger |z| would be noise, not a more extreme residual.
         R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
     end
     return R
