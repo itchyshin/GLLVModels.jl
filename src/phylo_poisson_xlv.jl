@@ -105,6 +105,7 @@ function _phylo_poisson_xlv_mode(Y, beta, Lambda, mean_eta, Q, leaf_pos;
     eps = zeros(Float64, n, K)
     u = zeros(Float64, size(Q, 1))
     local H
+    mode_found = false
 
     for _ in 1:maxiter
         grad, H = _phylo_poisson_xlv_grad_hessian(Y, beta, Lambda, mean_eta, Q,
@@ -143,8 +144,14 @@ function _phylo_poisson_xlv_mode(Y, beta, Lambda, mean_eta, Q, leaf_pos;
             step *= 0.5
         end
         accepted || return nothing, nothing, nothing
-        step * max_delta < tol && break
+        if step * max_delta < tol
+            mode_found = true
+            break
+        end
     end
+    # `maxiter` exhausted: (eps, u) is not the mode, so a Laplace value built from it
+    # would depend on `maxiter`. Report it as a failed search, like a non-SPD Hessian.
+    mode_found || return nothing, nothing, nothing
 
     _, H = _phylo_poisson_xlv_grad_hessian(Y, beta, Lambda, mean_eta, Q,
                                            leaf_pos, eps, u)
