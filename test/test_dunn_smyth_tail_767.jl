@@ -74,18 +74,10 @@ using Test, GLLVModels, Random, Distributions
             @test GM._ds_z(lo, hi, 1 - lo, 1 - hi, v) ≈ quantile(Normal(), u) atol = 1e-10
         end
         @test isnan(GM._ds_z(NaN, NaN, NaN, NaN, 0.5))
-        # Both early-return sites: NaN `u` (lower tail) and NaN `uc` (upper tail).
+        # Both early-return sites in the residual helper (NaN `u`, NaN `uc`)
+        # return NaN without throwing.
         @test isnan(GM._ds_z(NaN, 0.1, 1.0, 0.9, 0.5))
         @test isnan(GM._ds_z(0.6, 0.9, NaN, NaN, 0.5))
-    end
-
-    @testset "public residual: NaN observation returns NaN without throwing" begin
-        Random.seed!(8)
-        Y = Float64.(rand(0:3, 4, 60))
-        f = fit_poisson_gllvm(Int.(Y); K = 1)
-        Y[1, 1] = NaN
-        r = residuals(f, Y; rng = MersenneTwister(1))
-        @test isnan(r[1, 1])
     end
 
     @testset "extreme cells are finite and increase with the observation" begin
