@@ -122,6 +122,56 @@ function _bridge_get(options, key::AbstractString, default)
     return default
 end
 
+# `options` must be a dictionary (or absent). `_bridge_get` returns the default for any
+# other container, which would silently drop every option the caller supplied.
+function _bridge_check_options_container(options)
+    (options === nothing || options isa AbstractDict) || throw(ArgumentError(
+        "bridge_fit: options must be a Dict (or nothing); got $(typeof(options)), " *
+        "whose entries would all be ignored"))
+    return nothing
+end
+
+# The univariate phylo-precision diagnostic hook reads only `y`, `phylo` and `family`.
+# Reject every other argument it would otherwise drop (the multivariate branch already
+# rejects the same set).
+function _bridge_reject_ignored_phylo_diagnostic(; d, X, X_lv, mask, N, trait_names,
+                                                 unit_names, options)
+    d == 1 || throw(ArgumentError(
+        "bridge_fit: the phylo precision diagnostic hook is univariate and ignores " *
+        "d (got d = $d); use phylo_model = \"multivariate\" for d != 1"))
+    for (nm, val) in (("X", X), ("X_lv", X_lv), ("mask", mask), ("N", N),
+                      ("trait_names", trait_names), ("unit_names", unit_names))
+        val === nothing || throw(ArgumentError(
+            "bridge_fit: the phylo precision diagnostic hook does not use $nm; " *
+            "it would be silently ignored"))
+    end
+    ci = lowercase(String(_bridge_get(options, "ci_method", "none")))
+    ci == "none" || throw(ArgumentError(
+        "bridge_fit: the phylo precision diagnostic hook does not compute " *
+        "confidence intervals (ci_method = \"$ci\" would be ignored)"))
+    _bridge_truthy(_bridge_get(options, "reml", false)) && throw(ArgumentError(
+        "bridge_fit: the phylo precision diagnostic hook does not use option " *
+        "\"reml\"; it would be silently ignored"))
+    for key in ("coef_fixed", "xcoef_fixed", "beta_fixed", "gamma_fixed")
+        _bridge_get(options, key, nothing) === nothing || throw(ArgumentError(
+            "bridge_fit: the phylo precision diagnostic hook does not use option " *
+            "\"$key\"; it would be silently ignored"))
+    end
+    return nothing
+end
+
+# `reml` is read only by the plain Gaussian no-X, no-X_lv route. Elsewhere it would be
+# dropped and an ML fit returned, so reject it.
+function _bridge_check_reml_route(options, family, X, X_lv, sources)
+    _bridge_truthy(_bridge_get(options, "reml", false)) || return nothing
+    ok = !(family isa AbstractVector) && X === nothing && X_lv === nothing &&
+         sources === nothing && _bridge_family_key(String(family)) == "gaussian"
+    ok || throw(ArgumentError(
+        "bridge_fit: reml = true is supported only for the one-part gaussian family " *
+        "without X, X_lv or sources; it would be silently ignored on this route"))
+    return nothing
+end
+
 # Truthy coercion for bridge option flags coming from R/JuliaCall, where a logical
 # may arrive as Bool `true`, integer `1`, or the string "true"/"TRUE".
 _bridge_truthy(v::Bool) = v
@@ -506,6 +556,7 @@ function bridge_fit(; y,
     (isfinite(d) && d == round(d)) || throw(ArgumentError(
         "bridge_fit: d must be an integer (got $d)"))
     d = Int(d)
+    _bridge_check_options_container(options)
     phylo_model = String(_bridge_get(options, "phylo_model", "diagnostic"))
     phylo_model in ("diagnostic", "multivariate") || throw(ArgumentError(
         "bridge_fit: phylo_model must be diagnostic or multivariate"))
@@ -520,9 +571,12 @@ function bridge_fit(; y,
             return _bridge_fit_precision_multivariate(y, phylo;
                 family=family, d=d, X=X, options=options)
         end
+        _bridge_reject_ignored_phylo_diagnostic(; d = d, X = X, X_lv = X_lv, mask = mask,
+            N = N, trait_names = trait_names, unit_names = unit_names, options = options)
         return _bridge_fit_phylo_precision(y, phylo; family = family, options = options)
     end
     family === nothing && throw(ArgumentError("bridge_fit: family is required"))
+    _bridge_check_reml_route(options, family, X, X_lv, sources)
     K = Int(d)
     K >= 0 || throw(ArgumentError("d must be a non-negative integer"))
     if sources !== nothing

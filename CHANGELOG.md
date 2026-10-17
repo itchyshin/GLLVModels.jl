@@ -14,6 +14,8 @@
   throws (`_laplace_logdet`), and `fit_truncated_nbinom2_gllvm(K = 0)` and `zi_marginal_loglik_laplace`
   at K = 0 no longer throw on any Julia version.
 
+- **`bridge_fit` rejects arguments it would silently drop (#741).** The phylo-precision diagnostic hook now throws `ArgumentError` for `d != 1`, `X`, `X_lv`, `mask`, `N`, `trait_names`, `unit_names`, `ci_method != "none"`, `reml = true` and `coef_fixed`-style options, as the multivariate branch already did. `reml = true` throws on every route except one-part Gaussian without `X`/`X_lv`/`sources` (it used to return an ML fit). A non-`Dict` `options` (e.g. a NamedTuple) throws instead of being ignored whole. Forcing test: `test/test_bridge_ignored_args.jl`. A per-route allow-list for unknown option keys is not included.
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight
