@@ -47,11 +47,22 @@ function _gamma504_routes(Y)
     )
 end
 
-# A draw no Gamma fit can evaluate: one zero cell (log-density -Inf), so each
-# fitter ends on its failure sentinel. Data-driven, not RNG-driven.
+# A draw outside the Gamma support: one zero cell. Before #730 each fitter ended on its
+# failure sentinel (log-density -Inf); every route now refuses it up front with an
+# ArgumentError. Data-driven, not RNG-driven.
 function _gamma504_bad(Y)
     B = copy(Y)
     B[1, 1] = 0.0
+    return B
+end
+
+# A draw inside the support that no Gamma fit can evaluate: one species scaled by 1e20.
+# Its warm-start intercept (about 47) is far above the η clamp (30), where the #869 guard
+# makes the objective the failure sentinel, so each route ends at loglik = -Inf,
+# converged = false. Data-driven, not RNG-driven.
+function _gamma504_failing(Y)
+    B = copy(Y)
+    B[1, :] .*= 1e20
     return B
 end
 
@@ -73,17 +84,24 @@ end
 
     @testset "a failed refit is rejected ($route)" for (route, fit, ad, direct, pack) in routes
         Y_bad = _gamma504_bad(Y)
-        fb_bad = direct(Y_bad)
-        @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
-        raw_bad = ad.refit(Y_bad)
         m = length(ad.θ)
+        # #730: the out-of-support draw is refused before fitting; the adapter's own
+        # try/catch turns that into `nothing`, which the bootstrap screen rejects.
+        @test_throws ArgumentError direct(Y_bad)
+        @test ad.refit(Y_bad) === nothing
+        @test !GM._bootstrap_refit_ok(ad.refit(Y_bad), m)[2]
+        # A genuine failure on in-support data still reaches the adapter's verdict.
+        Y_fail = _gamma504_failing(Y)
+        fb_bad = direct(Y_fail)
+        @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
+        raw_bad = ad.refit(Y_fail)
         @test raw_bad isa NamedTuple && raw_bad.converged == false
         @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]    # the old contract accepts it
         @test !GM._bootstrap_refit_ok(raw_bad, m)[2]     # the migrated one does not
     end
 
     @testset "end to end: n_converged counts only converged replicates ($route)" for (route, fit, ad, direct, pack) in routes
-        Y_bad = _gamma504_bad(Y)
+        Y_bad = _gamma504_failing(Y)
         m = length(ad.θ)
         ad_mixed = GM._FamilyCI(ad.θ, ad.nll, ad.names, ad.kinds,
                                 rng -> rand(rng) < 0.5 ? Y : Y_bad, ad.refit)
