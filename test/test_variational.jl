@@ -80,3 +80,35 @@ using GLLVModels, Test, Random, Distributions, Statistics
         @test fit.loglik ≥ ll0 - 1e-3
     end
 end
+
+@testset "VA fitters refuse a non-canonical link instead of ignoring it (#760)" begin
+    # The ELBO of each VA fitter is written for one link (logit: binomial, beta; log: gamma,
+    # NB, exponential, delta-gamma). Any other link used to be accepted, ignored, and stored on
+    # the fit. The guard runs before the data are touched, so a tiny matrix is enough.
+    Yi = fill(1, 2, 5)
+    Yr = fill(0.5, 2, 5)
+    cases = [
+        ("fit_binomial_gllvm_va",    l -> fit_binomial_gllvm_va(Yi; K = 1, link = l),
+         GLLVModels.LogitLink, GLLVModels.ProbitLink()),
+        ("fit_beta_gllvm_va",        l -> fit_beta_gllvm_va(Yr; K = 1, link = l),
+         GLLVModels.LogitLink, GLLVModels.ProbitLink()),
+        ("fit_gamma_gllvm_va",       l -> fit_gamma_gllvm_va(Yr; K = 1, link = l),
+         GLLVModels.LogLink, GLLVModels.IdentityLink()),
+        ("fit_nb_gllvm_va",          l -> fit_nb_gllvm_va(Yi; K = 1, link = l),
+         GLLVModels.LogLink, GLLVModels.IdentityLink()),
+        ("fit_exponential_gllvm_va", l -> fit_exponential_gllvm_va(Yr; K = 1, link = l),
+         GLLVModels.LogLink, GLLVModels.CLogLogLink()),
+        ("fit_delta_gamma_gllvm_va", l -> fit_delta_gamma_gllvm_va(Yr; K = 1, link = l),
+         GLLVModels.LogLink, GLLVModels.IdentityLink()),
+    ]
+    for (name, fit, canonical, other) in cases
+        err = try; fit(other); nothing; catch e; e; end
+        @test err isa ArgumentError
+        err isa ArgumentError && @test occursin(name, err.msg) &&
+            occursin(string(nameof(canonical)), err.msg) &&
+            occursin(string(nameof(typeof(other))), err.msg)
+    end
+    # the canonical link itself passes the guard
+    @test GLLVModels._va_require_canonical_link("f", GLLVModels.LogitLink(), GLLVModels.LogitLink()) === nothing
+    @test GLLVModels._va_require_canonical_link("f", GLLVModels.LogLink(), GLLVModels.LogLink()) === nothing
+end

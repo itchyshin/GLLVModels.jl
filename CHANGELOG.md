@@ -2,6 +2,12 @@
 
 ## Development
 
+- **Test: the six variational (VA) fitters refuse a non-canonical link (refs #760).**
+  `fit_binomial_gllvm_va`, `fit_beta_gllvm_va`, `fit_gamma_gllvm_va`, `fit_nb_gllvm_va`,
+  `fit_exponential_gllvm_va` and `fit_delta_gamma_gllvm_va` already throw `ArgumentError` for any
+  link other than the one their ELBO implements (guard added in #708); `test/test_variational.jl`
+  now covers all six. Test only, no source change.
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight
