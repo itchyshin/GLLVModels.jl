@@ -424,19 +424,8 @@ _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
 # species legitimately heads to the lower cap. Only cells the objective reads count: an
 # offset may be NaN or ±Inf at an unobserved cell (`mask = false`; see
 # `_check_offset_observed`), and a masked +Inf would otherwise make every θ the sentinel.
-function _nb_eta_above_clamp(β::AbstractVector, offset; mask = nothing)
-    offset === nothing && return any(>(_ETA_CLAMP), β)
-    @inbounds for t in eachindex(β)
-        hi = -Inf
-        for s in axes(offset, 2)
-            (mask === nothing || mask[t, s]) || continue
-            o = offset[t, s]
-            isfinite(o) && (hi = max(hi, o))
-        end
-        β[t] + hi > _ETA_CLAMP && return true
-    end
-    return false
-end
+_nb_eta_above_clamp(β::AbstractVector, offset; mask = nothing) =
+    _eta_above_clamp(β, offset; mask = mask)   # shared helper, families/laplace.jl
 
 # NB2 grouped fits can stall with a group's log r out at the Poisson boundary, where
 # the likelihood is nearly flat, well below a better point (#477). From the returned
@@ -709,9 +698,24 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
-    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
-    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1)
-    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1)
+    # Exact gradient under LogLink: the covariate fitter's (`_nb_grouped_cov_negll_grad`)
+    # with no covariates (q = 0) and this fit's offset; θ has the same layout. The
+    # finite-difference gradient cost 2·(p + rr + G) Laplace passes per step and made
+    # per-species fits take minutes at p = 30 (#552: 494 s against tmb's 7 s). Only the
+    # gradient changes: the optimisers stay as they were (L-BFGS, then the restart and
+    # the BFGS ridge polish). Dense BFGS from the start, as the covariate fitter uses,
+    # picks a different local maximum on test/fixtures/nb2_restart_seed52.toml
+    # (-833.6085 against -833.1814). Other links keep the finite-difference gradient.
+    X0 = zeros(p, n, 0)
+    grad = link isa LogLink ?
+        (θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
+                                         hessian, newton_maxiter, newton_tol;
+                                         offset = offset)) : nothing
+    res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
+                             _optimize_with_analytic(negll, grad, θ0, ls, opts)
+    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad)
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
+                                                     grad = grad)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
@@ -795,11 +799,12 @@ function getLV(fit::NBGroupedCovFit, Y::AbstractMatrix{<:Integer},
 end
 
 # −∇θ of `fit_nb_gllvm_grouped_cov`'s objective, θ = [β; γ_free; pack(Λ); log r_1..r_G],
+# (with q = 0 and an `offset`, also of `fit_nb_gllvm_grouped`'s objective),
 # or `nothing` (finite-difference fallback) when a site's mode search fails or the AD
 # pass errors. Mode: the objective's own chain (`_nb_grouped_site_mode`); log-det weight:
 # `_nb_grouped_laplace_weight` at the objective's `hessian`.
 function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, msk,
-                                    hessian, maxiter, tol)
+                                    hessian, maxiter, tol; offset = nothing)
     try
         n = size(Yc, 2)
         N1 = ones(Int, p)
@@ -807,7 +812,13 @@ function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, m
         Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
         rg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         fams = [NegativeBinomial(float(rg[gidx[t]]), 0.5) for t in 1:p]
+        # An offset may be NaN or ±Inf at an unobserved cell (the engine never reads it).
+        # Zero those cells so they cannot put a NaN into the AD pass (#552 review).
+        if offset !== nothing && msk !== nothing
+            offset = ifelse.(msk, offset, 0.0)
+        end
         O = _build_offset(X_fit, γ)
+        offset === nothing || (O = O .+ offset)
         ẑs = Vector{Vector{Float64}}(undef, n)
         for s in 1:n
             mi = msk === nothing ? nothing : view(msk, :, s)
@@ -823,6 +834,7 @@ function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, m
             rgd = exp.(θd[(p + q + rr + 1):(p + q + rr + G)])
             famsd = [NegativeBinomial(rgd[gidx[t]], 0.5) for t in 1:p]
             Od = _build_offset(X_fit, γd)
+            offset === nothing || (Od = Od .+ offset)
             acc = zero(eltype(θd))
             for s in 1:n
                 y = view(Yc, :, s)
@@ -1124,7 +1136,7 @@ function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::A
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -1706,7 +1718,7 @@ function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -1872,6 +1884,7 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         αg = exp.(θ[(p + rr + 1):(p + rr + G)])
         αvec = [αg[gidx[t]] for t in 1:p]
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -gamma_grouped_marginal_loglik_laplace(Yc, Λ, β, αvec; link = link, mask = msk,
                                                    offset = offset, hessian = hessian,
@@ -1892,6 +1905,7 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     boundary = _dispersion_group_lower_boundary(α̂g)
     any(boundary) && @warn "Gamma grouped-dispersion fit reached the per-group lower boundary (α below 1e-6) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_gamma_gllvm_grouped")
     return GammaGroupedFit(β̂, Λ̂, α̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
                            boundary, _stored_offset(offset))
 end
@@ -2018,6 +2032,7 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
         αg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         αvec = [αg[gidx[t]] for t in 1:p]
         O = _build_offset(X_fit, γ)
+        _eta_cap_guarded(link) && _eta_above_clamp(β, O; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -gamma_grouped_marginal_loglik_laplace(Yc, Λ, β, αvec; link = link, mask = msk,
                                                    offset = O, hessian = hessian,
@@ -2040,6 +2055,8 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     boundary = _dispersion_group_lower_boundary(α̂g)
     any(boundary) && @warn "Gamma grouped-cov fit reached the per-group lower boundary (α below 1e-6) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, link, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
+                            caller = "fit_gamma_gllvm_grouped_cov")
     return GammaGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, α̂g, gidx, link,
                               loglik, conv && !any(boundary), iters, hessian, boundary)
 end
@@ -2199,7 +2216,7 @@ function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Ab
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -2383,6 +2400,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φg = exp.(θ[(p + rr + 1):(p + rr + G)])
         φvec = [φg[gidx[t]] for t in 1:p]
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -nb1_grouped_marginal_loglik_laplace(Yc, Λ, β, φvec; link = link, mask = msk,
                                                  offset = offset, hessian = hessian,
@@ -2412,6 +2430,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     any(lowb) && @warn "NB1 grouped-dispersion fit has φ above 1e6 for group(s) $(findall(lowb)); that overdispersion is numerically flat and not identified from this data; converged is false for this fit." maxlog=1
     any(<(1e-6), φ̂g) && @warn "NB1 grouped-dispersion fit has φ below 1e-6 for group(s) $(findall(<(1e-6), φ̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
     loglik, conv, iters = _fit_verdict(nll, conv0, iters0)   # conv0 includes the #485 gradient test
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm_grouped")
     return NB1GroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
                          boundary, _stored_offset(offset))
 end
@@ -2539,6 +2558,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
         φg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         φvec = [φg[gidx[t]] for t in 1:p]
         O = _build_offset(X_fit, γ)
+        _eta_cap_guarded(link) && _eta_above_clamp(β, O; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -nb1_grouped_marginal_loglik_laplace(Yc, Λ, β, φvec; link = link, mask = msk,
                                                  offset = O, hessian = hessian,
@@ -2569,6 +2589,8 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     any(lowb) && @warn "NB1 grouped-cov fit has φ above 1e6 for group(s) $(findall(lowb)); that overdispersion is numerically flat and not identified from this data; converged is false for this fit." maxlog=1
     any(<(1e-6), φ̂g) && @warn "NB1 grouped-cov fit has φ below 1e-6 for group(s) $(findall(<(1e-6), φ̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
     loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
+    conv = _eta_cap_verdict(conv, link, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
+                            caller = "fit_nb1_gllvm_grouped_cov")
     return NB1GroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
                             loglik, conv && !any(lowb), iters, hessian, boundary)
 end
@@ -2660,7 +2682,7 @@ function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -2909,6 +2931,7 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φg = exp.(θ[(p + rr + 1):(p + rr + G)])
         φvec = [φg[gidx[t]] for t in 1:p]
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return _TWEEDIE_FAIL_PENALTY   # #869: η-clamp plateau
         ξ = spec.nfree == 0 ? Float64[] : @view θ[(p + rr + G + 1):end]
         pw = if spec.nfree == 0
             spec.values
@@ -2954,6 +2977,7 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
         @warn "fit_tweedie_gllvm_grouped: the power ran to the boundary of (1, 2) \
                (p̂ = $(p̂), φ̂ = $(φ̂g)); the fit is flagged as not converged."
     end
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_tweedie_gllvm_grouped")
     if spec.mode === :species && !spec.fixed
         return TweediePerTraitPowerFit(β̂, Λ̂, φ̂g, collect(p̂), gidx, link, loglik, conv,
                                        Optim.iterations(res), hessian)

@@ -275,6 +275,7 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -marginal_loglik_laplace(CensoredPoisson(), Yc, Nc, Λ, β, link;
                                      mask = msk, offset = offset,
@@ -290,6 +291,8 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
-    return CensoredPoissonFit(β̂, Λ̂, link, _fit_verdict(res)...,
-                              collect(Float64, θ̂))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk,
+                            caller = "fit_censored_poisson_gllvm")   # #869
+    return CensoredPoissonFit(β̂, Λ̂, link, ll, conv, iters, collect(Float64, θ̂))
 end

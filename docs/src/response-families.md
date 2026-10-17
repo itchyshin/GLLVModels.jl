@@ -1258,12 +1258,15 @@ its [`ZiFit`](@ref) result yet.
 ## Extractors
 
 The same post-fit extractors (`communality`, `correlation`, `sigma_y_site`, …)
-work for all implemented families:
+work for all implemented families. Only the Gaussian fit supports the
+one-argument `communality(fit)` / `correlation(fit)` / `sigma_y_site(fit)`; the
+non-Gaussian fits take the response matrix too, as `(fit, Y)`, and `getLV` takes
+`Y` for every response family on this page:
 
 ```julia
-communality(fit)   # shared-variance fraction per response
-correlation(fit)   # cross-response correlation matrix
-getLV(fit)         # latent variable scores (sites × K)
+communality(fit, Y)   # shared-variance fraction per response
+correlation(fit, Y)   # cross-response correlation matrix
+getLV(fit, Y)         # latent variable scores (sites × K)
 ```
 
 See [Working with a fit](working-with-a-fit.md) for the full extractor reference.

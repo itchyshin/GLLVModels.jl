@@ -210,7 +210,7 @@ function ordinal_loglik_site(y::AbstractVector, Λ::AbstractMatrix, τ::Abstract
         end
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -327,7 +327,7 @@ function ordinal_loglik_site_pertrait(y::AbstractVector, Λ::AbstractMatrix,
         end
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 function ordinal_marginal_loglik_laplace_pertrait(Y::AbstractMatrix,

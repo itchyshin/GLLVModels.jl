@@ -332,6 +332,7 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         function negll(θ)
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+            _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
             v = try
                 -marginal_loglik_laplace(GeneralizedPoisson1(α), Yc, N1, Λ, β, link;
                                          hessian = hessian,
@@ -391,6 +392,8 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
             Λ = rstar.Λ, nll = rstar.nll, converged = rstar.converged, iters = rstar.iters))
     end
 
+    conv = _eta_cap_verdict(fit_star.converged, link, fit_star.β, offset; mask = msk,
+                            caller = "fit_gp1_gllvm")   # #869
     return GP1Fit(fit_star.β, fit_star.Λ, fit_star.α, link, -fit_star.nll,
-                  fit_star.converged, fit_star.iters, hessian, _stored_offset(offset))
+                  conv, fit_star.iters, hessian, _stored_offset(offset))
 end
