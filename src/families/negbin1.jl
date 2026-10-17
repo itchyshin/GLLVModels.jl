@@ -238,6 +238,7 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φ = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -nb1_marginal_loglik_laplace(Yc, Λ, β, φ; link = link, mask = msk, offset = offset,
                                          hessian = hessian,
@@ -254,5 +255,7 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    return NB1Fit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., hessian, _stored_offset(offset))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm")
+    return NB1Fit(β̂, Λ̂, φ̂, link, ll, conv, iters, hessian, _stored_offset(offset))
 end

@@ -5,10 +5,14 @@
 - Copied `test/test_nb_grouped_mollusc_default_784.jl` from `cursor/red-proof-784-914-43af`
   (PR #931, head `4291f22f`) and added one `_shard_include` at the end of `test/runtests.jl`
   (shard 4). Fixture `test/fixtures/mollusc15.csv` was already byte-identical
-  (`3ce2a4933`). No `src/` change.
+  (`3ce2a4933`).
 - Call: `fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)` with no
   `routes` keyword; assert `logLik >= -3121.17`. Failed on base in CI run `38970253410`
   (`-3129.53 >= -3121.17`); passed 3/3 locally on `a45b2ae25` (29m22s).
+- `main` moved after the first push (`d1fc1b3c`); PR was CONFLICTING so `pull_request` CI
+  did not start. Merged `origin/main` into this branch. Conflicts: `CHANGELOG.md` (kept
+  both NEWS lines), `src/families/grouped_dispersion.jl` (kept #784 `:both`/`:exact` and
+  main's #552 exact-gradient L-BFGS). `test/runtests.jl` auto-merged.
 - PR body: `Closes #784` plus current head SHA.
 
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)

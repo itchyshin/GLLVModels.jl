@@ -10,6 +10,18 @@
   fit stopped at logLik −3129.5314 with `converged = true`, 8.37 below gllvmTMB; the fit now
   reaches −3121.1644, gllvmTMB's optimum. Fits where L-BFGS already ends higher are unchanged.
 
+- **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
+  (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
+  hurdle, delta, `fit_gllvm_cov`, grouped Gamma/NB1/Tweedie) now return the failure sentinel when an
+  intercept plus its additive term is above the η clamp (30), and report `converged = false` for a
+  fit that ends at the cap. Before, such a fit could report `converged = true` at a clamped, meaningless
+  log-likelihood. **Behaviour change:** an explicit `β_init` above the cap, or data on a scale where
+  the intercept belongs past it (counts around 1e14), now ends at `loglik = -Inf, converged = false`
+  (some fitters used to backtrack off a start at 35). Rescale the response or the offset, or start inside
+  the cap. K = 0 fits no longer end at `loglik = -Inf` on Julia 1.12, where `logdet` of a 0×0 matrix
+  throws (`_laplace_logdet`), and `fit_truncated_nbinom2_gllvm(K = 0)` and `zi_marginal_loglik_laplace`
+  at K = 0 no longer throw on any Julia version.
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight

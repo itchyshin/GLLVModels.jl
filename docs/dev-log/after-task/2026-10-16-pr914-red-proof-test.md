@@ -12,7 +12,13 @@ merge, do not touch `main`.
 `a45b2ae25` was already an ancestor of #914 head `5bb2aa23`; no cherry-pick. Copied
 `test/test_nb_grouped_mollusc_default_784.jl` from `cursor/red-proof-784-914-43af`
 (`4291f22f`) and added its `_shard_include` at the end of `test/runtests.jl` (shard
-4). `test/fixtures/mollusc15.csv` was already byte-identical. No `src/` change.
+4). `test/fixtures/mollusc15.csv` was already byte-identical.
+
+The first push (`3090735d7`) left the PR CONFLICTING against `main` `d1fc1b3c`
+(#552 exact-gradient L-BFGS and #869 η-clamp), so `pull_request` CI did not start.
+Merged `origin/main` into this branch. In `fit_nb_gllvm_grouped`, `:lbfgs` keeps
+main's exact-gradient L-BFGS; `:exact` is the dense-BFGS second start; `:both`
+runs both and keeps the better.
 
 The new test calls `fit_gllvm` with no `routes` keyword and asserts
 `logLik >= -3121.17`. On `main` `033d4e1` that is finite-difference L-BFGS and
@@ -28,7 +34,9 @@ assertion.
 ## Files Changed
 
 - `test/test_nb_grouped_mollusc_default_784.jl` (new; from #931)
-- `test/runtests.jl` (one `_shard_include`)
+- `test/runtests.jl` (one `_shard_include`; auto-merged with main)
+- `src/families/grouped_dispersion.jl` (conflict resolution: #784 routes + #552 L-BFGS)
+- `CHANGELOG.md` (kept both NEWS lines)
 - `docs/dev-log/check-log.md`
 - `docs/dev-log/after-task/2026-10-16-pr914-red-proof-test.md`
 
@@ -88,9 +96,12 @@ fix branch so the same assertion can go green.
 ## Remaining Risks
 
 - Shard 4 wall time: the new test added ~11 min on the failing base run and ~29
-  min on the local pass. GitHub's default job timeout is 6 h, so this should
-  still finish, but shard 4 becomes the long pole.
-- #867 / #873 also edit `fit_nb_gllvm_grouped`; this slice does not combine them.
+  min on the local pass against `a45b2ae25` (finite-difference L-BFGS). After
+  merging #552, L-BFGS on the log link uses the exact gradient, so `:both` should
+  be cheaper; still a long pole if it is not.
+- Combining `:both` with #552's exact-gradient L-BFGS is a local-search
+  composition, not a new likelihood. The seed-52 fixture in #552 notes dense BFGS
+  and L-BFGS can land on different maxima; `:both` is supposed to keep the better.
 
 ## Known Limitations
 

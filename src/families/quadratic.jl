@@ -85,7 +85,7 @@ function quadratic_loglik_site(family, y::AbstractVector, n::AbstractVector,
     @inbounds for t in 1:p
         ℓ += _glm_logpdf(family, μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
