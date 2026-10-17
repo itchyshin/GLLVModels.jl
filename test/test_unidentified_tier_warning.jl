@@ -7,11 +7,14 @@ using GLLVModels, Test, Random
     p, K, n = 4, 1, 60
     Λ = reshape([0.7, 0.5, 0.3, -0.2], p, K)
     y = Λ * randn(K, n) + 0.5 * randn(p, n)
-    reset! = GLLVModels._reset_unidentified_warnings!
+    # On base this helper does not exist; skip the reset so the forcing test
+    # fails on the missing warning (assertion), not UndefVarError.
+    reset! = isdefined(GLLVModels, :_reset_unidentified_warnings!) ?
+        GLLVModels._reset_unidentified_warnings! : () -> nothing
 
     @testset "has_diag = true warns about σ²_B / σ²_W (#792)" begin
         reset!()
-        @test_logs (:warn, r"has_diag = true with one observation per unit") min_level = Base.CoreLogging.Warn fit_gaussian_gllvm(y; K = K, has_diag = true)
+        @test_logs (:warn, r"not identified") min_level = Base.CoreLogging.Warn fit_gaussian_gllvm(y; K = K, has_diag = true)
     end
 
     @testset "K_W > 0 warns that tier-split quantities are not identified (#702)" begin

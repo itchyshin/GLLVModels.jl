@@ -122,7 +122,9 @@ Optional extensions:
   how `Λ` and `Λ_W` share that covariance depends on the starting values, so
   tier-scoped summaries (`communality`, `proportions`, `extract_Sigma` at
   `level = :unit` / `:unit_obs`, `getLV`) and Wald SEs of single `Λ` / `Λ_W`
-  entries should not be interpreted. To separate between-unit from
+  entries should not be interpreted. `fit_gaussian_gllvm` warns once per Julia
+  session when `has_diag = true` or `K_W > 0` (a second unidentified fit in
+  the same session is silent). To separate between-unit from
   within-unit variation, use `fit_twolevel_gaussian` on repeated
   observations per unit.
 - J3 phylogenetic: `K_phy::Integer = 0` (Λ_phy rank),
@@ -249,7 +251,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         "not positive definite; do not interpret the σ²_B / σ²_W split or their " *
         "standard errors. The total Σ_y and the log-likelihood are unaffected. For " *
         "a between-unit / within-unit decomposition use fit_twolevel_gaussian on " *
-        "repeated observations per unit (refs #792).")
+        "repeated observations per unit (refs #792). Issued once per Julia session.")
     K_W > 0 && _warn_unidentified_once(:K_W,
         "K_W > 0: the W-tier loadings carry the full cross-trait covariance, so the " *
         "unit (B) and within-unit (W) tiers are not separately identified and the " *
@@ -257,7 +259,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         "communality or proportions, extract_Sigma at :unit / :unit_obs, getLV, the " *
         "kernel-separability verdict, or Wald SEs of single Λ / Λ_W entries. The " *
         "total Σ_y and the log-likelihood are unaffected. See the W-tier note in " *
-        "?fit_gaussian_gllvm (refs #702).")
+        "?fit_gaussian_gllvm (refs #702). Issued once per Julia session.")
 
     # Validate X dims if present, then drop fixed-zero columns for the optimiser.
     q_full = 0
