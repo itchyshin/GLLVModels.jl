@@ -796,6 +796,13 @@ positive definite (Cholesky fails, including an indefinite Hessian whose
 inverse still has a positive diagonal), `vcov` is all NaN. A positive
 definite Hessian with a non-finite or non-positive variance has NaN rows
 and columns for those entries. Nothing is regularised.
+
+On a Gaussian fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`,
+the pinned loadings are not parameters: the matrix is the inverse of the free
+parameters' information (R's `sd_report\$cov.fixed`), with zero rows and columns
+for the pinned loadings, and the positive-definiteness test is that of the free
+block. When that block is not positive definite, `vcov` is all NaN, the pinned
+rows and columns included.
 """
 function StatsAPI.vcov(fit::GllvmFit; y = nothing, kwargs...)
     y_mat = y !== nothing ? y : (hasproperty(fit, :y) ? fit.y : nothing)
