@@ -185,12 +185,14 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
             Optim.Options(iterations=iters,g_tol=g_tol,
                 x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,0.0));autodiff=:forward)
         # An x or f stop is not a stationary point (#735): continue on the gradient test alone,
-        # restarting L-BFGS from the stop, and report converged only if the gradient is met.
+        # restarting L-BFGS from the stop with a fresh iteration budget each time. Sharing
+        # the leftover count skipped the polish whenever the first run used the full
+        # `iterations` cap, which is how existing masked tests reported converged = false.
         total_iters=Optim.iterations(res)
         for _ in 1:_MASKED_GAUSSIAN_POLISH_RESTARTS
-            (_masked_gaussian_g_met(res,g_tol) || total_iters>=iters) && break
+            _masked_gaussian_g_met(res,g_tol) && break
             nxt=Optim.optimize(nll,Optim.minimizer(res),Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3)),
-                Optim.Options(iterations=iters-total_iters,g_tol=g_tol,x_abstol=0.0,f_reltol=0.0);autodiff=:forward)
+                Optim.Options(iterations=iters,g_tol=g_tol,x_abstol=0.0,f_reltol=0.0);autodiff=:forward)
             total_iters+=Optim.iterations(nxt)
             Optim.minimum(nxt)<=Optim.minimum(res) || break
             res=nxt
