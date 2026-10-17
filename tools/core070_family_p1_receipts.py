@@ -186,8 +186,13 @@ NOT_EXECUTED = {
         "JuliaCall. Not in the frozen three-case bridge sub-contract (docs/dev-log/core070/public-bridge-required-"
         "cases.json covers 02, 05 and 07 only), so the P1 bridge twin (tools/core070_family_bridge_p1.R) does not "
         "run it. Not run at P1 here.")
-       for t in ("00-IDENTITY", "11-LOG")},
+       for t in ("00-IDENTITY",)},
 }
+FAMILY11_BOUNDARY_CASE = "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE"
+FAMILY11_BOUNDARY_RAW = f"{REC_REL}/first-seven-boundary/r-public-bridge.json"
+FAMILY11_BOUNDARY_RECEIPT = f"{REC_REL}/first-seven-boundary/{FAMILY11_BOUNDARY_CASE}.json"
+FAMILY11_DATA_SHA = "ecbcf9f501c7e618131f2c3f1f0d213bb0e92364a72c0519095c52ef30930948"
+FAMILY11_GLVMODELS_COMMIT = "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a"
 
 # What each harness cell fits: toy fixtures, likelihood-level agreement.
 MEASURES = {
@@ -728,6 +733,134 @@ def bridge_case(cid):
     return verdict, body, entries
 
 
+def validate_family11_boundary(raw):
+    """Validate boundary evidence only; never turn absence or a failed probe into refusal."""
+    def need(ok, message):
+        if not ok:
+            raise SystemExit(message)
+    need(raw.get("schema") == "core070-family11-r-boundary/v1", "FAMILY-11 boundary: wrong raw schema")
+    need(raw.get("case_id") == FAMILY11_BOUNDARY_CASE, "FAMILY-11 boundary: wrong case id")
+    need(raw.get("pin") == "P1" and raw.get("reference_commit") == P1_SHA,
+         "FAMILY-11 boundary: raw probe is not pinned at P1")
+    problem = core070_source_pin_check.source_pin_problem(
+        {"gllvmTMB_version": raw.get("gllvmtmb_version"), "source_pin": raw.get("source_pin")}, "P1")
+    need(problem is None, f"FAMILY-11 boundary: {problem or ''}")
+    expected_ns = PINS["P1"]["namespace_sha256"]
+    need(raw.get("namespace_sha256") == expected_ns, "FAMILY-11 boundary: installed NAMESPACE hash is not P1")
+    build = load(ROOT / ORACLE_BUILD_TOTORO)
+    need(raw["source_pin"].get("installed_tree_sha256") == build["installed_tree_sha256"] and
+         raw["source_pin"].get("marker_sha256") == build["marker_sha256"],
+         "FAMILY-11 boundary: loaded installed build is not the registered Totoro build")
+    fixture = raw.get("fixture") or {}
+    need((fixture.get("p"), fixture.get("n"), fixture.get("K"), fixture.get("data_sha256")) ==
+         (5, 120, 1, FAMILY11_DATA_SHA), "FAMILY-11 boundary: recreated fixture shape/hash mismatch")
+    capture = raw.get("capture") or {}
+    engine_commit = str(capture.get("glvmodels_commit", ""))
+    need(engine_commit.startswith(FAMILY11_GLVMODELS_COMMIT),
+         "FAMILY-11 boundary: GLLVModels source commit is not the registered 4b78fa012 source")
+    run_commit_path = f"{batch_rel(BRIDGE_BATCH)}/run-commit.json"
+    need((ROOT / run_commit_path).is_file(), "FAMILY-11 boundary: existing bridge-p1 run-commit receipt is missing")
+    need(engine_commit == load(ROOT / run_commit_path).get("glvmodels_commit"),
+         "FAMILY-11 boundary: probe source commit differs from the pinned bridge batch commit")
+    need(capture.get("glvmodels_src_tree") == git("rev-parse", f"{engine_commit}:src").stdout.strip(),
+         "FAMILY-11 boundary: executed source tree differs from the registered commit")
+    need(all(capture.get(k) for k in ("r_version", "julia_version", "glvmodels_path")),
+         "FAMILY-11 boundary: R/Julia source runtime provenance is incomplete")
+    routes = raw.get("routes") or {}
+    need(set(routes) == {"matrix", "formula"}, "FAMILY-11 boundary: expected both public routes")
+    for route in ("matrix", "formula"):
+        record = routes[route]
+        message = str(record.get("message", ""))
+        need(record.get("refused") is True and "GJL-GATE-FAMILY" in message,
+             f"FAMILY-11 boundary: {route} did not capture GJL-GATE-FAMILY refusal")
+        need("error" in record.get("error_class", []),
+             f"FAMILY-11 boundary: {route} did not record an R error class")
+        need(record.get("call"), f"FAMILY-11 boundary: {route} call string is absent")
+    calls = [routes[x]["call"] for x in ("matrix", "formula")]
+    need("truncated_nbinom2()" in calls[0] and "num.lv = 1" in calls[0] and
+         "truncated_nbinom2()" in calls[1] and "d = 1" in calls[1] and "unique = FALSE" in calls[1] and
+         "reversed long" in calls[1], "FAMILY-11 boundary: recorded calls do not match the fixture contract")
+    return fixture, capture, routes, calls, expected_ns, engine_commit
+
+
+def family11_boundary_case():
+    """Derive the public R boundary receipt from a live, pinned, no-fit probe."""
+    path = ROOT / FAMILY11_BOUNDARY_RAW
+    if not path.is_file():
+        raise SystemExit(f"{FAMILY11_BOUNDARY_CASE}: raw R probe is missing: {FAMILY11_BOUNDARY_RAW}")
+    raw = load(path)
+    fixture, capture, routes, calls, expected_ns, engine_commit = validate_family11_boundary(raw)
+    run_commit_path = f"{batch_rel(BRIDGE_BATCH)}/run-commit.json"
+    body = {
+        "batch": "tools/core070_family_bridge_p1.R --family11-boundary (no fit; R public bridge gate capture)",
+        "measures": ("Whether both pinned P1 public R bridge routes refuse truncated NB2 at GJL-GATE-FAMILY "
+                     "before any numeric fit; fixture recreated from the registered seed-58 recipe."),
+        "r_calls": calls,
+        "data_sha256": FAMILY11_DATA_SHA,
+        "fixture": fixture,
+        "routes": routes,
+        "r_version": capture.get("r_version"),
+        "julia_version": capture.get("julia_version"),
+        "gllvmodels_path": capture.get("glvmodels_path"),
+        "gllvmodels_source_commit": engine_commit,
+        "gllvmtmb_version": raw["gllvmtmb_version"],
+        "source_pin": raw["source_pin"],
+        "namespace_sha256": expected_ns,
+        "read_from": read_from(FAMILY11_BOUNDARY_RAW, run_commit_path, BRIDGE_TOOL, "tools/core070_source_pin.R",
+                                "tools/core070_oracle_pins.toml", "test/parity/test_truncated_nbinom2_parity.jl"),
+        "raw": [FAMILY11_BOUNDARY_RAW],
+    }
+    return "r_public_bridge_boundary", "R_BOUNDARY_UNCHANGED", body, None
+
+
+def family11_boundary_self_test():
+    """Positive synthetic fixture plus fail-closed mutations; no R/Julia fit runs."""
+    pin = PINS["P1"]
+    good = {"schema": "core070-family11-r-boundary/v1", "case_id": FAMILY11_BOUNDARY_CASE,
+            "pin": "P1", "reference_commit": P1_SHA, "gllvmtmb_version": pin["version"],
+            "source_pin": {k: pin[k] for k in ("reference_commit", "source_tree_sha256", "archive_sha256",
+                                                 "namespace_sha256")} | {"version": pin["version"], "installed_tree_sha256": load(ROOT / ORACLE_BUILD_TOTORO)["installed_tree_sha256"], "marker_sha256": load(ROOT / ORACLE_BUILD_TOTORO)["marker_sha256"]},
+            "namespace_sha256": pin["namespace_sha256"],
+            "fixture": {"p": 5, "n": 120, "K": 1, "data_sha256": FAMILY11_DATA_SHA},
+            "capture": {"glvmodels_commit": FAMILY11_GLVMODELS_COMMIT, "glvmodels_src_tree": git("rev-parse", f"{FAMILY11_GLVMODELS_COMMIT}:src").stdout.strip(), "r_version": "R 4.x",
+                        "julia_version": "1.10.12", "glvmodels_path": "/fixture/GLLVModels.jl"},
+            "routes": {r: {"refused": True, "error_class": ["simpleError", "error", "condition"],
+                           "message": "[GJL-GATE-FAMILY] unsupported family",
+                       "call": ("gllvm_julia_fit(family=truncated_nbinom2(), num.lv = 1)" if r == "matrix"
+                               else "gllvmTMB(data = reversed long, family=truncated_nbinom2(), d = 1, unique = FALSE)")}
+                       for r in ("matrix", "formula")}}
+    assert validate_family11_boundary(good), "positive synthetic P1 boundary fixture rejected"
+    bad = json.loads(json.dumps(good)); bad["routes"]["matrix"]["refused"] = False
+    try: validate_family11_boundary(bad)
+    except SystemExit: pass
+    else: raise AssertionError("NOT_EXECUTED/non-refusal negative control passed")
+    bad = json.loads(json.dumps(good)); bad["reference_commit"] = "0" * 40
+    try: validate_family11_boundary(bad)
+    except SystemExit: pass
+    else: raise AssertionError("wrong-pin negative control passed")
+    bad = json.loads(json.dumps(good)); bad["fixture"]["data_sha256"] = "0" * 64
+    try: validate_family11_boundary(bad)
+    except SystemExit: pass
+    else: raise AssertionError("mismatched-fixture negative control passed")
+    bad = json.loads(json.dumps(good)); bad["routes"]["formula"]["message"] = "unsupported family"
+    try: validate_family11_boundary(bad)
+    except SystemExit: pass
+    else: raise AssertionError("wrong-refusal negative control passed")
+    bad = json.loads(json.dumps(good)); bad["capture"]["glvmodels_src_tree"] = "0" * 40
+    try: validate_family11_boundary(bad)
+    except SystemExit: pass
+    else: raise AssertionError("wrong-source-tree negative control passed")
+    bad = json.loads(json.dumps(good)); bad["source_pin"]["installed_tree_sha256"] = "0" * 64
+    try: validate_family11_boundary(bad)
+    except SystemExit: pass
+    else: raise AssertionError("wrong-installed-build negative control passed")
+    print("CORE070_FAMILY11_BOUNDARY_SELF_TEST_OK (1 positive, 6 rejected mutations)")
+
+
+def family11_boundary_receipt_path():
+    return ROOT / FAMILY11_BOUNDARY_RECEIPT
+
+
 def alias_case(cid, rec, native):
     d = batch_rel(BRIDGE_BATCH)
     res = bridge_results()
@@ -813,6 +946,8 @@ def in_scope_case_ids():
 
 
 def derive_case(cid):
+    if cid == FAMILY11_BOUNDARY_CASE:
+        return family11_boundary_case()
     if cid in NOT_EXECUTED:
         kind, (verdict, body, comp) = "not_executed", not_executed_case(cid)
         return kind, verdict, body, comp
@@ -833,6 +968,21 @@ def derive_case(cid):
 def derive_all(case_ids):
     check_registration()
     return {cid: derive_case(cid) for cid in case_ids}
+
+
+def tracked_case_receipts():
+    """Return ordinary case receipts plus the explicitly owned FAMILY-11 boundary receipt."""
+    paths = list((ROOT / REC_REL / "cases").glob("*.json"))
+    boundary = ROOT / FAMILY11_BOUNDARY_RECEIPT
+    if boundary.is_file():
+        paths = [p for p in paths if p.stem != FAMILY11_BOUNDARY_CASE]
+        paths.append(boundary)
+    return {p.stem: (str(p.relative_to(ROOT)), load(p)) for p in sorted(paths)}
+
+
+def case_receipt_path(cid):
+    return ROOT / (FAMILY11_BOUNDARY_RECEIPT if cid == FAMILY11_BOUNDARY_CASE
+                   else f"{REC_REL}/cases/{cid}.json")
 
 
 # ---------------------------------------------------------------------------
@@ -978,12 +1128,14 @@ PROVENANCE_KEYS = {"pin", "reference_commit", "p0_reference_commit", "oracle_bui
 
 def receipt_batch(rec):
     cid = rec["case_id"]
+    if cid == FAMILY11_BOUNDARY_CASE:
+        return BRIDGE_BATCH
     return None if cid in NOT_EXECUTED else REGISTRATION[cid][0]
 
 
 def check():
     problems = []
-    tracked = {p.stem: (str(p.relative_to(ROOT)), load(p)) for p in sorted((ROOT / REC_REL / "cases").glob("*.json"))}
+    tracked = tracked_case_receipts()
     for cid, (path, rec) in tracked.items():
         for rel, digest in (rec.get("read_from") or {}).items():
             if not (ROOT / rel).is_file():
@@ -1097,7 +1249,7 @@ def rederive():
         common = {k: old[k] for k in COMMON_KEYS}
         common["host"] = host_string(old["oracle_build_receipt"])
         rec = case_receipt(cid, kind, verdict, body, comparison, common)
-        path = ROOT / REC_REL / "cases" / f"{cid}.json"
+        path = case_receipt_path(cid)
         write_json(path, rec)
         receipts[cid] = receipt_info(str(path.relative_to(ROOT)), rec)
     cm = load(ROOT / CASEMAP_REL)
@@ -1143,7 +1295,12 @@ def main():
                     help="verify the tracked receipts against the files they read; write nothing")
     ap.add_argument("--rederive", action="store_true",
                     help="re-derive case receipts and rows from the tracked batch artifacts (derivation change only)")
+    ap.add_argument("--family11-boundary-self-test", action="store_true",
+                    help="run fixture-based positive/negative controls without R, JuliaCall, or any fit")
     args = ap.parse_args()
+    if args.family11_boundary_self_test:
+        family11_boundary_self_test()
+        return
     if args.check:
         check()
         return
@@ -1189,7 +1346,7 @@ def main():
     receipts = {}
     for cid, (kind, verdict, body, comparison) in derive_all(ids).items():
         rec = case_receipt(cid, kind, verdict, body, comparison, common)
-        path = ROOT / REC_REL / "cases" / f"{cid}.json"
+        path = case_receipt_path(cid)
         write_json(path, rec)
         receipts[cid] = receipt_info(str(path.relative_to(ROOT)), rec)
     rows, counts = build_rows(in_scope, carry_status, receipts)
