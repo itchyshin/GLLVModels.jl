@@ -10,9 +10,9 @@
 # Per site,
 #   ELBO_s = Σ_t E_q[log p(y_t | η_t, r)] − KL_s,
 #   KL_s   = ½ Σ_k (v_sk + m_sk² − 1 − log v_sk).
-# NB2 (same parameterisation as families/negbin.jl), μ = e^η:
-#   log p(y|μ,r) = loggamma(y+r) − loggamma(r) − loggamma(y+1)
-#                  + r·log(r/(r+μ)) + y·log(μ/(r+μ)).
+# NB2 (same parameterisation as families/negbin.jl), μ = e^η.
+# The ELBO log-pmf is `_nb2_logpdf_mean` (the stable form); the expanded
+# loggamma(y+r) − loggamma(r) + r log(r/(r+μ)) form cancels at large r (#871).
 # The expectation has no closed form, so with g(η) = log p(y_t | μ=e^η, r):
 #   E_q[g(η)] ≈ Σ_{j=1}^G (w_j/√π)·g( clamp(μη_t + √(2σ²_t)·x_j) ),
 # with (x_j, w_j) the G-point Gauss–Hermite nodes/weights (Σ w = √π).
@@ -24,12 +24,9 @@
 # `_gauss_hermite(G)` is shared with the other VA families (defined in
 # families/variational.jl, included first).
 
-# NB2 conditional log-pmf at η (μ = e^η), shared with families/negbin.jl's form.
-@inline function _nb_logpmf_eta(η, y, r)
-    μ = exp(η)
-    return loggamma(y + r) - loggamma(r) - loggamma(y + 1) +
-           r * log(r / (r + μ)) + y * log(μ / (r + μ))
-end
+# NB2 conditional log-pmf at η (μ = e^η). Routes through `_nb2_logpdf_mean`
+# so the VA ELBO matches the Laplace kernels at large r (#871).
+@inline _nb_logpmf_eta(η, y, r) = _nb2_logpdf_mean(exp(η), r, Int(y))
 
 # Per-site NB2 ELBO at variational params packed as ψ = [m (K); logv (K)].
 # Returns ELBO_s = Σ_t E_q[log p(y_t|η_t,r)] − KL_s, with E_q by GH quadrature.
