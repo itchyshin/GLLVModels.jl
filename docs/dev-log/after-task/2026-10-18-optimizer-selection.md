@@ -90,3 +90,9 @@ Rose audit: the final logged neighbor batch is incomplete at seven of nine files
 Covers: Gaussian exact marginal, mask/offset observed-data refit, and sign-flip stages; Gaussian source outer solve; Poisson Laplace; shared-r NB2 Laplace; the default per-trait NB2 formula route and its initial, boundary-restart, and ridge-polish stages; matrix/formula/model-selection forwarding; immutable receipts; legacy constructor compatibility; clear unsupported-route/refit errors.
 
 Does NOT cover: other count or continuous families; AGHQ/adaptive or variational solvers; non-NB2 grouped/covariance fits; grouped/mixed/phylogenetic/row-effect/pervar models; bootstrap/profile refit forwarding; full package or platform/CI evidence; R parity or release readiness.
+
+## Integration follow-up: main `a8be9b222`
+
+Integrated `origin/main` at `a8be9b2220c29d6c2d83834057571457d60a77f0` into PR head `8b0c4fd10b6005f8c368bf78bd06caa70dafc913`. Main added FAMILY-11 boundary evidence, receipts, tools and a test. Its only source-adjacent test registry change was `test/runtests.jl`: the optimizer-selection registration remains present and the FAMILY-11 boundary registration is also retained. Relative to the pre-merge PR head, no files changed under `src/`, `Project.toml`, `docs/Project.toml`, or `docs/src/`. The append-only `docs/dev-log/check-log.md` conflict was resolved by preserving both branches' entries.
+
+On integrated head `bc56d3d2565ea041cf0841070c0234da81536e19`, the focused optimizer-selection command passed 61/61 plus the 1/1 spy-cleanup check and printed `OPTIMIZER_SELECTION_PASS` (57 seconds). Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-integrated-focused.log`. No full suite or additional docs build was run. The prior broad-suite and local-docs limitations above remain unchanged.

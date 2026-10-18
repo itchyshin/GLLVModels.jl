@@ -21791,3 +21791,9 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Paired identical-start Poisson example passed; both methods converged and log-likelihoods differed by about 7e-14: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-paired-example-final.log`. Gaussian source-design neighbor: 34/34, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-gaussian-source-final.log`.
 - Final neighbor batch stopped at its 5-minute estimate after seven of nine files; `test_formula.jl` was interrupted and `formula_sources` not run. Do not report all nine as passing. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-neighbours-final.log`.
 - Docs VitePress rendering completed, but the Julia wrapper did not provide a final exit receipt; docs gate is unconfirmed. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-docs-final.log`. Broad suite remains incomplete from the earlier SIGINT; `Pkg.test()` not run.
+
+## 2026-10-18 — PR #939 integration with main `a8be9b222`
+
+- Merged `origin/main` at `a8be9b2220c29d6c2d83834057571457d60a77f0` into optimizer branch pre-merge head `8b0c4fd10b6005f8c368bf78bd06caa70dafc913`. Preserved both independent check-log additions; both `test_optimizer_selection.jl` and FAMILY-11 boundary tests remain registered in `test/runtests.jl`.
+- Main integration changed no `src/`, project files, or `docs/src/` relative to the pre-merge PR head. It adds FAMILY-11 evidence and supporting tests/tools/receipts.
+- On integrated head `bc56d3d2565ea041cf0841070c0234da81536e19`, focused selector tests passed 61/61 plus spy cleanup 1/1 in 57 seconds and printed `OPTIMIZER_SELECTION_PASS`. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-integrated-focused.log`. No full suite or docs rerun.
