@@ -56,7 +56,8 @@ matches R logLik to `1e-6`.
 
 ## JET / Allocs / Aqua Verdicts
 
-- JET / Aqua: via `Pkg.test()`; see Checks Run.
+- JET / Aqua: exercised inside `Pkg.test()` (the 31220-pass run includes
+  `test_quality.jl`). No quality-tool failure.
 - Allocs: not run.
 
 ## Checks Run
@@ -65,7 +66,8 @@ matches R logLik to `1e-6`.
   (Julia 1.10.10). DEP probe: `converged=true`,
   `stopping_reason=:converged`, `gradient_norm=6.2049e-6` (`<= 1e-5`).
 - `test/test_cov_phylo_twins_p1.jl`: **40 passed / 0 failed**.
-- Full `Pkg.test()`: tally filled after the local canonical run.
+- Full `Pkg.test()` (Julia 1.10.10): **31220 passed / 0 failed / 87 broken /
+  31307 total** (305m25s) plus README Quick start 8/8. `EXIT=0`.
 
 Because the issue's own repro passed locally, the PR body keeps `Closes #822`.
 

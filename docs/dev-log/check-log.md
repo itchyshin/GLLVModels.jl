@@ -7,7 +7,8 @@
   `test_phylo_latent_rounding_floor.jl` **14 + 10 passed / 0 failed**;
   issue #822 DEP (`d = 4`, 120 tips) `converged=true`,
   `gradient_norm=6.2049e-6`; `test_cov_phylo_twins_p1.jl` **40 passed / 0 failed**.
-- Full `Pkg.test()` tally: filled after the local canonical run.
+- Full `Pkg.test()` (Julia 1.10.10): **31220 passed / 0 failed / 87 broken / 31307 total**
+  (305m25s) plus README Quick start 8/8. `EXIT=0`.
 - Body keeps `Closes #822` because the DEP repro passed locally.
 
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
