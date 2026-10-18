@@ -1,3 +1,11 @@
+## 2026-10-17: FAMILY-11 public bridge boundary receipt
+
+- Added a retained raw P1 R-bridge refusal capture and fail-closed derivation for the exact `FAMILY-11-LOG` public bridge boundary. This is boundary evidence only; it does not establish native/formula parity or admit the family row as parity evidence.
+- Added the focused Julia boundary test to the normal sharded `test/runtests.jl` suite. The shard-selection contract still passes.
+- Re-derived family receipts and the shared assembled map/scoreboard from the clean `origin/main` worktree. Existing family receipt hashes were updated to match the changed derivation source; assembly remains at 317 rows.
+- Checks: family receipts current (30 cases, 21 rows); assembler current; checkpoint negative controls pass; Julia shard selection 43/43; focused FAMILY-11 boundary test 1/1; the seven-row verifier remains blocked at the next unclosed receipt row after FAMILY-11.
+- The R capture was retained and revalidated, not freshly rerun. No merge, push, full P1 closure, or public parity claim.
+
 ## 2026-10-06: P1 first-seven checkpoint verifier
 
 - Approved baseline: `f220379d0937d0afffc6a030023c63c0f715e168`; P1 R source: `9539352f66f2db2cc26b1c393e67212a359b60c9`.
