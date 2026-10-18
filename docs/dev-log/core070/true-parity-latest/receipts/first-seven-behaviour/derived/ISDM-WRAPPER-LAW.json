@@ -42,7 +42,7 @@
       "pin": "P1",
       "julia_version": "1.10.0",
       "host": "totoro",
-      "glvmodels_commit": "b0006ec14d1d9e8417797de93c7f2711325c4330",
+      "glvmodels_commit": "408c0d350c5f676864ecf769e1ba3a37e4d15754",
       "julia_threads": "4",
       "openblas_threads": "1",
       "omp_threads": "1",
@@ -55,8 +55,8 @@
   },
   "signed_scope": "D-319 N6/N10",
   "provenance": {
-    "raw_directory": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-17-v2",
-    "derivation_commit": "d8e9b78f600dc972e8361a0f7dd7807170fabad0",
+    "raw_directory": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-18-main",
+    "derivation_commit": "408c0d350c5f676864ecf769e1ba3a37e4d15754",
     "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
     "r_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
     "r_source_receipt_sha256": "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8",
@@ -66,8 +66,8 @@
     "r_installed_tree_sha256": "71ef0fb3d6c0a31e908c09ea599b97966dc8335038e1d9d23ccda901344d9997",
     "r_host": "totoro",
     "r_version": "4.6.1",
-    "julia_commit": "b0006ec14d1d9e8417797de93c7f2711325c4330",
-    "julia_src_tree": "a718f239524ea47e4164a21a9c1ce40fcd80aaf8",
+    "julia_commit": "408c0d350c5f676864ecf769e1ba3a37e4d15754",
+    "julia_src_tree": "c879670640a39570677a82d84195a31526e0a9fe",
     "julia_src_patch": "julia-src.patch",
     "julia_src_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "runner_snapshots": {
@@ -81,17 +81,17 @@
       },
       "derive": {
         "path": "runner-snapshots/first_seven_behaviour_derive.py",
-        "sha256": "6d5dea1e08c23c3e211f22de4251023c37f56b89d4c34736f511090404380003"
+        "sha256": "96da9aef11ba037809aacfc4b422541acf4f1b2f009bf15eca87d1cdae5eef72"
       }
     },
     "julia_version": "1.10.0",
     "julia_host": "totoro",
     "r_output_sha256": "dc444071c8dfd3c15f9f26e6a816787260fef782b2c480c64f37255111c242fb",
-    "julia_output_sha256": "279e690db4baadaf0f7e4e233934e2e975725fb97b53fed0b246e2772fb477d7",
+    "julia_output_sha256": "6fc24d387c93d9f6dc5d88df555492a8f44ae7f32aa661fedef4c0aa44788279",
     "runner_sha256": {
       "R": "ae7d803aa6976da2a9c83c20a8a59cca1d229d2152616e2f044ac07796b188bb",
       "Julia": "3098a88109e81afce68ed5251a57f16f976836e8d120dc205e5bb26b4b085d6b",
-      "derive": "6d5dea1e08c23c3e211f22de4251023c37f56b89d4c34736f511090404380003"
+      "derive": "96da9aef11ba037809aacfc4b422541acf4f1b2f009bf15eca87d1cdae5eef72"
     },
     "fixture_sha256": {
       "R": {

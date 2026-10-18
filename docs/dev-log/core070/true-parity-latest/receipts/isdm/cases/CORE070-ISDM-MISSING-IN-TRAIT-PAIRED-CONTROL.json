@@ -55,10 +55,10 @@
     "pin": "P1",
     "ruling": "itchyshin/GLLVModels.jl#684 item 2",
     "read_from": {
-      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-MISSING-IN-TRAIT.json": "0cd19e6224f4ce85447217d74ac1708ddc5dbf6501522ff7e9a5c41605a1b16f",
-      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-17-v2/run.json": "67935ec7511cf08a1b166f56db7068b5246ceff9e1ddc77b677a7b072af90853",
-      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-17-v2/r-public.tsv": "dc444071c8dfd3c15f9f26e6a816787260fef782b2c480c64f37255111c242fb",
-      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-17-v2/julia-public.tsv": "279e690db4baadaf0f7e4e233934e2e975725fb97b53fed0b246e2772fb477d7",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-MISSING-IN-TRAIT.json": "ecde86c9dffca788fe5071443d3881525bf976d7bd2b84ef5cc350cf6b957c96",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-18-main/run.json": "7e486a68dc0c09635692ce6b61264858b5aaef2857397d439734760bce60a813",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-18-main/r-public.tsv": "dc444071c8dfd3c15f9f26e6a816787260fef782b2c480c64f37255111c242fb",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-18-main/julia-public.tsv": "6fc24d387c93d9f6dc5d88df555492a8f44ae7f32aa661fedef4c0aa44788279",
       "tools/first_seven_behaviour_derive.py": "96da9aef11ba037809aacfc4b422541acf4f1b2f009bf15eca87d1cdae5eef72"
     },
     "cases": [

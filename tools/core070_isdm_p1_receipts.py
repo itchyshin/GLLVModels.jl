@@ -12,7 +12,9 @@ batch pays all 20, run at gllvmTMB pin P1 (GLLVM_PARITY_PIN=P1):
                           Julia: none in this batch. At the run commit GLLVModels' src/ has
                           no iSDM code (recorded from `git grep -il isdm <commit> -- src`).
 
-So no isdm row can bind here: R SIDE ONLY, NOTHING NUMERIC TO COMPARE. Draft PRs
+This batch alone cannot bind an iSDM row: R SIDE ONLY, NOTHING NUMERIC TO COMPARE. The
+five public-door rows named by the signed D-319 N6/N10 ruling may separately bind
+behaviourally when the behavioural receipt checker validates their paired receipts. Draft PRs
 #546 / #558 build the iSDM surface and a Julia-native twin of 19 of these
 predicates on another branch; whether they should pay these rows is a proposal
 for the maintainer, recorded in the PR body, not a rebinding made here.
@@ -89,7 +91,7 @@ TIER_TEXT = {
     "measured_fail": "measured at P1; the R predicate did not replay to its expectation, so the row does not bind",
 }
 COUNT_KEYS = ("numeric_pass", "numeric_fail", "numeric_held_batch_verifier_failed", "numeric_non_discriminating",
-              "needs_surface_r_side_measured", "measured_held_batch_verifier_failed", "measured_fail",
+              "behavioural", "needs_surface_r_side_measured", "measured_held_batch_verifier_failed", "measured_fail",
               "not_measured")
 LEGACY_NOTE = ("ISDM-LEGACY replays R's legacy two-source route (family_var = \"isdm_family\", fixed names gbif / "
                "survey_pa). Packet 1b item 2 (signed 2026-09-27, vault decision D-296) records it as an R-only "
@@ -124,14 +126,34 @@ def git_state():
     return head, dirty
 
 
-def check_run_commit(run_dir, head):
+def select_run_commit(run_dir, head, *, allow_historical=False):
     p = run_dir / "run-commit.json"
     if not p.is_file():
         raise SystemExit(f"{run_dir} has no run-commit.json; re-run the batch from a clean commit")
     rc = load(p)
-    if rc.get("glvmodels_commit") != head or rc.get("dirty") != []:
+    run_commit = rc.get("glvmodels_commit")
+    if rc.get("dirty") != []:
+        raise SystemExit(f"{run_dir}: run at {run_commit} dirty={rc.get('dirty')}; evidence must come from a clean tree")
+    if run_commit != head and not allow_historical:
         raise SystemExit(f"{run_dir}: run at {rc.get('glvmodels_commit')} dirty={rc.get('dirty')}, "
                          f"not at clean HEAD {head}; re-run at HEAD")
+    if run_commit != head:
+        exists = git("cat-file", "-e", f"{run_commit}^{{commit}}", check=False)
+        ancestor = git("merge-base", "--is-ancestor", run_commit, head, check=False)
+        if exists.returncode or ancestor.returncode:
+            raise SystemExit(f"{run_dir}: historical run commit {run_commit} is not an ancestor of {head}")
+        if julia_surface_at(run_commit):
+            raise SystemExit(f"{run_dir}: historical reuse is limited to commits with no iSDM source surface")
+    return run_commit
+
+
+def record_case_map_generation(head, dirty, run_commit):
+    """Bind the current derivation tool separately from the historical measurement commit."""
+    return {"generator": "tools/core070_isdm_p1_receipts.py", "commit": head,
+            "tool_sha256": sha(ROOT / "tools/core070_isdm_p1_receipts.py"),
+            "worktree_dirty": dirty,
+            "measurement_commit": run_commit,
+            "mode": "historical-absent-surface" if run_commit != head else "same-commit"}
 
 
 def run_verifier(state):
@@ -296,6 +318,25 @@ def apply_signed_disposition(row):
 
 WIRED_PREFIXES = (f"{OUT_REL}/receipts/julia-twins/", f"{OUT_REL}/receipts/fixture-twins/")
 
+BEHAVIOURAL_SOURCE_IDS = {
+    "isdm/ISDM-COUNT", "isdm/ISDM-EXTRA-SOURCE", "isdm/ISDM-MISSING-IN-TRAIT",
+    "isdm/ISDM-MISSING-SOURCE", "isdm/ISDM-WRAPPER-LAW",
+}
+
+
+def behavioural_overlay(row, counts):
+    """Promote only the five signed iSDM rows whose cited, measured behavior receipts bind.
+
+    The behavioural receipt checker owns equivalence-class, scope, case-id and provenance
+    validation. This adapter only constrains where that existing overlay may run.
+    """
+    if row.get("source_id") not in BEHAVIOURAL_SOURCE_IDS:
+        return False
+    if row.get("evidence_tier") != "needs_surface_r_side_measured" or row.get("measured_against") != P1_SHA:
+        return False
+    import core070_behaviour_receipts as behaviour_receipts
+    return behaviour_receipts.overlay_row(row, counts)
+
 
 def wired_overlay(row, committed):
     """A row later rewired to a Julia-twin or fixture-twin receipt (a numeric R-vs-Julia comparison) keeps
@@ -364,7 +405,9 @@ def build_rows(in_scope, receipts, committed_rows=None):
                    measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
                                     "case_kinds": {i: h[1] for i, h in zip(ids, have)}})
         counts[tier] += 1
-        if wired_overlay(row, committed_by_id.get(sid)):
+        if behavioural_overlay(row, counts):
+            pass
+        elif wired_overlay(row, committed_by_id.get(sid)):
             counts[tier] -= 1
             counts["numeric_pass"] += 1
         notes = [h[4] for h in have if h[4]]
@@ -381,6 +424,28 @@ def build_rows(in_scope, receipts, committed_rows=None):
 PROVENANCE_KEYS = {"pin", "reference_commit", "p0_reference_commit", "oracle_build_receipt", "oracle_source_receipt",
                    "glvmodels_commit", "glvmodels_worktree_dirty", "glvmodels_src_tree", "host", "schema", "case_id",
                    "verdict", "evidence_kind"}
+BEHAVIOUR_AUGMENTATION_KEYS = {"behaviour", "behaviour_not_bound"}
+
+
+def preserve_behaviour_augmentations(fresh, previous):
+    """Keep only the independently derived behavior blocks when refreshing R-owned fields."""
+    for key in BEHAVIOUR_AUGMENTATION_KEYS:
+        if key in previous:
+            fresh[key] = previous[key]
+    return fresh
+
+
+def write_case_receipt(path, fresh):
+    """Refresh R-owned fields while retaining behavior blocks from their independent writer."""
+    if path.is_file():
+        fresh = preserve_behaviour_augmentations(fresh, load(path))
+    write_json(path, fresh)
+    return fresh
+
+
+def comparable_receipt_body(rec):
+    """Return this generator's body, excluding provenance and the separately re-derived behaviour overlay."""
+    return {k: v for k, v in rec.items() if k not in PROVENANCE_KEYS | BEHAVIOUR_AUGMENTATION_KEYS}
 
 
 def provenance_problems(tracked, run_commit):
@@ -430,13 +495,36 @@ def check():
         rec = tracked[cid][1]
         if (rec["evidence_kind"], rec["verdict"]) != (kind, verdict):
             problems.append(f"{cid}: kind/verdict {rec['evidence_kind']}/{rec['verdict']} != re-derived {kind}/{verdict}")
-        if {k: v for k, v in rec.items() if k not in PROVENANCE_KEYS} != body:
+        if comparable_receipt_body(rec) != body:
             problems.append(f"{cid}: receipt body differs from the re-derivation")
         if rec.get("reference_commit") != P1_SHA or rec.get("pin") != "P1":
             problems.append(f"{cid}: receipt not pinned at P1")
     problems += provenance_problems(tracked, rc.get("glvmodels_commit"))
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     cm = load(ROOT / CASEMAP_REL)
+    generation = cm.get("generation")
+    if not isinstance(generation, dict):
+        problems.append("case-map has no derivation-generation provenance")
+    else:
+        gen_commit = generation.get("commit")
+        gen_exists = git("cat-file", "-e", f"{gen_commit}^{{commit}}", check=False)
+        if gen_exists.returncode:
+            problems.append(f"case-map derivation commit is unavailable: {gen_commit}")
+        if sha(ROOT / "tools/core070_isdm_p1_receipts.py") != generation.get("tool_sha256"):
+            problems.append("case-map generator bytes differ from the recorded derivation hash")
+        if generation.get("measurement_commit") != rc.get("glvmodels_commit"):
+            problems.append("case-map measurement commit differs from batch run-commit.json")
+        if gen_commit and generation.get("measurement_commit"):
+            ancestry = git("merge-base", "--is-ancestor", generation["measurement_commit"], gen_commit, check=False)
+            if ancestry.returncode:
+                problems.append("case-map measurement commit is not an ancestor of the derivation commit")
+        mode = generation.get("mode")
+        if mode == "historical-absent-surface" and julia_surface_at(generation.get("measurement_commit", "")):
+            problems.append("historical-absent-surface mode records an iSDM source surface")
+        elif mode not in {"historical-absent-surface", "same-commit"}:
+            problems.append(f"unknown case-map generation mode: {mode}")
+        elif mode == "same-commit" and generation.get("measurement_commit") != gen_commit:
+            problems.append("same-commit mode has different measurement and derivation commits")
     mine = own_rows(cm)
     n_rows = 0
     try:
@@ -468,14 +556,17 @@ def check():
 SCOPE = ("isdm family: the 20 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 isdm "
          "admission batch (R admission-predicate replay against the pinned P1 source; no fit, no Julia side). The 17 "
          "rejected isdm rows and the two NOT_BOUND_AT_P0 namespace exports (isdm_source, isdm_sources) are out of "
-         "scope.")
+         "scope. Five named public-door rows can additionally bind behaviourally under D-319 N6/N10 only when the "
+         "independent paired receipt validation succeeds.")
 NOTE = ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
         "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
         "docs/dev-log/core070/required-source-case-map.json unchanged, except the four signed dispositions of "
         "SIGNED_DISPOSITIONS (maintainer ruling 2026-10-05, D-319, item N6; no agent signs). The R side of "
         "every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run "
-        "commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are "
-        "not used here; mapping them onto these rows is a proposal for the maintainer (PR body).")
+         "commit. Rows without a paired behaviour receipt or numeric twin remain free and cite "
+         "evidence.non_binding_receipts. Draft PR #546's P1 iSDM twins are not otherwise used here. The five D-319 "
+         "public-door rows bind only through validated paired behaviour receipts; all "
+         "other rows retain the R-only evidence tier unless independently rewired to a numeric twin receipt.")
 
 
 def main():
@@ -484,45 +575,70 @@ def main():
     ap.add_argument("--runtimes", type=Path)
     ap.add_argument("--allow-dirty", action="store_true",
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
+    ap.add_argument("--reuse-pinned-run", action="store_true",
+                    help="rederive from a clean historical R-only batch only when its commit predates all Julia iSDM source")
+    ap.add_argument("--refresh-existing", action="store_true",
+                    help="rederive receipts and rows from the already tracked batch and case map; do not replace raw evidence")
     ap.add_argument("--check", action="store_true",
                     help="verify the tracked receipts against the files they read; write nothing")
     args = ap.parse_args()
     if args.check:
         check()
         return
-    if args.runs is None or args.runtimes is None:
+    if args.refresh_existing and (args.runs is not None or args.runtimes is not None):
+        ap.error("--refresh-existing uses the tracked batch and case map; omit --runs and --runtimes")
+    if args.reuse_pinned_run and not args.refresh_existing and args.runs is None:
+        ap.error("--reuse-pinned-run requires --runs or --refresh-existing")
+    if not args.refresh_existing and (args.runs is None or args.runtimes is None):
         ap.error("--runs and --runtimes are required unless --check")
-    runs, runtimes = args.runs, load(args.runtimes)
     head, dirty = git_state()
     if dirty and not args.allow_dirty:
         raise SystemExit("tracked files are modified outside this tool's outputs; commit first or pass "
                          "--allow-dirty: " + ", ".join(dirty))
-    check_run_commit(runs / BATCH, head)
-    shutil.rmtree(ROOT / REC_REL / "cases", ignore_errors=True)  # stale case receipts must not survive
-    artifacts = copy_batch(runs / BATCH)
-    verifier = {"tool": VERIFIER_ARGV[0], "argv": " ".join(VERIFIER_ARGV), "accept_marker": VERIFIER_MARKER,
-                "log": f"{REC_REL}/{BATCH}/verify.txt", **run_verifier(runs / BATCH)}
-    artifacts.append(verifier["log"])
+    previous = load(ROOT / CASEMAP_REL) if (ROOT / CASEMAP_REL).is_file() else {"rows": []}
+    if args.refresh_existing:
+        state = ROOT / REC_REL / BATCH
+        run_commit = select_run_commit(state, head, allow_historical=args.reuse_pinned_run)
+        in_scope = [r["source_id"] for r in own_rows(previous) if r.get("carry_scan_status") == "DANGLING"]
+        if len(in_scope) != 20 or any(not sid.startswith(FAMILY + "/") for sid in in_scope):
+            raise SystemExit("tracked case map does not contain the expected 20 P1 iSDM carry rows")
+        if not state.is_dir():
+            raise SystemExit(f"tracked batch is missing: {state}")
+        artifacts = [f"{REC_REL}/{BATCH}/{name}" for name in ARTIFACTS]
+        artifacts.append(f"{REC_REL}/{BATCH}/verify.txt")
+        runtimes = previous.get("runtimes_seconds") or {}
+    else:
+        runs, runtimes = args.runs, load(args.runtimes)
+        run_commit = select_run_commit(runs / BATCH, head, allow_historical=args.reuse_pinned_run)
+        shutil.rmtree(ROOT / REC_REL / "cases", ignore_errors=True)  # stale case receipts must not survive
+        artifacts = copy_batch(runs / BATCH)
+        carry = load(runs / "carry-scan-p1.json")
+        in_scope = [r["source_id"] for r in carry["rows"]
+                    if r["source_id"].startswith(FAMILY + "/") and r["status"] == "DANGLING"]
+        state = runs / BATCH
+    if args.refresh_existing:
+        verifier = verifier_block()
+        verifier["exit_code"] = 0 if verifier["status"] == "PASS" else 1
+    else:
+        verifier = {"tool": VERIFIER_ARGV[0], "argv": " ".join(VERIFIER_ARGV), "accept_marker": VERIFIER_MARKER,
+                    "log": f"{REC_REL}/{BATCH}/verify.txt", **run_verifier(state)}
+        artifacts.append(verifier["log"])
     common = {"pin": "P1", "reference_commit": P1_SHA, "p0_reference_commit": P0_SHA,
               "oracle_build_receipt": ORACLE_BUILD, "oracle_source_receipt": ORACLE_SOURCE,
-              "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
-              "glvmodels_src_tree": git("rev-parse", f"{head}:src").stdout.strip(), "host": HOST}
+              "glvmodels_commit": run_commit, "glvmodels_worktree_dirty": [],
+              "glvmodels_src_tree": git("rev-parse", f"{run_commit}:src").stdout.strip(), "host": HOST}
     receipts = {}
     for cid, (kind, verdict, body) in isdm_cases().items():
         rec = {"schema": "core070-isdm-p1-case-receipt/v1", "case_id": cid, "verdict": verdict,
                "evidence_kind": kind, **body, **common}
         path = ROOT / REC_REL / "cases" / f"{cid}.json"
-        write_json(path, rec)
+        rec = write_case_receipt(path, rec)
         receipts[cid] = receipt_info(str(path.relative_to(ROOT)), rec)
-    carry = load(runs / "carry-scan-p1.json")
-    in_scope = [r["source_id"] for r in carry["rows"]
-                if r["source_id"].startswith(FAMILY + "/") and r["status"] == "DANGLING"]
-    old_map = ROOT / CASEMAP_REL
-    previous = load(old_map) if old_map.is_file() else {"rows": []}
     rows, counts = build_rows(in_scope, receipts, own_rows(previous))
     write_json(ROOT / CASEMAP_REL, {
         "schema": 1, "reference_commit": P1_SHA, "scope": SCOPE, "note": NOTE,
-        "generator": "tools/core070_isdm_p1_receipts.py", "glvmodels_commit": head,
+        "generator": "tools/core070_isdm_p1_receipts.py", "glvmodels_commit": run_commit,
+        "generation": record_case_map_generation(head, dirty, run_commit),
         "batch_verifiers": {BATCH: verifier}, "counts": counts,
         "p0_evidence_summary": {
             "rows_with_p0_evidence_record": sum(r["p0_evidence"]["recorded"] for r in rows),
