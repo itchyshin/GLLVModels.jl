@@ -1,3 +1,45 @@
+## 2026-10-18: direct outer optimizer selection
+
+- Branch `codex/optimizer-selection-20261018` from `origin/main` at
+  `383e9d37053fd91ac3dc2e445ecadbbf82cc55f5`. Added optimizer selection for the
+  ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace, and default
+  per-trait NB2 formula routes. Supported methods: `:lbfgs`, `:bfgs`, and
+  configured `Optim.LBFGS()` / `Optim.BFGS()` objects. Default `nothing` retains
+  prior paths. Every fit stores `optimizer_info` with requested/actual method,
+  derivative route, controls, stages, and raw optimizer results. Old positional
+  fit constructors remain available.
+- `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=. -e 'using
+  GLLVModels; include("test/test_optimizer_selection.jl")'`: **46 passed** and
+  `OPTIMIZER_SELECTION_PASS`. The suite includes a prior red run against the
+  unsupported API, selected-method stage checks, default Poisson continuation,
+  formula/select_lv forwarding, early refusals, refit refusal, and constructor
+  compatibility.
+- Neighbor regression command (all completed with exit 0):
+  `test/test_gaussian_intercept.jl`, `test/test_gaussian_source_design.jl`,
+  `test/test_source_fit_optimizer_health.jl`, `test/test_poisson_fit.jl`,
+  `test/test_negbin_laplace.jl`, `test/test_nb_grouped_poisson_ridge.jl`,
+  `test/test_model_selection.jl`, `test/test_formula.jl`, and
+  `test/test_formula_sources.jl`. Includes the existing 31/31 NB2 Poisson-limit
+  ridge test and source optimizer-health checks.
+- `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=docs
+  docs/make.jl --local`: Documenter doctests, cross-reference checks, and
+  VitePress rendering completed. Warnings: local deployment skipped, and the
+  existing VitePress chunk exceeded the 500 kB advisory threshold. The docs
+  environment needed a temporary local `Pkg.develop(path=".")`; generated
+  manifests are not part of the feature.
+- Full core suite `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=test
+  test/runtests.jl`: deliberately interrupted with SIGINT at
+  `test/test_phylo_beta_xlv.jl:158` after the estimated 5–10 minute runtime was
+  exceeded. It had reached later truncated-NB2 tests; no final aggregate test
+  denominator was emitted, so this is incomplete evidence, not a pass. The test
+  environment's temporary local develop entry and generated manifests were
+  removed. `Pkg.test()` was not run. Focused/neighbour tests and docs build are
+  the completed evidence; independent review and PR CI remain outstanding.
+- Negative space: AGHQ/adaptive, VA, other grouped/covariance, mixed, phylogenetic,
+  row-effect, pervar, and non-Normal/Poisson/NB2 routes refuse explicit selection.
+  Profile/bootstrap intervals refuse explicitly selected fits because refit
+  solvers are not yet forwarded. No likelihood or formula grammar changed.
+
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
 
 - Branch `claude/true-parity-cov-postfit-family-twins` from `origin/main` (`3fcf20698`). New:

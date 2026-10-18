@@ -544,6 +544,7 @@ end
 # `bootstrap_ci`, `bootstrap_ci_derived`, `profile_ci_derived`), which are public and
 # would otherwise refit a pinned fit without its pins (refs #794).
 function _check_unpinned_refit(fit::GllvmFit, fname::AbstractString)
+    _check_optimizer_refit(fit, fname)
     isempty(_lambda_constraint_pinned_theta_indices(fit)) && return nothing
     throw(ArgumentError(
         "$fname is not available for a fit with lambda_constraint pins: its refits " *
@@ -563,6 +564,9 @@ function _confint_gaussian(fit::GllvmFit, y, level::Real, parm, X, Σ_phy,
                                                    method, kw, parm)
     label = _confint_fit_label(fit)
     _confint_check_method(method, label, parm)
+    if method in (:profile, :bootstrap)
+        _check_optimizer_refit(fit, "confint(method=:$method)")
+    end
     if _has_gaussian_record(fit)
         _confint_check_kwargs(kw, _CONFINT_RECORD_KWARGS, (), label, method)
         data = y === nothing ? fit.integration.data.responses : y

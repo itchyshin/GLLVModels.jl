@@ -186,6 +186,14 @@ species and site keys and requires a complete, duplicate-free grid. The original
 NB2 data qualification checks both shapes against the native model; broader formula
 models and the public R bridge still require separate qualification.
 
+For supported ordinary Gaussian, Poisson and NB2 fits, `optimizer = :lbfgs` or
+`:bfgs` selects the outer solver. This changes the numerical method while
+keeping the response family and dispersion specification fixed. For example,
+the formula call above can use `optimizer = :bfgs` and then
+`optimizer_info(f_formula)` reports the method and any outer stages. Explicit
+selection is not yet forwarded through profile or bootstrap refits; those
+interval methods require a fit made with the default `optimizer = nothing`.
+
 For continuous Gaussian data with **unequal residual variance across species**
 (heteroscedastic; gllvm's default), `fit_gaussian_pervar_gllvm` estimates a
 separate variance per species instead of the single shared `σ_eps` of

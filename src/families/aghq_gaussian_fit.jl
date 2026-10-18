@@ -104,6 +104,13 @@ latter a documented extra, not yet a verified twin).
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
+    requested_optimizer = get(kwargs, :optimizer, nothing)
+    _optimizer_method(requested_optimizer, Optim.LBFGS(); route = "fit_gaussian_gllvm")
+    lambda_constraint === nothing || _refuse_optimizer(requested_optimizer,
+        "fit_gaussian_gllvm", "the lambda_constraint confirmatory refit")
+    request=_aghq_request(aghq)
+    request === :off || _refuse_optimizer(requested_optimizer, "fit_gaussian_gllvm",
+        "AGHQ/adaptive integration (fixed internal outer solver)")
     hessian===:observed || throw(ArgumentError("Gaussian integration uses observed curvature"))
     offset=_normalize_offset(offset,size(Y,1),size(Y,2);Y=Y,mask=mask,caller="fit_gaussian_gllvm")
     if lambda_constraint!==nothing
@@ -121,7 +128,7 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         controls=(;(k=>v for (k,v) in pairs(kwargs) if k in (:x_tol,:f_tol,:g_tol,:iterations))...)
         return _fit_confirmatory_lambda_constraint(base,Y,lambda_constraint;controls...)
     end
-    request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
+    c=_aghq_controls(aghq_control)
     if request===:off && mask===nothing && offset===nothing
         return _fit_gaussian_gllvm_exact(Y;K=K,kwargs...)
     end

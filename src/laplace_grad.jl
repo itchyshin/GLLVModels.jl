@@ -61,16 +61,19 @@ end
 # when it is no worse by 1e-6 and either converged or strictly better. A converged run,
 # or one on the failure sentinel, is returned unchanged. `run(alg, θ)` re-runs the
 # caller's objective. Returns `(θ, nll, converged, iterations)`.
-function _bfgs_continuation(run, res)
+function _bfgs_continuation(run, res; stage_callback = nothing)
     θ = Optim.minimizer(res)
     f0 = Optim.minimum(res)
     conv = Optim.converged(res)
     iters = Optim.iterations(res)
     (conv || _nll_failed(f0)) && return (θ, f0, conv, iters)
-    trial = run(_COV_BFGS(), copy(θ))
+    method = _COV_BFGS()
+    trial = run(method, copy(θ))
     f1 = Optim.minimum(trial)
     c1 = Optim.converged(trial)
-    if f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+    accepted = f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+    stage_callback === nothing || stage_callback(:legacy_bfgs_continuation, method, trial; accepted = accepted)
+    if accepted
         return (Optim.minimizer(trial), f1, c1, iters + Optim.iterations(trial))
     end
     return (θ, f0, conv, iters)

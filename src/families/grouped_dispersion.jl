@@ -437,7 +437,8 @@ _nb_eta_above_clamp(β::AbstractVector, offset; mask = nothing) =
 # is a better local search, not a guarantee of the global maximum.
 # `grad` (optional, −∇negll closure or `nothing`): when given, the restarts use the same
 # exact-gradient optimiser as the main fit (`_optimize_with_analytic`).
-function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad = nothing)
+function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad = nothing,
+                              stage_callback = nothing)
     θ = Optim.minimizer(res)
     bd = findall(_dispersion_group_boundary(exp.(θ[first_log_r:end])))
     isempty(bd) && return res
@@ -449,7 +450,9 @@ function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad =
         trial = grad === nothing ?
             Optim.optimize(negll, θs, ls, opts; autodiff = :finite) :
             _optimize_with_analytic(negll, grad, θs, ls, opts)
-        Optim.minimum(trial) < Optim.minimum(best) - 1e-6 && (best = trial)
+        accepted = Optim.minimum(trial) < Optim.minimum(best) - 1e-6
+        stage_callback === nothing || stage_callback(:boundary_restart, ls, trial; accepted)
+        accepted && (best = trial)
     end
     return best
 end
@@ -480,7 +483,7 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
                                   rounds::Integer = 3, grad = nothing,
                                   alg = Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
                                   at_limit = >(1e3), limit_log = log(1e10),
-                                  conv_test = Optim.converged)
+                                  conv_test = Optim.converged, stage_callback = nothing)
     θ = Optim.minimizer(res)
     f0 = Optim.minimum(res)
     conv = conv_test(res)
@@ -506,7 +509,9 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
                     end, θs[free], alg, opts)
             f1 = Optim.minimum(trial)
             c1 = conv_test(trial)
-            if f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+            accepted = f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+            stage_callback === nothing || stage_callback(:ridge_polish, alg, trial; accepted)
+            if accepted
                 θs[free] = Optim.minimizer(trial)
                 θ, f0, conv = θs, f1, c1
                 iters += Optim.iterations(trial)
@@ -547,6 +552,7 @@ struct NBGroupedFit
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group Poisson-limit / degenerate flag (T14 F1)
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
+    optimizer_info::Union{Nothing,OptimizerRecord}
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -563,6 +569,10 @@ NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessia
 # Pre-offset compat tier (10 positional args, #788): no stored training offset.
 NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
     NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
+NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian::Symbol,
+            dispersion_boundary, offset) =
+    NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian,
+                 dispersion_boundary, offset, nothing)
 
 function Base.show(io::IO, f::NBGroupedFit)
     p, K = size(f.Λ)
@@ -634,7 +644,8 @@ end
 
 """
     fit_nb_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
-                         hessian=:observed, β_init=nothing, Λ_init=nothing, …) -> NBGroupedFit
+                         hessian=:observed, β_init=nothing, Λ_init=nothing,
+                         optimizer=nothing, …) -> NBGroupedFit
 
 Fit a negative-binomial GLLVM with grouped / species-specific dispersion (gllvm's
 `disp.group`): species `t` shares dispersion `r_group[group[t]]`. `group` is a
@@ -656,11 +667,16 @@ default) uses the exact conditional NB2/log curvature used by TMB's Laplace
 objective; set `hessian=:fisher` to retain the expected-information approximation.
 `β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
 as in [`fit_nb_gllvm`](@ref); `r_group` still starts at `r₀ = 10`.
+`optimizer` accepts `:lbfgs`, `:bfgs`, or a configured Optim method object.
+`nothing` preserves the historical initial LBFGS, boundary restarts, and
+conditional BFGS Poisson-ridge polish. Explicit LBFGS uses LBFGS for the initial
+and boundary stages and skips the polish; explicit BFGS uses BFGS at every
+executed stage. [`optimizer_info`](@ref) retains the per-attempt results.
 """
 function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
-        g_tol::Real = 1e-5, iterations::Integer = 500,
+        optimizer = nothing, g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
@@ -696,8 +712,15 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         end
         return isfinite(v) ? v : 1e12
     end
-    ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+    default_ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+    ls = _optimizer_method(optimizer, default_ls; route = "fit_nb_gllvm_grouped")
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    stages = OptimizerStage[]
+    stage_controls = (; g_tol, iterations, newton_maxiter, newton_tol, show_trace = false,
+                      optim_options = opts)
+    derivative = link isa LogLink ? :analytic : :finite_difference
+    callback(name, method, result; accepted = false) =
+        _optimizer_stage!(stages, name, method, derivative, stage_controls, result; accepted)
     # Exact gradient under LogLink: the covariate fitter's (`_nb_grouped_cov_negll_grad`)
     # with no covariates (q = 0) and this fit's offset; θ has the same layout. The
     # finite-difference gradient cost 2·(p + rr + G) Laplace passes per step and made
@@ -713,9 +736,20 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
                                          offset = offset)) : nothing
     res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
                              _optimize_with_analytic(negll, grad, θ0, ls, opts)
-    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad)
-    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
-                                                     grad = grad)
+    callback(:initial, ls, res; accepted = true)
+    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad,
+                               stage_callback = callback)
+    explicit = optimizer !== nothing
+    if !explicit || ls isa Optim.BFGS
+        θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
+            grad = grad, alg = explicit ? ls : Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
+            stage_callback = callback)
+    else
+        θ̂ = Optim.minimizer(res)
+        nll = Optim.minimum(res)
+        conv0 = Optim.converged(res)
+        iters0 = Optim.iterations(res)
+    end
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
@@ -724,8 +758,10 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     any(lowb) && @warn "NB2 grouped-dispersion fit reached the per-group lower boundary (r_group below 1e-6) for group(s) $(findall(lowb)); those groups' overdispersion is extreme and not identified from this data; converged is false for this fit." maxlog=1
     any(>(1e6), r̂g) && @warn "NB2 grouped-dispersion fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
     loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
+    receipt = _optimizer_record(optimizer, stages; controls = stage_controls,
+                                derivative, actual = _last_accepted_optimizer(stages))
     return NBGroupedFit(β̂, Λ̂, r̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
-                        boundary, _stored_offset(offset))
+                        boundary, _stored_offset(offset), receipt)
 end
 
 """

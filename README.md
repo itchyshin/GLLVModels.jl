@@ -88,6 +88,23 @@ GLLVModels.profile_ci(fit_shared, "sigma_eps"; y = y)                 # profile 
 GLLVModels.bootstrap_ci(fit_shared; y = y, n_boot = 20, seed = 42)    # parametric bootstrap; use 1000 or more for real work
 ```
 
+## Choosing the outer optimizer
+
+The ordinary Gaussian, Poisson Laplace, and shared-r NB2 fitters accept
+`optimizer = :lbfgs` or `:bfgs`; the default `optimizer = nothing` preserves
+their existing behavior. The default per-trait NB2 formula route accepts the
+same choice without changing its dispersion model. Explicit choices run
+directly, without the legacy Poisson/NB2 BFGS continuation. Inspect the actual
+stages with `optimizer_info(fit)`. AGHQ, grouped covariance, and other nested
+routes reject explicit selection. Profile and bootstrap intervals also reject
+fits made with an explicit choice because their internal refits do not yet
+forward it.
+
+```julia
+fit = fit_gllvm(Y_count; family = Poisson(), K = 2, optimizer = :bfgs)
+optimizer_info(fit)
+```
+
 ## Why
 
 GLLVMs decompose a multivariate response into a low-rank latent factor
