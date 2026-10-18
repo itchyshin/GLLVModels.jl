@@ -519,6 +519,7 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_branch_re.jl")
     _shard_include("test_branch_re_marginal_fallback.jl")
     _shard_include("test_core070_receipts.jl")
+    _shard_include("test_family11_p1_boundary.jl")
     _shard_include("test_core070_interface_registry.jl")
     _shard_include("test_core070_shape_boundaries.jl")
     _shard_include("test_ordinal_link_input.jl")
