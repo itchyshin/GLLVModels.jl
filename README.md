@@ -35,7 +35,7 @@ use them, also run `Pkg.add("Distributions")`.
 ## Quick start
 
 ```julia
-using GLLVModels, Random
+using GLLVModels, Distributions, Random
 
 # `using GLLVM` cannot resolve after the package rename. After loading
 # GLLVModels, `GLLVModels.GLLVM` is a temporary deprecated source-level alias.
@@ -101,9 +101,26 @@ fits made with an explicit choice because their internal refits do not yet
 forward it.
 
 ```julia
-fit = fit_gllvm(Y_count; family = Poisson(), K = 2, optimizer = :bfgs)
-optimizer_info(fit)
+Y_count = [1 0 3 2 0 1 4 0 2 1 0 3;
+           0 2 1 0 3 1 0 4 1 0 2 1;
+           2 1 0 3 1 0 2 1 4 0 1 2]
+K_count = 1
+β_start = [0.1, -0.1, 0.2]
+Λ_start = reshape([0.12, -0.06, 0.08], 3, K_count)
+
+fit_lbfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
+    β_init = β_start, Λ_init = Λ_start, optimizer = :lbfgs)
+fit_bfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
+    β_init = β_start, Λ_init = Λ_start, optimizer = :bfgs)
+@show fit_lbfgs.converged fit_bfgs.converged
+@show fit_lbfgs.loglik fit_bfgs.loglik
+optimizer_info(fit_lbfgs)
+optimizer_info(fit_bfgs)
 ```
+
+Both fits use the same count matrix, family, latent rank, and supplied starting
+values, so this compares optimizer paths without changing the model. Compare
+their convergence flags and likelihoods; different local optima remain possible.
 
 ## Why
 

@@ -21765,3 +21765,13 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Fix: exact test-only compat pin in `test/Project.toml`: `Aqua = "=0.8.16"`. No `Project.toml` version bump, no runtime deps, no likelihood code, no gllvmTMB edits, no Aqua subcheck skip.
 - Local validation: temp Julia env with `Aqua v0.8.16`, `SpecialFunctions v2.9.0`, and `LogExpFunctions v0.3.29`; `Aqua.test_all(GLLVM; ambiguities=false)` passed, including `Persistent tasks | 1/1`.
 - Also ran: `git diff --check` passed. Full `Pkg.test()` was not run locally; an accidental all-suite probe was stopped after it started because the focused Aqua reproducer covered the CI failure mode.
+
+
+## 2026-10-18 — outer optimizer follow-up: Gaussian mask/offset and evidence
+
+- Gaussian `mask`/`offset` observed-data refits now use the explicitly selected outer Optim method and append a receipt stage; Gaussian integration wrappers preserve the receipt. Default LBFGS BackTracking settings remain unchanged.
+- Added actual `Optim.optimize` boundary instrumentation for Gaussian, Poisson, per-trait NB2 and ridge-polish stages; the test removes its temporary methods and verifies cleanup.
+- Focused selector tests: 61/61 plus spy cleanup 1/1, `OPTIMIZER_SELECTION_PASS`; log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-optimizer-review-green.log`. Red witness from prior source: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-optimizer-review-red.log`.
+- Paired identical-start Poisson example passed; both methods converged and log-likelihoods differed by about 7e-14: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-paired-example-final.log`. Gaussian source-design neighbor: 34/34, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-gaussian-source-final.log`.
+- Final neighbor batch stopped at its 5-minute estimate after seven of nine files; `test_formula.jl` was interrupted and `formula_sources` not run. Do not report all nine as passing. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-neighbours-final.log`.
+- Docs VitePress rendering completed, but the Julia wrapper did not provide a final exit receipt; docs gate is unconfirmed. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-docs-final.log`. Broad suite remains incomplete from the earlier SIGINT; `Pkg.test()` not run.

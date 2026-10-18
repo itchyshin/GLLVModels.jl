@@ -194,6 +194,33 @@ the formula call above can use `optimizer = :bfgs` and then
 selection is not yet forwarded through profile or bootstrap refits; those
 interval methods require a fit made with the default `optimizer = nothing`.
 
+To compare methods from the same point, keep the response, family, rank, and
+both starting values fixed:
+
+```julia
+Y_count = [1 0 3 2 0 1 4 0 2 1 0 3;
+           0 2 1 0 3 1 0 4 1 0 2 1;
+           2 1 0 3 1 0 2 1 4 0 1 2]
+K_count = 1
+β_start = [0.1, -0.1, 0.2]
+Λ_start = reshape([0.12, -0.06, 0.08], 3, K_count)
+
+f_lbfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
+    β_init = β_start, Λ_init = Λ_start, optimizer = :lbfgs)
+f_bfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
+    β_init = β_start, Λ_init = Λ_start, optimizer = :bfgs)
+@show f_lbfgs.converged f_bfgs.converged
+@show f_lbfgs.loglik f_bfgs.loglik
+optimizer_info(f_lbfgs)
+optimizer_info(f_bfgs)
+```
+
+Read each convergence flag and likelihood; an optimizer change can lead to a
+different local optimum. The default per-trait NB2 formula route keeps its
+species-specific dispersion under either method. Gaussian `mask` and `offset`
+fits also use the selected method for both their warm-start and observed-data
+solves, and retain both in `optimizer_info`.
+
 For continuous Gaussian data with **unequal residual variance across species**
 (heteroscedastic; gllvm's default), `fit_gaussian_pervar_gllvm` estimates a
 separate variance per species instead of the single shared `σ_eps` of
