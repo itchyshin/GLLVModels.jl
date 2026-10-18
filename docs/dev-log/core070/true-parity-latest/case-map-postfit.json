@@ -68,10 +68,11 @@
     "numeric_fail": 0,
     "numeric_held_batch_verifier_failed": 0,
     "numeric_non_discriminating": 1,
-    "partial_non_numeric_case": 4,
+    "partial_non_numeric_case": 3,
     "needs_surface_not_executed": 0,
     "retired_at_p1_not_measured": 2,
-    "not_measured": 0
+    "not_measured": 0,
+    "behavioural": 1
   },
   "runtimes_seconds": {
     "surface_conversion_batch_wall": 121,

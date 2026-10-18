@@ -23,7 +23,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `6e9c99a60f3f06502b52dcb32e3031ac5e615cdd529cd25bbb738bca51c361a5`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `641e8095db0ff16b479434e0780276dfc63cb341e7be36457cb7ba6749516dbb`)
-- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `725cca357b6054d364dbe2f3d4c34e9f9044f54a9b87cfc93c2ea478ae0dd74f`)
+- `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `fce73e260cef6d19bc76c2a3ad11900ca91055620de9eb6ccfb80431a001320f`)
 
 ## Totals by family
 
