@@ -1,3 +1,15 @@
+## 2026-10-18: PR #905 reviewer unblock (refs #822)
+
+- Branch `claude/sharp-gates-3ud4k2`, rebased onto `origin/main` `383e9d370`.
+- `_phylo_latent_accept_rounding_floor` no longer sets `converged = true` when
+  `gradient_norm > g_tol`. The 1e-3 eligibility line is unchanged.
+- Targeted (Julia 1.10.10, `JULIA_NUM_THREADS=1`, `OPENBLAS_NUM_THREADS=1`):
+  `test_phylo_latent_rounding_floor.jl` **14 + 10 passed / 0 failed**;
+  issue #822 DEP (`d = 4`, 120 tips) `converged=true`,
+  `gradient_norm=6.2049e-6`; `test_cov_phylo_twins_p1.jl` **40 passed / 0 failed**.
+- Full `Pkg.test()` tally: filled after the local canonical run.
+- Body keeps `Closes #822` because the DEP repro passed locally.
+
 ## 2026-10-01: postfit numeric twins at gllvmTMB P1 (5 rows, #660)
 
 - Branch `claude/true-parity-cov-postfit-family-twins` from `origin/main` (`3fcf20698`). New:

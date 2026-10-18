@@ -307,11 +307,12 @@ gradient `2e-4`; after the polish the fit reports `converged = true` with
 gradient `6e-6` and matches R's logLik to `3e-13`. A fit that is genuinely not
 stationary still reports `converged = false`; inspect `gradient_norm` and
 `stopping_reason` rather than raising `g_tol` blindly. A fit that stops at the
-objective's rounding floor is also reported `converged = true`, with
-`stopping_reason = :rounding_floor`, when its finite-difference Hessian is
-positive definite, its Newton decrement `g' H^-1 g / 2` is at most
-`1000 * eps() * max(1, |nll|)`, and `max |gradient| <= 100 * max(g_tol, 1e-5)`
-(#822); nothing weaker is accepted. Returns a
+objective's rounding floor (positive-definite finite-difference Hessian, Newton
+decrement `g' H^-1 g / 2` at most `1000 * eps() * max(1, |nll|)`, and
+`max |gradient| <= 100 * max(g_tol, 1e-5)`) is reported `converged = true` with
+`stopping_reason = :rounding_floor` only when the stored `gradient_norm` is
+already `<= g_tol` (#822). The fitter never reports `converged = true` when
+`gradient_norm > g_tol`. Returns a
 [`PrecisionMultivariateFit`](@ref) with `residual_mode = :shared`; use
 `extract_Sigma(fit; level = :phy)` and [`extract_phylo_signal`](@ref).
 """
@@ -452,8 +453,9 @@ end
 #      1e-5)` (a tighter `g_tol` cannot be resolved by the FD stencil), so a
 #      tiny decrement from a huge curvature cannot hide a gradient that is far
 #      from zero.
-# A fit that meets them reports `converged = true` and
-# `stopping_reason = :rounding_floor`; every other fit is returned untouched.
+# A fit that meets them is eligible for `stopping_reason = :rounding_floor`,
+# but `converged` is set true only when the stored `gradient_norm` is already
+# `<= g_tol`. A fit with `gradient_norm > g_tol` is returned untouched.
 const _PHYLO_LATENT_FLOOR_ULPS = 1000.0
 const _PHYLO_LATENT_FLOOR_GRAD_FACTOR = 100.0
 
@@ -490,6 +492,8 @@ function _phylo_latent_accept_rounding_floor(fit::PrecisionMultivariateFit, g_to
         !isfinite(fit.loglik)) && return fit
     accepted, _, _ = _phylo_latent_floor_check(fit, g_tol)
     accepted || return fit
+    # Never report converged = true when the stored FD max is still above g_tol.
+    fit.gradient_norm > g_tol && return fit
     return PrecisionMultivariateFit(fit.beta, fit.loading, fit.phylo_unique_variance,
         fit.residual_variance, fit.mode, fit.rank, fit.phy, fit.species_id,
         fit.parameters, fit.loglik, true, fit.gradient_norm, fit.hessian_min_eigenvalue,

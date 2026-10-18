@@ -2,12 +2,14 @@
 
 ## Development
 
-- **`fit_phylo_latent_gllvm`: a stop at the objective's rounding floor is reported converged (#822).**
-  A fit whose finite-difference Hessian is positive definite, whose Newton decrement `g' H^-1 g / 2`
-  is at most `1000 * eps() * max(1, |nll|)` and whose `max |gradient|` is at most
-  `100 * max(g_tol, 1e-5)` now reports `converged = true` with `stopping_reason = :rounding_floor`,
-  instead of `converged = false` at a correct optimum (which platform it happened on depended on the
-  BLAS). Any other fit is returned unchanged. `test/test_phylo_latent_rounding_floor.jl`.
+- **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
+  After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
+  whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose
+  `max |gradient|` is at most `100 * max(g_tol, 1e-5)` may be tagged `stopping_reason =
+  :rounding_floor` and `converged = true` only when the stored `gradient_norm` is already
+  `<= g_tol`. The fitter never reports `converged = true` when `gradient_norm > g_tol`. The 1e-3
+  acceptance (`100 * max(g_tol, 1e-5)`) is unchanged. `test/test_phylo_latent_rounding_floor.jl`
+  includes the issue's own DEP (`d = 4`, 120 tips) default-start fit.
 
 - **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
   (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
