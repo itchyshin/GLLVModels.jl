@@ -227,7 +227,8 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
     Zemp = [linkfun(link, max(Yc[t, i], 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = _rescue_β_init(β_init, vec(sum(Zemp; dims = 2)) ./ n, offset, link;
+               mask = msk, caller = "fit_gamma_gllvm")
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)

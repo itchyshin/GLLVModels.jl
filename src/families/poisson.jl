@@ -252,7 +252,8 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = _rescue_β_init(β_init, vec(sum(Zemp; dims = 2)) ./ n, offset, link;
+               mask = msk, caller = "fit_poisson_gllvm")
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)

@@ -611,7 +611,8 @@ end
 # given (the `fit_nb_gllvm` convention, src/families/negbin.jl), otherwise empirical
 # link-scale means and SVD loadings of the centred link-scale data. As in `fit_nb_gllvm`,
 # a supplied `β_init` also centres the data the default loadings are taken from.
-function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init)
+function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init;
+                             offset = nothing, link::Link = IdentityLink(), mask = nothing)
     p, n = size(Zemp)
     if β_init !== nothing
         length(β_init) == p || throw(ArgumentError(
@@ -621,7 +622,8 @@ function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init)
         size(Λ_init) == (p, K) || throw(ArgumentError(
             "Λ_init has size $(size(Λ_init)); expected (p, K) = ($p, $K)"))
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = _rescue_β_init(β_init, vec(sum(Zemp; dims = 2)) ./ n, offset, link;
+               mask = mask, caller = "grouped-dispersion fit")
     Λ_init === nothing || return β0, collect(float.(Λ_init))
     Zc = Zemp .- β0
     F = svd(Zc); kk = min(K, length(F.S))
@@ -677,7 +679,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init)
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, link = link, mask = msk)
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
 
     function negll(θ)
@@ -1399,7 +1401,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init)
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, link = link, mask = msk)
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
 
     function negll(θ)
@@ -2392,7 +2394,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init)
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, link = link, mask = msk)
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(1.0), G))
 
     function negll(θ)

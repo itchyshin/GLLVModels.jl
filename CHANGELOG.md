@@ -2,6 +2,15 @@
 
 ## Development
 
+- **Rescue user `β_init` above the η clamp (#874).** An explicit `β_init` entry whose intercept plus
+  its largest additive term is above the η clamp (30) now falls back to the default warm start for
+  that entry, with one warning, instead of starting on the failure sentinel and ending at
+  `loglik = -Inf, converged = false` (the #869 behaviour change). Covers the log-link fitters that
+  take `β_init`: Poisson, NB (shared and grouped), NB1, COM-Poisson, GP1, truncated Poisson/NB2,
+  censored Poisson, Tweedie, Gamma, Exponential. The entry is not projected onto the cap. A
+  data-driven start past the cap (counts around 1e14) is unchanged: it still ends at the sentinel.
+  Not covered: the covariate and two-part routes do not take a user `β_init`.
+
 - **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
   (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
   hurdle, delta, `fit_gllvm_cov`, grouped Gamma/NB1/Tweedie) now return the failure sentinel when an

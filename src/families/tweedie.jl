@@ -347,7 +347,8 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
 
     Zemp = log.(Yc .+ _tweedie_log_offset(Yc, msk))
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = _rescue_β_init(β_init, vec(sum(Zemp; dims = 2)) ./ n, nothing, link;
+               mask = msk, caller = "fit_tweedie_gllvm")
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)

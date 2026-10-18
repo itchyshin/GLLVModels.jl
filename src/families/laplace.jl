@@ -78,6 +78,28 @@ function _eta_cap_verdict(conv::Bool, link::Link, β::AbstractVector, offset; ma
     return false
 end
 
+# #874: a user-supplied `β_init` entry above the η clamp (β_t + its largest additive term >
+# `_ETA_CLAMP`) starts the fit on the failure sentinel, where Optim cannot move. Fall back to the
+# data-driven default start for that entry (bit-identical to the `β_init = nothing` start) and
+# warn once. Not projected onto the cap: just under it the objectives already sit at
+# failure-scale values. Log links only (`_eta_cap_guarded`); a data-driven start past the cap
+# is left alone, because there the intercept really belongs past the cap.
+function _rescue_β_init(β_init, β_default::AbstractVector, offset, link::Link;
+                        mask = nothing, caller::AbstractString = "fit")
+    β_init === nothing && return β_default
+    β = collect(float.(β_init))
+    _eta_cap_guarded(link) || return β
+    length(β) == length(β_default) || return β   # the caller's length check reports it
+    bad = Int[]
+    @inbounds for t in eachindex(β)
+        β[t] + _eta_offset_max(offset, t; mask = mask) > _ETA_CLAMP && push!(bad, t)
+    end
+    isempty(bad) && return β
+    β[bad] .= β_default[bad]
+    @warn "$caller: β_init entries $(bad) sit above the η clamp (β + offset > $(_ETA_CLAMP)); using the default warm start for them." maxlog = 1
+    return β
+end
+
 # Robust linear solve: returns `nothing` if the factorization is singular or
 # fails, so the inner Newton can stop gracefully. A = Λ'WΛ + I is SPD by
 # construction but can be numerically singular when the Fisher weights blow up
