@@ -43,5 +43,30 @@
   "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json": "4db62415458b3270c7e090799ba441d6d2c6e3c39898deee7a005873aaf88fa0",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-17-v2/run.json": "67935ec7511cf08a1b166f56db7068b5246ceff9e1ddc77b677a7b072af90853",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-17-v2/r-public.tsv": "dc444071c8dfd3c15f9f26e6a816787260fef782b2c480c64f37255111c242fb",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-17-v2/julia-public.tsv": "279e690db4baadaf0f7e4e233934e2e975725fb97b53fed0b246e2772fb477d7",
+      "tools/first_seven_behaviour_derive.py": "96da9aef11ba037809aacfc4b422541acf4f1b2f009bf15eca87d1cdae5eef72"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-WAVE7-CHECK-AUTO-RESIDUAL",
+        "source_id": "postfit/POSTFIT-SURFACE-check_auto_residual",
+        "kind": "route",
+        "r_observed": "residual-check:coherent",
+        "julia_observed": "residual-check:coherent",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json#raw_observations.R",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json#raw_observations.Julia",
+        "r_call": "{     gf <- gllvmTMB(value ~ 0 + trait + latent(0 + trait | cell_id, d = 1, unique = FALSE), data = diagnostic$data, unit = \"cell_id\", trait = \"trait\", family = gaussian(), silent = TRUE)     check_auto_residual(gf) }",
+        "julia_call": "fit_gaussian_gllvm(diagnostic.Y; K=1, X=diagnostic.trait_X); check_auto_residual(fit)",
+        "ruling": "D-319 N6/N10"
+      }
+    ]
+  }
 }
