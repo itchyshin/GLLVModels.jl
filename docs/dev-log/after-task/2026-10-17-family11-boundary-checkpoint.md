@@ -34,12 +34,12 @@ The FAMILY-11 runner, raw capture, receipt derivation, focused test, and checkpo
 - `julia --project=. -e 'Meta.parseall(read("test/runtests.jl", String)); println("RUNTTESTS_PARSE_OK")'`: pass.
 - `julia --project=. -e 'include("test/test_shard_selection.jl")'`: pass, 43/43.
 - Focused FAMILY-11 test and receipt mutation controls passed in the builder worktree. The raw capture was retained, not freshly executed.
-- `Rscript tools/check-after-task.R <report>`: pass, after-task structure check.
-- The hub `evidence_gate.py` did not pass because an unrelated existing ledger at `.unlazy/totoro-t4-p6-grid/GATES.md` is malformed; it reports that it cannot read the ledger. No ledger was changed in this slice.
+- `Rscript tools/check-after-task.R <report>`: the after-task structure check passes, but the command exits 1 because the unrelated existing `.unlazy/totoro-t4-p6-grid/GATES.md` cannot be read: a gate entry lacks its required ID and colon. No ledger was changed in this slice.
+- The hub `evidence_gate.py` also did not pass because it cannot read that same unrelated malformed ledger. No ledger was changed in this slice.
 
 ## 6. Tests of the Tests
 
-Checkpoint negative controls reject row substitution, dropped rows, changed contracts, unapproved signed substitutions, missing P1 provenance, altered raw hashes, and invalid bridge context. Receipt controls accept the valid capture and reject six malformed mutations. The focused Julia test exercises the public bridge refusal.
+Checkpoint negative controls reject row substitution, dropped rows, changed contracts, unapproved signed substitutions, missing P1 provenance, altered raw hashes, and invalid bridge context. The receipt validator accepts its synthetic positive fixture and rejects six malformed mutations. The focused Julia test exercises these synthetic validator controls; it does not call R or probe the public bridge. The retained R capture supplies the live refusal evidence. This focused test is opt-in through `GLLVM_P1_RECEIPT_CONTROLS=1`, and no committed workflow enables it.
 
 ## 7a. Issue Ledger
 

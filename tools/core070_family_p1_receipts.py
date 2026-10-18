@@ -43,9 +43,10 @@ against the reconciliation record.
                         `alias_identity_r`: they gate the case verdict under the frozen
                         rule but are never read as R-vs-Julia evidence or for the tier.
 
-Not executed at P1 (receipt with evidence_kind not_executed): the 00 and 11
-*-PUBLIC-R-BRIDGE cases, which are outside the frozen three-case bridge
-sub-contract.
+Not executed at P1 (receipt with evidence_kind not_executed): only the
+00-IDENTITY-PUBLIC-R-BRIDGE case remains outside the frozen three-case bridge
+sub-contract. The 11-LOG-PUBLIC-R-BRIDGE case has a retained P1 R-refusal
+receipt and is handled as boundary context, not as a numeric comparison.
 
 Shared gates (PR #567 / #569 / #571 / #579):
 
@@ -1007,12 +1008,11 @@ def p0_evidence(base):
 
 # Maintainer ruling 2026-10-05 (D-319), N1: a PUBLIC-R-BRIDGE case at which R refuses before any Julia call, shown
 # by a receipt (evidence_kind r_public_bridge_boundary, verdict R_BOUNDARY_UNCHANGED), is non-binding context; the
-# covariance overlay applies the same test. FAMILY-00-IDENTITY and FAMILY-11-LOG are the family rows it names, but
-# their bridge cases are NOT_EXECUTED (outside the frozen bridge sub-contract), not an R refusal, so neither binds
-# this way at P1 and both stay partial_case_not_executed. A row binds under N1 only when its bridge case has an
-# R_BOUNDARY_UNCHANGED receipt and every other case is a passing, discriminating numeric comparison from an accepted
-# batch (FAMILY-00's native and formula cases also FAIL on the current receipts). The checker (boundaryContext)
-# re-validates the context case.
+# covariance overlay applies the same test. FAMILY-11-LOG now has this retained refusal receipt, but its row binds
+# only through its passing, discriminating numeric comparison cases from an accepted batch. FAMILY-00-IDENTITY's
+# bridge case remains NOT_EXECUTED outside the frozen bridge sub-contract, so it cannot use this context path and
+# stays partial_case_not_executed; its native and formula cases also FAIL on the current receipts. The checker
+# (boundaryContext) re-validates the context case.
 FAMILY_N1_CONTEXT = {"family/FAMILY-00-IDENTITY", "family/FAMILY-11-LOG"}
 N1_CONTEXT_KIND = ("r_public_bridge_boundary", "R_BOUNDARY_UNCHANGED")
 N1_TIER = ("numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1, "
