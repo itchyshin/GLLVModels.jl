@@ -49,5 +49,30 @@
   "glvmodels_commit": "361516c7d03bea1d49b7b5639c04b153c0e77f94",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-WRAPPER-LAW.json": "0c28726847618472618e73308d363fb4a2bc7542ca6942ca9d71179c7ffbcb25",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-18-main/run.json": "7e486a68dc0c09635692ce6b61264858b5aaef2857397d439734760bce60a813",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-18-main/r-public.tsv": "dc444071c8dfd3c15f9f26e6a816787260fef782b2c480c64f37255111c242fb",
+      "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-18-main/julia-public.tsv": "6fc24d387c93d9f6dc5d88df555492a8f44ae7f32aa661fedef4c0aa44788279",
+      "tools/first_seven_behaviour_derive.py": "96da9aef11ba037809aacfc4b422541acf4f1b2f009bf15eca87d1cdae5eef72"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL",
+        "source_id": "isdm/ISDM-WRAPPER-LAW",
+        "kind": "error_class",
+        "r_observed": "guard:wrapper-law-refusal",
+        "julia_observed": "guard:wrapper-law-refusal",
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-WRAPPER-LAW.json#raw_observations.R",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-WRAPPER-LAW.json#raw_observations.Julia",
+        "r_call": "isdm_sources(gbif=poisson(), survey=isdm_source(binomial(\"logit\"), observation=~access))",
+        "julia_call": "isdm_sources(gbif=Poisson(), survey=isdm_source(Binomial(); observation=:(~ access)))",
+        "ruling": "D-319 N6/N10"
+      }
+    ]
+  }
 }

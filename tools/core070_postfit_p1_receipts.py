@@ -536,7 +536,9 @@ def count_key(row):
 def recount(cm):
     counts = {k: 0 for k in cm["counts"]}
     for r in cm["rows"]:
-        counts[count_key(r)] += 1
+        key = count_key(r)
+        counts.setdefault(key, 0)
+        counts[key] += 1
     return counts
 
 

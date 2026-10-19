@@ -986,7 +986,9 @@ explicit ids, never by prefix:
   rows whose R side is an admission or refusal predicate split three ways, read from each R case's `r_expression`:
   - behavioural scope, 5 rows whose R case is reachable through `gllvmTMB(..., family = isdm_sources(...))`:
     `isdm/ISDM-COUNT`, `-EXTRA-SOURCE`, `-MISSING-IN-TRAIT`, `-MISSING-SOURCE`, `-WRAPPER-LAW`. Each binds only when a
-    receipt shows Julia's public door giving the same refusal or admission (slice W3-2); none does yet.
+    paired receipts now record the same public admission/refusal outcome, and all five rows are
+    `EVIDENCED-BEHAVIOURAL` on this candidate under their signed D-319 scope. This records routing behavior only,
+    not numeric fit or likelihood parity; the rows remain open on main until this candidate is merged.
   - signed disposition, 3 internal predicates: `isdm/ISDM-NO-TRAITS` (calls the predicate with `traits = NULL`),
     `-WRONG-ID` and `-WRONG-LINK` (tamper the family-id or link-id column of the internal row-id matrix). No public
     call on either engine can set those arguments. The ruling names the count; the three ids were confirmed by the
@@ -996,7 +998,8 @@ explicit ids, never by prefix:
   The four dispositions are written by `tools/core070_isdm_p1_receipts.py` (`SIGNED_DISPOSITIONS`), so its
   `--check` keeps re-deriving the rows; each row carries the reason in `disposition_basis`.
 - **N10** (signed yes): `postfit/POSTFIT-SURFACE-check_auto_residual`. It binds when a behaviour block shows the same
-  verdict from both engines (slice W3-9); its receipt has none yet.
+  verdict from both engines (slice W3-9); a paired receipt now records the coherent-residual behavior, with no numeric
+  fit or likelihood claim.
 
 The 14 ids live in `BEHAVIOURAL_EXTENDED_SOURCE_IDS` in the checker and in the assembler, a separate set so the
 59-row inference list stays tied to `case-map-inference.json`. Every other rule of ruling 2 is unchanged: a row in
