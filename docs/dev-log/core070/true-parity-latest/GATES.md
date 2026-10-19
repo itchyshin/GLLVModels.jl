@@ -986,8 +986,9 @@ explicit ids, never by prefix:
   rows whose R side is an admission or refusal predicate split three ways, read from each R case's `r_expression`:
   - behavioural scope, 5 rows whose R case is reachable through `gllvmTMB(..., family = isdm_sources(...))`:
     `isdm/ISDM-COUNT`, `-EXTRA-SOURCE`, `-MISSING-IN-TRAIT`, `-MISSING-SOURCE`, `-WRAPPER-LAW`. Each binds only when a
-    receipt shows Julia's public door giving the same refusal or admission (slice W3-2); paired receipts now record
-    those outcomes, but the five source-map rows remain unbound pending their separately scoped admission.
+    paired receipts now record the same public admission/refusal outcome, and all five rows are
+    `EVIDENCED-BEHAVIOURAL` on this candidate under their signed D-319 scope. This records routing behavior only,
+    not numeric fit or likelihood parity; the rows remain open on main until this candidate is merged.
   - signed disposition, 3 internal predicates: `isdm/ISDM-NO-TRAITS` (calls the predicate with `traits = NULL`),
     `-WRONG-ID` and `-WRONG-LINK` (tamper the family-id or link-id column of the internal row-id matrix). No public
     call on either engine can set those arguments. The ruling names the count; the three ids were confirmed by the
