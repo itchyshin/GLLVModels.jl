@@ -56,6 +56,8 @@ Bind derived receipts to the exact deriver snapshot and launch tree, preserve ra
 
 Memory receipt: the approved plan and exact scope decisions remain the authority; this report records measurements and does not create signatures.
 
+Local-integration follow-up: after explicit maintainer approval, locally available `origin/main` `882292ac6` was merged into the candidate as `a6d66afd9`. The exact checkpoint verifier passes on this merge commit (seven rows, X2 304/317, C2 290/297); the X2 audit still identifies the same 13 unresolved rows. The newly merged response-support test passes 49/49. A full or core suite was not rerun on the merge commit; prior partition receipts apply to `7d6806a59` only. The remote was unreachable, so `882292ac6` is not confirmed as the current remote tip. This local merge does not land anything on GitHub or current main.
+
 Golden Set: the exact seven-row checkpoint, raw hashes, eight partition result receipts, and independent review records are retained under `.unlazy/true-parity-p1-next/`.
 
 ## 12. Cross-Product Coverage

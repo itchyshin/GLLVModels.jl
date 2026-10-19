@@ -9,3 +9,4 @@
 - Fresh Emmy, Pat and Rose reviews pass with notes for this first checkpoint only. Their verdict covers this bounded candidate checkpoint, not main or full P1.
 - Current `origin/main=882292ac6` measures X2 298/317, C2 284/297; C0/C1/C5/C7/C8 MET, C3 6/8, C4 4/8, C6 NOT MET. Thirteen scoreboard rows and five F-capability gates remain open. The newer main head is not integrated or approved for integration.
 - No push, GitHub merge, new row admission, unsigned decision, release, or public parity claim.
+- After separate explicit approval, locally available `origin/main=882292ac6` was merged into the candidate at `a6d66afd9`. Post-merge checkpoint passes: seven rows, X2 304/317, C2 290/297. X2 still has the same 13 unresolved rows. Newly merged response-support tests pass 49/49; full/core suites were not rerun at this merge ref. The remote tip could not be refreshed, and no GitHub/main merge occurred.
