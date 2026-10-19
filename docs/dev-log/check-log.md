@@ -1,3 +1,15 @@
+## 2026-10-19: approved P1 C6 scope integration, verification in progress
+
+Reused the signed C6 candidate on `codex/p1-c6-approved-20261019` from main
+`d9afa090c`. Exactly seventeen extras, eleven scoped names and nine holds change;
+the scoreboard and assembled map remain byte-unchanged. Independent review
+found and verified the repair of a general-rule authorization gap: both readers
+now bind each scoped export to its exact approved contract digest. Focused Julia
+checks passed 2,117/2,117; 122 exact-scope Python controls and assembly check
+passed. Complete Node/Python reruns, ledger reverification and exact committed
+HEAD checks remain pending. No push, merge or row admission. See the
+[checkpoint report](after-task/2026-10-19-p1-c6-approved.md).
+
 ## 2026-10-18: direct outer optimizer selection
 
 - Branch `codex/optimizer-selection-20261018` from `origin/main` at

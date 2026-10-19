@@ -131,6 +131,20 @@ end
     @test d === nothing && occursin("ALIASES maps R nbinom2", why) && occursin("not Julia-only", why) && kind == "alias_twin"
 end
 
+@testset "C6 signed hold pending route evidence" begin
+    @test Set(HOLD_PENDING_NAMES) == Set(["NBFit", "Ordinal", "TweedieFit", "ZIB", "ZINegBin",
+        "fit_animal_latent_gllvm", "fit_kernel_latent_gllvm", "gllvm", "link_residual"])
+    for name in HOLD_PENDING_NAMES
+        d, basis, kind = decide(F(name = name, doc = true, pages = ["docs/src/api.md"]))
+        @test d == "HOLD_PENDING_EVIDENCE" && kind == ""
+        @test occursin("held pending route-specific fit or behavioural evidence", basis)
+    end
+    @test decide(F(name = "unapproved_hold", doc = true, pages = ["docs/src/api.md"]))[1] == "KEPT_AS_JULIA_EXTRA"
+    text = render([("NBFit", "HOLD_PENDING_EVIDENCE", "maintainer directed this exact name to remain held")])
+    @test occursin("\"ref\": \"docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md\"", text)
+    @test occursin("\"signed_on\": \"2026-10-17\"", text)
+end
+
 @testset "C6 guard: the ALIASES guard follows the object (twin_aliases)" begin
     # StudentTFamily is the same object as StudentT, which ALIASES maps to R student
     d, why, kind = decide(F(name = "StudentTFamily", doc = true, pages = ["docs/src/api.md"],
@@ -194,6 +208,7 @@ end
 @testset "C6 signed overrides (maintainer ruling 2026-10-05, D-319)" begin
     @test length(SIGNED_OVERRIDES) == 23
     @test isdisjoint(keys(SIGNED_OVERRIDES), keys(NAMED_HOLDS))
+    @test isdisjoint(keys(SIGNED_OVERRIDES), HOLD_PENDING_NAMES)
     @test count(v -> v[1] == "EXCLUDED_INTERNAL_HELPER", values(SIGNED_OVERRIDES)) == 7
     @test count(v -> v[1] == "KEPT_AS_JULIA_EXTRA", values(SIGNED_OVERRIDES)) == 16
     em = "EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family"
@@ -215,6 +230,24 @@ end
         d == "KEPT_AS_JULIA_EXTRA" || continue
         pages = [m.match for m in eachmatch(r"docs/src/[A-Za-z0-9_./-]+\.md", b)]
         @test !isempty(pages) && all(p -> isfile(joinpath(ROOT, p)), pages)
+    end
+end
+
+@testset "C6 exact-name approvals (maintainer ruling 2026-10-17)" begin
+    @test Set(keys(APPROVED_C6_DECISIONS)) == APPROVED_C6_NAMES
+    @test length(APPROVED_C6_EXTRAS) == 17
+    @test length(APPROVED_C6_SCOPED) == 11
+    @test isempty(intersect(APPROVED_C6_NAMES, union(keys(SIGNED_OVERRIDES), HOLD_PENDING_NAMES)))
+    for n in APPROVED_C6_EXTRAS
+        @test APPROVED_C6_DECISIONS[n]["decision"] == "KEPT_AS_JULIA_EXTRA"
+        @test occursin("2026-10-17-p1-c6-and-c3-c4-contract-approval.md", APPROVED_C6_DECISIONS[n]["basis"])
+    end
+    for n in APPROVED_C6_SCOPED
+        item = APPROVED_C6_DECISIONS[n]
+        @test item["decision"] == "SCOPED_R_TWIN"
+        @test item["ruling"]["ref"] == HOLD_RULING_REF
+        @test item["ruling"]["signed_on"] == HOLD_RULING_SIGNED_ON
+        @test haskey(item, "counterpart") && haskey(item, "scope") && !isempty(item["receipt_ids"])
     end
 end
 
@@ -288,7 +321,10 @@ end
                  "other than api.md and low-level-reference.md, or in README.md",
                  "(6) it would be EXCLUDED but its internal class is marked PROPOSED (unsigned)",
                  "(7) it would be KEPT but its own ledger class says R has it",
-                 "(8) it is on the named review list of this script (NAMED_HOLDS)")
+                 "(8) it is on the named review list of this script (NAMED_HOLDS)",
+                 "The 28 exact names in c6-approved-decisions-2026-10-17.toml apply the maintainer's signed extra or scoped-twin decisions without broadening their scope",
+                 "The nine names in HOLD_PENDING_NAMES instead receive the explicit 2026-10-17 maintainer disposition HOLD_PENDING_EVIDENCE",
+                 "decision accounting only, makes no twin or parity claim, and admits no scoreboard row")
         @test occursin(must, CRITERION)
     end
     for n in keys(NAMED_HOLDS)                                                       # every named hold is in the text
@@ -357,11 +393,13 @@ end
     @test isempty(dropped_in_src())                                          # no docstring dropped anywhere in src/
     entries = Dict{String,Tuple{String,String}}()
     for l in eachline(OUT)
-        m = match(r"^  \"(.*)\": \{\"decision\": \"([A-Z_]+)\", \"basis\": \"(.*)\"\},?$", l)
-        m === nothing || (entries[unescape_u(m.captures[1])] = (m.captures[2], replace(m.captures[3], "\\\"" => "\"")))
+        m = match(r"^  \"(.*)\": \{\"decision\": \"([A-Z_]+)\", \"basis\": \"((?:\\.|[^\"])*)\"", l)
+        m === nothing || (entries[unescape_u(m.captures[1])] =
+            (m.captures[2], replace(m.captures[3], "\\\"" => "\"", "\\\\" => "\\")))
     end
     @test !isempty(entries)
-    @test Set(d for (d, _) in values(entries)) <= Set(["KEPT_AS_JULIA_EXTRA", "EXCLUDED_INTERNAL_HELPER"])
+    @test Set(d for (d, _) in values(entries)) <= Set(["KEPT_AS_JULIA_EXTRA", "EXCLUDED_INTERNAL_HELPER",
+        "SCOPED_R_TWIN", "HOLD_PENDING_EVIDENCE"])
     gap = Set(gap_names())
     @test all(in(gap), keys(entries))                                        # every decision names a reverse-gap item
     cls = ledger_classes(sort!(collect(keys(entries))))
@@ -369,6 +407,18 @@ end
     texts["README.md"] = read(joinpath(ROOT, "README.md"), String)
     docs_src = r"docs/src/[A-Za-z0-9_./-]+\.md"
     for (n, (d, b)) in entries
+        if d == "HOLD_PENDING_EVIDENCE"
+            @test n in HOLD_PENDING_NAMES
+            @test occursin("no twin or parity claim", b)
+            @test occursin("no scoreboard row admitted", b)
+            line = only(filter(l -> occursin("\"$n\":", l), readlines(OUT)))
+            @test occursin("\"ruling\": {\"ref\": \"$HOLD_RULING_REF\", \"signed_by\": \"Shinichi Nakagawa\", \"signed_on\": \"$HOLD_RULING_SIGNED_ON\"}", line)
+            continue
+        end
+        if haskey(APPROVED_C6_DECISIONS, n)
+            @test (d, b) == (APPROVED_C6_DECISIONS[n]["decision"], APPROVED_C6_DECISIONS[n]["basis"])
+            continue
+        end
         if haskey(SIGNED_OVERRIDES, n)                                       # signed one by one (D-319)
             @test (d, b) == (SIGNED_OVERRIDES[n][1], SIGNED_RULING * SIGNED_OVERRIDES[n][2])
             continue
@@ -391,14 +441,15 @@ end
     end
     # the REML kernel is KEPT, not excluded (its class names R's internal knob, not the Julia name)
     @test entries["gaussian_reml_loglik"][1] == "KEPT_AS_JULIA_EXTRA"
-    # the names the final review held stay out of the file
-    for n in ("StudentTFamily", "StudentT", "bridge_capabilities", "lognormal_marginal_loglik",
-              "GllvmModel", "welch_t", "link_residual", "ZIB", "random_balanced_tree", "shrinkage_factor")
-        @test !haskey(entries, n)
+    # prior unsigned names remain excluded; the nine later maintainer holds are emitted with their own ruling.
+    for n in APPROVED_C6_NAMES
+        @test haskey(entries, n)
     end
+    @test all(n -> haskey(entries, n) && entries[n][1] == "HOLD_PENDING_EVIDENCE",
+              HOLD_PENDING_NAMES)
     # the signed names are in the file with their signed decision
     @test all(n -> haskey(entries, n) && entries[n][1] == SIGNED_OVERRIDES[n][1], keys(SIGNED_OVERRIDES))
-    @test length(entries) == 341
+    @test length(entries) == length(gap) == 378
     # decided names that share an object agree on the decision (the guard held the others)
     twins = object_twins(exports_now())
     for (n, (d, _)) in entries, t in get(twins, n, String[])

@@ -3,9 +3,15 @@
   "source_id": "julia-export/@formula",
   "name": "@formula",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/structured-term-fitting.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/AnBSparseSolver",
@@ -39,9 +45,36 @@
   "source_id": "julia-export/BetaBinom",
   "name": "BetaBinom",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/families/beta_binomial.jl:53-57",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "betabinomial",
+   "r_source": "R/families.R:703"
+  },
+  "scope": {
+   "data": "p=5,n=120,K=1,N=8,seed=56; no covariates",
+   "estimand": "R-vs-Julia log-likelihood comparison on the retained P1 fixture",
+   "exclusions": [
+    "other links, covariates, latent dimensions, or output quantities"
+   ],
+   "family_link": "beta-binomial with logit link and per-trait dispersion",
+   "outputs": [
+    "logLik"
+   ],
+   "public_route": "GLLVModels.jl BetaBinom on the exact P1 family fixture"
+  },
+  "receipt_ids": [
+   "CORE070-FAMILY-08-LOGIT-NATIVE-MODEL"
+  ]
  },
  {
   "source_id": "julia-export/BetaBinomialFit",
@@ -593,9 +626,15 @@
   "source_id": "julia-export/GllvmModel",
   "name": "GllvmModel",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/GllvmSpeciesCovFit",
@@ -867,9 +906,36 @@
   "source_id": "julia-export/NB1",
   "name": "NB1",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/families/negbin1.jl:39-43",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "nbinom1",
+   "r_source": "R/families.R:312"
+  },
+  "scope": {
+   "data": "p=5,n=120,K=1,seed=55; no covariates",
+   "estimand": "R-vs-Julia log-likelihood comparison on the retained P1 fixture",
+   "exclusions": [
+    "other links, covariates, latent dimensions, or output quantities"
+   ],
+   "family_link": "NB1 log link with per-trait dispersion",
+   "outputs": [
+    "logLik"
+   ],
+   "public_route": "GLLVModels.jl NB1 on the exact P1 family fixture"
+  },
+  "receipt_ids": [
+   "CORE070-FAMILY-15-LOG-NATIVE-MODEL"
+  ]
  },
  {
   "source_id": "julia-export/NB1Fit",
@@ -917,9 +983,15 @@
   "source_id": "julia-export/NBFit",
   "name": "NBFit",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/NBGroupedCovFit",
@@ -995,9 +1067,15 @@
   "source_id": "julia-export/Ordinal",
   "name": "Ordinal",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/OrdinalPerTraitCovFit",
@@ -1269,25 +1347,88 @@
   "source_id": "julia-export/StatsAPI",
   "name": "StatsAPI",
   "kind": "Other",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/pitfalls.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/StudentT",
   "name": "StudentT",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/families/studentt.jl:57-74",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "student",
+   "r_source": "R/families.R:371"
+  },
+  "scope": {
+   "data": "Student-t; df fixed at 6 in both engines; per-trait sigma; p=5,n=250,K=1",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "free df, other df, other families",
+    "StudentTFamily is the same Julia object and shares this decision"
+   ],
+   "family_link": "Student-t identity, fixed df=6",
+   "outputs": [
+    "paired logLik and parameter comparisons in the receipt"
+   ],
+   "public_route": "GLLVModels.jl StudentT on the exact route below"
+  },
+  "receipt_ids": [
+   "CORE070-A6-STUDENTT-FIXED-DF-PAIRED"
+  ]
  },
  {
   "source_id": "julia-export/StudentTFamily",
   "name": "StudentTFamily",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/families/studentt.jl:57-74",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "student",
+   "r_source": "R/families.R:371"
+  },
+  "scope": {
+   "data": "Alias of StudentT; one underlying Julia object and one shared fixed-df=6 receipt",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "free df, other df, other families",
+    "StudentT shares this decision"
+   ],
+   "family_link": "Student-t identity, fixed df=6",
+   "outputs": [
+    "same paired logLik and parameter comparisons as StudentT",
+    "no duplicate receipt or capability"
+   ],
+   "public_route": "GLLVModels.jl StudentTFamily on the exact route below"
+  },
+  "receipt_ids": [
+   "CORE070-A6-STUDENTT-FIXED-DF-PAIRED"
+  ]
  },
  {
   "source_id": "julia-export/StudentTFit",
@@ -1349,9 +1490,39 @@
   "source_id": "julia-export/TruncatedNegBin2",
   "name": "TruncatedNegBin2",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/families/truncated_nbinom2.jl:28-31",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "truncated_nbinom2",
+   "r_source": "R/families.R:336"
+  },
+  "scope": {
+   "data": "Zero-truncated NB2; native and formula routes; per-trait dispersion; p=5,n=120,K=1, seed 58; likelihood-level evidence",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "successful public bridge fit (none)",
+    "outputs beyond logLik",
+    "models outside measured native/formula cases"
+   ],
+   "family_link": "Truncated NB2/log link",
+   "outputs": [
+    "logLik only"
+   ],
+   "public_route": "GLLVModels.jl TruncatedNegBin2 on the exact route below"
+  },
+  "receipt_ids": [
+   "NATIVE-12-TRUNCATED-NB2",
+   "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE"
+  ]
  },
  {
   "source_id": "julia-export/TruncatedNegBin2Fit",
@@ -1399,9 +1570,15 @@
   "source_id": "julia-export/TweedieFit",
   "name": "TweedieFit",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/TweedieGroupedFit",
@@ -1449,9 +1626,15 @@
   "source_id": "julia-export/ZIB",
   "name": "ZIB",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/ZIBCovFit",
@@ -1513,9 +1696,15 @@
   "source_id": "julia-export/ZINegBin",
   "name": "ZINegBin",
   "kind": "Type",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/ZIPCovFit",
@@ -1773,17 +1962,60 @@
   "source_id": "julia-export/bridge_capabilities",
   "name": "bridge_capabilities",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/gllvmtmb-parity.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/bridge_fit",
   "name": "bridge_fit",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/bridge.jl:493",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "gllvm_julia_fit",
+   "r_source": "R/julia-bridge.R:2618"
+  },
+  "scope": {
+   "data": "gllvm_julia_fit Gaussian formula route; p=6,n=200, complete observations and no X; formula ~0+trait+latent(0+trait|unit,d=2,unique=FALSE)",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "other bridge routes, response families, X, missing responses"
+   ],
+   "family_link": "Gaussian/log link identity on measured bridge formula route",
+   "outputs": [
+    "formula-route logLik",
+    "logLik",
+    "df",
+    "trait intercepts",
+    "\u039b\u039b\u2032",
+    "sigma_eps"
+   ],
+   "public_route": "GLLVModels.jl bridge_fit on the exact route below"
+  },
+  "receipt_ids": [
+   "P1-BRIDGE-READBACK-GJF-FORMULA-ROUTE-LOGLIK",
+   "P1-BRIDGE-READBACK-GJF-LOGLIK-TMB",
+   "P1-BRIDGE-READBACK-GJF-DF-TMB",
+   "P1-BRIDGE-READBACK-GJF-INTERCEPTS-TMB",
+   "P1-BRIDGE-READBACK-GJF-LATENT-SIGMA-TMB",
+   "P1-BRIDGE-READBACK-GJF-SIGMA-EPS-TMB"
+  ]
  },
  {
   "source_id": "julia-export/build_AnB_sparse",
@@ -2335,9 +2567,15 @@
   "source_id": "julia-export/excess_kurtosis",
   "name": "excess_kurtosis",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/exponential_marginal_loglik_laplace",
@@ -2427,17 +2665,53 @@
   "source_id": "julia-export/fit_animal_dep_gllvm",
   "name": "fit_animal_dep_gllvm",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/animal_dep.jl:34-62",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "animal_dep",
+   "r_source": "R/animal-keyword.R:325"
+  },
+  "scope": {
+   "data": "Gaussian 36 sites \u00d7 3 traits; animal_dep(0+trait|species,A=C); native and formula SourceCovariance(C;mode=:dep)",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "other families, public R bridge (refusal is boundary evidence only), other covariance routes"
+   ],
+   "family_link": "Gaussian identity with animal dependency covariance",
+   "outputs": [
+    "logLik",
+    "beta",
+    "covariance"
+   ],
+   "public_route": "GLLVModels.jl fit_animal_dep_gllvm on the exact route below"
+  },
+  "receipt_ids": [
+   "FIT-MODE-ANIMAL-DEP",
+   "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE"
+  ]
  },
  {
   "source_id": "julia-export/fit_animal_latent_gllvm",
   "name": "fit_animal_latent_gllvm",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/fit_beta_binomial_gllvm",
@@ -2737,9 +3011,39 @@
   "source_id": "julia-export/fit_dep_gllvm",
   "name": "fit_dep_gllvm",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/none_dep.jl:42-72",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "dep",
+   "r_source": "R/brms-sugar.R:1959"
+  },
+  "scope": {
+   "data": "Gaussian 36 sites \u00d7 3 traits; native and formula dependency route",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "non-Gaussian families, public R bridge, separate identification of U versus \u03c3\u00b2I"
+   ],
+   "family_link": "Gaussian identity with ordination dependency covariance",
+   "outputs": [
+    "logLik",
+    "beta",
+    "total covariance U+\u03c3\u00b2I"
+   ],
+   "public_route": "GLLVModels.jl fit_dep_gllvm on the exact route below"
+  },
+  "receipt_ids": [
+   "FIT-MODE-ORD-DEP",
+   "FIT-MODE-ORD-DEP-FORMULA-INTERFACE"
+  ]
  },
  {
   "source_id": "julia-export/fit_diagnostic_table",
@@ -2969,9 +3273,41 @@
   "source_id": "julia-export/fit_gllvm",
   "name": "fit_gllvm",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/families/fit_gllvm.jl:464",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "gllvmTMB (family=nbinom2())",
+   "r_source": "R/gllvmTMB.R:636"
+  },
+  "scope": {
+   "data": "NB2 only; p=6,n=200,K=1 one-axis fixture; logLik is checked by linked test",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "all other fit_gllvm families, options, and routes"
+   ],
+   "family_link": "NB2/log link, per-trait dispersion, one-axis latent route",
+   "outputs": [
+    "intercepts",
+    "\u039b\u039b\u2032",
+    "per-trait dispersion",
+    "logLik (linked test)"
+   ],
+   "public_route": "GLLVModels.jl fit_gllvm on the exact route below"
+  },
+  "receipt_ids": [
+   "P1-JULIA-NB2-INTERCEPTS",
+   "P1-JULIA-NB2-LAMBDA-LAMBDAT",
+   "P1-JULIA-NB2-DISPERSION"
+  ]
  },
  {
   "source_id": "julia-export/fit_gllvm_cov",
@@ -3089,25 +3425,93 @@
   "source_id": "julia-export/fit_kernel_dep_gllvm",
   "name": "fit_kernel_dep_gllvm",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/kernel_dep.jl:38-68",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "kernel_dep",
+   "r_source": "R/kernel-keywords.R:117"
+  },
+  "scope": {
+   "data": "Gaussian 36 sites \u00d7 3 traits; known kernel C",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "non-Gaussian families, public R bridge refusal, other kernel modes"
+   ],
+   "family_link": "Gaussian identity with dependent kernel covariance",
+   "outputs": [
+    "logLik",
+    "beta",
+    "covariance"
+   ],
+   "public_route": "GLLVModels.jl fit_kernel_dep_gllvm on the exact route below"
+  },
+  "receipt_ids": [
+   "FIT-MODE-KERNEL-DEP",
+   "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE"
+  ]
  },
  {
   "source_id": "julia-export/fit_kernel_indep_gllvm",
   "name": "fit_kernel_indep_gllvm",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "SCOPED_R_TWIN",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  },
+  "counterpart": {
+   "julia_source": "src/kernel_indep.jl:39-69",
+   "r_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+   "r_function": "kernel_indep; kernel_scalar when common=TRUE",
+   "r_source": "R/kernel-keywords.R:111"
+  },
+  "scope": {
+   "data": "Gaussian 36 sites \u00d7 3 traits; known kernel C; independent and common=TRUE shared-scalar routes",
+   "estimand": "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture",
+   "exclusions": [
+    "other kernel modes, other families, public R bridge refusals"
+   ],
+   "family_link": "Gaussian identity with independent or common kernel covariance",
+   "outputs": [
+    "logLik",
+    "beta",
+    "covariance"
+   ],
+   "public_route": "GLLVModels.jl fit_kernel_indep_gllvm on the exact route below"
+  },
+  "receipt_ids": [
+   "FIT-MODE-KERNEL-INDEP",
+   "FIT-MODE-KERNEL-COMMON",
+   "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE",
+   "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE"
+  ]
  },
  {
   "source_id": "julia-export/fit_kernel_latent_gllvm",
   "name": "fit_kernel_latent_gllvm",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/fit_lognormal_gllvm",
@@ -3827,9 +4231,15 @@
   "source_id": "julia-export/gaussian_marginal_loglik_sparse_phy",
   "name": "gaussian_marginal_loglik_sparse_phy",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/gaussian_pervar_marginal_loglik",
@@ -3863,9 +4273,15 @@
   "source_id": "julia-export/gllvm",
   "name": "gllvm",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/gllvm_anova",
@@ -4039,9 +4455,15 @@
   "source_id": "julia-export/link_residual",
   "name": "link_residual",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "held",
+  "decision": "HOLD_PENDING_EVIDENCE",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+  "ruling": {
+   "ref": "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-17"
+  }
  },
  {
   "source_id": "julia-export/loading_profile_exploratory",
@@ -4075,9 +4497,15 @@
   "source_id": "julia-export/lognormal_marginal_loglik",
   "name": "lognormal_marginal_loglik",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/response-families.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/lognormal_response_mean",
@@ -4265,9 +4693,15 @@
   "source_id": "julia-export/observed_mask",
   "name": "observed_mask",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/ordered_beta_marginal_loglik_laplace",
@@ -4371,9 +4805,15 @@
   "source_id": "julia-export/ppca_init",
   "name": "ppca_init",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/precision_logdet_check",
@@ -4463,9 +4903,15 @@
   "source_id": "julia-export/qq_max_dev",
   "name": "qq_max_dev",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/quadratic_marginal_loglik_laplace",
@@ -4485,9 +4931,15 @@
   "source_id": "julia-export/random_balanced_tree",
   "name": "random_balanced_tree",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/random_slope_marginal_loglik_laplace",
@@ -4507,9 +4959,15 @@
   "source_id": "julia-export/rank_sum_z",
   "name": "rank_sum_z",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/raw_loading_wald_ci",
@@ -4641,9 +5099,15 @@
   "source_id": "julia-export/shrinkage_factor",
   "name": "shrinkage_factor",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/sigma_phy_dense",
@@ -4845,9 +5309,15 @@
   "source_id": "julia-export/spearman",
   "name": "spearman",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/standardized_loading_wald_ci",
@@ -4909,17 +5379,29 @@
   "source_id": "julia-export/truncated_nbinom2_marginal_loglik_laplace",
   "name": "truncated_nbinom2_marginal_loglik_laplace",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/truncated_nbinom2_pertrait_marginal_loglik_laplace",
   "name": "truncated_nbinom2_pertrait_marginal_loglik_laplace",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/truncated_poisson_marginal_loglik_laplace",
@@ -5009,9 +5491,15 @@
   "source_id": "julia-export/welch_t",
   "name": "welch_t",
   "kind": "Function",
-  "status": "unsigned",
-  "decision": null,
-  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt"
+  "status": "decided",
+  "decision": "KEPT_AS_JULIA_EXTRA",
+  "derived_from": "names(GLLVModels) at 36776bfb1123; no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt",
+  "basis": "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md",
+  "ruling": {
+   "ref": "itchyshin/GLLVModels.jl#684 item 3",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-10-02"
+  }
  },
  {
   "source_id": "julia-export/zi_marginal_loglik_laplace",

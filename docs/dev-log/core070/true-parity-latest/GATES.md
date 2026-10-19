@@ -586,10 +586,10 @@ Julia-only exports that are documented user-facing extras are signed as document
 `status` to `decided`. A name in `decisions` that is not a reverse-gap item fails the run (stale).
 Names with no clear classification stay out of the file and remain undecided.
 
-The checker's C6 vocabulary is `KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
-`RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`. A decided item also needs a `basis` that is
-visible text (see "Visible text" in ruling 2) and a `ruling`. The ruling `ref` must be `itchyshin/GLLVModels.jl#684 item 3`, the only
-ruling the tool recognises (`C6_RULINGS` in the checker, copied into the assembler); `signed_on`
+The original C6 vocabulary was `KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
+`RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`. The dated extension below adds two states. A decided item also needs a `basis` that is
+visible text (see "Visible text" in ruling 2) and a `ruling`. The ruling `ref` must be `itchyshin/GLLVModels.jl#684 item 3`, the original
+ruling recognised by the tool (`C6_RULINGS` in the checker, copied into the assembler); `signed_on`
 must be `2026-10-02`, its date; and `signed_by` must pass the signature rule (allow-list, real past
 date). That ruling covers `KEPT_AS_JULIA_EXTRA` and `EXCLUDED_INTERNAL_HELPER` only. A decision
 `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE` or `RENAME_TO_AVOID_COLLISION` is listed under
@@ -601,6 +601,29 @@ with a `..` segment anywhere, such as `tools/../tools/gen.py`, and a directory a
 assembler reads the generator, the checker does not), a `basis` with no visible character, or a
 `KEPT_AS_JULIA_EXTRA` basis that fails the documented-extra rule below. C6 also prints
 `decision_counts=` per vocabulary word.
+
+Dated extension, signed 2026-10-17: `SCOPED_R_TWIN` accounts for ten exact
+contracts across eleven names, and `HOLD_PENDING_EVIDENCE` records the nine
+named evidence holds. The source is
+`docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md`; the
+approved scope data are in `c6-approved-decisions-2026-10-17.toml` alongside
+this ledger. The same approval signs seventeen named Julia extras. A general
+rule does not sign another name or a wider route.
+
+For each scoped twin, both readers check the exact export name and SHA-256 of
+its counterpart, scope, receipt IDs and ruling, using recursively sorted compact
+UTF-8 JSON. The eleven pinned digests match the approved TOML. The canonical
+checker also requires `source_id` to identify that exact Julia export. It resolves
+scoped receipt IDs against the assembled case map, while ordinary C1-C8/X2
+continue to use their existing case map. Every scope must still cite executable
+P1 numeric or behavioural rows with receipt paths that resolve. These C6 checks
+do not independently remeasure receipt contents or establish fit parity.
+
+A held name has status `held`, no counterpart/scope/receipt fields, and a basis
+that states there is no twin or parity claim and no scoreboard row admission.
+`fit_gllvm` is scoped only to the approved NB2 route; its remaining routes stay
+held. C6 decision accounting can be MET with nine explicit evidence holds. The
+holds and outstanding scoreboard evidence remain open.
 
 Basis rules. An `EXCLUDED_INTERNAL_HELPER` basis must be visible text. A `KEPT_AS_JULIA_EXTRA` basis must also
 cite at least one page under `docs/src`, and every page it cites must be an existing `.md` file written exactly as
