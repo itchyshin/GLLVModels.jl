@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { BASELINE, P1, REQUIRED, APPROVED_C6_EXTRAS, APPROVED_C6_SCOPED, HELD_C6_NAMES, parseBoard, compareCheckpoint, compareC6Decisions, provenanceProblem, rowMaps } from './true_parity_checkpoint_check.mjs';
+import { BASELINE, P1, REQUIRED, APPROVED_C6_EXTRAS, APPROVED_C6_SCOPED, HELD_C6_NAMES, MAIN_C6_EXPORT_ADDITIONS, parseBoard, compareCheckpoint, compareC6Decisions, provenanceProblem, rowMaps } from './true_parity_checkpoint_check.mjs';
 const board = execFileSync('git',['show',`${BASELINE}:docs/dev-log/core070/true-parity-latest/scoreboard.md`],{encoding:'utf8'});
 const base = parseBoard(board);
 const maps = rowMaps(BASELINE);
@@ -12,7 +12,22 @@ assert.equal(new Set(maps.rows.map(r=>r.source_id)).size,317);
 const reverseGapPath='docs/dev-log/core070/true-parity-latest/reverse-gap.json';
 const c6Base=JSON.parse(execFileSync('git',['show',`${BASELINE}:${reverseGapPath}`],{encoding:'utf8'}));
 const c6Candidate=JSON.parse(readFileSync(new URL(`../${reverseGapPath}`,import.meta.url),'utf8'));
-assert.deepEqual(compareC6Decisions(c6Base,c6Candidate),{extras:17,scoped:11,held:9});
+assert.deepEqual(compareC6Decisions(c6Base,c6Candidate),{extras:17,scoped:11,held:9,export_additions:3});
+for (const name of MAIN_C6_EXPORT_ADDITIONS) {
+  const missing=c6Candidate.filter(x=>x.name!==name);
+  assert.throws(()=>compareC6Decisions(c6Base,missing),/admission set changed/);
+  for (const key of ['basis','ruling','derived_from','kind','decision','source_id']) {
+    const bad=structuredClone(c6Candidate);
+    bad.find(x=>x.name===name)[key]='fabricated';
+    assert.throws(()=>compareC6Decisions(c6Base,bad),/invalid main-export census addition/);
+  }
+}
+const invented=structuredClone(c6Candidate);
+invented.push({...invented.find(x=>x.name==='optimizer_info'),name:'unsigned',source_id:'julia-export/unsigned'});
+assert.throws(()=>compareC6Decisions(c6Base,invented),/admission set changed/);
+const staleCensus=structuredClone(c6Candidate);
+staleCensus.find(x=>x.name==='AnBSparseSolver').derived_from='fabricated';
+assert.throws(()=>compareC6Decisions(c6Base,staleCensus),/census provenance changed/);
 const missingExtra=structuredClone(c6Candidate);
 missingExtra.find(x=>x.name===APPROVED_C6_EXTRAS[0]).decision=null;
 assert.throws(()=>compareC6Decisions(c6Base,missingExtra),/approved C6 extra not applied exactly/);
@@ -26,7 +41,7 @@ for (const name of HELD_C6_NAMES) Object.assign(signedHolds.find(x=>x.name===nam
   ruling:{ref:'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md',
     signed_by:'Shinichi Nakagawa',signed_on:'2026-10-17'},
 });
-assert.deepEqual(compareC6Decisions(c6Base,signedHolds),{extras:17,scoped:11,held:9});
+assert.deepEqual(compareC6Decisions(c6Base,signedHolds),{extras:17,scoped:11,held:9,export_additions:3});
 const holdOnUnapproved=structuredClone(signedHolds);
 holdOnUnapproved.find(x=>x.name==='StudentT').decision='HOLD_PENDING_EVIDENCE';
 assert.throws(()=>compareC6Decisions(c6Base,holdOnUnapproved),/approved C6 scope not applied exactly/);

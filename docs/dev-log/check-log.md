@@ -1,4 +1,17 @@
-## 2026-10-19: approved P1 C6 scope integration, verification in progress
+## 2026-10-19: C6 live census repair
+
+The owning generator exposed three optimizer exports missing after main PR #939.
+A new live-export regression failed before repair and passed afterward. Refreshed
+inputs and decisions cover exactly those three documented extras under existing
+rule #684 item 3. The original seventeen approvals, eleven scoped names and nine
+holds remain intact. Focused Julia tests: 2,133 passed. Checkpoint substitution
+controls passed. Scoreboard and assembled map remain byte-unchanged at X2 298/317.
+Fresh replay passed Julia, regeneration, live census and checkpoint controls.
+Node and Python suites each timed out at 1,800 seconds; these remain unmet.
+Independent census review found no blocker. Refreshed committed-source checks
+and landing remain pending.
+
+## 2026-10-19: approved P1 C6 scope integration, local checkpoint
 
 Reused the signed C6 candidate on `codex/p1-c6-approved-20261019` from main
 `d9afa090c`. Exactly seventeen extras, eleven scoped names and nine holds change;
@@ -6,8 +19,11 @@ the scoreboard and assembled map remain byte-unchanged. Independent review
 found and verified the repair of a general-rule authorization gap: both readers
 now bind each scoped export to its exact approved contract digest. Focused Julia
 checks passed 2,117/2,117; 122 exact-scope Python controls and assembly check
-passed. Complete Node/Python reruns, ledger reverification and exact committed
-HEAD checks remain pending. No push, merge or row admission. See the
+passed. Complete Node/Python controls passed 252/525 respectively. The four
+runnable acceptance gates passed replay; review and exact committed-source
+checks complete the six-gate local ledger. Code commit `c62b877f0` measures C6
+MET and unchanged X2=298/317. Landing and full P1 closure remain open. No push,
+merge or row admission. See the
 [checkpoint report](after-task/2026-10-19-p1-c6-approved.md).
 
 ## 2026-10-18: direct outer optimizer selection

@@ -374,6 +374,10 @@ end
 
 import GLLVModels                                                            # for object identity; no exports pulled in
 
+@testset "C6 census matches live exports" begin
+    @test exports_in_inputs() == exports_now()
+end
+
 @testset "C6 object identity (===) over names(GLLVModels)" begin
     exported = exports_now()
     twins = object_twins(exported)
@@ -449,7 +453,7 @@ end
               HOLD_PENDING_NAMES)
     # the signed names are in the file with their signed decision
     @test all(n -> haskey(entries, n) && entries[n][1] == SIGNED_OVERRIDES[n][1], keys(SIGNED_OVERRIDES))
-    @test length(entries) == length(gap) == 378
+    @test length(entries) == length(gap) == 381
     # decided names that share an object agree on the decision (the guard held the others)
     twins = object_twins(exports_now())
     for (n, (d, _)) in entries, t in get(twins, n, String[])

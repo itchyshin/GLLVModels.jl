@@ -39,6 +39,10 @@ export const APPROVED_C6_SCOPED_SHA256 = Object.freeze({
   "fit_kernel_dep_gllvm": "33475a40838b1a5fc85d26dada32b69f80bc65c0468cd1f3a07ae227e349c756",
   "fit_kernel_indep_gllvm": "13dcb057d0794cb3b806f1825025db2817708ec402d8b13a68c5b2338c5427b8"
 });
+// Three exports introduced on main by #939. These use the existing documented-extra
+// rule (#684 item 3), separately from the seventeen individually signed extras.
+export const C6_CENSUS_COMMIT = 'c62b877f06b22e30f2c16df38becca34d746f5c7';
+export const MAIN_C6_EXPORT_ADDITIONS = Object.freeze(['OptimizerRecord', 'OptimizerStage', 'optimizer_info']);
 export const HELD_C6_NAMES = Object.freeze([
   'NBFit', 'Ordinal', 'TweedieFit', 'ZIB', 'ZINegBin',
   'fit_animal_latent_gllvm', 'fit_kernel_latent_gllvm', 'gllvm', 'link_residual',
@@ -93,12 +97,29 @@ export function compareC6Decisions(baseItems, candidateItems) {
     return out;
   };
   const before = index(baseItems), after = index(candidateItems);
-  if (before.size !== after.size) fail('C6 reverse-gap admission set changed');
+  if (after.size !== before.size + MAIN_C6_EXPORT_ADDITIONS.length) fail('C6 reverse-gap admission set changed');
+  const censusPrefix = `names(GLLVModels) at ${C6_CENSUS_COMMIT.slice(0,12)};`;
+  for (const name of MAIN_C6_EXPORT_ADDITIONS) {
+    const a = after.get(`julia-export/${name}`);
+    const expected = {
+      source_id: `julia-export/${name}`, name,
+      kind: name === 'optimizer_info' ? 'Function' : 'Type',
+      status: 'decided', decision: 'KEPT_AS_JULIA_EXTRA',
+      derived_from: `${censusPrefix} no gllvmTMB export or S3 generic of the same name at P1 (compared with underscores and dots removed and lower-cased, as tools/parity_ledger.py norm()) and not named as the Julia side of any tracked namespace receipt`,
+      basis: 'not classed internal by tools/parity_ledger.py --ref 9539352f6; has a docstring, rendered in an @docs block on docs/src/api.md',
+      ruling: {ref: 'itchyshin/GLLVModels.jl#684 item 3', signed_by: 'Shinichi Nakagawa', signed_on: '2026-10-02'},
+    };
+    if (!a || before.has(expected.source_id) || canonicalDigest(a) !== canonicalDigest(expected)) fail(`invalid main-export census addition: ${name}`);
+  }
+  const addedIds = new Set(MAIN_C6_EXPORT_ADDITIONS.map(n => `julia-export/${n}`));
+  for (const id of after.keys()) if (!before.has(id) && !addedIds.has(id)) fail(`unapproved C6 census addition: ${id}`);
   const extras = new Set(APPROVED_C6_EXTRAS), scoped = new Set(APPROVED_C6_SCOPED), held = new Set(HELD_C6_NAMES);
   for (const [id, b] of before) {
     const a = after.get(id);
     if (!a) fail(`C6 reverse-gap item missing: ${id}`);
     if (b.name !== a.name) fail(`C6 reverse-gap identity changed: ${id}`);
+    const expectedDerived = b.derived_from.replace(/^names\(GLLVModels\) at [0-9a-f]{12};/, censusPrefix);
+    if (a.derived_from !== expectedDerived) fail(`C6 census provenance changed: ${id}`);
     if (extras.has(b.name)) {
       if (b.decision !== null || a.decision !== 'KEPT_AS_JULIA_EXTRA' || a.status !== 'decided') fail(`approved C6 extra not applied exactly: ${b.name}`);
     } else if (scoped.has(b.name)) {
@@ -113,13 +134,13 @@ export function compareC6Decisions(baseItems, candidateItems) {
           || 'counterpart' in a || 'scope' in a || 'receipt_ids' in a) {
         fail(`approved C6 hold not applied exactly: ${b.name}`);
       }
-    } else if (JSON.stringify(b) !== JSON.stringify(a)) {
+    } else if (JSON.stringify({...b, derived_from: expectedDerived}) !== JSON.stringify(a)) {
       fail(`unapproved C6 decision changed: ${b.name}`);
     }
   }
   const names = new Set([...before.values()].map(x => x.name));
   for (const name of [...extras, ...scoped, ...held]) if (!names.has(name)) fail(`expected C6 name missing: ${name}`);
-  return { extras: extras.size, scoped: scoped.size, held: held.size };
+  return { extras: extras.size, scoped: scoped.size, held: held.size, export_additions: addedIds.size };
 }
 export function provenanceProblem(rec, read) {
   if (rec.pin !== 'P1' || rec.reference_commit !== P1) return 'missing P1 receipt provenance';
