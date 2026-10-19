@@ -2,6 +2,8 @@
 
 ## Development
 
+- **`fit_animal_latent_gllvm` docstring names the right twin (#823).** It is a Hadamard row-relatedness model `(Λ_phy Λ_phy') .* A`, not gllvmTMB's `Λ Λ' ⊗ A` `animal_latent`; the docstring no longer claims the same estimand class and points to `fit_kernel_latent_gllvm(Y, A, groups, d)` as the Kronecker twin. Docstring-only; no behaviour change.
+
 - **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 
 - **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
