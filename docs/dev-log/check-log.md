@@ -1,3 +1,23 @@
+## 2026-10-19: measured seven-row checkpoint at 7670e106b
+
+The committed candidate passes the exact frozen-baseline checkpoint in 6.26s:
+X2 304/317, C2 290/297, with seven exact rows and other contracts unchanged.
+The combined Node and assembler controls pass in 19.87s and 7.60s on Totoro.
+Four corrupted-evidence controls are rejected. Label corruption leaves summary
+counts unchanged; the final exact-receipt predicate rejects the mismatch, as
+separately verified with the frozen checker. The original incorrect count
+expectation is retained. A valid-output Julia smoke passed in 24.76s.
+
+The current main8ca3eb76e measures298/317. Four intervening main commits touch
+oracle-version and phylogenetic convergence code; the candidate is based on
+d9afa090c. Full Pkg.test is running on7670; sequential core and local docs checks
+are bounded and conditional on preceding success. No pass is inferred.
+The exact13 remaining-row packet and source audit passed their independent
+filed-version recheck, including16 local links. Melissa reconciled the bounded
+checkpoint and named the open gates. Full completion review and landing remain
+pending; no push, merge, tolerance or engine change occurred here. The earlier
+entries below retain the checkpoint's prior states and failures.
+
 ## 2026-10-19: five iSDM receipt candidate and C6 recovery
 
 Exactly five iSDM rows change versus a444181ae; 312 other rows and C6 remain

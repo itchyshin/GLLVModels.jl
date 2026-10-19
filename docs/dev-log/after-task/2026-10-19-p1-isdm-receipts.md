@@ -1,6 +1,7 @@
 # P1 five-row iSDM receipt candidate
 
-Status: local candidate; committed-source measurement and landing pending.
+Status: committed candidate 7670e106b passes the exact seven-row checkpoint;
+full regression, completion review and landing remain pending.
 
 ## 1. Goal
 
@@ -37,7 +38,10 @@ Seven runnable leaf gates passed parent re-verification: raw derivation;
 regeneration (32 receipts, 24 classes, 63 entries); assembly (317 rows);
 three focused scope tests; checkpoint provenance controls. Assembly changed
 exactly five rows versus a444181ae, leaving the other 312 and C6 unchanged.
-Committed-source X2, full checkpoint, Julia/core, Aqua/JET and docs are pending.
+Committed-source checkpoint exited zero in 6.26 seconds: X2 304/317, C2 290/297.
+Complete Node and Python controls then passed in 19.87 and 7.60 seconds on
+Totoro. The valid-output smoke passed in 24.76 seconds. Julia/core, Aqua/JET
+and documentation results remain pending; no pass is inferred from launch.
 
 ## 6. Tests of the Tests
 
@@ -55,7 +59,7 @@ signature was inferred from implementation authority.
 ## 8. Consistency Audit
 
 Owning maps, receipt derivation and assembled outputs agree. The bounded
-checkpoint reviewer found no blocker; the separate five-row review is pending.
+checkpoint reviewer and separate five-row reviewer found no blocker.
 Public APIs and numerical claims are unchanged. Whole-P1 review remains open.
 
 ## 9. What Did Not Go Smoothly
@@ -68,11 +72,17 @@ by the sandbox because this managed worktree lies outside the writable roots.
 
 ## 10. Known Residuals
 
-Main remains last verified at 298/317. Expected local 304/317 is not yet a
-committed-source result. Thirteen scoreboard rows, five F gaps, regressions,
+Main 8ca3eb76e was freshly measured at 298/317. Local 304/317 belongs to
+7670e106b, based on the older d9afa090c main. The four intervening main commits
+include oracle-version and phylogenetic convergence changes; landing validation
+must account for them. Thirteen scoreboard rows, five F gaps, regressions,
 completion review and landing remain open. Inherited environment snapshots
 are supplemental; canonical sidecars do not independently validate the lock.
-Direct helper calls without a row ID are less strict than the canonical caller,
+Four checkpoint corruption controls reject invalid evidence. The original
+expectation that label corruption would change summary counts was wrong:
+the final exact-receipt check rejects it, with the frozen predicate separately
+confirming the mismatch. The failed expectation is retained. Direct helper
+calls without a row ID are less strict than the canonical caller,
 which always supplies exact IDs. No full-P1 claim follows from this slice.
 
 ## 11. Team Learning

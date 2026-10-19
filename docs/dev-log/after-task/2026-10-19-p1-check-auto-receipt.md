@@ -1,7 +1,7 @@
 # P1 check_auto_residual receipt checkpoint
 
-Status: local candidate in progress. Committed-source measurement is pending; bounded independent
-review passed. No push, merge or main-row admission.
+Status: local candidate a444181ae measures X2 299/317; bounded independent
+review passed. All eight local acceptance gates are met. No push, merge or main-row admission.
 
 ## 1. Goal
 
@@ -44,7 +44,7 @@ suite passed 36/36 controls. The owning behavior tool reports 27 receipts and
 24 classes current; these contain 58 behavior entries. The postfit tool reports
 seven twin rows and 52 rows current. Assembly checks all 317 rows current.
 All five runnable acceptance checks passed re-verification. Exact committed-source
-measurement remains pending; independent review verified the final aggregate.
+measurement at a444181ae is 299/317; independent review verified the final aggregate.
 
 Full Julia package/core suites, quality tools and Documenter were not run for
 this tooling checkpoint. Whole-P1 regression and completion gates remain open.
@@ -80,8 +80,10 @@ stopped before writing. The corrected preview checks both separately.
 ## 10. Known Residuals
 
 The candidate has not changed main. Last verified main remains X2 298/317.
-The five iSDM rows, remaining scientific rows, F gates, C6 timeout recovery,
-full regression, final review and landing remain open. The environment manifest
+The five iSDM rows are implemented separately in candidate 7670e106b, whose
+full seven-row checkpoint measures 304/317. C6 timeout recovery is complete.
+Remaining scientific rows, F gates, full regression, final review and landing
+remain open. The environment manifest
 and project are retained as hash-attested raw snapshots. The canonical sidecar
 does not independently revalidate that dependency lock; this is not a fully
 frozen cross-platform environment.
