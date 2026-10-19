@@ -1,0 +1,10 @@
+# P1 first checkpoint — provenance and regression validation
+
+- Candidate `7d6806a59d840aafb3e557fb2dddbc529d345136` has the approved seven-row checkpoint: X2 304/317, C2 290/297. The approved `7cd56b3d0` main commit is already in candidate ancestry.
+- Finalized retained first-seven capture metadata to name the exact deriver commit and refreshed six derived sidecars plus six paired case receipts. Raw R/Julia TSVs, R/Julia runner snapshots, and empty Julia source patch are unchanged. No observation was rerun.
+- Route audit found intervening changes only in `src/phylo_binomial_xlv.jl`, `src/phylo_gamma_xlv.jl`, and `src/phylo_nb_xlv.jl`; none is on the seven receipt routes. Evidence is route-local carry-forward, not a rerun against candidate source.
+- Checks: raw derivation valid; behavior receipts 32/24; postfit receipts 7/52; postfit recount passed; assembly 317 current; checkpoint controls passed; behavior controls 37/37; complete true-parity negative controls exited 0.
+- Exact-ref Totoro regression: all four full and four core partitions passed on `7d6806a59`, with matching source-smoke, ref, log hashes and no tracked diffs. Exact-ref local Documenter checks and VitePress render completed; deployment skipped. Evidence: `.unlazy/true-parity-p1-next/regressions/7d6806a/`.
+- Fresh Emmy, Pat and Rose reviews pass with notes for this first checkpoint only. Corrected receipt metadata remains uncommitted; rerun exact committed-source positive checkpoint after commit.
+- Current `origin/main=882292ac6` measures X2 298/317, C2 284/297; C0/C1/C5/C7/C8 MET, C3 6/8, C4 4/8, C6 NOT MET. Thirteen scoreboard rows and five F-capability gates remain open. The newer main head is not integrated or approved for integration.
+- No push, GitHub merge, new row admission, unsigned decision, release, or public parity claim.

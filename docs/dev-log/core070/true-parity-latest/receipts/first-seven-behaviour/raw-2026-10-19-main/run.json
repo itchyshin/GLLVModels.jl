@@ -1,6 +1,6 @@
 {
   "raw_directory": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-19-main",
-  "derivation_commit": "e6a6da69fc297c47f3a273a75b05a64bb376a587",
+  "derivation_commit": "7d6806a59d840aafb3e557fb2dddbc529d345136",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "r_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
   "r_source_receipt_sha256": "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8",
