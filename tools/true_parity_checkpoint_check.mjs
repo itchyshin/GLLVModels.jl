@@ -142,10 +142,30 @@ export function compareC6Decisions(baseItems, candidateItems) {
   for (const name of [...extras, ...scoped, ...held]) if (!names.has(name)) fail(`expected C6 name missing: ${name}`);
   return { extras: extras.size, scoped: scoped.size, held: held.size, export_additions: addedIds.size };
 }
-export function provenanceProblem(rec, read) {
+export function provenanceProblem(rec, read, sourceId) {
   if (rec.pin !== 'P1' || rec.reference_commit !== P1) return 'missing P1 receipt provenance';
-  if (!rec.read_from || typeof rec.read_from !== 'object' || !Object.keys(rec.read_from).length) return 'missing raw hashes';
-  for (const [path, sha] of Object.entries(rec.read_from)) {
+  const groups = [];
+  const hashes = value => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length;
+  // Flat measurement hashes remain mandatory when supplied. Paired public-call
+  // receipts may instead carry their hashes in the separately derived block.
+  if (rec.read_from !== undefined) {
+    if (!hashes(rec.read_from)) return 'missing raw hashes';
+    groups.push(rec.read_from);
+  }
+  if (rec.behaviour !== undefined) {
+    const behaviour = rec.behaviour;
+    if (!behaviour || behaviour.pin !== 'P1') return 'missing behaviour P1 provenance';
+    if (behaviour.ruling !== 'itchyshin/GLLVModels.jl#684 item 2') return 'invalid behaviour ruling';
+    if (!Array.isArray(behaviour.cases) || !behaviour.cases.length) return 'missing behaviour cases';
+    for (const entry of behaviour.cases) {
+      if (!entry || !rec.case_id || entry.case_id !== rec.case_id) return 'behaviour case identity mismatch';
+      if (!REQUIRED.slice(1).includes(entry.source_id) || (sourceId && entry.source_id !== sourceId)) return 'behaviour source identity mismatch';
+    }
+    if (!hashes(behaviour.read_from)) return 'missing behaviour raw hashes';
+    groups.push(behaviour.read_from);
+  }
+  if (!groups.length) return 'missing raw hashes';
+  for (const group of groups) for (const [path, sha] of Object.entries(group)) {
     if (!/^[0-9a-f]{64}$/.test(sha) || digest(read(path)) !== sha) return `raw hash mismatch: ${path}`;
   }
   for (const key of ['oracle_build_receipt', 'oracle_source_receipt']) {
@@ -198,7 +218,7 @@ export function runCheckpoint(ref = 'HEAD', baseline = BASELINE) {
     const evidence = [...(Array.isArray(r.evidence?.receipt) ? r.evidence.receipt : [r.evidence?.receipt]), ...(r.evidence?.boundary_context_receipts || [])].filter(Boolean);
     if (!evidence.length) fail(`missing receipts: ${r.source_id}`);
     for (const path of evidence) {
-      const why = provenanceProblem(JSON.parse(blob(target,path)), p => blob(target,p));
+      const why = provenanceProblem(JSON.parse(blob(target,path)), p => blob(target,p), r.source_id);
       if (why) fail(`${r.source_id}: ${why}`);
     }
   }

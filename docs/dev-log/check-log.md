@@ -1,3 +1,17 @@
+## 2026-10-19: five iSDM receipt candidate and C6 recovery
+
+Exactly five iSDM rows change versus a444181ae; 312 other rows and C6 remain
+unchanged. Seven runnable leaf gates passed re-verification, including 36
+behavior controls and three focused scope tests. Nested checkpoint provenance
+has retained red/green controls. Committed-source 304/317 and full checkpoint
+remain pending. No new fit, push or merge. See the
+[five-row report](after-task/2026-10-19-p1-isdm-receipts.md).
+
+C6 recovery on 295f22ec9 completed: Node and Python suites exited zero under
+one-hour caps; all eight local gates are met. Earlier timeouts remain retained.
+Residual candidate a444181ae measured X2 299/317. Main remains last verified
+at 298/317. Full regressions, final review and landing remain open.
+
 ## 2026-10-19: check_auto_residual source-bound behavior candidate
 
 Fresh Julia public-door capture at `7a2b8dcbe` exited zero in 49.13 seconds under

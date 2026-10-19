@@ -88,4 +88,21 @@ assert.match(provenanceProblem({...valid,verdict:'NOT_EXECUTED'},read),/bridge b
 assert.match(provenanceProblem({...valid,comparison:{}},read),/bridge boundary/);
 assert.match(provenanceProblem({...valid,oracle_source_receipt:undefined},read),/oracle_source/);
 assert.match(provenanceProblem(valid,p=>p==='build' ? JSON.stringify({reference_commit:'P0'}) : read(p)),/oracle_build_receipt is not P1/);
+const nestedSid = 'postfit/POSTFIT-SURFACE-check_auto_residual';
+const nestedCase = 'CORE070-WAVE7-CHECK-AUTO-RESIDUAL';
+const nested = {...valid, case_id:nestedCase, evidence_kind:'paired_verdict', verdict:'PASS', read_from:undefined,
+  behaviour:{pin:'P1',ruling:'itchyshin/GLLVModels.jl#684 item 2',read_from:{...valid.read_from},
+    cases:[{case_id:nestedCase,source_id:nestedSid}]}};
+assert.equal(provenanceProblem(nested,read,nestedSid),null);
+assert.match(provenanceProblem({...nested,behaviour:{...nested.behaviour,pin:'P0'}},read,nestedSid),/behaviour.*provenance/);
+assert.match(provenanceProblem({...nested,behaviour:{...nested.behaviour,ruling:'unsigned'}},read,nestedSid),/behaviour.*ruling/);
+assert.match(provenanceProblem({...nested,behaviour:{...nested.behaviour,read_from:{}}},read,nestedSid),/raw hashes/);
+assert.match(provenanceProblem({...nested,behaviour:{...nested.behaviour,read_from:{raw:'0'.repeat(64)}}},read,nestedSid),/hash mismatch/);
+assert.match(provenanceProblem({...nested,read_from:{...valid.read_from},behaviour:{...nested.behaviour,read_from:{raw:'0'.repeat(64)}}},read,nestedSid),/hash mismatch/);
+assert.match(provenanceProblem({...nested,read_from:{raw:'0'.repeat(64)}},read,nestedSid),/hash mismatch/);
+assert.match(provenanceProblem({...nested,behaviour:{...nested.behaviour,cases:[]}},read,nestedSid),/behaviour cases/);
+assert.match(provenanceProblem({...nested,behaviour:{...nested.behaviour,cases:[{case_id:'wrong',source_id:nestedSid}]}},read,nestedSid),/behaviour case identity/);
+assert.match(provenanceProblem({...nested,behaviour:{...nested.behaviour,cases:[{case_id:nestedCase,source_id:'isdm/ISDM-COUNT'}]}},read,nestedSid),/behaviour source identity/);
+assert.match(provenanceProblem({...nested,verdict:'NOT_EXECUTED'},read,nestedSid),/NOT_EXECUTED/);
+assert.match(provenanceProblem({...nested,oracle_source_receipt:undefined},read,nestedSid),/oracle_source/);
 console.log('P1_CHECKPOINT_CONTROLS_PASS: exact rows, unchanged contracts, P1 provenance, raw hashes and bridge context');
