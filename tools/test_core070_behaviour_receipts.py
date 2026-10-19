@@ -71,6 +71,28 @@ def tracked_receipts_and_table_are_current():
 
 
 @test
+def raw_source_patch_is_checked_against_launch_commit():
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.invalid"], check=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "P1 test"], check=True)
+        (repo / "src").mkdir()
+        source = repo / "src" / "model.jl"
+        source.write_text("model = 1\n")
+        subprocess.run(["git", "-C", str(repo), "add", "src/model.jl"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-qm", "launch source"], check=True)
+        launch = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], check=True,
+                                capture_output=True, text=True).stdout.strip()
+        patch = b""  # The captured checkout was clean at launch.
+        source.write_text("model = 2\n")
+        subprocess.run(["git", "-C", str(repo), "add", "src/model.jl"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-qm", "later source change"], check=True)
+        assert F7.julia_source_patch_problem(repo, launch, patch) is None
+        assert F7.julia_source_patch_problem(repo, launch, b"tampered") is not None
+
+
+@test
 def table_is_well_formed_and_cites_both_engines():
     A.behaviour_equivalence(ROOT)  # raises Fail on an ambiguous table, an empty basis, a bad kind
     for c in B.CLASSES:
@@ -762,7 +784,7 @@ def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
         try:
             F7.derive(rrows, stale_rows, meta)
         except ValueError as e:
-            assert "Julia raw source diff differs" in str(e)
+            assert "Julia raw source patch differs" in str(e)
         else:
             raise AssertionError("stale Julia source-diff evidence was accepted")
         self = receipts["isdm/ISDM-EXTRA-SOURCE"]

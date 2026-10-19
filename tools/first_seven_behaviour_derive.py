@@ -10,9 +10,11 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 # Preserve the source loaded for this process. --finalize must attest the
@@ -165,6 +167,28 @@ def label(case_id, row, engine):
     return f"error:{cls}:{first}"
 
 
+def julia_source_patch_problem(root, commit, patch):
+    """Check the captured src patch against its launch commit, independent of later HEAD edits."""
+    try:
+        with tempfile.TemporaryDirectory(prefix="gllvm-p1-source-index-") as tmp:
+            env = os.environ.copy()
+            env["GIT_INDEX_FILE"] = str(Path(tmp) / "index")
+            subprocess.run(["git", "-C", str(root), "read-tree", commit], check=True,
+                           capture_output=True, env=env)
+            if patch:
+                subprocess.run(["git", "-C", str(root), "apply", "--cached", "--binary", "-"],
+                               input=patch, check=True, capture_output=True, env=env)
+            changed = subprocess.run(["git", "-C", str(root), "diff", "--cached", "--name-only", commit, "--"],
+                                     check=True, capture_output=True, text=True, env=env).stdout.splitlines()
+            if any(not (path == "src" or path.startswith("src/")) for path in changed):
+                return "captured source patch changes files outside src"
+            subprocess.run(["git", "-C", str(root), "write-tree"], check=True,
+                           capture_output=True, env=env)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        return f"captured source patch does not apply to launch commit: {exc}"
+    return None
+
+
 def derive(rrows, jrows, meta):
     if meta.get("reference_commit") != PIN:
         raise ValueError("run metadata is not pinned to P1")
@@ -213,13 +237,12 @@ def derive(rrows, jrows, meta):
                           check=True, capture_output=True, text=True).stdout.strip()
     if meta["julia_src_tree"] != tree:
         raise ValueError("Julia source tree hash differs from the recorded launch commit")
-    src_diff = subprocess.run(["git", "-C", str(ROOT), "diff", "--binary", meta["julia_commit"], "--", "src"],
-                              check=True, capture_output=True).stdout
-    patch = raw_artifact(meta, meta.get("julia_src_patch", "" )).read_bytes()
+    patch = raw_artifact(meta, meta.get("julia_src_patch", "")).read_bytes()
     patch_hash = hashlib.sha256(patch).hexdigest()
-    if patch_hash != meta.get("julia_src_patch_sha256") or patch != src_diff or \
-            any(r.get("src_diff_sha256") != patch_hash for r in jrows.values()):
-        raise ValueError("Julia raw source diff differs from the executed checkout")
+    if patch_hash != meta.get("julia_src_patch_sha256") or \
+            any(r.get("src_diff_sha256") != patch_hash for r in jrows.values()) or \
+            julia_source_patch_problem(ROOT, meta["julia_commit"], patch):
+        raise ValueError("Julia raw source patch differs from the recorded launch checkout")
     if any(r.get("runner_sha256") != runner_hashes["Julia"] for r in jrows.values()):
         raise ValueError("Julia raw runner digest differs from the executed source")
     if any(r.get("package_source") != "src/GLLVModels.jl" for r in jrows.values()):
@@ -337,10 +360,21 @@ def main():
                                          check=True, capture_output=True).stdout
         if hashlib.sha256(launched_runner).hexdigest() != jvals[0]["runner_sha256"]:
             raise ValueError("Julia launch runner is not the recorded commit's runner")
-        src_diff = subprocess.run(["git", "-C", str(ROOT), "diff", "--binary", commit, "--", "src"],
-                                  check=True, capture_output=True).stdout
-        if any(r.get("src_diff_sha256") != hashlib.sha256(src_diff).hexdigest()
-               or r.get("package_source") != "src/GLLVModels.jl" for r in jvals):
+        if mp.is_file():
+            prior_meta = json.loads(mp.read_text())
+            prior_patch = raw_artifact(prior_meta, prior_meta.get("julia_src_patch", "")).read_bytes()
+            prior_hash = hashlib.sha256(prior_patch).hexdigest()
+            if prior_hash != prior_meta.get("julia_src_patch_sha256") or \
+                    any(r.get("src_diff_sha256") != prior_hash for r in jvals) or \
+                    julia_source_patch_problem(ROOT, commit, prior_patch):
+                raise ValueError("Julia raw source patch does not match the recorded launch checkout")
+            src_diff = prior_patch
+        else:
+            src_diff = subprocess.run(["git", "-C", str(ROOT), "diff", "--binary", commit, "--", "src"],
+                                      check=True, capture_output=True).stdout
+            if any(r.get("src_diff_sha256") != hashlib.sha256(src_diff).hexdigest() for r in jvals):
+                raise ValueError("Julia raw source identity does not match the executed checkout")
+        if any(r.get("package_source") != "src/GLLVModels.jl" for r in jvals):
             raise ValueError("Julia raw source identity does not match the executed checkout")
         tree = subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{commit}:src"],
                               check=True, capture_output=True, text=True).stdout.strip()

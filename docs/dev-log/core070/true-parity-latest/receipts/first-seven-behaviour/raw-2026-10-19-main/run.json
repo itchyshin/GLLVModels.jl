@@ -1,6 +1,6 @@
 {
   "raw_directory": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-19-main",
-  "derivation_commit": "7a2b8dcbe074412f1a1a0c6be0303ed4a1cf8f9f",
+  "derivation_commit": "e6a6da69fc297c47f3a273a75b05a64bb376a587",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "r_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
   "r_source_receipt_sha256": "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8",
@@ -25,7 +25,7 @@
     },
     "derive": {
       "path": "runner-snapshots/first_seven_behaviour_derive.py",
-      "sha256": "6d5dea1e08c23c3e211f22de4251023c37f56b89d4c34736f511090404380003"
+      "sha256": "b970aefb8fa13bff53e1209a8930d0ab729cdf263495dcea2201b9d0c9d64512"
     }
   },
   "julia_version": "1.10.0",
@@ -35,7 +35,7 @@
   "runner_sha256": {
     "R": "ae7d803aa6976da2a9c83c20a8a59cca1d229d2152616e2f044ac07796b188bb",
     "Julia": "3098a88109e81afce68ed5251a57f16f976836e8d120dc205e5bb26b4b085d6b",
-    "derive": "6d5dea1e08c23c3e211f22de4251023c37f56b89d4c34736f511090404380003"
+    "derive": "b970aefb8fa13bff53e1209a8930d0ab729cdf263495dcea2201b9d0c9d64512"
   },
   "fixture_sha256": {
     "R": {
