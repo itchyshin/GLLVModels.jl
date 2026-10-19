@@ -22,6 +22,23 @@
   throws (`_laplace_logdet`), and `fit_truncated_nbinom2_gllvm(K = 0)` and `zi_marginal_loglik_laplace`
   at K = 0 no longer throw on any Julia version.
 
+- **Dunn–Smyth residuals are no longer silently capped at ±7.034 (#767).** The randomized
+  quantile residual was `quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))` with `u` built from
+  `cdf`, so every cell with a tail probability below 1e-12 returned exactly ±7.034 whatever
+  the observation (a Poisson count of 40 and one of 100000 under a mean near 1 got the same
+  value). `residuals` now forms the quantile in the nearer tail from `ccdf`
+  (`_ds_z` in `src/postfit.jl`), and when the tail probability itself underflows it uses the
+  log mass of the observed cell and inverts the normal tail on the log scale, so a gross
+  outlier gets a finite residual that increases with the observation. Applies to the
+  Binomial (incl. AGHQ), Poisson (incl. AGHQ), NB2, NB1, GP-1, Beta, Gamma, Exponential,
+  ordinal (logit/probit, shared and per-trait cutpoints), delta-lognormal, delta-Gamma,
+  hurdle-Poisson, hurdle-NB, ZIP/ZINB, ZIB, beta-hurdle and grouped-NB residuals.
+  Continuous families have no log-mass fallback and floor the tail at `floatmin`
+  (|z| ≈ 37.5). Cells whose tail probability exceeds 1e-12 are unchanged to rounding.
+  **Still capped:** the Tweedie residual (its CDF is a 200-point Simpson quadrature with no
+  upper tail, so a larger |z| would be noise; the cap is now documented in the source) and
+  the `cv_gllvm` residuals in `src/cv.jl`.
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight
