@@ -121,6 +121,7 @@ EQUIV_PATH = OUT / "behaviour-equivalence.json"
 INF = f"{LEDGER}/receipts/inference"
 AGHQ = f"{LEDGER}/receipts/aghq"
 SURF = f"{LEDGER}/receipts/postfit/surface-conversion-p1"
+FIRST7 = f"{LEDGER}/receipts/first-seven-behaviour/derived"
 FIXTURE = "test/parity/fixtures/core070_inference_routes.tsv"
 P1_SHA = "9539352f66f2db2cc26b1c393e67212a359b60c9"
 RUN_JULIA = "61c5eda48"      # glvmodels_commit of the wave2 and wave4 inference receipts
@@ -537,7 +538,30 @@ def withdrawn_classes():
 
 
 def all_classes():
-    return CLASSES + refusal_classes() + withdrawn_classes()
+    out = CLASSES + refusal_classes() + withdrawn_classes()
+    # D-319 N6/N10 permits these exact six public-door rows in the behavioural
+    # tier. Build classes only from measured labels that are identical on both
+    # sides; a mismatch never creates a class.
+    for p in sorted((ROOT / FIRST7).glob("*.json")) if (ROOT / FIRST7).is_dir() else []:
+        rec = load(p)
+        if rec.get("reference_commit") != P1_SHA or rec.get("verdict") != "PASS":
+            continue
+        label = rec.get("r_observed")
+        if not label or label != rec.get("julia_observed"):
+            continue
+        sid = rec.get("source_id")
+        kind = "error_class" if rec.get("raw_observations", {}).get("R", {}).get("outcome") == "ERROR" else "route"
+        out.append(cls(kind, label, [label], [label],
+            f"Measured identical public-door behaviour for {sid}; P1 raw R and Julia outputs are preserved in "
+            f"{FIRST7}/{p.name}. Included by signed D-319 N6/N10."))
+    unique = {}
+    for c in out:
+        key = (c["kind"], c["canonical"])
+        if key not in unique:
+            unique[key] = c
+        elif unique[key]["r"] != c["r"] or unique[key]["julia"] != c["julia"]:
+            raise SystemExit(f"conflicting behaviour class {key}")
+    return list(unique.values())
 
 
 # ---------------------------------------------------------------------------
@@ -854,10 +878,65 @@ DERIVE = {"routing_control_flow": wave2, "reject_error_class": wave4, "paired_re
           "paired_control_categorical": aghq}
 CASE_DIRS = [f"{INF}/cases", f"{AGHQ}/cases"]
 
+FIRST7_SOURCE_IDS = {
+    "postfit/POSTFIT-SURFACE-check_auto_residual",
+    "isdm/ISDM-COUNT", "isdm/ISDM-EXTRA-SOURCE", "isdm/ISDM-MISSING-IN-TRAIT",
+    "isdm/ISDM-MISSING-SOURCE", "isdm/ISDM-WRAPPER-LAW",
+}
+
+
+def first7(case_id, rec):
+    """Derive the signed first-seven behaviour from raw public-call labels."""
+    sids = rec.get("source_ids") or ([rec["source_id"]] if rec.get("source_id") else [])
+    sid = next((s for s in sids if s in FIRST7_SOURCE_IDS), None)
+    if sid is None:
+        return [], [], {}
+    p = ROOT / FIRST7 / (sid.split("/", 1)[1] + ".json")
+    if not p.is_file():
+        return [], [], {}
+    raw = load(p)
+    if raw.get("reference_commit") != P1_SHA or raw.get("source_id") != sid:
+        raise SystemExit(f"{p}: source id or P1 pin mismatch")
+    import first_seven_behaviour_derive as F7
+    raw_dir = Path((raw.get("provenance") or {}).get("raw_directory", ""))
+    if not raw_dir.parts or raw_dir.is_absolute() or ".." in raw_dir.parts:
+        raise SystemExit(f"{p}: raw provenance must name a repo-relative directory")
+    d = ROOT / raw_dir
+    meta = load(d / "run.json")
+    if meta != raw.get("provenance"):
+        raise SystemExit(f"{p}: provenance differs from the retained run metadata")
+    checked_meta = dict(meta, r_output_path=str(d / "r-public.tsv"), julia_output_path=str(d / "julia-public.tsv"))
+    fresh, _ = F7.derive(F7.tsv(d / "r-public.tsv", "R"), F7.tsv(d / "julia-public.tsv", "Julia"), checked_meta)
+    checked_meta.pop("r_output_path", None); checked_meta.pop("julia_output_path", None)
+    if fresh[sid] != raw or raw.get("case_id") != case_id:
+        raise SystemExit(f"{p}: sidecar differs from raw re-derivation or frozen case id")
+    rf, jf = raw.get("r_observed"), raw.get("julia_observed")
+    inputs = [p, d / "run.json", d / "r-public.tsv", d / "julia-public.tsv", ROOT / "tools/first_seven_behaviour_derive.py"]
+    reads = {str(x.relative_to(ROOT)): sha(x) for x in inputs}
+    if raw.get("verdict") != "PASS" or rf != jf:
+        return [], [{"source_id": sid, "reason": "public_route_differs",
+                     "text": f"P1 public-door labels differ: R={rf!r}; Julia={jf!r}. "
+                             "The exact calls and raw outputs are in the cited receipt.",
+                     "evidence": {"receipt": f"{FIRST7}/{p.name}"}}], reads
+    kind = "error_class" if raw.get("raw_observations", {}).get("R", {}).get("outcome") == "ERROR" else "route"
+    entry = {"case_id": case_id, "source_id": sid, "kind": kind,
+             "r_observed": rf, "julia_observed": jf,
+             "r_source": f"{FIRST7}/{p.name}#raw_observations.R",
+             "julia_source": f"{FIRST7}/{p.name}#raw_observations.Julia",
+             "r_call": raw.get("raw_observations", {}).get("R", {}).get("call"),
+             "julia_call": raw.get("raw_observations", {}).get("Julia", {}).get("call"),
+             "ruling": "D-319 N6/N10"}
+    return [entry], [], reads
+
 
 def derive_block(case_id, rec):
     """The behaviour block and not-bound list for one case receipt, or None when the receipt has no
     behavioural evidence to give (the numeric and structural cases)."""
+    if rec.get("evidence_kind") == "public_door_behaviour" or any(
+            s in FIRST7_SOURCE_IDS for s in (rec.get("source_ids") or [rec.get("source_id")])):
+        entries, not_bound, rf = first7(case_id, rec)
+        block = {"pin": "P1", "ruling": RULING, "read_from": rf, "cases": entries} if entries else None
+        return block, not_bound
     fn = DERIVE.get(rec.get("evidence_kind"))
     if fn is None:
         return None
@@ -871,6 +950,19 @@ def tracked_receipts():
     for d in CASE_DIRS:
         for p in sorted((ROOT / d).glob("*.json")):
             out[p.stem] = (p, load(p))
+    # Add only the six owned public-door case receipts, and only once the
+    # independently derived raw sidecar exists. This keeps pre-measurement
+    # --check identical to the existing baseline.
+    for sid in sorted(FIRST7_SOURCE_IDS):
+        sidecar = ROOT / FIRST7 / (sid.split("/", 1)[1] + ".json")
+        if not sidecar.is_file():
+            continue
+        folder = "postfit" if sid.startswith("postfit/") else "isdm"
+        pdir = ROOT / LEDGER / "receipts" / folder / "cases"
+        for p in sorted(pdir.glob("*.json")):
+            rec = load(p)
+            if sid in (rec.get("source_ids") or [rec.get("source_id")]):
+                out[p.stem] = (p, rec)
     return out
 
 
@@ -965,7 +1057,10 @@ def overlay_row(row, counts):
     case id has several citers). Moves evidence.non_binding_receipts to evidence.receipt, sets the tier text,
     and nothing else. Updates `counts` (tier count down, `behavioural` up). Returns True if flipped.
     A row that is not flipped gets a one-line note when this tool records why (see _annotate)."""
-    if row.get("evidence_tier") not in OVERLAY_TIERS or row.get("measured_against") != P1_SHA:
+    eligible = row.get("evidence_tier") in OVERLAY_TIERS or (
+        row.get("source_id") in FIRST7_SOURCE_IDS and
+        row.get("evidence_tier") == "needs_surface_r_side_measured")
+    if not eligible or row.get("measured_against") != P1_SHA:
         return False
     paths = list((row.get("evidence") or {}).get("non_binding_receipts") or [])
     if not paths or not all((ROOT / p).is_file() for p in paths):
@@ -1016,7 +1111,8 @@ def check_problems():
         if tr[cid][1] != new:
             problems.append(f"{path.relative_to(ROOT)}: behaviour block differs from the re-derivation")
     for cid, (path, rec) in tr.items():
-        if "behaviour" in rec and rec.get("evidence_kind") not in DERIVE:
+        if "behaviour" in rec and rec.get("evidence_kind") not in DERIVE and not any(
+                sid in FIRST7_SOURCE_IDS for sid in (rec.get("source_ids") or [rec.get("source_id")])):
             problems.append(f"{path.relative_to(ROOT)}: behaviour block on a receipt this tool does not derive")
     return problems
 

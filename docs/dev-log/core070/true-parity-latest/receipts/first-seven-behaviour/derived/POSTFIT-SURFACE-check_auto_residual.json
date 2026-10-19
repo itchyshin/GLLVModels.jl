@@ -1,0 +1,122 @@
+{
+  "schema": "core070-first-seven-behaviour/v1",
+  "case_id": "CORE070-WAVE7-CHECK-AUTO-RESIDUAL",
+  "source_id": "postfit/POSTFIT-SURFACE-check_auto_residual",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "verdict": "PASS",
+  "evidence_kind": "public_door_behaviour",
+  "r_observed": "residual-check:coherent",
+  "julia_observed": "residual-check:coherent",
+  "raw_observations": {
+    "R": {
+      "case_id": "CORE070-FIRST7-CHECK-AUTO-RESIDUAL",
+      "outcome": "RETURN",
+      "class": "list",
+      "actual": "coherent",
+      "message": "ordinal-probit control status=warn",
+      "call": "{     gf <- gllvmTMB(value ~ 0 + trait + latent(0 + trait | cell_id, d = 1, unique = FALSE), data = diagnostic$data, unit = \"cell_id\", trait = \"trait\", family = gaussian(), silent = TRUE)     check_auto_residual(gf) }",
+      "engine": "R",
+      "pin": "P1",
+      "package_version": "0.7.1",
+      "r_version": "4.6.1",
+      "host": "totoro",
+      "openblas_threads": "1",
+      "omp_threads": "1",
+      "oracle_build": "totoro",
+      "public_positive_control": "mixed-source-accepted",
+      "source_marker_sha256": "aa1fc44f481294678c2d1eb5505eaf182f976236f3b3f50373465c68330b2941",
+      "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+      "installed_tree_sha256": "71ef0fb3d6c0a31e908c09ea599b97966dc8335038e1d9d23ccda901344d9997",
+      "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+      "fixture_sha256": "c3cb0f6fd2325d9449512d04b38c0afffb23c8f2303a1966ffc72e0272dc22e7",
+      "runner_sha256": "ae7d803aa6976da2a9c83c20a8a59cca1d229d2152616e2f044ac07796b188bb"
+    },
+    "Julia": {
+      "case_id": "CORE070-FIRST7-CHECK-AUTO-RESIDUAL",
+      "outcome": "RETURN",
+      "class": "check_auto_residual",
+      "actual": "true",
+      "message": "ordinal-probit control flagged; ",
+      "call": "fit_gaussian_gllvm(diagnostic.Y; K=1, X=diagnostic.trait_X); check_auto_residual(fit)",
+      "engine": "Julia",
+      "pin": "P1",
+      "julia_version": "1.10.0",
+      "host": "w-kw3k3y6229.psych.ualberta.ca",
+      "glvmodels_commit": "7a2b8dcbe074412f1a1a0c6be0303ed4a1cf8f9f",
+      "julia_threads": "4",
+      "openblas_threads": "1",
+      "omp_threads": "1",
+      "runner_sha256": "3098a88109e81afce68ed5251a57f16f976836e8d120dc205e5bb26b4b085d6b",
+      "fixture_sha256": "c3cb0f6fd2325d9449512d04b38c0afffb23c8f2303a1966ffc72e0272dc22e7",
+      "package_source": "src/GLLVModels.jl",
+      "src_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public_positive_control": "mixed-source-accepted"
+    }
+  },
+  "signed_scope": "D-319 N6/N10",
+  "provenance": {
+    "raw_directory": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-19-main",
+    "derivation_commit": "e6a6da69fc297c47f3a273a75b05a64bb376a587",
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "r_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+    "r_source_receipt_sha256": "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8",
+    "r_source_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "r_oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+    "r_oracle_build_sha256": "6aaf50b2b2f89c257494300cd3c25c3345f0c50d45092d5899f1e8c9bd65ad4f",
+    "r_installed_tree_sha256": "71ef0fb3d6c0a31e908c09ea599b97966dc8335038e1d9d23ccda901344d9997",
+    "r_host": "totoro",
+    "r_version": "4.6.1",
+    "julia_commit": "7a2b8dcbe074412f1a1a0c6be0303ed4a1cf8f9f",
+    "julia_src_tree": "be9acebca6b2a6361049fbfcc6555590baad8ac3",
+    "julia_src_patch": "julia-src.patch",
+    "julia_src_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "runner_snapshots": {
+      "R": {
+        "path": "runner-snapshots/first_seven_behaviour_R.R",
+        "sha256": "ae7d803aa6976da2a9c83c20a8a59cca1d229d2152616e2f044ac07796b188bb"
+      },
+      "Julia": {
+        "path": "runner-snapshots/first_seven_behaviour_J.jl",
+        "sha256": "3098a88109e81afce68ed5251a57f16f976836e8d120dc205e5bb26b4b085d6b"
+      },
+      "derive": {
+        "path": "runner-snapshots/first_seven_behaviour_derive.py",
+        "sha256": "b970aefb8fa13bff53e1209a8930d0ab729cdf263495dcea2201b9d0c9d64512"
+      }
+    },
+    "julia_version": "1.10.0",
+    "julia_host": "w-kw3k3y6229.psych.ualberta.ca",
+    "r_output_sha256": "dc444071c8dfd3c15f9f26e6a816787260fef782b2c480c64f37255111c242fb",
+    "julia_output_sha256": "dc018b3b872432d369c9ad553591109297f59b68ab504a98f9c4979a470774ba",
+    "runner_sha256": {
+      "R": "ae7d803aa6976da2a9c83c20a8a59cca1d229d2152616e2f044ac07796b188bb",
+      "Julia": "3098a88109e81afce68ed5251a57f16f976836e8d120dc205e5bb26b4b085d6b",
+      "derive": "b970aefb8fa13bff53e1209a8930d0ab729cdf263495dcea2201b9d0c9d64512"
+    },
+    "fixture_sha256": {
+      "R": {
+        "CORE070-FIRST7-CHECK-AUTO-RESIDUAL": "c3cb0f6fd2325d9449512d04b38c0afffb23c8f2303a1966ffc72e0272dc22e7",
+        "CORE070-FIRST7-ISDM-COUNT": "d7c59608bb7f77ec531b8a26f0720b6a43ff3d6c0b138668918929c0024e4830",
+        "CORE070-FIRST7-ISDM-EXTRA-SOURCE": "c3e6b88c4833ac1f0bf8d95f63db82ca526f4097a44a3362e4f43c106abdf030",
+        "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT": "4b3fac319407879d94e759f1a34083a510f40b266b6dde8a0a8301c75787583b",
+        "CORE070-FIRST7-ISDM-MISSING-SOURCE": "bf97eb9cb58ab01f023abe40f1487dc8456fb263b78b3ea7cc4a7515a0072ba2",
+        "CORE070-FIRST7-ISDM-WRAPPER-LAW": "991071ed3c69e105bd4288305557a08d75f0784e1f0a844c40e34cd47507f27b"
+      },
+      "Julia": {
+        "CORE070-FIRST7-CHECK-AUTO-RESIDUAL": "c3cb0f6fd2325d9449512d04b38c0afffb23c8f2303a1966ffc72e0272dc22e7",
+        "CORE070-FIRST7-ISDM-COUNT": "d7c59608bb7f77ec531b8a26f0720b6a43ff3d6c0b138668918929c0024e4830",
+        "CORE070-FIRST7-ISDM-EXTRA-SOURCE": "c3e6b88c4833ac1f0bf8d95f63db82ca526f4097a44a3362e4f43c106abdf030",
+        "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT": "4b3fac319407879d94e759f1a34083a510f40b266b6dde8a0a8301c75787583b",
+        "CORE070-FIRST7-ISDM-MISSING-SOURCE": "bf97eb9cb58ab01f023abe40f1487dc8456fb263b78b3ea7cc4a7515a0072ba2",
+        "CORE070-FIRST7-ISDM-WRAPPER-LAW": "991071ed3c69e105bd4288305557a08d75f0784e1f0a844c40e34cd47507f27b"
+      }
+    },
+    "thread_caps": {
+      "r_openblas": "1",
+      "r_omp": "1",
+      "julia_threads": "4",
+      "julia_openblas": "1",
+      "julia_omp": "1"
+    }
+  }
+}
