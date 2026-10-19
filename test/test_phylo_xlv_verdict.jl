@@ -143,3 +143,29 @@ end
     @test vp.loglik == -Inf
     @test vp.reason === :objective_failure
 end
+
+# A matrix whose element access throws InterruptException, to check the guards rethrow it.
+struct _XlvInterruptY <: AbstractMatrix{Int}
+    sz::Tuple{Int,Int}
+end
+Base.size(m::_XlvInterruptY) = m.sz
+Base.getindex(::_XlvInterruptY, ::Int, ::Int) = throw(InterruptException())
+
+@testset "phylo xlv NB2, binomial and Gamma guards rethrow InterruptException (#947)" begin
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    p, n, K, q = 6, 30, 1, 1
+    X = reshape(collect(range(-1.0, 1.0; length = n)), n, 1)
+    rr = GLLVModels.rr_theta_len(p, K)
+    Yi = _XlvInterruptY((p, n))
+    Ni = _XlvInterruptY((p, n))
+    @test_throws InterruptException GLLVModels._phylo_nb_xlv_nll_guarded(
+        zeros(p + q * K + rr + 2), Yi, p, K, phy, X; q_lv = q)
+    @test_throws InterruptException GLLVModels._phylo_binomial_xlv_nll_guarded(
+        zeros(p + q * K + rr + 1), Yi, Ni, p, K, phy, X; q_lv = q)
+    @test_throws InterruptException GLLVModels._phylo_gamma_xlv_nll_guarded(
+        zeros(p + q * K + rr + 2), Yi, p, K, phy, X; q_lv = q)
+    # The sentinel behaviour for ordinary errors is unchanged.
+    Yg = [1.0 + 0.1 * ((t + s) % 6) for t in 1:p, s in 1:n]
+    th = zeros(p + q * K + rr + 2); th[end] = 1000.0
+    @test GLLVModels._phylo_gamma_xlv_nll_guarded(th, Yg, p, K, phy, X; q_lv = q) == 1e12
+end
