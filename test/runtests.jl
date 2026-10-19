@@ -481,6 +481,7 @@ println(_SHARD === nothing ?
     _shard_include("test_quadratic.jl")
     _shard_include("test_ordination_uncertainty.jl")
     _shard_include("test_structural_confint.jl")
+    _shard_include("test_structural_confint_edge.jl")
     _shard_include("test_ordered_beta.jl")
     _shard_include("test_ordered_beta_mode_search.jl")
     _shard_include("test_variational.jl")
