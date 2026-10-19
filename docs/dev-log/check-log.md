@@ -21840,3 +21840,10 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Merged `origin/main` at `a8be9b2220c29d6c2d83834057571457d60a77f0` into optimizer branch pre-merge head `8b0c4fd10b6005f8c368bf78bd06caa70dafc913`. Preserved both independent check-log additions; both `test_optimizer_selection.jl` and FAMILY-11 boundary tests remain registered in `test/runtests.jl`.
 - Main integration changed no `src/`, project files, or `docs/src/` relative to the pre-merge PR head. It adds FAMILY-11 evidence and supporting tests/tools/receipts.
 - On integrated head `bc56d3d2565ea041cf0841070c0234da81536e19`, focused selector tests passed 61/61 plus spy cleanup 1/1 in 57 seconds and printed `OPTIMIZER_SELECTION_PASS`. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-integrated-focused.log`. No full suite or docs rerun.
+
+## 2026-10-18 — Core070 oracle version-qualified Gaussian contract
+
+- Fixed the frozen Gaussian parity assertion to select `z_B,s_B` only for the exact 0.7.0 source pin and `z_B` only for the exact 0.7.1 pin. Unknown commits and source/version mismatches fail closed.
+- The oracle builder now records the installed `gllvmTMB` version in `build.json` and `CORE070_SOURCE_PIN.toml`; parity startup verifies marker and installed package versions. Legacy markers/build receipts without a version require a fresh pinned build.
+- Focused Julia pin suite: 69/69, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-contract-green.log`. Builder/version focused selection: 9/9, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-focused-final2.log`. Gaussian fixture parsed; `git diff --check` passed.
+- The unrelated fresh-archive hash test exceeded 120 seconds and was stopped without a result; logs `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-red.log` (full Python suite incomplete) and `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-hash-diagnostic.log` (isolated diagnostic incomplete). No oracle build/install or full Julia workflow was run. See `docs/dev-log/after-task/2026-10-18-core070-oracle-version-contract.md`.
