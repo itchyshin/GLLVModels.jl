@@ -534,6 +534,7 @@ println(_SHARD === nothing ?
     _shard_include("test_em_squarem.jl")
     _shard_include("test_em_squarem_safety.jl")
     _shard_include("test_relaxed_clock.jl")
+    _shard_include("test_relaxed_clock_estep_clade.jl")
     _shard_include("test_spatial_cov.jl")
     _shard_include("test_cv.jl")
     _shard_include("test_gaussian_intercept.jl")
