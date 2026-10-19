@@ -100,6 +100,22 @@ routes reject explicit selection. Profile and bootstrap intervals also reject
 fits made with an explicit choice because their internal refits do not yet
 forward it.
 
+For a quick Poisson comparison, `Y` is a count matrix with responses in rows
+and sites in columns. Omitting `optimizer` keeps the existing default policy;
+select either supported solver explicitly and inspect the recorded method:
+
+```julia
+using GLLVModels
+
+fit_bfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :bfgs)
+fit_lbfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :lbfgs)
+optimizer_info(fit_bfgs)
+optimizer_info(fit_lbfgs)
+```
+
+See the [tutorial](docs/src/tutorial.md) for a matched-start comparison and
+convergence and likelihood checks.
+
 ```julia
 Y_count = [1 0 3 2 0 1 4 0 2 1 0 3;
            0 2 1 0 3 1 0 4 1 0 2 1;
