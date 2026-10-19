@@ -1,3 +1,18 @@
+## 2026-10-19: check_auto_residual source-bound behavior candidate
+
+Fresh Julia public-door capture at `7a2b8dcbe` exited zero in 49.13 seconds under
+its two-minute cap, Julia4/BLAS1/OMP1. The P1 R output is retained, not rerun.
+Source, runner, fixture and raw-output provenance finalized successfully.
+Only the residual-check sidecar, receipt and case-map row change; five iSDM
+admissions remain separate. Focused behavior controls passed 36/36 and all five
+runnable acceptance gates passed re-verification. Assembly reports 317 rows
+current, with exactly the residual row changed and C6 output byte-unchanged.
+Local committed-source X2 measurement and landing are pending. Main remains last
+verified at 298/317. Initial missing-Optim failure is retained; the retry reused
+an exactly matching resolved Project environment, now snapshotted with hashes.
+Full package regressions, final P1 review and closure remain open. Report:
+[check-auto checkpoint](after-task/2026-10-19-p1-check-auto-receipt.md).
+
 ## 2026-10-19: C6 live census repair
 
 The owning generator exposed three optimizer exports missing after main PR #939.
