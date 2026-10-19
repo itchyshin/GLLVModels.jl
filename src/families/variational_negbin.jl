@@ -284,6 +284,7 @@ function fit_nb_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
     _va_require_canonical_link("fit_nb_gllvm_va", link, LogLink())
+    _check_response_support(:count, Y, nothing; caller = "fit_nb_gllvm_va")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
