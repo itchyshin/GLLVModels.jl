@@ -617,7 +617,8 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
         v = try
             -ordinal_marginal_loglik_laplace(Y, Λ, τ; link = link, mask = mask,
                                              maxiter = newton_maxiter, tol = newton_tol)
-        catch
+        catch e
+            e isa InterruptException && rethrow()
             return 1e12
         end
         return isfinite(v) ? v : 1e12
@@ -632,7 +633,8 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
                                       X_lv = X_lv_fit, q_lv = q_lv,
                                       mask = mask, maxiter = newton_maxiter,
                                       tol = newton_tol)
-            catch
+            catch e
+                e isa InterruptException && rethrow()
                 return 1e12
             end
             return isfinite(v) ? v : 1e12
@@ -708,7 +710,8 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
         v = try
             -ordinal_marginal_loglik_laplace_pertrait(Y, Λ, β, τ, C;
                 link = link, mask = mask, maxiter = newton_maxiter, tol = newton_tol)
-        catch
+        catch e
+            e isa InterruptException && rethrow()
             return 1e12
         end
         return isfinite(v) ? v : 1e12
@@ -821,7 +824,8 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
             -ordinal_marginal_loglik_laplace_pertrait(Y, Λ, β, τ, C;
                 link = link, mask = mask, offset = O,
                 maxiter = newton_maxiter, tol = newton_tol)
-        catch
+        catch e
+            e isa InterruptException && rethrow()
             return 1e12
         end
         return isfinite(v) ? v : 1e12
