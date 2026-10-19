@@ -258,6 +258,21 @@ function _phylo_binomial_xlv_nll_packed(theta::AbstractVector, Y::AbstractMatrix
     return isfinite(ll) ? -ll : 1e12
 end
 
+# The objective `_fit_phylo_binomial_xlv` hands to Optim: any exception or non-finite value
+# at a line-search trial step becomes the sentinel, as in the Gamma and NB2 fitters (#944).
+function _phylo_binomial_xlv_nll_guarded(theta::AbstractVector, Y::AbstractMatrix,
+        N::AbstractMatrix, p::Integer, K::Integer, phy::AugmentedPhy,
+        X_lv::AbstractMatrix; q_lv::Integer, maxiter::Integer = 80,
+        tol::Real = 1e-9)
+    v = try
+        _phylo_binomial_xlv_nll_packed(theta, Y, N, p, K, phy, X_lv;
+                                       q_lv = q_lv, maxiter = maxiter, tol = tol)
+    catch
+        return 1e12
+    end
+    return isfinite(v) ? v : 1e12
+end
+
 function _phylo_binomial_xlv_theta0(Y::AbstractMatrix, N::AbstractMatrix,
         K::Integer, X_lv::AbstractMatrix; beta_init = nothing,
         Lambda_init = nothing, alpha_lv_init = nothing,
@@ -342,10 +357,10 @@ function _fit_phylo_binomial_xlv(Y::AbstractMatrix, N::AbstractMatrix,
                                         Lambda_init = Lambda_init,
                                         alpha_lv_init = alpha_lv_init,
                                         sigma2_phy_init = sigma2_phy_init)
-    nll = theta -> _phylo_binomial_xlv_nll_packed(theta, Y, N, p, K, phy, X_lv;
-                                                  q_lv = q_lv,
-                                                  maxiter = newton_maxiter,
-                                                  tol = newton_tol)
+    nll = theta -> _phylo_binomial_xlv_nll_guarded(theta, Y, N, p, K, phy, X_lv;
+                                                   q_lv = q_lv,
+                                                   maxiter = newton_maxiter,
+                                                   tol = newton_tol)
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(nll, theta0, ls,
                          Optim.Options(g_tol = g_tol, iterations = iterations);

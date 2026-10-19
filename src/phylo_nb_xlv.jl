@@ -254,6 +254,20 @@ function _phylo_nb_xlv_nll_packed(theta::AbstractVector, Y::AbstractMatrix,
     return isfinite(ll) ? -ll : 1e12
 end
 
+# The objective `_fit_phylo_nb_xlv` hands to Optim. A line-search step that overflows
+# r = exp(log_r) throws in `_phylo_nb_xlv_validate`; return the sentinel instead (#944).
+function _phylo_nb_xlv_nll_guarded(theta::AbstractVector, Y::AbstractMatrix,
+        p::Integer, K::Integer, phy::AugmentedPhy, X_lv::AbstractMatrix;
+        q_lv::Integer, maxiter::Integer = 80, tol::Real = 1e-9)
+    v = try
+        _phylo_nb_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
+                                 q_lv = q_lv, maxiter = maxiter, tol = tol)
+    catch
+        return 1e12
+    end
+    return isfinite(v) ? v : 1e12
+end
+
 function _phylo_nb_xlv_theta0(Y::AbstractMatrix, K::Integer,
         X_lv::AbstractMatrix; beta_init = nothing, Lambda_init = nothing,
         alpha_lv_init = nothing, r_init::Real = 2.0,
@@ -313,10 +327,10 @@ function _fit_phylo_nb_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
                                   alpha_lv_init = alpha_lv_init,
                                   r_init = r_init,
                                   sigma2_phy_init = sigma2_phy_init)
-    nll = theta -> _phylo_nb_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
-                                            q_lv = q_lv,
-                                            maxiter = newton_maxiter,
-                                            tol = newton_tol)
+    nll = theta -> _phylo_nb_xlv_nll_guarded(theta, Y, p, K, phy, X_lv;
+                                             q_lv = q_lv,
+                                             maxiter = newton_maxiter,
+                                             tol = newton_tol)
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(nll, theta0, ls,
                          Optim.Options(g_tol = g_tol, iterations = iterations);
