@@ -2601,6 +2601,10 @@ end
 # if a τ momentarily loses ordering.
 function _family_ci(fit::OrdinalFit, Y::AbstractMatrix;
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    fit.alpha_lv === nothing || throw(ArgumentError(
+        "confint for fit_ordinal_gllvm(...; X_lv=...) is not carried by confint(fit, Y); " *
+        "use confint_lv_effects(fit, Y, X_lv) for Wald intervals on B_lv, " *
+        "or extract_lv_effects(fit) for point estimates"))
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); C = fit.C
     θ = vcat(pack_lambda(fit.Λ), fit.τ)
     nll = function (θv)
