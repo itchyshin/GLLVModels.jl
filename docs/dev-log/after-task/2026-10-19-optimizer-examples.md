@@ -8,7 +8,7 @@ Make explicit outer-optimizer selection easy to discover from the package README
 
 Added concise Poisson examples using `optimizer = :bfgs` and `optimizer = :lbfgs`, plus `optimizer_info()` calls. The text identifies the `responses × sites` count-matrix layout and states that omitting `optimizer` retains the existing default policy. Linked the example to the tutorial's matched-start comparison.
 
-## 3. Decisions and rejected alternatives
+## 3a. Decisions and Rejected Alternatives
 
 Kept the README's existing detailed same-start code block and the tutorial's explanation intact. Added no implementation, API, CI, or test changes.
 
@@ -26,7 +26,7 @@ Kept the README's existing detailed same-start code block and the tutorial's exp
 
 No optimizer fit was run: this change only adds a discovery example for an existing API, and the README snippet is not an executable Documenter block. The syntax and reader-facing link were checked directly.
 
-## 7. Issue ledger
+## 7a. Issue Ledger
 
 The snippet covers only the existing ordinary Poisson route. It makes no claim about AGHQ, grouped covariance, profile/bootstrap refits, or broader optimizer support.
 
@@ -34,15 +34,15 @@ The snippet covers only the existing ordinary Poisson route. It makes no claim a
 
 The example uses the `fit_poisson_gllvm` and `optimizer_info` names shown by the existing tutorial and documents the matrix orientation used by the package.
 
-Rose verdict: independent audit pending parent review. The local review found no mismatch between the README scope statement, the example calls, and the linked tutorial.
+Rose verdict: PASS. Root's independent review found the README example correct and within the documented API scope.
 
 ## 9. What did not go smoothly
 
-The first lease attempt overlapped active parity work and was refused. The original disposable worktree also could not update its shared Git metadata under the sandbox. Work resumed after the parent established a durable, scoped lease and a fresh isolated branch.
+The first lease attempt overlapped active parity work and was refused. The original disposable worktree also could not update its shared Git metadata under the sandbox. Work resumed after the parent established a durable, scoped lease and a fresh isolated branch. Automatic approval review initially rejected the push because the remote destination was unverified. Root then verified that the repository is public, confirmed the exact `itchyshin/GLLVModels.jl` identity, and checked the user's prior authorization to push. Root will handle the approved retry; no alternate external write was attempted.
 
 ## 10. Known residuals
 
-No new model fit or full Documenter build was requested or run. Existing same-start comparison and package validation evidence remain the source for numerical behavior.
+No new model fit or full Documenter build was requested or run. The branch has not yet been pushed, no PR was opened, and no CI ran; root owns the authorized push retry. The existing same-start comparison and package validation evidence remain the source for numerical behavior.
 
 ## 11. Team learning
 
@@ -50,4 +50,4 @@ For a public API that already has a detailed tutorial, a short README example pl
 
 ## 12. Cross-product coverage
 
-This is a GLLVModels documentation-only slice. It does not establish or alter optimizer behavior in other packages.
+This does NOT cover optimizer behavior in other packages, model recovery, interval refits, or numerical performance. It records only GLLVModels README discoverability for its existing API.
