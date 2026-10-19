@@ -21889,3 +21889,10 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Added setup-r to the negative-control workflow because two existing base-R fixture controls call `Rscript`, and added the postfit recount regression test to the job.
 - Checks: behavior controls 37/37; `core070_postfit_p1_receipts.py --check`; `test_core070_postfit_recount.py`; `true_parity_assemble.py --check`; behavior receipt `--check`; `git diff --check`.
 - Full/core integrated Julia suites remain running separately on Totoro. This change restores receipt provenance checking; it is not a new fit-parity result or a full-P1 claim.
+
+## 2026-10-19 — Refresh iSDM receipt hashes after the provenance correction
+
+- After integrating the residual source-provenance correction, the retained six-case first-seven run metadata had a new derivation commit while five iSDM behavior sidecars and case receipts still cited the previous metadata hash. The checkpoint verifier correctly rejected the stale run.json hash.
+- Revalidated the retained six-case R/Julia capture with first_seven_behaviour_derive.py; regenerated its derived sidecars and the five affected iSDM behavior receipt blocks from raw outputs. No R or Julia observation was rerun or edited.
+- Before/after SHA-256 comparison: all 46 files under the retained raw* evidence directories were unchanged.
+- Validation: behavior controls 37/37; postfit recount regression passed; postfit and behavior receipt checks passed; assembler check passed; the checkpoint mutation-control test passed independently. The positive checkpoint on committed HEAD remains pending until these refreshed hashes are committed.
