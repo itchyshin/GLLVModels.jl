@@ -519,6 +519,7 @@ println(_SHARD === nothing ?
     _shard_include("test_curvature_census.jl")
     _shard_include("test_phylo_contrasts.jl")
     _shard_include("test_edge_incidence.jl")
+    _shard_include("test_edge_incidence_solveQ.jl")
     _shard_include("test_phylo_branch_re.jl")
     _shard_include("test_branch_re_marginal_fallback.jl")
     _shard_include("test_core070_receipts.jl")
