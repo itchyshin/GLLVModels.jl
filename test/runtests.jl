@@ -256,6 +256,7 @@ println(_SHARD === nothing ?
     _shard_include("test_link_honoured.jl")
     _shard_include("test_issue_721_link_docs.jl")
     _shard_include("test_issue_725_extractor_docs.jl")
+    _shard_include("test_issue_719_docs_deploy_guard.jl")
     _shard_include("test_tweedie.jl")
     _shard_include("test_tweedie_engine_health.jl")
     _shard_include("test_tweedie_grouped_engine_health.jl")
