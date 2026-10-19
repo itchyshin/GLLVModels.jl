@@ -79,8 +79,39 @@ end
         if hasproperty(fit, :stop_reason)
             @test fit.converged == (fit.stop_reason === :converged)
         end
+        # #944: a trial step that overflows r = exp(log_r) gets the sentinel from the
+        # objective the fitter hands to Optim, not an ArgumentError that aborts the fit.
+        if family === :nb
+            th = copy(fit.theta_packed); th[end - 1] = 1000.0
+            @test GLLVModels._phylo_nb_xlv_nll_guarded(th, d.Y, phy.n_leaves, 1, phy, d.X;
+                                                       q_lv = 1) == 1e12
+        end
     end
     @test n_checked == 12
+end
+
+@testset "phylo xlv fitter objectives return the 1e12 sentinel instead of throwing (#944)" begin
+    # Deterministic: theta is set directly to where an overshooting line-search step lands,
+    # rather than relying on the optimiser to step there.
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    p, n, K, q = 6, 30, 1, 1
+    Y = [(t + s) % 6 for t in 1:p, s in 1:n]
+    N = fill(5, p, n)
+    X = reshape(collect(range(-1.0, 1.0; length = n)), n, 1)
+    rr = GLLVModels.rr_theta_len(p, K)
+    # NB2 theta = (beta, alpha_lv, Lambda, log_r, log_sigma2_phy); exp(1000) overflows r.
+    th_nb = zeros(p + q * K + rr + 2)
+    @test GLLVModels._phylo_nb_xlv_nll_guarded(th_nb, Y, p, K, phy, X; q_lv = q) ==
+          GLLVModels._phylo_nb_xlv_nll_packed(th_nb, Y, p, K, phy, X; q_lv = q)
+    th_nb[end - 1] = 1000.0
+    @test GLLVModels._phylo_nb_xlv_nll_guarded(th_nb, Y, p, K, phy, X; q_lv = q) == 1e12
+    # Binomial theta = (beta, alpha_lv, Lambda, log_sigma2_phy); no dispersion, so the
+    # same overflow is placed on sigma2_phy.
+    th_bin = zeros(p + q * K + rr + 1)
+    @test GLLVModels._phylo_binomial_xlv_nll_guarded(th_bin, Y, N, p, K, phy, X; q_lv = q) ==
+          GLLVModels._phylo_binomial_xlv_nll_packed(th_bin, Y, N, p, K, phy, X; q_lv = q)
+    th_bin[end] = 1000.0
+    @test GLLVModels._phylo_binomial_xlv_nll_guarded(th_bin, Y, N, p, K, phy, X; q_lv = q) == 1e12
 end
 
 @testset "phylo xlv fitters expose a stop_reason" begin
