@@ -2,6 +2,8 @@
 
 ## Development
 
+- **`fit_relaxed_clock` no longer reports `converged = true` on a clamped fit (#876).** `RelaxedClockFit` gains `tau2_boundary` and `sigma_eps_boundary` (appended fields; the old positional constructor still works), set when the free-τ² update ends at `τ²_floor` or the free-σ²_eps update ends at its floor; either leaves `converged = false`. Pinned `fix_τ²` / `fix_σ²_eps` are never boundaries. The σ²_eps floor is now `1e-8 * mean(y.^2)` instead of an absolute `1e-8`, so rescaling `y` cannot flip the flag. **Behaviour change:** constant-rate or weak-replicate data that used to report `converged = true` at `τ² = 1e-4` now reports `converged = false, tau2_boundary = true`. `show` prints the flags.
+
 - **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 
 - **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
