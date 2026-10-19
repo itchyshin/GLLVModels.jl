@@ -63,3 +63,32 @@ end
     η_spatial = GLLVModels.predict_spatial(fit, Y, locs, locs; type = :link)
     @test η_spatial ≈ η
 end
+
+@testset "confint_spde_latent takes N for Binomial fits (#779)" begin
+    Random.seed!(779)
+    m, L = 4, 4.0
+    nodes, tris = _grid_mesh_bin(m, L)
+    site_nodes = collect(1:2:(m * m))     # 8 sites
+    locs = nodes[site_nodes, :]
+    M = size(locs, 1)
+    p, K = 3, 1
+    Ntr = fill(5, p, M)
+    Y = [rand(Binomial(5, 0.4)) for _ in 1:p, _ in 1:M]
+    @test maximum(Y) > 1
+
+    fit = fit_spde_latent_gllvm(Y, nodes, tris, locs;
+                                family = Binomial(), K = K, N = Ntr,
+                                iterations = 30, newton_maxiter = 30)
+
+    ci = confint_spde_latent(fit, Y, locs; N = Ntr)
+    @test all(isfinite, ci.se)
+    @test !any(isnan, ci.lower) && !any(isnan, ci.upper)
+    @test ci.pd_hessian
+
+    # A fit that did not record its trials, with no N supplied, must refuse.
+    bare = GLLVModels.SPDELatentFit(fit.β, fit.Λ, fit.κ, fit.τ, fit.dispersion,
+                                    fit.link, fit.family, fit.loglik,
+                                    fit.converged, fit.iterations,
+                                    fit.nodes, fit.tris)
+    @test_throws ArgumentError confint_spde_latent(bare, Y, locs)
+end
