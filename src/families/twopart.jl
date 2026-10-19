@@ -1568,6 +1568,21 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
                          autodiff = :finite)
+    # #739: the observed surface has a Laplace breakdown wall (the eigenvalue floor), and
+    # L-BFGS from the warm start can stall against it far from the maximum. The Fisher
+    # optimum sits close to the observed one, so restart from it and keep the better end.
+    if hessian === :observed && !(Optim.converged(res) &&
+                                  _zip_min_site_eigen(Y, unpack_lambda(Optim.minimizer(res)[(2p + 1):(2p + rr)], p, K),
+                                                      Optim.minimizer(res)[1:p], Optim.minimizer(res)[(p + 1):(2p)],
+                                                      offset, newton_maxiter, newton_tol) >= 1.1 * ZI_LAPLACE_EIGMIN_FLOOR)
+        ff = fit_zip_gllvm(Y; K = K, offset = offset, hessian = :fisher, g_tol = g_tol,
+                           iterations = iterations, newton_maxiter = newton_maxiter,
+                           newton_tol = newton_tol)
+        θf = vcat(ff.βz, ff.βc, pack_lambda(ff.Λc))
+        res2 = Optim.optimize(negll, θf, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
+                              autodiff = :finite)
+        Optim.minimum(res2) < Optim.minimum(res) && (res = res2)
+    end
     # #573: never end below the nested Poisson fit (see `_zi_nested_guard`).
     pf = try fit_poisson_gllvm(Y; K = K, offset = offset) catch; nothing end
     if pf !== nothing
