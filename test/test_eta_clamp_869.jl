@@ -111,14 +111,20 @@ _off869(f) = !f.converged
         @test isfinite(fit_truncated_nbinom2_gllvm(max.(Y, 1); K = 0).loglik)
     end
 
-    @testset "a start past the cap is refused, not reported converged (K = 0, Gamma / Tweedie)" begin
+    @testset "a user start past the cap is rescued, not reported converged at the sentinel (K = 0, Gamma / Tweedie)" begin
+        # #874: an explicit β_init entry above the cap falls back to the default warm start for
+        # that entry (see test_beta_init_rescue_874.jl); it used to end at loglik = -Inf here.
         Yf = Float64.(_Y869) .+ 0.5
         b0 = log.(vec(sum(Yf; dims = 2)) ./ size(Yf, 2)); b0[1] = 35.0
-        for thunk in (() -> fit_gamma_gllvm(Yf; K = 0, β_init = b0),
-                      () -> fit_tweedie_gllvm(Float64.(_Y869); K = 0, β_init = b0))
+        for (thunk, ref) in ((() -> fit_gamma_gllvm(Yf; K = 0, β_init = b0),
+                              () -> fit_gamma_gllvm(Yf; K = 0)),
+                             (() -> fit_tweedie_gllvm(Float64.(_Y869); K = 0, β_init = b0),
+                              () -> fit_tweedie_gllvm(Float64.(_Y869); K = 0)))
             f = redirect_stderr(devnull) do; thunk(); end
-            @test !f.converged
-            @test f.loglik == -Inf
+            r = redirect_stderr(devnull) do; ref(); end
+            @test f.converged
+            @test isfinite(f.loglik)
+            @test f.loglik ≈ r.loglik rtol = 1e-6
         end
     end
 
