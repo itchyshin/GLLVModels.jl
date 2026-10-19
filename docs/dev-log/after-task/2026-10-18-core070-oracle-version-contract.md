@@ -53,7 +53,7 @@ The full Python file includes a local archive re-derivation that did not finish 
 
 ## 10. Known Residuals
 
-The old archive-hash neighbor remains unverified in this repair. The main advisory CI workflow is not rerun, no full Julia suite is claimed, and the R oracle build has not been run. The patch awaits parent review and any requested bounded build gate.
+The old archive-hash neighbor remains unverified in this repair. The source/test patch passed parent review on commit `258ceb9f955dc8ca7d9b4dfc8125147b0c986795`. PR #941 is open and its Julia checks are in progress; Documenter and the guard have passed. The P0 advisory job is skipped on pull requests by workflow design, so no P0 build or Gaussian fixture CI result is claimed here. The workflow's post-merge main run is the planned exact-environment check. No full local Julia suite or local R oracle build was run.
 
 ## 11. Team Learning
 
@@ -61,4 +61,4 @@ When a pin-specific evidence test combines a small metadata probe with a large a
 
 ## 12. Cross-Product Coverage
 
-The repaired test reads the actual installed R package version from Julia/RCall and compares it with the Julia pin table before making the Gaussian parity assertion. No downstream package or other product was changed.
+This task covers the installed R package version read through Julia/RCall, its comparison with the Julia pin table, and the version-qualified Gaussian fixture assertion. It also covers writing that version into the builder's build receipt and installed marker. It does NOT cover model-solver behavior, other parity contracts, the full Julia suite, inference validation, or release readiness.
