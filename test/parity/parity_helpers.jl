@@ -131,6 +131,8 @@ function _core070_source_pin!()
     pkg_root = rcopy(String, R"find.package('gllvmTMB')")
     realpath(marker) == joinpath(realpath(pkg_root), "CORE070_SOURCE_PIN.toml") ||
         throw(ArgumentError("R source-pin marker must be CORE070_SOURCE_PIN.toml in the installed gllvmTMB library"))
+    package_version = rcopy(String, R"as.character(utils::packageVersion('gllvmTMB'))")
+    _core070_check_installed_package_version(get(pin, "gllvmTMB_version", nothing), package_version)
     _core070_sha256_file(joinpath(pkg_root, "NAMESPACE")) == _CORE070_NAMESPACE_SHA256 ||
         throw(ArgumentError("installed gllvmTMB NAMESPACE is not the frozen R reference"))
     installed_tree = _core070_tree_sha256(pkg_root; ignore = rel -> rel == "CORE070_SOURCE_PIN.toml")
@@ -141,6 +143,7 @@ function _core070_source_pin!()
         throw(ArgumentError("oracle build receipt does not describe the installed gllvmTMB library"))
     source = Dict{String, Any}(
         "reference_commit" => _CORE070_REFERENCE_COMMIT,
+        "gllvmTMB_version" => package_version,
         "archive_sha256" => _CORE070_ARCHIVE_SHA256,
         "namespace_sha256" => _CORE070_NAMESPACE_SHA256,
         "source_marker_sha256" => _core070_sha256_file(marker),
