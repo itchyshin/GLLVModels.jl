@@ -1,3 +1,45 @@
+## 2026-10-18: direct outer optimizer selection
+
+- Branch `codex/optimizer-selection-20261018` from `origin/main` at
+  `383e9d37053fd91ac3dc2e445ecadbbf82cc55f5`. Added optimizer selection for the
+  ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace, and default
+  per-trait NB2 formula routes. Supported methods: `:lbfgs`, `:bfgs`, and
+  configured `Optim.LBFGS()` / `Optim.BFGS()` objects. Default `nothing` retains
+  prior paths. Every fit stores `optimizer_info` with requested/actual method,
+  derivative route, controls, stages, and raw optimizer results. Old positional
+  fit constructors remain available.
+- `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=. -e 'using
+  GLLVModels; include("test/test_optimizer_selection.jl")'`: **46 passed** and
+  `OPTIMIZER_SELECTION_PASS`. The suite includes a prior red run against the
+  unsupported API, selected-method stage checks, default Poisson continuation,
+  formula/select_lv forwarding, early refusals, refit refusal, and constructor
+  compatibility.
+- Neighbor regression command (all completed with exit 0):
+  `test/test_gaussian_intercept.jl`, `test/test_gaussian_source_design.jl`,
+  `test/test_source_fit_optimizer_health.jl`, `test/test_poisson_fit.jl`,
+  `test/test_negbin_laplace.jl`, `test/test_nb_grouped_poisson_ridge.jl`,
+  `test/test_model_selection.jl`, `test/test_formula.jl`, and
+  `test/test_formula_sources.jl`. Includes the existing 31/31 NB2 Poisson-limit
+  ridge test and source optimizer-health checks.
+- `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=docs
+  docs/make.jl --local`: Documenter doctests, cross-reference checks, and
+  VitePress rendering completed. Warnings: local deployment skipped, and the
+  existing VitePress chunk exceeded the 500 kB advisory threshold. The docs
+  environment needed a temporary local `Pkg.develop(path=".")`; generated
+  manifests are not part of the feature.
+- Full core suite `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=test
+  test/runtests.jl`: deliberately interrupted with SIGINT at
+  `test/test_phylo_beta_xlv.jl:158` after the estimated 5–10 minute runtime was
+  exceeded. It had reached later truncated-NB2 tests; no final aggregate test
+  denominator was emitted, so this is incomplete evidence, not a pass. The test
+  environment's temporary local develop entry and generated manifests were
+  removed. `Pkg.test()` was not run. Focused/neighbour tests and docs build are
+  the completed evidence; independent review and PR CI remain outstanding.
+- Negative space: AGHQ/adaptive, VA, other grouped/covariance, mixed, phylogenetic,
+  row-effect, pervar, and non-Normal/Poisson/NB2 routes refuse explicit selection.
+  Profile/bootstrap intervals refuse explicitly selected fits because refit
+  solvers are not yet forwarded. No likelihood or formula grammar changed.
+
 ## 2026-10-17: FAMILY-11 public bridge boundary receipt
 
 - Added a retained raw P1 R-bridge refusal capture and fail-closed derivation for the exact `FAMILY-11-LOG` public bridge boundary. This is boundary evidence only; it does not establish native/formula parity or admit the family row as parity evidence.
@@ -21739,3 +21781,19 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Fix: exact test-only compat pin in `test/Project.toml`: `Aqua = "=0.8.16"`. No `Project.toml` version bump, no runtime deps, no likelihood code, no gllvmTMB edits, no Aqua subcheck skip.
 - Local validation: temp Julia env with `Aqua v0.8.16`, `SpecialFunctions v2.9.0`, and `LogExpFunctions v0.3.29`; `Aqua.test_all(GLLVM; ambiguities=false)` passed, including `Persistent tasks | 1/1`.
 - Also ran: `git diff --check` passed. Full `Pkg.test()` was not run locally; an accidental all-suite probe was stopped after it started because the focused Aqua reproducer covered the CI failure mode.
+
+
+## 2026-10-18 — outer optimizer follow-up: Gaussian mask/offset and evidence
+
+- Gaussian `mask`/`offset` observed-data refits now use the explicitly selected outer Optim method and append a receipt stage; Gaussian integration wrappers preserve the receipt. Default LBFGS BackTracking settings remain unchanged.
+- Added actual `Optim.optimize` boundary instrumentation for Gaussian, Poisson, per-trait NB2 and ridge-polish stages; the test removes its temporary methods and verifies cleanup.
+- Focused selector tests: 61/61 plus spy cleanup 1/1, `OPTIMIZER_SELECTION_PASS`; log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-optimizer-review-green.log`. Red witness from prior source: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-optimizer-review-red.log`.
+- Paired identical-start Poisson example passed; both methods converged and log-likelihoods differed by about 7e-14: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-paired-example-final.log`. Gaussian source-design neighbor: 34/34, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-gaussian-source-final.log`.
+- Final neighbor batch stopped at its 5-minute estimate after seven of nine files; `test_formula.jl` was interrupted and `formula_sources` not run. Do not report all nine as passing. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-neighbours-final.log`.
+- Docs VitePress rendering completed, but the Julia wrapper did not provide a final exit receipt; docs gate is unconfirmed. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-docs-final.log`. Broad suite remains incomplete from the earlier SIGINT; `Pkg.test()` not run.
+
+## 2026-10-18 — PR #939 integration with main `a8be9b222`
+
+- Merged `origin/main` at `a8be9b2220c29d6c2d83834057571457d60a77f0` into optimizer branch pre-merge head `8b0c4fd10b6005f8c368bf78bd06caa70dafc913`. Preserved both independent check-log additions; both `test_optimizer_selection.jl` and FAMILY-11 boundary tests remain registered in `test/runtests.jl`.
+- Main integration changed no `src/`, project files, or `docs/src/` relative to the pre-merge PR head. It adds FAMILY-11 evidence and supporting tests/tools/receipts.
+- On integrated head `bc56d3d2565ea041cf0841070c0234da81536e19`, focused selector tests passed 61/61 plus spy cleanup 1/1 in 57 seconds and printed `OPTIMIZER_SELECTION_PASS`. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-integrated-focused.log`. No full suite or docs rerun.

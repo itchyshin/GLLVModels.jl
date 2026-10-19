@@ -20,6 +20,7 @@ using Distributions: Distribution, Univariate, Discrete, Continuous,
 
 # Core
 include("fit_verdict.jl")            # _fit_verdict: never report a failure sentinel as a loglik
+include("optimizer_selection.jl")     # direct outer optimizer choices and immutable fit receipts
 include("packing.jl")
 include("lowrank_cholesky.jl")          # used by likelihood
 include("likelihood.jl")
@@ -243,7 +244,8 @@ Alias of [`ConstrainedOrdinationFit`](@ref), the result type of
 const ConcurrentOrdinationFit = ConstrainedOrdinationFit
 
 # Public API
-export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevolution_blockna,
+export OptimizerStage, OptimizerRecord, optimizer_info,
+       make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevolution_blockna,
        fit_gaussian_mi_fiml, fit_gaussian_mi_phylo, fit_gllvm_mi, fit_gllvm_mi_multi,
        spatial_cov, relatedness_cov,
        spde_fem, spde_precision, spde_projector, matern_correlation,

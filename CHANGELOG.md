@@ -2,6 +2,14 @@
 
 ## Development
 
+- **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
+  and the default per-trait NB2 Laplace formula route accept `optimizer=:lbfgs`, `:bfgs`, or a
+  configured `Optim.LBFGS()` / `Optim.BFGS()`. `optimizer=nothing` retains prior defaults and
+  continuation behavior. Per-fit `optimizer_info(fit)` receipts report actual stages and raw
+  optimizer results. Explicit choices refuse unsupported nested routes and profile/bootstrap
+  refits that do not propagate the selected method. Gaussian mask and offset refits use and record
+  the selected method alongside the warm-start solve.
+
 - **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
   (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
   hurdle, delta, `fit_gllvm_cov`, grouped Gamma/NB1/Tweedie) now return the failure sentinel when an
