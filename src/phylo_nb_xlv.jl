@@ -324,10 +324,12 @@ function _fit_phylo_nb_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
     theta_hat = Optim.minimizer(res)
     beta_hat, Lambda_hat, alpha_hat, r_hat, sigma2_hat =
         _phylo_nb_xlv_unpack_packed(theta_hat, p, K, q_lv)
+    verdict = _phylo_xlv_verdict(res, g_tol)
     return (beta = collect(beta_hat), Lambda = Matrix(Lambda_hat),
             alpha_lv = Matrix(alpha_hat), r = r_hat, sigma2_phy = sigma2_hat,
-            loglik = _fit_verdict(res)[1], converged = _fit_verdict(res)[2],
-            iterations = Optim.iterations(res), theta_packed = collect(theta_hat))
+            loglik = verdict.loglik, converged = verdict.converged,
+            iterations = Optim.iterations(res), theta_packed = collect(theta_hat),
+            stop_reason = verdict.reason)
 end
 
 function _phylo_nb_xlv_profile_indices(indices, nb::Integer)
