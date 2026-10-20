@@ -1,3 +1,16 @@
+## 2026-10-18: PR #905 reviewer unblock (refs #822)
+
+- Branch `claude/sharp-gates-3ud4k2`, rebased onto `origin/main` `383e9d370`.
+- `_phylo_latent_accept_rounding_floor` no longer sets `converged = true` when
+  `gradient_norm > g_tol`. The 1e-3 eligibility line is unchanged.
+- Targeted (Julia 1.10.10, `JULIA_NUM_THREADS=1`, `OPENBLAS_NUM_THREADS=1`):
+  `test_phylo_latent_rounding_floor.jl` **14 + 10 passed / 0 failed**;
+  issue #822 DEP (`d = 4`, 120 tips) `converged=true`,
+  `gradient_norm=6.2049e-6`; `test_cov_phylo_twins_p1.jl` **40 passed / 0 failed**.
+- Full `Pkg.test()` (Julia 1.10.10): **31220 passed / 0 failed / 87 broken / 31307 total**
+  (305m25s) plus README Quick start 8/8. `EXIT=0`.
+- Body keeps `Closes #822` because the DEP repro passed locally. The GitHub body now declares `intended-closes: 822`.
+
 ## 2026-10-11: data-relative floors + SQUAREM hit_floor (review of #868)
 
 - Same branch `cursor/false-converged-754-753-781-78dc`, still draft #868.

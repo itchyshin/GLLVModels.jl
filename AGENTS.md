@@ -93,6 +93,7 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **PR #905 reviewer unblock (2026-10-18).** Branch `claude/sharp-gates-3ud4k2`, rebased onto current `main`. Never report `converged = true` when `gradient_norm > g_tol`; 1e-3 eligibility unchanged; DEP `d = 4`, 120-tip repro passed locally (`gradient_norm=6.2e-6`). Body keeps `Closes #822`. After-task: `docs/dev-log/after-task/2026-10-18-pr905-rounding-floor-ci.md`. `Project.toml` stays **`0.3.0`**.
 - **False `converged` on three fitters (2026-10-11 review).** Draft PR #868
   (`cursor/false-converged-754-753-781-78dc`): floors are now fractions of
   the data scale (`1e-8 * var(y)` for branch-RE, `1e-8 * mean(y.^2)` for
