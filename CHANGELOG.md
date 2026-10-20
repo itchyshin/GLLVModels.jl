@@ -2,6 +2,15 @@
 
 ## Development
 
+- **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
+  After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
+  whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose
+  `max |gradient|` is at most `100 * max(g_tol, 1e-5)` may be tagged `stopping_reason =
+  :rounding_floor` and `converged = true` only when the stored `gradient_norm` is already
+  `<= g_tol`. The fitter never reports `converged = true` when `gradient_norm > g_tol`. The 1e-3
+  acceptance (`100 * max(g_tol, 1e-5)`) is unchanged. `test/test_phylo_latent_rounding_floor.jl`
+  includes the issue's own DEP (`d = 4`, 120 tips) default-start fit.
+
 - **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 
 - **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
