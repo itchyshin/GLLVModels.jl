@@ -1845,8 +1845,13 @@ with `γ=0` and `log r = log(10)`.
 `X` is `(p, n, q)`. `γ_fixed` optionally zeros selected covariate columns for
 **both** parts (same contract as [`fit_zip_gllvm_cov`](@ref)). `θ_init` is an
 optional packed start `[βz; γz; βc; γc; pack(Λc); log r]` (same length as the
-free packed vector). Twin light RCall Δ is out of scope (twin ZINB cut).
-Per-trait `r` is **not** the default.
+free packed vector); every entry must be finite. Twin light RCall Δ is out of
+scope (twin ZINB cut). Per-trait `r` is **not** the default.
+
+`iterations <= 0` evaluates the Laplace objective at the start vector and
+returns immediately with `converged = false` and `iterations = 0`. That path
+is a shared-start / transport check, not a fitted optimum: no L-BFGS step
+runs and no gradient is tested.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
 `:fisher`); the mode search does not depend on it. As for the no-covariate
@@ -1877,6 +1882,8 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         θin = collect(Float64, θ_init)
         length(θin) == nθ || throw(ArgumentError(
             "θ_init length ($(length(θin))) must equal $nθ = 2p+2q+rr+1"))
+        all(isfinite, θin) || throw(ArgumentError(
+            "fit_zinb_gllvm_cov: θ_init contains non-finite values"))
         θin
     end
     function negll(θ)
@@ -1899,7 +1906,8 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         return isfinite(v) ? v : 1e12
     end
     # iterations ≤ 0: evaluate at θ0 only (shared-start / transport checks; no
-    # second LBFGS wander on the shared-r ridge).
+    # second LBFGS wander on the shared-r ridge). No optimiser ran, so
+    # `converged` cannot be true — `_fit_verdict` also refuses a sentinel nll.
     if iterations <= 0
         θ̂ = θ0
         nll0 = negll(θ̂)
@@ -1911,10 +1919,11 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         r̂ = exp(θ̂[2p + 2q + rr + 1])
         γẑ = collect(Float64, _expand_fixed_zero(γz_free, γ_fixed_mask))
         γĉ = collect(Float64, _expand_fixed_zero(γc_free, γ_fixed_mask))
+        ll, conv, iters = _fit_verdict(nll0, false, 0)
+        conv = _eta_cap_verdict(conv, LogLink(), βĉ, _build_offset(X_fit, γc_free);
+                                caller = "fit_zinb_gllvm_cov")
         return ZINBCovFit(βẑ, γẑ, βĉ, γĉ, collect(Bool, γ_fixed_mask), Λĉ, r̂,
-                          -nll0,
-                          _eta_cap_verdict(true, LogLink(), βĉ, _build_offset(X_fit, γc_free);
-                                           caller = "fit_zinb_gllvm_cov"), 0)
+                          ll, conv, iters)
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
