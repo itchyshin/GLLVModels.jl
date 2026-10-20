@@ -260,6 +260,7 @@ println(_SHARD === nothing ?
     _shard_include("test_tweedie.jl")
     _shard_include("test_tweedie_engine_health.jl")
     _shard_include("test_tweedie_grouped_engine_health.jl")
+    _shard_include("test_tweedie_grouped_mode_search_503.jl")
     _shard_include("test_tweedie_power_contract.jl")
     _shard_include("test_exponential.jl")
     _shard_include("test_studentt.jl")
@@ -292,6 +293,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_pervar_design.jl")
     _shard_include("test_gaussian_fixed_residual.jl")
     _shard_include("test_gaussian_pervar_fallback.jl")
+    _shard_include("test_gaussian_pervar_heywood_736.jl")   # #736
     _shard_include("test_formula_pervar.jl")
     _shard_include("test_formula_default_x_guard.jl")
     _shard_include("test_aicbic_newfits.jl")
@@ -404,6 +406,7 @@ println(_SHARD === nothing ?
     _shard_include("test_beta_binomial.jl")
     _shard_include("test_beta_binomial_mode_search.jl")
     _shard_include("test_beta_binomial_verdict_515.jl")
+    _shard_include("test_beta_binomial_phi_continuity_872.jl")
     _shard_include("test_beta_binomial_grouped_verdict_515.jl")
     _shard_include("test_zero_inflated.jl")
     _shard_include("test_zi_twin.jl")
