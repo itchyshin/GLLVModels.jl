@@ -122,6 +122,24 @@ using StableRNGs
         @test abs(cv_bin.residual_mean) < 0.5
     end
 
+    @testset "Binomial with trial counts: predictions and MSE are on the count scale (#769)" begin
+        Random.seed!(11)
+        p, n = 6, 60
+        Ntr = fill(20, p, n)
+        Y = [rand(Binomial(20, 0.4)) for _ in 1:p, _ in 1:n]
+        r = cv_gllvm(Y; k_folds = 3, split = :random, family = Binomial(), K = 1, N = Ntr,
+                     rng = Random.MersenneTwister(2))
+        pred = filter(!isnan, vec(r.predictions))
+        # Predictions are expected counts out of 20, not probabilities.
+        @test all(0.0 .<= pred .<= 20.0)
+        @test abs(mean(pred) - mean(Y)) < 1.0
+        # A model that fits should score near the data variance, not ~13x it.
+        @test r.mse < 2 * var(vec(Y))
+        # mse is the mean squared error of the stored predictions against Y.
+        ok = .!isnan.(r.predictions)
+        @test isapprox(r.mse, mean(abs2, (Y .- r.predictions)[ok]); rtol = 1e-8)
+    end
+
     @testset "Negative Binomial Family CV" begin
         Random.seed!(404)
         p, n = 4, 30

@@ -256,9 +256,11 @@ println(_SHARD === nothing ?
     _shard_include("test_link_honoured.jl")
     _shard_include("test_issue_721_link_docs.jl")
     _shard_include("test_issue_725_extractor_docs.jl")
+    _shard_include("test_issue_719_docs_deploy_guard.jl")
     _shard_include("test_tweedie.jl")
     _shard_include("test_tweedie_engine_health.jl")
     _shard_include("test_tweedie_grouped_engine_health.jl")
+    _shard_include("test_tweedie_grouped_mode_search_503.jl")
     _shard_include("test_tweedie_power_contract.jl")
     _shard_include("test_exponential.jl")
     _shard_include("test_studentt.jl")
@@ -291,6 +293,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_pervar_design.jl")
     _shard_include("test_gaussian_fixed_residual.jl")
     _shard_include("test_gaussian_pervar_fallback.jl")
+    _shard_include("test_gaussian_pervar_heywood_736.jl")   # #736
     _shard_include("test_formula_pervar.jl")
     _shard_include("test_formula_default_x_guard.jl")
     _shard_include("test_aicbic_newfits.jl")
@@ -402,6 +405,7 @@ println(_SHARD === nothing ?
     _shard_include("test_beta_binomial.jl")
     _shard_include("test_beta_binomial_mode_search.jl")
     _shard_include("test_beta_binomial_verdict_515.jl")
+    _shard_include("test_beta_binomial_phi_continuity_872.jl")
     _shard_include("test_beta_binomial_grouped_verdict_515.jl")
     _shard_include("test_zero_inflated.jl")
     _shard_include("test_zi_twin.jl")
@@ -614,6 +618,8 @@ println(_SHARD === nothing ?
     _shard_include("test_n_lt_p.jl")
     _shard_include("test_wtier_crosscov.jl")
     _shard_include("test_spde_projector_validation.jl")
+    # #794 / #764: Wald routes on lambda_constraint fits (gllvmTMB's pdHess gate; lognormal refuses pins).
+    _shard_include("test_lambda_constraint_wald_794.jl")
     _shard_include("test_changelog_structure.jl")
 end
 include("test_readme_quickstart.jl")
