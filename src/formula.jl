@@ -208,6 +208,12 @@ non-common trait variances. This does not open public R bridge admission.
 `ZIB` through `@formula` is **no-X only** for now (bridge still OWED; ZIB+X formula
 is fenced).
 
+On ordinary no-covariate Gaussian and count routes, `optimizer` accepts `:lbfgs`,
+`:bfgs`, or a configured `Optim.LBFGS()` / `Optim.BFGS()` object. The default
+NB2 formula route remains per-trait dispersion when an optimizer is selected.
+Nested formula routes reject explicit selection. `optimizer_info(fit)` records
+the solver stages; profile and bootstrap refits require `optimizer = nothing`.
+
 `weights` (observation weights) follow [`fit_gllvm`](@ref) and are accepted on the
 no-covariate Poisson route only (`@formula(y ~ 1)`, `family = Poisson()`); every other formula
 route refuses them with an `ArgumentError`.
@@ -223,6 +229,19 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                sources = nothing, grouping=nothing,
                pervar::Bool = false,
                contrasts::AbstractDict = Dict{Symbol, Any}(), weights = nothing, kwargs...)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
+        requested = kwargs[:optimizer]
+        _optimizer_method(requested, Optim.LBFGS(); route = "gllvm")
+        grouping === nothing || _refuse_optimizer(requested, "gllvm", "composite grouping fits")
+        pervar && _refuse_optimizer(requested, "gllvm", "pervar fits")
+        if sources !== nothing
+            family isa Normal || _refuse_optimizer(requested, "gllvm", "non-Gaussian source fits")
+        elseif family isa Union{Normal,Poisson,NegativeBinomial}
+            nothing
+        else
+            _refuse_optimizer(requested, "gllvm", "this formula family")
+        end
+    end
     p, n = size(Y)
     # Observation weights reach only the no-covariate Poisson route (through `fit_gllvm`,
     # which owns the shape rules); every other formula route refuses them. `nothing` never
@@ -280,6 +299,10 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     end
     mm, cnames = _build_site_modelmatrix(formula.rhs, cols; contrasts = contrasts)
     q = size(mm, 2)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing && q > 0 &&
+       !(family isa Normal)
+        _refuse_optimizer(kwargs[:optimizer], "gllvm", "non-Gaussian covariate formula fits")
+    end
 
     _default_route_no_intercept_error(formula, family)
 

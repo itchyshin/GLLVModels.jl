@@ -213,6 +213,33 @@ using Distributions: Normal, quantile
         best_idx = argmin(abs.(rho_grid .- 0.2))
         @test out.table.is_best[best_idx]
         @test out.best_rho == rho_grid[best_idx]
+
+        # #732: a higher logLik at an unconverged grid point must not win best_rho.
+        trick_refit(K, rho) = (
+            logLik = rho ≈ 0.8 ? 0.0 : -(rho - 0.2)^2,
+            converged = !(rho ≈ 0.8),
+            pd_hessian = true,
+        )
+        out_trick = profile_cross_rho(A_H, A_P, W, trick_refit;
+                                      rho_grid = [-0.2, 0.2, 0.8])
+        @test out_trick.best_rho ≈ 0.2
+        @test !out_trick.table.is_best[3]
+
+        # #732: finite_ll is grid indices — findall(..., finite_ll) would treat
+        # positions in that short list as grid rows (wrong when point 1 is non-finite).
+        sparse_finite_refit(K, rho) = begin
+            rho ≈ 0.1 && error("non-finite grid head")
+            rho ≈ 0.2 && return (logLik = -1.0, converged = true, pd_hessian = true)
+            return (logLik = 0.0, converged = false, pd_hessian = true)
+        end
+        out_sparse = profile_cross_rho(A_H, A_P, W, sparse_finite_refit;
+                                       rho_grid = [0.1, 0.2, 0.3])
+        @test out_sparse.table.status[1] == :error
+        @test out_sparse.best_rho ≈ 0.2
+        @test out_sparse.table.is_best[2]
+        @test !out_sparse.table.is_best[1]
+        @test !out_sparse.table.is_best[3]
+
         @test out.table.relative_logLik ≈ out.table.logLik .- maximum(out.table.logLik)
         @test out.table.delta_deviance ≈ 2 .* (maximum(out.table.logLik) .- out.table.logLik)
         @test all(out.table.status .== :ok)

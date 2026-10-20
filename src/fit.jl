@@ -59,9 +59,12 @@ struct GllvmFit
     optim_result
     cputime::Float64
     integration::Union{Nothing,AbstractIntegrationInfo}
+    optimizer_info::Union{Nothing,OptimizerRecord}
 end
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
-    GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing)
+    GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing,nothing)
+GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration)=
+    GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration,nothing)
 
 """
     fit_gaussian_gllvm(y; K, K_W=0, has_diag=false, K_phy=0,
@@ -72,11 +75,14 @@ GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
                        σ²_B_init=0.1, σ²_W_init=0.1, σ_phy_init=0.1,
                        β_init=nothing, β_fixed=nothing, alpha_lv_init=nothing,
                        x_tol=1e-8, f_tol=0.0,
-                       g_tol=1e-6, iterations=500) -> GllvmFit
+                       g_tol=1e-6, iterations=500, optimizer=nothing) -> GllvmFit
 
 L-BFGS minimisation of the closed-form Gaussian marginal NLL via
 ForwardDiff gradients. Returns a `GllvmFit` with parameter estimates,
 convergence diagnostics, and wall-clock fit time.
+Choose an outer method with `optimizer = :lbfgs`, `:bfgs`, `Optim.LBFGS()`, or
+`Optim.BFGS()`. `nothing` retains the default L-BFGS method. The fitted object
+stores the actual outer attempts; inspect them with [`optimizer_info`](@ref).
 
 Stopping is left to the gradient test (`g_tol`) and the step size (`x_tol`);
 the relative objective-change test is off by default (`f_tol = 0.0`, Optim's
@@ -192,8 +198,14 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             x_tol = 1e-8,
                             f_tol = 0.0,
                             g_tol = 1e-6,
-                            iterations = 500)
+                            iterations = 500,
+                            optimizer = nothing)
     p, n = size(y)
+    default_optimizer = Optim.LBFGS()
+    outer_optimizer = _optimizer_method(optimizer, default_optimizer; route = "fit_gaussian_gllvm")
+    stages = OptimizerStage[]
+    controls = (x_abstol = x_tol, f_reltol = f_tol, g_tol = g_tol,
+                iterations = iterations, show_trace = false)
     1 <= K <= p || throw(ArgumentError("K must lie in 1:p (got K = $K, p = $p)"))
     @assert K_W ≥ 0
     @assert K_phy ≥ 0
@@ -426,9 +438,11 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             iterations = iterations,
             show_trace = false,
         )
+        controls = merge(controls, (optim_options = opts,))
 
         t0 = time()
-        res = Optim.optimize(nll, params₀, Optim.LBFGS(), opts; autodiff = :forward)
+        res = Optim.optimize(nll, params₀, outer_optimizer, opts; autodiff = :forward)
+        _optimizer_stage!(stages, :primary, outer_optimizer, :forwarddiff, controls, res)
         t1 = time()
         params_hat = Optim.minimizer(res)
 
@@ -489,6 +503,9 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             _fit_verdict(res)[2],
             res,
             t1 - t0,
+            nothing,
+            _optimizer_record(optimizer, stages; controls = controls, derivative = :forwarddiff,
+                              actual = outer_optimizer),
         )
     end
 
@@ -530,9 +547,11 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         iterations = iterations,
         show_trace = false,
     )
+    controls = merge(controls, (optim_options = opts,))
 
     t0 = time()
-    res = Optim.optimize(nll, params₀, Optim.LBFGS(), opts; autodiff = :forward)
+    res = Optim.optimize(nll, params₀, outer_optimizer, opts; autodiff = :forward)
+    _optimizer_stage!(stages, :primary, outer_optimizer, :forwarddiff, controls, res)
     t1 = time()
 
     params_hat = Optim.minimizer(res)
@@ -573,9 +592,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             # Restart LBFGS from the best single-flipped point.
             params_seed = copy(params_hat)
             params_seed[ρ_range[best_idx]] = -params_seed[ρ_range[best_idx]]
-            res_flip = Optim.optimize(nll, params_seed, Optim.LBFGS(), opts;
+            res_flip = Optim.optimize(nll, params_seed, outer_optimizer, opts;
                                        autodiff = :forward)
-            if Optim.minimum(res_flip) < Optim.minimum(res) - 1e-8
+            accepted_flip = Optim.minimum(res_flip) < Optim.minimum(res) - 1e-8
+            _optimizer_stage!(stages, :sign_flip, outer_optimizer, :forwarddiff, controls,
+                              res_flip; accepted = accepted_flip)
+            if accepted_flip
                 res = res_flip
                 params_hat = Optim.minimizer(res)
             else
@@ -665,5 +687,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         (_fit_verdict(res)[2]),
         res,
         t1 - t0,
+        nothing,
+        _optimizer_record(optimizer, stages; controls = controls, derivative = :forwarddiff,
+                          actual = outer_optimizer),
     )
 end

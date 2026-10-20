@@ -74,5 +74,5 @@ function _fit_gaussian_trait_intercepts(Y::AbstractMatrix; K::Integer, kwargs...
     fit = fit_gaussian_gllvm(Y; K = K, X = X, rest...)
     pars = merge(fit.pars, (mean_design = common ? :common_intercept : :trait_intercepts,))
     return GllvmFit(fit.model, pars, fit.logLik, fit.n_iter, fit.converged,
-                    fit.optim_result, fit.cputime, fit.integration)
+                    fit.optim_result, fit.cputime, fit.integration, fit.optimizer_info)
 end

@@ -6,6 +6,12 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **Development:** ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
+  and the default per-trait NB2 formula route accept direct outer-optimizer
+  selection with `:lbfgs`, `:bfgs`, or configured Optim methods. The default
+  preserves historical behavior; `optimizer_info(fit)` reports executed
+  stages. Explicit selection is refused for unsupported nested routes and
+  profile/bootstrap refits that do not yet forward the solver.
 - **CHANGED (default, breaking):** `DeltaLogNormal()` / `DeltaGamma()`
   (`fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`, and `fit_gllvm`)
   default to `disp_group = :species` — one dispersion per trait, matching R

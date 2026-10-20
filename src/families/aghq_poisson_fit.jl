@@ -26,6 +26,10 @@ This function covers Poisson; the separate binomial candidate does not establish
 the full family or structured-model Stage1a contract.
 """
 function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),kwargs...)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing &&
+       _aghq_request(aghq) !== :off
+        _refuse_optimizer(kwargs[:optimizer], "fit_poisson_gllvm", "an AGHQ request")
+    end
     kwargs=_entry_offset_kwargs(kwargs,Y,"fit_poisson_gllvm")
     request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
     request===:off && return _fit_poisson_gllvm_laplace(Y;K=K,kwargs...)
