@@ -36,10 +36,7 @@ function _nb_grouped_residuals(Y::AbstractMatrix, μ::AbstractMatrix, rvec::Abst
             R[t, s] = (Y[t, s] - m) / sqrt(m + m^2 / rvec[t])
         else
             d = _nb_grouped_dist(μ[t, s], rvec[t])
-            Flo = cdf(d, Y[t, s] - 1)
-            Fhi = cdf(d, Y[t, s])
-            u = Flo + (Fhi - Flo) * rand(rng)
-            R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+            R[t, s] = _ds_z_discrete(d, Y[t, s], rand(rng))
         end
     end
     return R

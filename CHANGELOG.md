@@ -11,6 +11,16 @@
   acceptance (`100 * max(g_tol, 1e-5)`) is unchanged. `test/test_phylo_latent_rounding_floor.jl`
   includes the issue's own DEP (`d = 4`, 120 tips) default-start fit.
 
+- **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
+
+- **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
+  and the default per-trait NB2 Laplace formula route accept `optimizer=:lbfgs`, `:bfgs`, or a
+  configured `Optim.LBFGS()` / `Optim.BFGS()`. `optimizer=nothing` retains prior defaults and
+  continuation behavior. Per-fit `optimizer_info(fit)` receipts report actual stages and raw
+  optimizer results. Explicit choices refuse unsupported nested routes and profile/bootstrap
+  refits that do not propagate the selected method. Gaussian mask and offset refits use and record
+  the selected method alongside the warm-start solve.
+
 - **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
   (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
   hurdle, delta, `fit_gllvm_cov`, grouped Gamma/NB1/Tweedie) now return the failure sentinel when an
@@ -22,6 +32,32 @@
   the cap. K = 0 fits no longer end at `loglik = -Inf` on Julia 1.12, where `logdet` of a 0×0 matrix
   throws (`_laplace_logdet`), and `fit_truncated_nbinom2_gllvm(K = 0)` and `zi_marginal_loglik_laplace`
   at K = 0 no longer throw on any Julia version.
+
+- **Dunn–Smyth residuals are no longer silently capped at ±7.034 (#767).** The randomized
+  quantile residual was `quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))` with `u` built from
+  `cdf`, so every cell with a tail probability below 1e-12 returned exactly ±7.034 whatever
+  the observation (a Poisson count of 40 and one of 100000 under a mean near 1 got the same
+  value). `residuals` now forms the quantile in the nearer tail from `ccdf`
+  (`_ds_z` in `src/postfit.jl`), and when the tail probability itself underflows it uses the
+  log mass of the observed cell and inverts the normal tail on the log scale, so a gross
+  outlier gets a finite residual that increases with the observation. Applies to the
+  Binomial (incl. AGHQ), Poisson (incl. AGHQ), NB2, NB1, GP-1, Beta, Gamma, Exponential,
+  ordinal (logit/probit, shared and per-trait cutpoints), delta-lognormal, delta-Gamma,
+  hurdle-Poisson, hurdle-NB, ZIP/ZINB, ZIB, beta-hurdle and grouped-NB residuals.
+  Continuous families have no log-mass fallback and floor the tail at `floatmin`
+  (|z| ≈ 37.5). Cells whose tail probability exceeds 1e-12 are unchanged to rounding.
+  **Still capped:** the Tweedie residual (its CDF is a 200-point Simpson quadrature with no
+  upper tail, so a larger |z| would be noise; the cap is now documented in the source) and
+  the `cv_gllvm` residuals in `src/cv.jl`.
+
+- **Phylogenetic xlv point fitters (binomial, NB2, Gamma): `converged` now requires a small
+  gradient (refs #505).** `_fit_phylo_binomial_xlv`, `_fit_phylo_nb_xlv` and `_fit_phylo_gamma_xlv`
+  took `converged` from `Optim.converged`, which also fires on a zero-length line-search step, and
+  reported `converged = true` at finite-difference gradients of order 1-100 (a huge `sigma2_phy`
+  start, a species with all-zero counts). A new `_phylo_xlv_verdict` adds the stall test
+  `fit_phylo_gaussian` uses (a relative gradient bound, not the optimiser's own `g_tol`), and the
+  fits gain a `stop_reason` field (`:converged`, `:not_converged`, `:gradient_not_small`,
+  `:gradient_at_failure_value`, `:objective_failure`).
 
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
