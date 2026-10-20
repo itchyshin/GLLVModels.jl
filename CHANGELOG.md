@@ -2,6 +2,8 @@
 
 ## Development
 
+- **Scalar Laplace fitters reject out-of-support responses up front (part of #730).** `fit_nb_gllvm`, `fit_nb1_gllvm`, `fit_gp1_gllvm`, `fit_compoisson_gllvm`, `fit_beta_binomial_gllvm`, `fit_tweedie_gllvm`, `fit_exponential_gllvm`, `fit_truncated_poisson_gllvm`, `fit_truncated_nbinom2_gllvm`, `fit_censored_poisson_gllvm`, `fit_studentt_gllvm` and `fit_ordered_beta_gllvm` now throw an `ArgumentError` naming the fitter, the first bad cell, the count of bad cells and the allowed support, as the Poisson, Binomial, Beta and Gamma fitters already do. **Behaviour change:** a negative, non-integer, `NaN` or out-of-range observed cell used to return `loglik = -Inf, converged = false` or fail late with an `InexactError`; `missing`, `mask = false` cells are still not read (a `NaN` there no longer reaches the `Integer` conversion). The grouped, two-part, ordinal and variational fitters are not covered by this change.
+
 - **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 
 - **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,

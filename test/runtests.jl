@@ -617,5 +617,6 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_projector_validation.jl")
     # #794 / #764: Wald routes on lambda_constraint fits (gllvmTMB's pdHess gate; lognormal refuses pins).
     _shard_include("test_lambda_constraint_wald_794.jl")
+    _shard_include("test_response_support_730_siblings.jl")
 end
 include("test_readme_quickstart.jl")
