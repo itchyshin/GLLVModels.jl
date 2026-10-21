@@ -1164,12 +1164,12 @@ modes on `origin/main`, which is the honest state, not a false pass.
 One F-gate per capability named in the D-295 boundary; each becomes a scoreboard row under
 C2 once A0c/A0d land. Listed here so the boundary is legible without re-reading the plan:
 
-- [ ] F-ISDM-1FO-PREDICT — R's public door, non-spatial, Laplace, first order plus `predict`
-- [ ] F-TEMPORAL-1FO — Gaussian rank-1 latent score, AR1/OU, first order
-- [ ] F-PHYLO-LATENT-1FO — `phylo_latent()` bare, first-order paired (carries A14/A15 from
+- [x] F-ISDM-1FO-PREDICT — R's public door, non-spatial, Laplace, first order plus `predict` (docs/dev-log/2026-10-20-p1-f-isdm-1fo-predict.md)
+- [x] F-TEMPORAL-1FO — Gaussian rank-1 latent score, AR1/OU, first order (docs/dev-log/2026-10-20-p1-f-temporal-1fo.md)
+- [x] F-PHYLO-LATENT-1FO — `phylo_latent()` bare, first-order paired (carries A14/A15 from
   the 0.7.0 scoreboard)
-- [ ] F-ORDINAL-LOGIT-1FO — `ordinal_logit`, first order
-- [ ] F-ZI-1FO — R-semantics `zi_*`, first order (Julia's own two-part ZI stays a documented
+- [x] F-ORDINAL-LOGIT-1FO — `ordinal_logit`, first order
+- [x] F-ZI-1FO — R-semantics `zi_*`, first order (Julia's own two-part ZI stays a documented
   extra; a name match alone never signs this row, see C8)
 
 CHECK: none yet (informational; folds into C2 once the P1 scoreboard carries these ids)
