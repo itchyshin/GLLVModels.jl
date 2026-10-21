@@ -1,3 +1,5 @@
+2026-10-21: Offline checker reported C0_MET, C1_MET, C5_MET, C6_MET, and C8_MET. Those boxes are ticked. C2, C3, C4, and X2 stay open. The parity goal stays open.
+
 2026-10-21: Shinichi signed the P1 optimizer stopping rule. Receipts stay fail and the numeric bars stay unchanged.
 
 ## 2026-10-19: measured seven-row checkpoint at 7670e106b
