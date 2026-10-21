@@ -1,3 +1,80 @@
+## 2026-10-19: measured seven-row checkpoint at 7670e106b
+
+The committed candidate passes the exact frozen-baseline checkpoint in 6.26s:
+X2 304/317, C2 290/297, with seven exact rows and other contracts unchanged.
+The combined Node and assembler controls pass in 19.87s and 7.60s on Totoro.
+Four corrupted-evidence controls are rejected. Label corruption leaves summary
+counts unchanged; the final exact-receipt predicate rejects the mismatch, as
+separately verified with the frozen checker. The original incorrect count
+expectation is retained. A valid-output Julia smoke passed in 24.76s.
+
+The current main8ca3eb76e measures298/317. Four intervening main commits touch
+oracle-version and phylogenetic convergence code; the candidate is based on
+d9afa090c. Full Pkg.test is running on7670; sequential core and local docs checks
+are bounded and conditional on preceding success. No pass is inferred.
+The exact13 remaining-row packet and source audit passed their independent
+filed-version recheck, including16 local links. Melissa reconciled the bounded
+checkpoint and named the open gates. Full completion review and landing remain
+pending; no push, merge, tolerance or engine change occurred here. The earlier
+entries below retain the checkpoint's prior states and failures.
+
+## 2026-10-19: five iSDM receipt candidate and C6 recovery
+
+Exactly five iSDM rows change versus a444181ae; 312 other rows and C6 remain
+unchanged. Seven runnable leaf gates passed re-verification, including 36
+behavior controls and three focused scope tests. Nested checkpoint provenance
+has retained red/green controls. Committed-source 304/317 and full checkpoint
+remain pending. No new fit, push or merge. See the
+[five-row report](after-task/2026-10-19-p1-isdm-receipts.md).
+
+C6 recovery on 295f22ec9 completed: Node and Python suites exited zero under
+one-hour caps; all eight local gates are met. Earlier timeouts remain retained.
+Residual candidate a444181ae measured X2 299/317. Main remains last verified
+at 298/317. Full regressions, final review and landing remain open.
+
+## 2026-10-19: check_auto_residual source-bound behavior candidate
+
+Fresh Julia public-door capture at `7a2b8dcbe` exited zero in 49.13 seconds under
+its two-minute cap, Julia4/BLAS1/OMP1. The P1 R output is retained, not rerun.
+Source, runner, fixture and raw-output provenance finalized successfully.
+Only the residual-check sidecar, receipt and case-map row change; five iSDM
+admissions remain separate. Focused behavior controls passed 36/36 and all five
+runnable acceptance gates passed re-verification. Assembly reports 317 rows
+current, with exactly the residual row changed and C6 output byte-unchanged.
+Local committed-source X2 measurement and landing are pending. Main remains last
+verified at 298/317. Initial missing-Optim failure is retained; the retry reused
+an exactly matching resolved Project environment, now snapshotted with hashes.
+Full package regressions, final P1 review and closure remain open. Report:
+[check-auto checkpoint](after-task/2026-10-19-p1-check-auto-receipt.md).
+
+## 2026-10-19: C6 live census repair
+
+The owning generator exposed three optimizer exports missing after main PR #939.
+A new live-export regression failed before repair and passed afterward. Refreshed
+inputs and decisions cover exactly those three documented extras under existing
+rule #684 item 3. The original seventeen approvals, eleven scoped names and nine
+holds remain intact. Focused Julia tests: 2,133 passed. Checkpoint substitution
+controls passed. Scoreboard and assembled map remain byte-unchanged at X2 298/317.
+Fresh replay passed Julia, regeneration, live census and checkpoint controls.
+Node and Python suites each timed out at 1,800 seconds; these remain unmet.
+Independent census review found no blocker. Refreshed committed-source checks
+and landing remain pending.
+
+## 2026-10-19: approved P1 C6 scope integration, local checkpoint
+
+Reused the signed C6 candidate on `codex/p1-c6-approved-20261019` from main
+`d9afa090c`. Exactly seventeen extras, eleven scoped names and nine holds change;
+the scoreboard and assembled map remain byte-unchanged. Independent review
+found and verified the repair of a general-rule authorization gap: both readers
+now bind each scoped export to its exact approved contract digest. Focused Julia
+checks passed 2,117/2,117; 122 exact-scope Python controls and assembly check
+passed. Complete Node/Python controls passed 252/525 respectively. The four
+runnable acceptance gates passed replay; review and exact committed-source
+checks complete the six-gate local ledger. Code commit `c62b877f0` measures C6
+MET and unchanged X2=298/317. Landing and full P1 closure remain open. No push,
+merge or row admission. See the
+[checkpoint report](after-task/2026-10-19-p1-c6-approved.md).
+
 ## 2026-10-18: PR #905 reviewer unblock (refs #822)
 
 - Branch `claude/sharp-gates-3ud4k2`, rebased onto `origin/main` `383e9d370`.
@@ -21857,3 +21934,18 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - The oracle builder now records the installed `gllvmTMB` version in `build.json` and `CORE070_SOURCE_PIN.toml`; parity startup verifies marker and installed package versions. Legacy markers/build receipts without a version require a fresh pinned build.
 - Focused Julia pin suite: 69/69, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-contract-green.log`. Builder/version focused selection: 9/9, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-focused-final2.log`. Gaussian fixture parsed; `git diff --check` passed.
 - The unrelated fresh-archive hash test exceeded 120 seconds and was stopped without a result; logs `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-red.log` (full Python suite incomplete) and `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-hash-diagnostic.log` (isolated diagnostic incomplete). No oracle build/install or full Julia workflow was run. See `docs/dev-log/after-task/2026-10-18-core070-oracle-version-contract.md`.
+
+## 2026-10-19 — Keep P1 public-call source receipts valid across descendant commits
+
+- CI on residual draft #950 exposed a false failure: the validator compared the captured empty `src` patch at Julia launch commit `7a2b8dcbe` with all later `src` changes through main `8ca3eb76e`. The intervening changes were confined to the phylogenetic XLV fitters; the retained receipt is still bound to its exact launch tree.
+- The validator now applies the hash-pinned raw patch to a temporary index initialized from the recorded launch commit, and rejects invalid patches or paths outside `src`. A regression test commits a later `src` change and confirms the launch receipt remains verifiable; tampered patch bytes are refused. The finalizer reuses and re-verifies existing captured patch evidence when refreshing the deriver snapshot.
+- Added setup-r to the negative-control workflow because two existing base-R fixture controls call `Rscript`, and added the postfit recount regression test to the job.
+- Checks: behavior controls 37/37; `core070_postfit_p1_receipts.py --check`; `test_core070_postfit_recount.py`; `true_parity_assemble.py --check`; behavior receipt `--check`; `git diff --check`.
+- Full/core integrated Julia suites remain running separately on Totoro. This change restores receipt provenance checking; it is not a new fit-parity result or a full-P1 claim.
+
+## 2026-10-19 — Refresh iSDM receipt hashes after the provenance correction
+
+- After integrating the residual source-provenance correction, the retained six-case first-seven run metadata had a new derivation commit while five iSDM behavior sidecars and case receipts still cited the previous metadata hash. The checkpoint verifier correctly rejected the stale run.json hash.
+- Revalidated the retained six-case R/Julia capture with first_seven_behaviour_derive.py; regenerated its derived sidecars and the five affected iSDM behavior receipt blocks from raw outputs. No R or Julia observation was rerun or edited.
+- Before/after SHA-256 comparison: all 46 files under the retained raw* evidence directories were unchanged.
+- Validation: behavior controls 37/37; postfit recount regression passed; postfit and behavior receipt checks passed; assembler check passed; the checkpoint mutation-control test passed independently. The positive checkpoint on committed HEAD remains pending until these refreshed hashes are committed.

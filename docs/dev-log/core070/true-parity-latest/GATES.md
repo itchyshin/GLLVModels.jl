@@ -586,10 +586,10 @@ Julia-only exports that are documented user-facing extras are signed as document
 `status` to `decided`. A name in `decisions` that is not a reverse-gap item fails the run (stale).
 Names with no clear classification stay out of the file and remain undecided.
 
-The checker's C6 vocabulary is `KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
-`RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`. A decided item also needs a `basis` that is
-visible text (see "Visible text" in ruling 2) and a `ruling`. The ruling `ref` must be `itchyshin/GLLVModels.jl#684 item 3`, the only
-ruling the tool recognises (`C6_RULINGS` in the checker, copied into the assembler); `signed_on`
+The original C6 vocabulary was `KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
+`RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`. The dated extension below adds two states. A decided item also needs a `basis` that is
+visible text (see "Visible text" in ruling 2) and a `ruling`. The ruling `ref` must be `itchyshin/GLLVModels.jl#684 item 3`, the original
+ruling recognised by the tool (`C6_RULINGS` in the checker, copied into the assembler); `signed_on`
 must be `2026-10-02`, its date; and `signed_by` must pass the signature rule (allow-list, real past
 date). That ruling covers `KEPT_AS_JULIA_EXTRA` and `EXCLUDED_INTERNAL_HELPER` only. A decision
 `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE` or `RENAME_TO_AVOID_COLLISION` is listed under
@@ -601,6 +601,29 @@ with a `..` segment anywhere, such as `tools/../tools/gen.py`, and a directory a
 assembler reads the generator, the checker does not), a `basis` with no visible character, or a
 `KEPT_AS_JULIA_EXTRA` basis that fails the documented-extra rule below. C6 also prints
 `decision_counts=` per vocabulary word.
+
+Dated extension, signed 2026-10-17: `SCOPED_R_TWIN` accounts for ten exact
+contracts across eleven names, and `HOLD_PENDING_EVIDENCE` records the nine
+named evidence holds. The source is
+`docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md`; the
+approved scope data are in `c6-approved-decisions-2026-10-17.toml` alongside
+this ledger. The same approval signs seventeen named Julia extras. A general
+rule does not sign another name or a wider route.
+
+For each scoped twin, both readers check the exact export name and SHA-256 of
+its counterpart, scope, receipt IDs and ruling, using recursively sorted compact
+UTF-8 JSON. The eleven pinned digests match the approved TOML. The canonical
+checker also requires `source_id` to identify that exact Julia export. It resolves
+scoped receipt IDs against the assembled case map, while ordinary C1-C8/X2
+continue to use their existing case map. Every scope must still cite executable
+P1 numeric or behavioural rows with receipt paths that resolve. These C6 checks
+do not independently remeasure receipt contents or establish fit parity.
+
+A held name has status `held`, no counterpart/scope/receipt fields, and a basis
+that states there is no twin or parity claim and no scoreboard row admission.
+`fit_gllvm` is scoped only to the approved NB2 route; its remaining routes stay
+held. C6 decision accounting can be MET with nine explicit evidence holds. The
+holds and outstanding scoreboard evidence remain open.
 
 Basis rules. An `EXCLUDED_INTERNAL_HELPER` basis must be visible text. A `KEPT_AS_JULIA_EXTRA` basis must also
 cite at least one page under `docs/src`, and every page it cites must be an existing `.md` file written exactly as
@@ -1141,12 +1164,12 @@ modes on `origin/main`, which is the honest state, not a false pass.
 One F-gate per capability named in the D-295 boundary; each becomes a scoreboard row under
 C2 once A0c/A0d land. Listed here so the boundary is legible without re-reading the plan:
 
-- [ ] F-ISDM-1FO-PREDICT — R's public door, non-spatial, Laplace, first order plus `predict`
-- [ ] F-TEMPORAL-1FO — Gaussian rank-1 latent score, AR1/OU, first order
-- [ ] F-PHYLO-LATENT-1FO — `phylo_latent()` bare, first-order paired (carries A14/A15 from
+- [x] F-ISDM-1FO-PREDICT — R's public door, non-spatial, Laplace, first order plus `predict` (docs/dev-log/2026-10-20-p1-f-isdm-1fo-predict.md)
+- [x] F-TEMPORAL-1FO — Gaussian rank-1 latent score, AR1/OU, first order (docs/dev-log/2026-10-20-p1-f-temporal-1fo.md)
+- [x] F-PHYLO-LATENT-1FO — `phylo_latent()` bare, first-order paired (carries A14/A15 from
   the 0.7.0 scoreboard)
-- [ ] F-ORDINAL-LOGIT-1FO — `ordinal_logit`, first order
-- [ ] F-ZI-1FO — R-semantics `zi_*`, first order (Julia's own two-part ZI stays a documented
+- [x] F-ORDINAL-LOGIT-1FO — `ordinal_logit`, first order
+- [x] F-ZI-1FO — R-semantics `zi_*`, first order (Julia's own two-part ZI stays a documented
   extra; a name match alone never signs this row, see C8)
 
 CHECK: none yet (informational; folds into C2 once the P1 scoreboard carries these ids)
