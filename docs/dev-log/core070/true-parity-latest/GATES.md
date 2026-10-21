@@ -1052,7 +1052,7 @@ holds on `origin/main` independent of the pin. C1 through C6 and C8 need the P1 
 `node tools/true_parity_check.mjs <mode>` reports `MEASUREMENT_FAILED` (exit 2) for those
 modes on `origin/main`, which is the honest state, not a false pass.
 
-- [ ] C0: the P1 oracle exists alongside P0 (additive) in `tools/parity_oracle.py`
+- [x] C0: the P1 oracle exists alongside P0 (additive) in `tools/parity_oracle.py`
       (`P1_GLLVMTMB_ORACLE` present and equal to the full P1 SHA, `FROZEN_GLLVMTMB_ORACLE`
       unchanged, `CAPABILITY_LEDGER_REF` present), the explicit `R_REF_PINS` +
       `GLLVM_PARITY_PIN` switch exists, **and `DEFAULT_R_REF` itself actually resolves to P1**
@@ -1076,7 +1076,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
   branch rather than only the fixtures). C0 becomes met once a later PR sets
   `_DEFAULT_PIN = "P1"` there and it merges.
 
-- [ ] C1: every required row (`required_core`, `compatibility_adapter`) at P1 is bound to a
+- [x] C1: every required row (`required_core`, `compatibility_adapter`) at P1 is bound to a
       receipt that resolves on `origin/main` (numeric evidence, counted in `bound_numeric=`; or, for
       the frozen list of rows itchyshin/GLLVModels.jl#684 item 2 names, behavioural evidence, counted
       in `bound_behavioural=`), or carries a maintainer-signed disposition; `BLOCKED_*`, `PARTIAL_*`
@@ -1108,7 +1108,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
   EXPECT: C4_MET
   EVIDENCE: pending
 
-- [ ] C5: grouping levels `unit`, `unit_obs`, `cluster`, `cluster2` exist on both engines
+- [x] C5: grouping levels `unit`, `unit_obs`, `cluster`, `cluster2` exist on both engines
       under those names and pair (same reading as the 0.7.0 ledger's B-04 disposition:
       same names plus the paired Gaussian receipts that exist today; non-Gaussian numerical
       pairing is out of scope, Packet 1 row 9)
@@ -1116,7 +1116,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
   EXPECT: C5_MET
   EVIDENCE: pending
 
-- [ ] C6: the reverse-gap list is tool-produced and every item (including the Julia-only
+- [x] C6: the reverse-gap list is tool-produced and every item (including the Julia-only
       extras: `SourceCovariance`, two-part ZI) has a written decision from a fixed vocabulary
       (`KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
       `RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`) — a placeholder like `"TBD"` or
@@ -1137,7 +1137,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
   does not mean" heading is present; `C7 parity_page_has_exact_not_mean_heading=true` /
   `C7_MET`. Pin-independent (the page is not gllvmTMB-ref-scoped).
 
-- [ ] C8: every R export at P1 is twinned (case-map row with a resolving Julia receipt AND
+- [x] C8: every R export at P1 is twinned (case-map row with a resolving Julia receipt AND
       non-empty `executable_case_ids`) or carries a real signed disposition (`signed_by` +
       `signed_on`, see the case-map schema above); name matches alone never count — a
       `semantic_divergence` row fails this clause unless it is properly signed, however many
