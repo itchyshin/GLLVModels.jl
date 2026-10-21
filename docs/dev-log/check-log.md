@@ -1,3 +1,5 @@
+2026-10-21: Shinichi signed the P1 optimizer stopping rule. Receipts stay fail and the numeric bars stay unchanged.
+
 ## 2026-10-19: measured seven-row checkpoint at 7670e106b
 
 The committed candidate passes the exact frozen-baseline checkpoint in 6.26s:
