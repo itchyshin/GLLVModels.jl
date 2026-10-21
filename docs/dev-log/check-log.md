@@ -75,6 +75,59 @@ MET and unchanged X2=298/317. Landing and full P1 closure remain open. No push,
 merge or row admission. See the
 [checkpoint report](after-task/2026-10-19-p1-c6-approved.md).
 
+## 2026-10-18: PR #905 reviewer unblock (refs #822)
+
+- Branch `claude/sharp-gates-3ud4k2`, rebased onto `origin/main` `383e9d370`.
+- `_phylo_latent_accept_rounding_floor` no longer sets `converged = true` when
+  `gradient_norm > g_tol`. The 1e-3 eligibility line is unchanged.
+- Targeted (Julia 1.10.10, `JULIA_NUM_THREADS=1`, `OPENBLAS_NUM_THREADS=1`):
+  `test_phylo_latent_rounding_floor.jl` **14 + 10 passed / 0 failed**;
+  issue #822 DEP (`d = 4`, 120 tips) `converged=true`,
+  `gradient_norm=6.2049e-6`; `test_cov_phylo_twins_p1.jl` **40 passed / 0 failed**.
+- Full `Pkg.test()` (Julia 1.10.10): **31220 passed / 0 failed / 87 broken / 31307 total**
+  (305m25s) plus README Quick start 8/8. `EXIT=0`.
+- Body keeps `Closes #822` because the DEP repro passed locally. The GitHub body now declares `intended-closes: 822`.
+
+## 2026-10-11: data-relative floors + SQUAREM hit_floor (review of #868)
+
+- Same branch `cursor/false-converged-754-753-781-78dc`, still draft #868.
+  Review of `4fa4848c9` blocked on unit-dependent floors and SQUAREM dropping
+  `hit_floor`.
+- Floors are now `1e-8 * var(y)` (branch-RE) and `1e-8 * mean(y.^2)` (phylo
+  EM, including the clamp). SQUAREM latches `hit_floor` on the main path.
+  `y` / `y*1e-5` / `y*1e5` share `(converged, boundary) = (false, true)`.
+- `fit_relaxed_clock` follow-up: `issue_write` 403. Body at
+  `docs/dev-log/owed/2026-10-11-relaxed-clock-false-converged-issue.md`
+  and `/opt/cursor/artifacts/2026-10-11-relaxed-clock-false-converged-issue.md`.
+- Julia 1.10.12 local:
+  test_branch_re_convergence 16/16, test_em_phylo_sigma_eps_floor 28/28,
+  test_em_squarem 27/27, test_zinb_cov_iterations 10/10,
+  test_em_phylo 27/27, test_nparams_em_branch_re 8/8,
+  test_phylo_branch_re 44/44.
+- After-task:
+  `docs/dev-log/after-task/2026-10-11-false-converged-review-floors.md`.
+
+## 2026-10-10: false `converged` on three fitters (refs #754, #753, #781)
+
+- Branch `cursor/false-converged-754-753-781-78dc` from `origin/main` `e6cfcd4ee`.
+  Draft PR #868. Repros in `docs/dev-log/repro/2026-10-10-false-converged/`.
+- Main (`e6cfcd4ee`, Julia 1.10.12): #754 noise-only `conv=true` `s2=6.21e-10`;
+  constant y `conv=true` `negll=-11870.67`; NaN y `ErrorException` pointing at
+  the optimiser. #753 rank-1 `σ_eps=sqrt(eps())` `conv=true` `logLik=1939.83`.
+  #781 `iterations=0` `conv=true`; NaN `θ_init` `conv=true` `loglik=-1e12`.
+- After: noise-only `sigma2_boundary=true` `conv=false`; constant/NaN y
+  `ArgumentError` naming `y`; EM `sigma_eps_boundary=true` `conv=false`;
+  ZINB `iterations=0` `conv=false`; NaN `θ_init` rejected.
+- Julia 1.10.12 local: test_branch_re_convergence 14/14, test_em_phylo_sigma_eps_floor 4/4,
+  test_zinb_cov_iterations 10/10, test_nparams_em_branch_re 8/8, test_em_squarem 27/27,
+  test_em_phylo 27/27, test_zinb_x_identity 42/42, test_em_louis 147/147,
+  test_branch_re_marginal_fallback 13/13, test_phylo_branch_re 44/44.
+- #752 (xlv feasibility-as-converged) not touched; next PR. Siblings:
+  `em_fit_phylo_squarem` increment stop, `fit_relaxed_clock` increment stop.
+- CI on #868 head `3d87d246b`: 14 successful / 0 failed / 1 skipped
+  (advisory frozen-R smoke). Julia 1.10 + Julia 1 shards 1–4, Documenter,
+  Documenter deploy, both P1 twin jobs, wrong-close guard.
+
 ## 2026-10-18: direct outer optimizer selection
 
 - Branch `codex/optimizer-selection-20261018` from `origin/main` at
