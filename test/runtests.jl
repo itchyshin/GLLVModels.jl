@@ -619,6 +619,7 @@ println(_SHARD === nothing ?
     _shard_include("test_eta_clamp_869.jl")
     _shard_include("test_response_support_730.jl")
     _shard_include("test_bootstrap_decisions.jl")
+    _shard_include("test_truncpois_boot_782.jl")
     _shard_include("test_derived_decisions.jl")
     _shard_include("test_n_lt_p.jl")
     _shard_include("test_wtier_crosscov.jl")
