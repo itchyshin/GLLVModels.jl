@@ -25,9 +25,10 @@ end
 # ---------------------------------------------------------------------------------------
 # Independent ZIP site evaluator. Its own density, its own mode search (damped Newton on
 # the full ForwardDiff Hessian of the site log-posterior) and its own expected information
-# (a brute-force sum over the support). It shares no code with the package kernel. The
-# Laplace value it returns is the package's formula for ZIP, ℓ(ẑ) − ½ẑ'ẑ − ½logdet A,
-# where A uses the expected information (ZIP has no observed-curvature override).
+# (the exact observed count curvature, -∂²logf/∂ηc², by ForwardDiff). It shares no code
+# with the package kernel. The Laplace value it returns is the package's formula for ZIP,
+# ℓ(ẑ) − ½ẑ'ẑ − ½logdet A, where A uses the observed count weight (#739; before it, ZIP
+# had no observed-curvature override and A used the expected information).
 # ---------------------------------------------------------------------------------------
 _tp484_lgt(x) = 1 / (1 + exp(-x))
 _tp484_clamp(x) = clamp(x, -30.0, 30.0)
@@ -57,19 +58,12 @@ function _tp484_indep_mode(y, Λ, βz, βc)
     return z
 end
 
-function _tp484_zip_expected_info(ηz, ηc)
-    μ = exp(ηc)
-    acc = 0.0
-    for y in 0:ceil(Int, μ + 25 * sqrt(μ) + 40)
-        s = ForwardDiff.derivative(e -> _tp484_zip_logf(y, ηz, e), ηc)
-        acc += exp(_tp484_zip_logf(y, ηz, ηc)) * s^2
-    end
-    return acc
-end
+_tp484_zip_observed_weight(y, ηz, ηc) =
+    -ForwardDiff.derivative(e -> ForwardDiff.derivative(f -> _tp484_zip_logf(y, ηz, f), e), ηc)
 
 function _tp484_indep_site(y, Λ, βz, βc)
     z = _tp484_indep_mode(y, Λ, βz, βc)
-    W = [_tp484_zip_expected_info(_tp484_clamp(βz[t]), _tp484_clamp(βc[t] + dot(Λ[t, :], z)))
+    W = [_tp484_zip_observed_weight(y[t], _tp484_clamp(βz[t]), _tp484_clamp(βc[t] + dot(Λ[t, :], z)))
          for t in eachindex(y)]
     return _tp484_q(y, Λ, βz, βc, z) - 0.5 * logdet(Symmetric(Λ' * (W .* Λ) + I))
 end
@@ -104,7 +98,7 @@ function _tp484_old_site(fam, y, Λc, βz, βc; maxiter = 100, tol = 1e-9)
     ηz = G._clamp_eta.(βz .+ Λz * z)
     ηc = G._clamp_eta.(βc .+ Λc * z)
     P = [G._tp_pieces(fam, y[t], ηz[t], ηc[t]) for t in 1:p]
-    Wo = [G._tp_observed_Wc(fam, y[t], ηc[t], P[t][4]) for t in 1:p]
+    Wo = [G._tp_observed_Wc_z(fam, y[t], ηz[t], ηc[t], P[t][4]) for t in 1:p]
     A = Λz' * (getindex.(P, 3) .* Λz)
     A .+= Λc' * (Wo .* Λc)
     for d in 1:K
