@@ -25,6 +25,18 @@ All notable changes to GLLVModels.jl are documented here.
   refits that do not propagate the selected method. Gaussian mask and offset refits use and record
   the selected method alongside the warm-start solve.
 
+- **A `β_init` above the η clamp falls back to the default warm start (#874).** Follow-up to the
+  #869 behaviour change below. In the log-link fitters that accept `β_init` (Poisson, NB, NB1, grouped
+  NB and NB1, COM-Poisson, GP1, truncated Poisson, truncated NB2 and its per-trait form, censored
+  Poisson, Tweedie, Gamma, Exponential), an entry whose intercept plus offset is above the cap (30) is
+  replaced by that species' default warm start, bit-identical to `β_init = nothing`, with a warning
+  naming the species. Such a start used to end at `loglik = -Inf, converged = false`; it now reaches
+  the default-start optimum. Entries are not projected onto the cap, where the count objectives
+  already sit at failure-scale values. Data whose default warm start is itself past the cap (counts
+  around 1e14) still end at the sentinel: rescale the response or the offset. Non-log links (for
+  example identity-link Gamma) are unchanged, and the check uses the offset only, not the `X_lv`
+  mean term. The covariate (`fit_gllvm_cov`) and two-part routes take no `β_init` and are unchanged.
+
 - **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
   (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
   hurdle, delta, `fit_gllvm_cov`, grouped Gamma/NB1/Tweedie) now return the failure sentinel when an
