@@ -136,6 +136,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 - **IN:** isolated RCall.jl parity scaffold (`test/parity/`, opt-in) for
   checking agreement against R `gllvmTMB`.
 
+## GLLVModels.jl v0.3.0
+
+Broad gllvmTMB-targeted capability build-out (2026-06-07). The full entry is in the
+[root `CHANGELOG.md`](https://github.com/itchyshin/GLLVModels.jl/blob/main/CHANGELOG.md).
+
 ## GLLVModels.jl v0.2.0
 
 A large expansion from the v0.1.0 Gaussian-only pilot to a broad, gllvmTMB-class

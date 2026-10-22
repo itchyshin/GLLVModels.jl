@@ -1,6 +1,8 @@
 # Changelog
 
-## Development
+All notable changes to GLLVModels.jl are documented here.
+
+## Unreleased
 
 - **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
   After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
@@ -989,10 +991,6 @@
   the four types above: Wald, `vcov` and `coef_table` on all of them, and one profile and one
   bootstrap on a variational Poisson fit and a `:fisher` truncated NB2 fit). Test:
   `test/test_confint_offset.jl`.
-
-All notable changes to GLLVModels.jl are documented here.
-
-## Unreleased
 
 ### Added
 - **`zi_poisson()`, `zi_nbinom2()`, `zi_binomial()`: twins of gllvmTMB's
