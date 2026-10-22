@@ -241,6 +241,21 @@ function _phylo_poisson_xlv_nll_packed(theta::AbstractVector, Y::AbstractMatrix,
     return isfinite(ll) ? -ll : 1e12
 end
 
+# The objective `_fit_phylo_poisson_xlv` hands to Optim. An exception or non-finite value from a
+# trial step returns the sentinel, as for NB2 and binomial (#944); Ctrl-C is rethrown (#947).
+function _phylo_poisson_xlv_nll_guarded(theta::AbstractVector, Y::AbstractMatrix,
+        p::Integer, K::Integer, phy::AugmentedPhy, X_lv::AbstractMatrix;
+        q_lv::Integer, maxiter::Integer = 80, tol::Real = 1e-9)
+    v = try
+        _phylo_poisson_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
+                                      q_lv = q_lv, maxiter = maxiter, tol = tol)
+    catch e
+        e isa InterruptException && rethrow()
+        return 1e12
+    end
+    return isfinite(v) ? v : 1e12
+end
+
 function _phylo_poisson_xlv_theta0(Y::AbstractMatrix, K::Integer,
         X_lv::AbstractMatrix; beta_init = nothing, Lambda_init = nothing,
         alpha_lv_init = nothing, sigma2_phy_init::Real = 0.5)
@@ -295,10 +310,10 @@ function _fit_phylo_poisson_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
                                        Lambda_init = Lambda_init,
                                        alpha_lv_init = alpha_lv_init,
                                        sigma2_phy_init = sigma2_phy_init)
-    nll = theta -> _phylo_poisson_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
-                                                 q_lv = q_lv,
-                                                 maxiter = newton_maxiter,
-                                                 tol = newton_tol)
+    nll = theta -> _phylo_poisson_xlv_nll_guarded(theta, Y, p, K, phy, X_lv;
+                                                  q_lv = q_lv,
+                                                  maxiter = newton_maxiter,
+                                                  tol = newton_tol)
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(nll, theta0, ls,
                          Optim.Options(g_tol = g_tol, iterations = iterations);
@@ -401,10 +416,10 @@ function _phylo_poisson_xlv_profile_eta_realized(fit, Y::AbstractMatrix,
     length(eta_realized_truth) == nb || throw(ArgumentError(
         "eta_realized_truth length ($(length(eta_realized_truth))) must equal p*q_lv=$nb"))
     theta0 = collect(Float64, fit.theta_packed)
-    nll = theta -> _phylo_poisson_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
-                                                 q_lv = q_lv,
-                                                 maxiter = newton_maxiter,
-                                                 tol = newton_tol)
+    nll = theta -> _phylo_poisson_xlv_nll_guarded(theta, Y, p, K, phy, X_lv;
+                                                  q_lv = q_lv,
+                                                  maxiter = newton_maxiter,
+                                                  tol = newton_tol)
     nll0 = nll(theta0)
     cutoff = quantile(Chisq(1), level)
     b_hat = _phylo_poisson_xlv_effects_from_packed(theta0, p, K, q_lv)
