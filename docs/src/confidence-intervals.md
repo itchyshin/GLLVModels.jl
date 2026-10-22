@@ -203,7 +203,9 @@ rho and proportion; the profile route here is the existing penalty-based
 `profile_ci_derived` and is exploratory. A fit made with `lambda_constraint`
 pins takes `method = :wald` only, and its Wald intervals use the covariance of
 the free parameters, as gllvmTMB's `cov.fixed` does: a pinned loading has
-`se = 0` and `lower = upper = estimate`. See [`confint`](@ref) for the keywords.
+`se = 0` and `lower = upper = estimate`. If that information is not positive
+definite, every SE and bound is `NaN`, the pinned loadings' included, as in
+gllvmTMB's `loading_ci()`. See [`confint`](@ref) for the keywords.
 
 ### Confirmatory fits and `loading_profile` (D3 Stage 1)
 
