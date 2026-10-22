@@ -4033,7 +4033,11 @@ function _lv_effect_profile(nll::Function, x̂::AbstractVector, p::Integer, K::I
 end
 
 """
-    confint_lv_effects(fit, Y, X_lv; N=nothing, offset=nothing, level=0.95) -> NamedTuple
+    confint_lv_effects(fit, Y, X_lv; N=nothing, offset=nothing, level=0.95,
+                       method=:wald, n_boot=200, seed=0, bootstrap_iterations=nothing,
+                       profile_indices=nothing, profile_iterations=nothing,
+                       profile_g_tol=1e-8, profile_max_expand=nothing,
+                       profile_max_bisect=40) -> NamedTuple
 
 Wald confidence intervals for the predictor-informed latent-score trait-effect
 matrix `B_lv = Λ·α'` of an `X_lv` fit (`fit_*_gllvm(...; X_lv=...)` for Poisson,
@@ -4050,7 +4054,11 @@ and refuses one); the objective is checked against `fit.loglik` for every method
 bootstrap included, and a mismatch throws, as in [`confint`](@ref): a fit made with an
 offset is refused when bootstrapped without it. For `method = :profile`,
 `profile_indices` selects entries of `vec(B_lv)` in column-major order; `nothing`
-profiles every entry. Bootstrap refits use each family's default optimiser
+profiles every entry. `profile_iterations`, `profile_g_tol` (default `1e-8`),
+`profile_max_expand` and `profile_max_bisect` (default `40`) tune the constrained
+refits and the endpoint search; `nothing` keeps the family default. For
+`method = :bootstrap`, `n_boot` (default `200`) refits are drawn with `seed`
+(default `0`). Bootstrap refits use each family's default optimiser
 iteration cap unless `bootstrap_iterations` is supplied.
 Admitted for `K ≥ 1` (`B_lv` is rotation-invariant), complete responses, single
 ordinary latent block. Shared-cutpoint Julia-side `OrdinalFit` is admitted
@@ -4176,7 +4184,11 @@ function confint_lv_effects(fit::OrdinalFit, Y::AbstractMatrix, X_lv::AbstractMa
 end
 
 """
-    confint_lv_effects(fit::GllvmFit, Y, X_lv; level=0.95) -> NamedTuple
+    confint_lv_effects(fit::GllvmFit, Y, X_lv; N=nothing, level=0.95,
+                       method=:wald, n_boot=200, seed=0, bootstrap_iterations=nothing,
+                       profile_indices=nothing, profile_iterations=nothing,
+                       profile_g_tol=1e-8, profile_max_expand=nothing,
+                       profile_max_bisect=40) -> NamedTuple
 
 Wald intervals for `B_lv = Λ·α'` of a Gaussian `X_lv` fit
 (`fit_gaussian_gllvm(...; X_lv=...)`). The Gaussian marginal is closed-form, so
@@ -4186,9 +4198,13 @@ the observed information is the **exact ForwardDiff Hessian** of
 `df = max(n_sites - K - 1, 1)`), `:profile` (LR inversion via constrained refit;
 the Gaussian objective is AD-friendly so the constrained refits use LBFGS), or
 `:bootstrap`. For `method = :profile`, `profile_indices` selects entries of
-`vec(B_lv)` in column-major order; `nothing` profiles every entry. Bootstrap
-refits use the Gaussian fitter's default optimiser iteration cap unless
-`bootstrap_iterations` is supplied. `K ≥ 1` (`B_lv` rotation-invariant),
+`vec(B_lv)` in column-major order; `nothing` profiles every entry;
+`profile_iterations`, `profile_g_tol` (default `1e-8`), `profile_max_expand` and
+`profile_max_bisect` (default `40`) tune the constrained refits and the endpoint
+search. For `method = :bootstrap`, `n_boot` (default `200`) refits are drawn with
+`seed` (default `0`). Bootstrap refits use the Gaussian fitter's default optimiser
+iteration cap unless `bootstrap_iterations` is supplied. `N` is accepted for
+signature parity with the other families and is unused for a Gaussian fit. `K ≥ 1` (`B_lv` rotation-invariant),
 complete responses, single unit-tier latent block, no fixed-effect `X`.
 """
 function confint_lv_effects(fit::GllvmFit, Y::AbstractMatrix, X_lv::AbstractMatrix;
