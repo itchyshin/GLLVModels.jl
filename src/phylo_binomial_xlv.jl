@@ -286,8 +286,9 @@ function _phylo_binomial_xlv_theta0(Y::AbstractMatrix, N::AbstractMatrix,
         throw(ArgumentError("sigma2_phy_init must be positive"))
 
     beta0 = beta_init === nothing ?
-        [logit(clamp((sum(Y[t, s] for s in 1:n) + 0.5) /
-                     (sum(N[t, s] for s in 1:n) + 1), 1e-4, 1 - 1e-4))
+        [(m = clamp((sum(Y[t, s] for s in 1:n) + 0.5) /
+                    (sum(N[t, s] for s in 1:n) + 1), 1e-4, 1 - 1e-4);
+          log(m / (1 - m)))
          for t in 1:p] :
         collect(Float64, beta_init)
     length(beta0) == p ||
