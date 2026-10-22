@@ -578,10 +578,16 @@ function _sanitize_missing(Y::AbstractMatrix, placeholder)
     return map(y -> ismissing(y) ? placeholder : y, Y)
 end
 
-# Resolve an observation mask: an explicit `mask` wins; otherwise derive it from
-# `missing` entries in `Y` (or `nothing` when `Y` is fully observed).
-_resolve_obs_mask(mask, Y) =
-    mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
+# Resolve an observation mask. `missing` entries of `Y` are always unobserved: with no
+# explicit `mask` the result is derived from them (or `nothing` when `Y` is fully
+# observed); with an explicit `mask` the result is `mask .& .!ismissing.(Y)`, so a
+# `missing` cell can never reach the likelihood as an observed placeholder (#763).
+# An explicit mask is returned untouched when `Y` has no `missing`.
+function _resolve_obs_mask(mask, Y)
+    any(ismissing, Y) || return mask
+    obs = observed_mask(Y)
+    return mask === nothing ? obs : (mask .& obs)
+end
 
 # Mask-respecting warm start: overwrite the masked cells of a link-scale empirical
 # matrix `Zemp` with their row's observed mean, so the intercept and SVD loadings
