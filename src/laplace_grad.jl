@@ -306,10 +306,12 @@ end
 # --- Negative binomial (log link) — dispersion family: r enters θ as log r ---
 # AD-friendly NB2 log-pmf kernel (mean μ, dispersion r); the loggamma(y+1) constant
 # is dropped (zero gradient). r is a θ parameter (via log r), so the r-dependent
-# loggamma(r+y) − loggamma(r) terms are kept and differentiated (loggamma' = digamma,
-# which ForwardDiff supports).
-_nb_logker(μ, r, y) = loggamma(r + y) - loggamma(r) +
-                      r * log(r) - (r + y) * log(r + μ) + y * log(μ)
+# terms are kept and differentiated. Evaluated through the stable
+# `_nb2_logpdf_mean` (src/families/negbin.jl), the log-pmf the objective uses: the
+# expanded loggamma(r+y) − loggamma(r) + r log r − (r+y) log(r+μ) subtracts
+# O(r log r) terms whose difference is O(1), so near the Poisson limit its value and
+# its log-r derivative were rounding noise (#871).
+_nb_logker(μ, r, y) = _nb2_logpdf_mean(μ, r, Int(y)) + loggamma(float(y) + 1)
 
 function _nb_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, logr;
                            mask = nothing)

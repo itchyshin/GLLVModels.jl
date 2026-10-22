@@ -1,6 +1,21 @@
 # Changelog
 
-## Development
+All notable changes to GLLVModels.jl are documented here.
+
+## Unreleased
+
+- **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
+  After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
+  whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose
+  `max |gradient|` is at most `100 * max(g_tol, 1e-5)` may be tagged `stopping_reason =
+  :rounding_floor` and `converged = true` only when the stored `gradient_norm` is already
+  `<= g_tol`. The fitter never reports `converged = true` when `gradient_norm > g_tol`. The 1e-3
+  acceptance (`100 * max(g_tol, 1e-5)`) is unchanged. `test/test_phylo_latent_rounding_floor.jl`
+  includes the issue's own DEP (`d = 4`, 120 tips) default-start fit.
+
+- **`_fit_phylo_binomial_xlv` default start no longer throws (#943).** The default `beta_init` called an undefined `logit`, so any call without `beta_init` raised `UndefVarError` before the optimiser ran. The start now uses `log(m / (1 - m))` on the clamped pooled proportion.
+
+- **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 
 - **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
   and the default per-trait NB2 Laplace formula route accept `optimizer=:lbfgs`, `:bfgs`, or a
@@ -22,6 +37,20 @@
   throws (`_laplace_logdet`), and `fit_truncated_nbinom2_gllvm(K = 0)` and `zi_marginal_loglik_laplace`
   at K = 0 no longer throw on any Julia version.
 
+- **False `converged` on three fitters (refs #754, #753, #781).**
+  `fit_branch_re` now requires a small Nelder–Mead simplex in parameter
+  space and reports `sigma2_boundary` when a variance sits on the stated
+  `1e-8 * var(y)` floor; constant or non-finite `y` raise `ArgumentError` naming
+  the data. `em_fit_phylo` and `em_fit_phylo_squarem` record
+  `sigma_eps_boundary` when the M-step clamps `σ_eps²` to
+  `1e-8 * mean(y.^2)` and do not report `converged = true` on that
+  floor. Both floors are fractions of the data scale, so rescaling `y`
+  cannot flip the flags. SQUAREM's main path (no fallback) carries the
+  clamp flag and vetoes `converged` the same way. `fit_zinb_gllvm_cov(iterations <= 0)` is a start-only
+  transport check (`converged = false`) and rejects a non-finite
+  `θ_init`. No new absolute gradient or objective tolerance. #752 is
+  left as the next sibling PR.
+
 - **Dunn–Smyth residuals are no longer silently capped at ±7.034 (#767).** The randomized
   quantile residual was `quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))` with `u` built from
   `cdf`, so every cell with a tail probability below 1e-12 returned exactly ±7.034 whatever
@@ -40,6 +69,28 @@
   the `cv_gllvm` residuals in `src/cv.jl`.
 
 - **`bridge_fit` rejects arguments it would silently drop (#741).** The phylo-precision diagnostic hook now throws `ArgumentError` for `d != 1`, `X`, `X_lv`, `mask`, `N`, `trait_names`, `unit_names`, `ci_method != "none"`, `reml = true` and `coef_fixed`-style options, as the multivariate branch already did. `reml = true` throws on every route except one-part Gaussian without `X`/`X_lv`/`sources` (it used to return an ML fit). A non-`Dict` `options` (e.g. a NamedTuple) throws instead of being ignored whole. Forcing test: `test/test_bridge_ignored_args.jl`. A per-route allow-list for unknown option keys is not included.
+
+- **Phylogenetic xlv point fitters (binomial, NB2, Gamma): `converged` now requires a small
+  gradient (refs #505).** `_fit_phylo_binomial_xlv`, `_fit_phylo_nb_xlv` and `_fit_phylo_gamma_xlv`
+  took `converged` from `Optim.converged`, which also fires on a zero-length line-search step, and
+  reported `converged = true` at finite-difference gradients of order 1-100 (a huge `sigma2_phy`
+  start, a species with all-zero counts). A new `_phylo_xlv_verdict` adds the stall test
+  `fit_phylo_gaussian` uses (a relative gradient bound, not the optimiser's own `g_tol`), and the
+  fits gain a `stop_reason` field (`:converged`, `:not_converged`, `:gradient_not_small`,
+  `:gradient_at_failure_value`, `:objective_failure`).
+
+- **`fit_zip_gllvm` Laplace log-determinant now uses the observed count curvature (refs #739).**
+  The ZIP count weight was the expected Fisher information, so `hessian = :observed` (the
+  default) and `:fisher` gave the identical objective and `fit_zip_gllvm` maximised a different
+  surface from gllvmTMB's `zi_poisson()`: logLik below it on simulated ZIP data, with a
+  higher mean ZI estimate. `:observed` is now the exact second derivative of the ZIP
+  log-density (`_tp_observed_Wc_z(::ZIPoisson, …)`), with the same eigenvalue floor as the
+  `zi_poisson()` route (`ZI_LAPLACE_EIGMIN_FLOOR`) and `converged = false` for an optimum at the
+  floor. On a p = 6, n = 50 fixture the logLik moves from -663.283 to -659.541, equal to the
+  `zi_poisson()` fit (`test/test_zip_observed_laplace.jl`). Fitted ZIP values change, in
+  `fit_zip_gllvm`, `fit_zip_gllvm_cov` and every route that reaches the ZIP two-part Laplace with
+  the default `hessian`; `hessian = :fisher` is unchanged. ZINB and ZIB still use the Fisher
+  weight (`TWOPART_KNOWN_OPEN`).
 
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
@@ -957,10 +1008,6 @@
   the four types above: Wald, `vcov` and `coef_table` on all of them, and one profile and one
   bootstrap on a variational Poisson fit and a `:fisher` truncated NB2 fit). Test:
   `test/test_confint_offset.jl`.
-
-All notable changes to GLLVModels.jl are documented here.
-
-## Unreleased
 
 ### Added
 - **`zi_poisson()`, `zi_nbinom2()`, `zi_binomial()`: twins of gllvmTMB's

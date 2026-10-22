@@ -258,6 +258,21 @@ function _phylo_binomial_xlv_nll_packed(theta::AbstractVector, Y::AbstractMatrix
     return isfinite(ll) ? -ll : 1e12
 end
 
+# The objective `_fit_phylo_binomial_xlv` hands to Optim: any exception or non-finite value
+# at a line-search trial step becomes the sentinel, as in the Gamma and NB2 fitters (#944).
+function _phylo_binomial_xlv_nll_guarded(theta::AbstractVector, Y::AbstractMatrix,
+        N::AbstractMatrix, p::Integer, K::Integer, phy::AugmentedPhy,
+        X_lv::AbstractMatrix; q_lv::Integer, maxiter::Integer = 80,
+        tol::Real = 1e-9)
+    v = try
+        _phylo_binomial_xlv_nll_packed(theta, Y, N, p, K, phy, X_lv;
+                                       q_lv = q_lv, maxiter = maxiter, tol = tol)
+    catch
+        return 1e12
+    end
+    return isfinite(v) ? v : 1e12
+end
+
 function _phylo_binomial_xlv_theta0(Y::AbstractMatrix, N::AbstractMatrix,
         K::Integer, X_lv::AbstractMatrix; beta_init = nothing,
         Lambda_init = nothing, alpha_lv_init = nothing,
@@ -271,8 +286,9 @@ function _phylo_binomial_xlv_theta0(Y::AbstractMatrix, N::AbstractMatrix,
         throw(ArgumentError("sigma2_phy_init must be positive"))
 
     beta0 = beta_init === nothing ?
-        [logit(clamp((sum(Y[t, s] for s in 1:n) + 0.5) /
-                     (sum(N[t, s] for s in 1:n) + 1), 1e-4, 1 - 1e-4))
+        [(m = clamp((sum(Y[t, s] for s in 1:n) + 0.5) /
+                    (sum(N[t, s] for s in 1:n) + 1), 1e-4, 1 - 1e-4);
+          log(m / (1 - m)))
          for t in 1:p] :
         collect(Float64, beta_init)
     length(beta0) == p ||
@@ -290,6 +306,31 @@ function _phylo_binomial_xlv_theta0(Y::AbstractMatrix, N::AbstractMatrix,
         throw(ArgumentError("alpha_lv_init size $(size(alpha0)) must equal ($q_lv, $K)"))
 
     return vcat(beta0, vec(alpha0), pack_lambda(Lambda0), log(float(sigma2_phy_init)))
+end
+
+# Verdict shared by the phylogenetic xlv point fitters (binomial, NB2, Gamma). #505 class:
+# `Optim.converged(res)` also fires on a zero-length line-search step or an f/x stop, so the
+# `_fit_verdict(res)` pass-through reported `converged = true` at finite-difference gradients
+# of order 1-100. This adds the same stall test `fit_phylo_gaussian` uses (`_phylo_g_met`:
+# a loose relative bound, not the optimiser's own `g_tol`). A gradient at or near the 1e12
+# failure value (a finite-difference step landing on the objective sentinel) is its own
+# reason, not a generic "gradient not small".
+function _phylo_xlv_verdict(res, g_tol::Real)
+    loglik, optim_converged, iterations = _fit_verdict(res)
+    gres = Optim.g_residual(res)
+    reason = if !isfinite(loglik)
+        :objective_failure
+    elseif !isfinite(gres) || gres >= _NLL_FAIL_THRESHOLD
+        :gradient_at_failure_value
+    elseif !_phylo_g_met(res, g_tol)
+        :gradient_not_small
+    elseif !optim_converged
+        :not_converged
+    else
+        :converged
+    end
+    return (loglik = loglik, converged = reason === :converged,
+            iterations = iterations, reason = reason)
 end
 
 """
@@ -317,10 +358,10 @@ function _fit_phylo_binomial_xlv(Y::AbstractMatrix, N::AbstractMatrix,
                                         Lambda_init = Lambda_init,
                                         alpha_lv_init = alpha_lv_init,
                                         sigma2_phy_init = sigma2_phy_init)
-    nll = theta -> _phylo_binomial_xlv_nll_packed(theta, Y, N, p, K, phy, X_lv;
-                                                  q_lv = q_lv,
-                                                  maxiter = newton_maxiter,
-                                                  tol = newton_tol)
+    nll = theta -> _phylo_binomial_xlv_nll_guarded(theta, Y, N, p, K, phy, X_lv;
+                                                   q_lv = q_lv,
+                                                   maxiter = newton_maxiter,
+                                                   tol = newton_tol)
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(nll, theta0, ls,
                          Optim.Options(g_tol = g_tol, iterations = iterations);
@@ -328,10 +369,12 @@ function _fit_phylo_binomial_xlv(Y::AbstractMatrix, N::AbstractMatrix,
     theta_hat = Optim.minimizer(res)
     beta_hat, Lambda_hat, alpha_hat, sigma2_hat =
         _phylo_binomial_xlv_unpack_packed(theta_hat, p, K, q_lv)
+    verdict = _phylo_xlv_verdict(res, g_tol)
     return (beta = collect(beta_hat), Lambda = Matrix(Lambda_hat),
             alpha_lv = Matrix(alpha_hat), sigma2_phy = sigma2_hat,
-            loglik = _fit_verdict(res)[1], converged = _fit_verdict(res)[2],
-            iterations = Optim.iterations(res), theta_packed = collect(theta_hat))
+            loglik = verdict.loglik, converged = verdict.converged,
+            iterations = Optim.iterations(res), theta_packed = collect(theta_hat),
+            stop_reason = verdict.reason)
 end
 
 function _phylo_binomial_xlv_profile_indices(indices, nb::Integer)

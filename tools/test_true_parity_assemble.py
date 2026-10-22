@@ -562,8 +562,10 @@ def main():
     c, o = run(root, "--check")
     expect("decisions_output_checks_current", c == 0 and "ASSEMBLE_OK" in o, o)
     if shutil.which("node"):
-        env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root))
-        out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C6"], env=env, capture_output=True, text=True).stdout
+        env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root),
+                   PARITY_CASEMAP=str(A.LEDGER / A.OUT_CASEMAP))
+        check = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C6"], env=env, capture_output=True, text=True)
+        out = check.stdout + check.stderr
         expect("checker_c6_accepts_assembled_decision", "C6_MET" in out and "EXCLUDED_INTERNAL_HELPER:1" in out and "unsigned_decision=none" in out, out)
     shutil.rmtree(tmp)
     root, tmp = with_root()
@@ -612,6 +614,101 @@ def main():
     rg = json.loads((root / A.LEDGER / A.OUT_REVERSE_GAP).read_text())
     expect("decisions_file_kept_as_julia_extra_ok", c == 0 and rg[0]["decision"] == "KEPT_AS_JULIA_EXTRA" and rg[0]["status"] == "decided", o)
     shutil.rmtree(tmp)
+    scoped_ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+    scoped_ruling = {"ref": scoped_ref, "signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-17"}
+    scoped_entry = {
+        "decision": "SCOPED_R_TWIN", "basis": "bounded executable P1 twin with explicit limits",
+        "ruling": scoped_ruling,
+        "counterpart": {"r_function": "betabinomial", "r_commit": A.P1_SHA,
+                        "r_source": "R/family.R:10-20", "julia_source": "src/test.jl:1-2"},
+        "scope": {"public_route": "fit_beta_binomial_gllvm", "family_link": "beta-binomial/logit",
+                  "data": "pinned fixture", "estimand": "fixed effects and dispersion",
+                  "outputs": ["beta", "dispersion"], "exclusions": ["other families"]},
+        "receipt_ids": ["C"],
+    }
+    root, tmp = numeric_root()
+    (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+    (root / scoped_ref).write_text("Approved general SCOPED_R_TWIN evidence rule.\n")
+    (root / "src/test.jl").parent.mkdir(parents=True, exist_ok=True)
+    (root / "src/test.jl").write_text("# fixture source\n")
+    (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": scoped_entry})))
+    c, o = run(root)
+    expect("general_rule_does_not_authorize_fabricated_scoped_name",
+           c == 1 and "not an exact approved Julia export" in o, o)
+    shutil.rmtree(tmp)
+    root, tmp = numeric_root()
+    (root / "src/test.jl").parent.mkdir(parents=True, exist_ok=True)
+    (root / "src/test.jl").write_text("# fixture source\n")
+    (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": scoped_entry})))
+    c, o = run(root, "--check")
+    expect("scoped_twin_missing_approval_record_fails_closed",
+           c == 1 and "SCOPED_R_TWIN approval record" in o and "is missing" in o, o)
+    shutil.rmtree(tmp)
+    hold_ruling = {"ref": scoped_ref, "signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-17"}
+    hold_decision = {"decision": "HOLD_PENDING_EVIDENCE",
+                     "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+                     "ruling": hold_ruling}
+    root, tmp = with_root()
+    (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+    (root / scoped_ref).write_text("Shinichi approved the nine exact names to remain held pending route evidence.\n")
+    inp = json.loads((root / A.LEDGER / A.IN_REVERSE_GAP).read_text())
+    inp["julia_exports"] = [{"name": "NBFit", "kind": "Type"}]
+    (root / A.LEDGER / A.IN_REVERSE_GAP).write_text(json.dumps(inp))
+    c, o = run(root)
+    scoreboard_before_hold = (root / A.LEDGER / A.OUT_SCOREBOARD).read_bytes()
+    (root / DEC).write_text(json.dumps(decisions(decisions={"NBFit": hold_decision})))
+    c, o = run(root)
+    rg = json.loads((root / A.LEDGER / A.OUT_REVERSE_GAP).read_text())
+    expect("hold_pending_evidence_is_signed_held_and_does_not_change_scoreboard",
+           c == 0 and len(rg) == 1 and rg[0]["name"] == "NBFit"
+           and rg[0]["decision"] == "HOLD_PENDING_EVIDENCE" and rg[0]["status"] == "held"
+           and rg[0]["ruling"] == hold_ruling
+           and (root / A.LEDGER / A.OUT_SCOREBOARD).read_bytes() == scoreboard_before_hold, (rg, o))
+    shutil.rmtree(tmp)
+    root, tmp = with_root()
+    (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+    (root / scoped_ref).write_text("Shinichi approved only the nine exact held names.\n")
+    (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": hold_decision})))
+    c, o = run(root, "--check")
+    expect("hold_pending_evidence_for_unapproved_name_fails_closed",
+           c == 1 and "not in the approved hold name set" in o and "julia_only" in o, o)
+    shutil.rmtree(tmp)
+    for label, bad in (
+        ("no_item_ruling", {"decision": "HOLD_PENDING_EVIDENCE",
+          "basis": "held pending evidence; no twin or parity claim; no scoreboard row admitted"}),
+        ("basis_claims_twin", {"decision": "HOLD_PENDING_EVIDENCE", "basis": "measured twin equivalence" , "ruling": hold_ruling}),
+    ):
+        root, tmp = with_root()
+        (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+        (root / scoped_ref).write_text("Shinichi approved only the nine exact held names.\n")
+        (root / DEC).write_text(json.dumps(decisions(decisions={"NBFit": bad})))
+        c, o = run(root, "--check")
+        expect(f"hold_pending_evidence_{label}_fails_closed", c == 1 and "ASSEMBLE_FAIL" in o, o)
+        shutil.rmtree(tmp)
+    for label, update in (
+        ("missing_counterpart", {"counterpart": None}),
+        ("wrong_pinned_r_commit", {"counterpart": {**scoped_entry["counterpart"], "r_commit": "0" * 40}}),
+        ("missing_julia_source", {"counterpart": {"r_function": "betabinomial", "r_commit": A.P1_SHA,
+                                           "r_source": "R/family.R:10-20"}}),
+        ("missing_scope_exclusions", {"scope": {**scoped_entry["scope"], "exclusions": []}}),
+        ("missing_receipt_ids", {"receipt_ids": []}),
+        ("unknown_receipt_id", {"receipt_ids": ["NOT-A-CASE"]}),
+        ("duplicate_receipt_ids", {"receipt_ids": ["C"] * 2}),
+        ("missing_item_ruling", {"ruling": None}),
+    ):
+        root, tmp = numeric_root() if label == "unknown_receipt_id" else with_root()
+        (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+        (root / scoped_ref).write_text("Approved general SCOPED_R_TWIN evidence rule.\n")
+        (root / "src/test.jl").parent.mkdir(parents=True, exist_ok=True)
+        (root / "src/test.jl").write_text("# fixture source\n")
+        bad = {**scoped_entry, **update}
+        (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": bad})))
+        c, o = run(root, "--check")
+        ok = c == 1 and "ASSEMBLE_FAIL" in o
+        if label == "unknown_receipt_id":
+            ok = ok and "no executable P1 numeric or behavioural row" in o
+        expect(f"scoped_twin_{label}_fails_closed", ok, o)
+        shutil.rmtree(tmp)
     for label, over in (("no_ruling", {"ruling": None}), ("ruling_missing_signed_on", {"ruling": {"ref": "r", "signed_by": "x"}}),
                         ("bad_schema", {"schema": 2})):
         root, tmp = with_root()
@@ -1162,10 +1259,19 @@ def main():
     vocab = re.search(r"const C6_DECISION_VOCAB = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("c6_vocab_matches_checker", re.findall(r"'([A-Z_]+)'", vocab) == list(A.C6_DECISION_VOCAB), vocab)
     rtable = re.search(r"const C6_RULINGS = \{(.*?)\n\};", mjs, re.S).group(1)
-    ref = re.search(r"'([^']+#684 item 3)': \{ signed_on: '([0-9-]+)', words: new Set\(\[([^\]]*)\]\)", rtable)
-    expect("c6_rulings_match_checker",
-           ref is not None and list(A.C6_RULINGS) == [ref.group(1)] and A.C6_RULINGS[ref.group(1)]["signed_on"] == ref.group(2)
-           and re.findall(r"'([A-Z_]+)'", ref.group(3)) == list(A.C6_RULINGS[ref.group(1)]["words"]), rtable)
+    refs = re.findall(r"'([^']+)': \{ signed_on: '([0-9-]+)', words: new Set\(\[([^\]]*)\]\) \}", rtable)
+    parsed_rulings = {ref: {"signed_on": date, "words": tuple(re.findall(r"'([A-Z_]+)'", words))}
+                      for ref, date, words in refs}
+    expect("c6_rulings_match_checker", parsed_rulings == A.C6_RULINGS, (parsed_rulings, A.C6_RULINGS))
+    held_js = re.search(r"const HELD_C6_NAMES = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
+    held_checkpoint = re.search(r"export const HELD_C6_NAMES = Object.freeze\(\[(.*?)\]\);", (HERE / "true_parity_checkpoint_check.mjs").read_text(), re.S).group(1)
+    held_classifier = re.search(r"const HOLD_PENDING_NAMES = Set\(\[(.*?)\]\);?", (HERE / "true_parity_c6_classify.jl").read_text(), re.S).group(1)
+    parse_names = lambda text: re.findall(r"'([^']+)'", text)  # noqa: E731
+    expect("c6_held_name_allowlists_match_checkers",
+           parse_names(held_js) == list(A.C6_HELD_NAMES) == parse_names(held_checkpoint)
+           and re.findall(r'"([^"]+)"', held_classifier) == list(A.C6_HELD_NAMES),
+           (parse_names(held_js), A.C6_HELD_NAMES, parse_names(held_checkpoint),
+            re.findall(r'"([^"]+)"', held_classifier)))
     named = re.search(r"const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("behavioural_named_ids_match_checker", re.findall(r"'([^']+)'", named) == list(A.BEHAVIOURAL_NAMED_SOURCE_IDS), named)
     ext = re.search(r"const BEHAVIOURAL_EXTENDED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
@@ -1374,5 +1480,24 @@ def main():
     return 1 if FAILS else 0
 
 
+def check_exact_scoped_authorization():
+    import copy
+    records = json.loads((A.ROOT / A.LEDGER / A.IN_REVERSE_GAP_DECISIONS).read_text())["decisions"]
+    scoped = {n: v for n, v in records.items() if v["decision"] == "SCOPED_R_TWIN"}
+    expect("exact_scoped_authorization_has_eleven_names", set(scoped) == set(A.C6_APPROVED_SCOPE_SHA256))
+    for name, entry in scoped.items():
+        expect(f"exact_scope_{name}_passes", A.approved_scope_problem(name, entry) is None)
+        expect(f"unsigned_name_{name}_fails", A.approved_scope_problem("unsigned_" + name, entry) is not None)
+        for field in ("public_route", "family_link", "data", "estimand", "outputs", "exclusions"):
+            bad = copy.deepcopy(entry)
+            bad["scope"][field] = ["unsigned expansion"] if isinstance(bad["scope"][field], list) else "unsigned expansion"
+            expect(f"expanded_scope_{name}_{field}_fails", A.approved_scope_problem(name, bad) is not None)
+        for field in ("receipt_ids", "counterpart", "ruling"):
+            bad = copy.deepcopy(entry)
+            bad[field] = ["unsigned receipt"] if field == "receipt_ids" else {"unsigned": "replacement"}
+            expect(f"changed_contract_{name}_{field}_fails", A.approved_scope_problem(name, bad) is not None)
+
+
 if __name__ == "__main__":
+    check_exact_scoped_authorization()
     sys.exit(main())

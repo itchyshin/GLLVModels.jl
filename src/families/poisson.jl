@@ -239,7 +239,6 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized count matrix with a safe placeholder in the masked cells.
     msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
-    Yc = Integer.(_sanitize_missing(Y, 0))
     # Observation weights (p×n, 0 at unobserved cells) multiply each cell's conditional
     # log-density, as gllvmTMB's `weights` do. Not threaded through the X_lv objective.
     if weights !== nothing
@@ -248,6 +247,10 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         weights = _normalize_weights(weights, p, n; Y = Y, mask = msk,
                                      caller = "fit_poisson_gllvm")
     end
+    # A zero weight drops the cell exactly like `mask`, so the support check skips it too.
+    _check_response_support(:count, Y, weights === nothing ? msk : weights .> 0;
+                            caller = "fit_poisson_gllvm")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical log-scale intercepts + SVD (PPCA-like) loadings.
     # With an offset (η = β + offset + Λz), subtract it from the link-scale data so
