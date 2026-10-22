@@ -21956,3 +21956,5 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 
 2026-10-21: Shinichi signed the polished species-distribution and fungi comparisons as the receipts for those two rows only.
 2026-10-21: ISDM-HEADLINE-RSZ and RD-FUNGI-BINOMIAL are recorded. Spider, beetle, ordinal, and the other left rows stay fail. C2, C3, C4, and X2 stay open.
+2026-10-21: Shinichi signed the polished ordinal logit comparison as the receipt for family-ORDINAL-LOGIT-RSZ only.
+2026-10-21: ORDINAL-LOGIT-RSZ is recorded. Spider, beetle, urbanisation, identity, and the six left rows stay fail. C3, C4, and X2 stay unticked.
