@@ -43,9 +43,14 @@ const _SPIDER573 = Float64[
     end
 
     @testset "healthy control: fits already above the nested fit are unchanged" begin
-        # Species 2,4,5,9,11,12 (K = 1): the warm-start fits already end above the
-        # nested fits on main (ZIP +0.26, ZINB +0.23), so the guard must not fire.
-        Y = _SPIDER573[[2, 4, 5, 9, 11, 12], :]
+        # ZINB: species 2,4,5,9,11,12 (K = 1): the warm-start fit already ends above the
+        # shared-r NB2 fit (+0.23), so the guard must not fire.
+        # ZIP: species 3,5,7,8,10,12 (K = 1), warm-start fit +186 above Poisson. The ZIP
+        # control used species 2,4,5,9,11,12 until #739: ZIP's Laplace log-determinant then
+        # became the observed curvature, the warm-start fit on those species ends at -418.00
+        # against Poisson -410.97, the guard (rightly) fires, and the refit reaches -410.63.
+        Yn = _SPIDER573[[2, 4, 5, 9, 11, 12], :]
+        Y = _SPIDER573[[3, 5, 7, 8, 10, 12], :]
         p, K = size(Y, 1), 1
         rr = _G573.rr_theta_len(p, K)
         negll(θ) = begin
@@ -70,8 +75,8 @@ const _SPIDER573 = Float64[
         # The guard returns its input untouched when the fit is at/above the nested fit.
         @test _G573._zi_nested_guard(negll, res, -Optim.minimum(res) - 1.0, zeros(2p + rr),
                                      1e-5, 10) === res
-        zb = _G573.fit_zinb_gllvm(Y; K = K)
-        nb = _G573.fit_nb_gllvm(Y; K = K)
+        zb = _G573.fit_zinb_gllvm(Yn; K = K)
+        nb = _G573.fit_nb_gllvm(Yn; K = K)
         @test zb.loglik >= nb.loglik - 1e-6
     end
 end

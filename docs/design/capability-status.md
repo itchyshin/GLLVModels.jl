@@ -562,8 +562,9 @@ exception (`DEFERRED_BY_DECISION`, evidence recorded). Binomial/cloglog
 extreme-η Laplace saturation is a separate post-fit health issue (measured
 under both curvature selectors; diagnostic guard shipped in PR #272), not a
 weight bug and not a reason to keep `:fisher` as the default. **Still open: the TWO-PART families** — only
-DeltaGamma has a specialised observed count-part weight, so the selector is
-currently inert for the other nine (`TWOPART_KNOWN_OPEN`).
+DeltaGamma and ZIPoisson (since #739) have a specialised observed count-part
+weight, so the selector is currently inert for the other eight
+(`TWOPART_KNOWN_OPEN`).
 
 **This is a PARITY goal, not an accuracy improvement — and that distinction is
 load-bearing.** Measured against high-resolution numerical quadrature over 12

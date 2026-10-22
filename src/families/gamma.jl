@@ -221,7 +221,8 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = _sanitize_missing(Y, 1.0)                   # positive placeholder
+    _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm")
+    Yc  = _sanitize_unobserved(Y, msk, 1.0)           # positive placeholder
 
     # link-scale warm start (η = g(y)); for the default log link this is exactly `log.(max.(Yc, 1e-6))`
     Zemp = [linkfun(link, max(Yc[t, i], 1e-6)) for t in 1:p, i in 1:n]
