@@ -202,6 +202,10 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     link isa LogLink || throw(ArgumentError(
         "fit_censored_poisson_gllvm: only LogLink is supported (Identity lock)"))
+    # With explicit (lower, upper) bounds `Y` is not read, so only the other routes check it.
+    (lower === nothing && upper === nothing) &&
+        _check_response_support(:count, Y, _resolve_obs_mask(mask, Y);
+                                caller = "fit_censored_poisson_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_censored_poisson_gllvm")
@@ -219,7 +223,7 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         size(censored) == (p, n) || throw(ArgumentError("censored must be p×n"))
         L = Matrix{Int}(undef, p, n)
         U = Matrix{Int}(undef, p, n)
-        Yraw = Integer.(_sanitize_missing(Y, 0))
+        Yraw = Integer.(_sanitize_unobserved(Y, _resolve_obs_mask(mask, Y), 0))
         @inbounds for t in 1:p, s in 1:n
             if censored[t, s]
                 C = Int(Yraw[t, s])
@@ -238,7 +242,7 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         censored_bounds_to_YN(L, U)
     else
         # All-uncensored convenience path (must match Poisson).
-        Yraw = Integer.(_sanitize_missing(Y, 0))
+        Yraw = Integer.(_sanitize_unobserved(Y, _resolve_obs_mask(mask, Y), 0))
         Yraw, zeros(Int, p, n)
     end
 
