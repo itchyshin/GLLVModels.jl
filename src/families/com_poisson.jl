@@ -444,7 +444,9 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
     # observed mean so neither the intercept nor the SVD sees the placeholder.
     Zemp = [log(max(float(Yc[t, i]) + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, nothing; mask = msk,
+                           caller = "fit_compoisson_gllvm")   # #874 (rate is always log)
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)

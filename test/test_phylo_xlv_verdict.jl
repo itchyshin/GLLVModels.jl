@@ -160,3 +160,15 @@ end
     @test isfinite(marg())
     @test marg(maxiter = 1) == -Inf
 end
+
+@testset "phylo binomial xlv: default start works without beta_init (#943)" begin
+    # The default beta start called an undefined `logit`, so a call without `beta_init`
+    # threw UndefVarError before the optimiser ran. Only finiteness is asserted: the
+    # optimiser path differs across platforms.
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    d = _xlv_v_data(:binomial, MersenneTwister(1000), 30)
+    fit = GLLVModels._fit_phylo_binomial_xlv(d.Y, d.N, phy; K = 1, X_lv = d.X,
+                                             iterations = 20)
+    @test isfinite(fit.loglik)
+    @test length(fit.beta) == phy.n_leaves
+end
