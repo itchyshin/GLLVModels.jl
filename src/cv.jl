@@ -36,7 +36,7 @@ Fields:
 - `fold_mses::Vector{Float64}` — out-of-sample MSE for each fold
 - `fold_residual_means::Vector{Float64}` — mean of quantile residuals per fold
 - `fold_residual_stds::Vector{Float64}` — standard deviation of quantile residuals per fold
-- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$
+- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$ (for `Binomial` with trial counts `N`, the expected count $N\hat{\mu}$, on the scale of `Y`)
 - `residuals::Matrix{Float64}` — $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
 - `fits::Vector{Any}` — fitted model objects from each training fold
 """
@@ -274,14 +274,6 @@ function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::I
     return (ll, r)
 end
 
-# Fallback for other families
-function _cv_cell_eval(fit, family, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
-    d = Normal(μ, 1.0)
-    ll = logpdf(d, y)
-    r = y - μ
-    return (ll, r)
-end
-
 # -----------------------------------------------------------------------------
 # Main cv_gllvm entry point
 # -----------------------------------------------------------------------------
@@ -309,7 +301,10 @@ Supported `split` strategies:
 For the Gaussian family, a fixed-effect design `X` (a `p×n×q` array, as for
 [`fit_gaussian_gllvm`](@ref)) may be passed as `X = X`; it is subset with each
 fold's training data, and held-out cells are predicted at `X[t, s, :] ⋅ β̂`.
-Other families reject `X`.
+Other families reject `X`. `offset` is not supported and is rejected.
+
+Only `Normal`, `Poisson`, `Binomial`, `NegativeBinomial`, `Beta`, `Gamma` and
+`Exponential` can be scored; any other `family` throws an `ArgumentError`.
 
 Returns a [`CVResult`](@ref) containing out-of-sample log-likelihood, MSE,
 Dunn–Smyth randomized quantile residuals, predictions, and per-fold metrics.
@@ -352,6 +347,17 @@ function cv_gllvm(Y::AbstractMatrix;
     else
         throw(ArgumentError("Unknown split :$split. Supported: :random, :site, :species"))
     end
+
+    # Only families with a `_cv_cell_eval` method have an out-of-sample density and
+    # Dunn–Smyth residual; refuse the rest before any fit (#773).
+    family isa Union{Normal, Poisson, Binomial, NegativeBinomial, Beta, Gamma, Exponential} ||
+        throw(ArgumentError(
+            "cv_gllvm cannot score family $(family): it has no out-of-sample log-density " *
+            "or Dunn–Smyth residual. Supported families: Normal, Poisson, Binomial, " *
+            "NegativeBinomial, Beta, Gamma, Exponential."))
+    haskey(kwargs, :offset) && throw(ArgumentError(
+        "cv_gllvm does not support `offset`: the fold fits would use it but the held-out " *
+        "predictions would not, which inflates CV error (#772)."))
 
     # A Gaussian fixed-effect design X (p×n×q) is subset alongside each fold's data.
     X = get(kwargs, :X, nothing)
@@ -527,8 +533,12 @@ function cv_gllvm(Y::AbstractMatrix;
             η = β_t + Λ_t_dot_z
             μ = linkinv(link, η)
 
-            predictions[t, s] = μ
-            sq_err = (Float64(y_val) - Float64(μ))^2
+            # Binomial with trial counts: `y` is a count out of N[t, s], so the
+            # prediction is the expected count N * μ, not the probability (#769).
+            # `_cv_cell_eval` below keeps μ: its log-density takes (N, μ).
+            pred = (family isa Binomial && N !== nothing) ? Float64(N[t, s]) * Float64(μ) : Float64(μ)
+            predictions[t, s] = pred
+            sq_err = (Float64(y_val) - pred)^2
             push!(fold_errs, sq_err)
             push!(all_sq_errs, sq_err)
 

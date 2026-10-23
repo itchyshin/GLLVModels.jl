@@ -35,7 +35,7 @@ use them, also run `Pkg.add("Distributions")`.
 ## Quick start
 
 ```julia
-using GLLVModels, Random
+using GLLVModels, Distributions, Random
 
 # `using GLLVM` cannot resolve after the package rename. After loading
 # GLLVModels, `GLLVModels.GLLVM` is a temporary deprecated source-level alias.
@@ -87,6 +87,56 @@ GLLVModels.confint(fit_shared; y = y)                                 # Wald (de
 GLLVModels.profile_ci(fit_shared, "sigma_eps"; y = y)                 # profile likelihood
 GLLVModels.bootstrap_ci(fit_shared; y = y, n_boot = 20, seed = 42)    # parametric bootstrap; use 1000 or more for real work
 ```
+
+## Choosing the outer optimizer
+
+The ordinary Gaussian, Poisson Laplace, and shared-r NB2 fitters accept
+`optimizer = :lbfgs` or `:bfgs`; the default `optimizer = nothing` preserves
+their existing behavior. The default per-trait NB2 formula route accepts the
+same choice without changing its dispersion model. Explicit choices run
+directly, without the legacy Poisson/NB2 BFGS continuation. Inspect the actual
+stages with `optimizer_info(fit)`. AGHQ, grouped covariance, and other nested
+routes reject explicit selection. Profile and bootstrap intervals also reject
+fits made with an explicit choice because their internal refits do not yet
+forward it.
+
+For a quick Poisson comparison, `Y` is a count matrix with responses in rows
+and sites in columns. Omitting `optimizer` keeps the existing default policy;
+select either supported solver explicitly and inspect the recorded method:
+
+```julia
+using GLLVModels
+
+fit_bfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :bfgs)
+fit_lbfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :lbfgs)
+optimizer_info(fit_bfgs)
+optimizer_info(fit_lbfgs)
+```
+
+See the [tutorial](docs/src/tutorial.md) for a matched-start comparison and
+convergence and likelihood checks.
+
+```julia
+Y_count = [1 0 3 2 0 1 4 0 2 1 0 3;
+           0 2 1 0 3 1 0 4 1 0 2 1;
+           2 1 0 3 1 0 2 1 4 0 1 2]
+K_count = 1
+β_start = [0.1, -0.1, 0.2]
+Λ_start = reshape([0.12, -0.06, 0.08], 3, K_count)
+
+fit_lbfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
+    β_init = β_start, Λ_init = Λ_start, optimizer = :lbfgs)
+fit_bfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
+    β_init = β_start, Λ_init = Λ_start, optimizer = :bfgs)
+@show fit_lbfgs.converged fit_bfgs.converged
+@show fit_lbfgs.loglik fit_bfgs.loglik
+optimizer_info(fit_lbfgs)
+optimizer_info(fit_bfgs)
+```
+
+Both fits use the same count matrix, family, latent rank, and supplied starting
+values, so this compares optimizer paths without changing the model. Compare
+their convergence flags and likelihoods; different local optima remain possible.
 
 ## Why
 

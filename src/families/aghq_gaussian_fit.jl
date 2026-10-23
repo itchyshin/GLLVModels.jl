@@ -112,6 +112,13 @@ latter a documented extra, not yet a verified twin).
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
+    requested_optimizer = get(kwargs, :optimizer, nothing)
+    _optimizer_method(requested_optimizer, Optim.LBFGS(); route = "fit_gaussian_gllvm")
+    lambda_constraint === nothing || _refuse_optimizer(requested_optimizer,
+        "fit_gaussian_gllvm", "the lambda_constraint confirmatory refit")
+    request=_aghq_request(aghq)
+    request === :off || _refuse_optimizer(requested_optimizer, "fit_gaussian_gllvm",
+        "AGHQ/adaptive integration (fixed internal outer solver)")
     hessian===:observed || throw(ArgumentError("Gaussian integration uses observed curvature"))
     offset=_normalize_offset(offset,size(Y,1),size(Y,2);Y=Y,mask=mask,caller="fit_gaussian_gllvm")
     if lambda_constraint!==nothing
@@ -129,7 +136,7 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         controls=(;(k=>v for (k,v) in pairs(kwargs) if k in (:x_tol,:f_tol,:g_tol,:iterations))...)
         return _fit_confirmatory_lambda_constraint(base,Y,lambda_constraint;controls...)
     end
-    request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
+    c=_aghq_controls(aghq_control)
     if request===:off && mask===nothing && offset===nothing
         return _fit_gaussian_gllvm_exact(Y;K=K,kwargs...)
     end
@@ -179,27 +186,41 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
     if any(!,data.mask) || offset!==nothing
         nll=_gaussian_data_nll(data,K,fixed)
         start=base.pars.θ_packed
+        default_outer=Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3))
+        outer=_optimizer_method(requested_optimizer,default_outer;route="fit_gaussian_gllvm mask/offset refit")
         g_tol=get(kwargs,:g_tol,1e-6);iters=get(kwargs,:iterations,500)
-        ls=Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3))
-        res=Optim.optimize(nll,start,ls,
-            Optim.Options(iterations=iters,g_tol=g_tol,
-                x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,0.0));autodiff=:forward)
+        opts=Optim.Options(iterations=iters,g_tol=g_tol,
+            x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,0.0))
+        stages=base.optimizer_info===nothing ? OptimizerStage[] : OptimizerStage[base.optimizer_info.stages...]
+        refit_controls=(iterations=iters,g_tol=g_tol,
+            x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,0.0),optim_options=opts)
+        res=Optim.optimize(nll,start,outer,opts;autodiff=:forward)
+        _optimizer_stage!(stages,:mask_offset_refit,outer,:forwarddiff,refit_controls,res)
         # An x or f stop is not a stationary point (#735): continue on the gradient test alone,
-        # restarting L-BFGS from the stop with a fresh iteration budget each time. Sharing
-        # the leftover count skipped the polish whenever the first run used the full
-        # `iterations` cap, which is how existing masked tests reported converged = false.
+        # restarting the selected outer optimizer from the stop with a fresh iteration budget
+        # each time. Sharing the leftover count skipped the polish whenever the first run used
+        # the full `iterations` cap, which is how existing masked tests reported converged = false.
+        # Every solve is recorded as its own optimizer stage; a polish that does not lower the
+        # objective is recorded with accepted = false and discarded.
         total_iters=Optim.iterations(res)
+        polish_opts=Optim.Options(iterations=iters,g_tol=g_tol,x_abstol=0.0,f_reltol=0.0)
+        polish_controls=merge(refit_controls,(x_abstol=0.0,f_reltol=0.0,optim_options=polish_opts))
         for _ in 1:_MASKED_GAUSSIAN_POLISH_RESTARTS
             _masked_gaussian_g_met(res,g_tol) && break
-            nxt=Optim.optimize(nll,Optim.minimizer(res),Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3)),
-                Optim.Options(iterations=iters,g_tol=g_tol,x_abstol=0.0,f_reltol=0.0);autodiff=:forward)
+            nxt=Optim.optimize(nll,Optim.minimizer(res),outer,polish_opts;autodiff=:forward)
             total_iters+=Optim.iterations(nxt)
-            Optim.minimum(nxt)<=Optim.minimum(res) || break
+            better=Optim.minimum(nxt)<=Optim.minimum(res)
+            _optimizer_stage!(stages,:mask_offset_polish,outer,:forwarddiff,polish_controls,nxt;accepted=better)
+            better || break
             res=nxt
         end
         t=Optim.minimizer(res)
+        info=_optimizer_record(requested_optimizer,stages;
+            controls=(warmstart=base.optimizer_info===nothing ? (;) : base.optimizer_info.controls,
+                      mask_offset_refit=refit_controls),derivative=:forwarddiff,actual=outer)
         base=_gaussian_update(base,t,-nll(t),total_iters,
-            _fit_verdict(res)[2] && _masked_gaussian_g_met(res,g_tol),res,time()-t0,fixed)
+            _fit_verdict(res)[2] && _masked_gaussian_g_met(res,g_tol),res,time()-t0,fixed;
+            optimizer_info=info)
     end
     problem=aghq_gaussian_problem(Y,K;k=reason===:eligible ? k : 1,X=Xfree,
         mask=data.mask,offset=data.offset,mode_gradient_tol=c.mode_gradient_tol)
@@ -228,12 +249,13 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         deepcopy(sel.adaptation),data,_aghq_data_digest(data),maximum(d.gradient_max for d in problem.mode_diagnostics(t)))
     return _gaussian_with_integration(_gaussian_update(base,t,-sel.objective,sel.passes,sel.converged,result,time()-t0,fixed),info)
 end
-_gaussian_with_integration(f,i)=GllvmFit(f.model,f.pars,f.logLik,f.n_iter,f.converged,f.optim_result,f.cputime,i)
-function _gaussian_update(base,t,ll,it,conv,res,elapsed,fixed)
+_gaussian_with_integration(f,i)=GllvmFit(f.model,f.pars,f.logLik,f.n_iter,f.converged,
+    f.optim_result,f.cputime,i,f.optimizer_info)
+function _gaussian_update(base,t,ll,it,conv,res,elapsed,fixed;optimizer_info=base.optimizer_info)
     q=count(!,fixed);p,K=base.model.p,base.model.K
     pars=merge(base.pars,(β=_expand_fixed_zero(t[1:q],fixed),β_fixed=copy(fixed),σ_eps=exp(t[q+1]),
         Λ=unpack_lambda(t[q+2:end],p,K),θ_packed=copy(t)))
-    return GllvmFit(base.model,pars,ll,it,conv,res,elapsed)
+    return GllvmFit(base.model,pars,ll,it,conv,res,elapsed,base.integration,optimizer_info)
 end
 _has_gaussian_record(f)=f isa GllvmFit && f.integration!==nothing && f.integration.data isa AGHQGaussianData
 _is_gaussian_aghq(f)=_has_gaussian_record(f) && f.integration.actual===:aghq

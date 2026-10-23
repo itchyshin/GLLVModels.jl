@@ -246,6 +246,13 @@ end
 Fit a GLLVM, dispatching on the response `family` — a Distributions.jl
 distribution used as a marker (the GLM.jl convention):
 
+On ordinary Gaussian, Poisson Laplace, and NB2 Laplace routes, `optimizer`
+accepts `:lbfgs`, `:bfgs`, or a configured `Optim.LBFGS()` / `Optim.BFGS()`
+object. `nothing` keeps the existing default. The formula interface's default
+per-trait NB2 route is included; this changes only the solver, not the dispersion
+specification. Use [`optimizer_info`](@ref) to inspect the methods actually run.
+Nested and other family routes reject explicit selection.
+
 - `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal. Without `X`,
   one intercept per trait is estimated (`pars.β`); `fit_gaussian_gllvm` itself treats
   `X = nothing` as a zero mean. An explicit `X` defines the complete mean.
@@ -468,6 +475,25 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
                    species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
+        requested = kwargs[:optimizer]
+        _optimizer_method(requested, Optim.LBFGS(); route = "fit_gllvm")
+        aghq = get(kwargs, :aghq, false)
+        _aghq_request(aghq) === :off || _refuse_optimizer(requested, "fit_gllvm",
+            "AGHQ integration")
+        (grouping === nothing && phylo === nothing && row_eff === :none && !pervar) ||
+            _refuse_optimizer(requested, "fit_gllvm", "grouped, phylogenetic, row-effect, or pervar fits")
+        if family isa Normal
+            disp_group === nothing || _refuse_optimizer(requested, "fit_gllvm", "dispersion variants")
+        elseif family isa Poisson
+            disp_group === nothing || _refuse_optimizer(requested, "fit_gllvm", "grouped Poisson dispersion")
+            haskey(kwargs, :X) && _refuse_optimizer(requested, "fit_gllvm", "Poisson covariates")
+        elseif family isa NegativeBinomial
+            haskey(kwargs, :X) && _refuse_optimizer(requested, "fit_gllvm", "NB2 covariates")
+        else
+            _refuse_optimizer(requested, "fit_gllvm", "this response family")
+        end
+    end
     # `offset = nothing` means no offset; drop it so a route without an offset keyword
     # does not reject it. Any other offset is checked below (or refused on the routes
     # that take none).
