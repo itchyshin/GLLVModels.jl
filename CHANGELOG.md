@@ -4,6 +4,8 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+- **`bridge_fit` accepts a Gaussian `mask` on the plain no-X route (#912).** `"gaussian"` joins the mask families; trait means are taken over observed cells and `mask` is forwarded to `fit_gaussian_gllvm`, so `logLik` and `converged` match the direct masked fit. Masked Gaussian with CIs, REML, `X` or `X_lv` still raises `ArgumentError`. The offset half of the issue (a new `offset` argument) is not included.
+
 - **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
   After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
   whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose
