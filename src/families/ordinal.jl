@@ -35,15 +35,24 @@ function _check_ordinal_link(link::Link)
     return nothing
 end
 
-# Observed ordinal levels must be integers >= 1: the fitters index count vectors
-# by level inside `@inbounds` loops. Masked cells (`obs` false) are not checked.
-function _check_ordinal_levels(Y::AbstractMatrix, obs::AbstractMatrix)
-    for i in eachindex(Y, obs)
-        obs[i] || continue
+# Observed ordinal levels must be integers in 1:C (#730): the fitters and marginals index
+# count vectors and cutpoints by level inside `@inbounds` loops. `C` is the stated
+# category count (`length(τ) + 1` in the marginals) or `nothing` where the fitter infers
+# it from the data, so only the lower bound can fail there. Masked cells (`obs` false)
+# are not checked; categories with no observations are left as they are.
+function _check_ordinal_levels(Y::AbstractMatrix, obs; caller::AbstractString = "ordinal",
+        C = nothing)
+    for i in eachindex(Y)
+        (obs === nothing || obs[i]) || continue
         y = Y[i]
-        y >= 1 || throw(ArgumentError(
-            "ordinal response has observed level $y at index $(CartesianIndices(Y)[i]); " *
-            "levels must be integers 1..C"))
+        ismissing(y) && continue
+        Ci = C === nothing ? nothing : (C isa Integer ? C : C[CartesianIndices(Y)[i][1]])
+        (y isa Real && isfinite(y) && y == round(y) && y >= 1 && (Ci === nothing || y <= Ci)) ||
+            throw(ArgumentError(
+                "$caller: Y[$(join(Tuple(CartesianIndices(Y)[i]), ", "))] = $y is not a valid ordinal " *
+                "level; observed codes must be integers in 1..$(Ci === nothing ? "C" : Ci) " *
+                "(coded from 1, not 0-based)." *
+                ". Fix the data, or mark unobserved cells `mask = false`."))
     end
     return nothing
 end
@@ -226,6 +235,8 @@ independent cumulative-link log-likelihood `Σ log(F(τ_c) − F(τ_{c−1}))`.
 function ordinal_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,
         τ::AbstractVector; link::Link = LogitLink(), mask = nothing,
         offset = nothing, kwargs...)
+    _check_ordinal_levels(Y, mask; caller = "ordinal_marginal_loglik_laplace",
+                          C = length(τ) + 1)
     acc = 0.0
     @inbounds for s in axes(Y, 2)
         mcol = mask === nothing ? nothing : view(mask, :, s)
@@ -334,6 +345,7 @@ function ordinal_marginal_loglik_laplace_pertrait(Y::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector, τ::AbstractMatrix,
         C::AbstractVector{<:Integer};
         link::Link = LogitLink(), mask = nothing, offset = nothing, kwargs...)
+    _check_ordinal_levels(Y, mask; caller = "ordinal_marginal_loglik_laplace_pertrait", C = C)
     acc = 0.0
     @inbounds for s in axes(Y, 2)
         mcol = mask === nothing ? nothing : view(mask, :, s)
@@ -535,7 +547,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
-    _check_ordinal_levels(Y, obs)
+    _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm")
     # Category count and warm starts use OBSERVED cells only, so a masked cell's
     # (arbitrary) value never leaks into the fit.
     C = 0
@@ -674,7 +686,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
-    _check_ordinal_levels(Y, obs)
+    _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait")
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
         obs[t, i] && (C[t] = max(C[t], Int(Y[t, i])))
@@ -784,7 +796,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
     obs = mask === nothing ? trues(p, n) : mask
-    _check_ordinal_levels(Y, obs)
+    _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait_cov")
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
         obs[t, i] && (C[t] = max(C[t], Int(Y[t, i])))
