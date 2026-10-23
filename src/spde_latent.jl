@@ -78,12 +78,29 @@ function _spde_latent_hessian(Q::AbstractMatrix, A::AbstractMatrix,
     return hvcat(ntuple(_ -> K, K), blocks...)
 end
 
+# Penalised log-likelihood φ(U) = ℓ_data(U) − ½ Σ_k u_kᵀ Q u_k that the mode search ascends.
+function _spde_latent_phi(family, Y::AbstractMatrix, Ntr::AbstractMatrix,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link,
+        A::AbstractMatrix, Qs::AbstractMatrix, U::AbstractMatrix)
+    η = _clamp_eta.(β .+ Λ * (A * U)')
+    μ = _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
+    ℓ = 0.0
+    @inbounds for s in axes(Y, 2), t in axes(Y, 1)
+        ℓ += _glm_logpdf(family, μ[t, s], Ntr[t, s], Y[t, s])
+    end
+    return ℓ - 0.5 * sum(U .* (Qs * U))
+end
+
 """
     _spde_latent_mode(family, Y, Ntr, Λ, β, link, A, Qs; maxiter, tol) -> U::Matrix
 
 Internal helper: run the Fisher-scoring Newton loop to find the joint-Laplace mode
-`Û` (N×K) for the stacked GMRF. `Qs` must be a sparse precision matrix. Returns
-the converged field mode, or `nothing` if a non-SPD Hessian is encountered.
+`Û` (N×K) for the stacked GMRF. `Qs` must be a sparse precision matrix. The step is
+halved until the penalised log-likelihood `φ(U)` does not decrease, so the iterates
+are monotone. Returns the field mode only when the step fell below `tol` within
+`maxiter` iterations; returns `nothing` if a non-SPD Hessian is encountered, if no
+non-decreasing step exists, or if `maxiter` is exhausted (the mode is not found, so
+a Laplace value computed from it would depend on `maxiter`).
 """
 function _spde_latent_mode(family, Y::AbstractMatrix, Ntr::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector, link::Link,
@@ -92,6 +109,7 @@ function _spde_latent_mode(family, Y::AbstractMatrix, Ntr::AbstractMatrix,
     Nn = size(A, 2)
     K = size(Λ, 2)
     U = zeros(Nn, K)
+    φ0 = _spde_latent_phi(family, Y, Ntr, Λ, β, link, A, Qs, U)
 
     # Fisher-scoring Newton on φ(U) = ℓ_data(U) − ½ Σ_k u_kᵀ Q u_k.
     for _ in 1:maxiter
@@ -107,15 +125,40 @@ function _spde_latent_mode(family, Y::AbstractMatrix, Ntr::AbstractMatrix,
         local cholH
         try
             cholH = cholesky(Symmetric(sparse(H)))
-        catch
+        catch err
+            err isa PosDefException || rethrow()
             return nothing
         end
         Δ = reshape(cholH \ vec(Grad), Nn, K)
         all(isfinite, Δ) || return nothing
-        U .+= Δ
-        maximum(abs, Δ) < tol && break
+        maxΔ = maximum(abs, Δ)
+        if maxΔ < tol                                # full step already below tol
+            U .+= Δ
+            return U
+        end
+
+        # Step halving: accept the first step that does not decrease φ (up to
+        # round-off), so the iterates never move away from the mode. When φ is
+        # not finite at the current iterate (data impossible under the model,
+        # e.g. y > n trials) there is nothing to compare against, so the full
+        # step is taken; the marginal is -Inf there anyway.
+        step = 1.0
+        accepted = false
+        for _half in 1:30
+            Ut = U .+ step .* Δ
+            φ1 = _spde_latent_phi(family, Y, Ntr, Λ, β, link, A, Qs, Ut)
+            if !isfinite(φ0) || (isfinite(φ1) && φ1 >= φ0 - 1e-12 * (1 + abs(φ0)))
+                U = Ut
+                φ0 = φ1
+                accepted = true
+                break
+            end
+            step *= 0.5
+        end
+        accepted || return nothing
+        step * maxΔ < tol && return U
     end
-    return U
+    return nothing                                   # maxiter exhausted: not at the mode
 end
 
 """
@@ -130,8 +173,9 @@ intercepts, `link` a `Link`, `A` the M×N sparse projector (`spde_projector`), a
 `Q` the N×N sparse SPD precision (`spde_precision`).
 
 Returns `ℓ_data(Û) − ½Σ_k û_kᵀQû_k + (K/2)logdet Q − ½logdet H`, with the field
-mode `Û` found by Fisher-scoring Newton over the stacked GMRF. An infeasible step
-(non-SPD `H`) returns `-Inf`.
+mode `Û` found by step-halved Fisher-scoring Newton over the stacked GMRF. An
+infeasible step (non-SPD `H`) or a mode search that does not reach `tol` within
+`maxiter` returns `-Inf`, so the value never depends on the iteration cap.
 """
 function spde_latent_marginal_loglik(family, Y::AbstractMatrix, Ntr::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector, link::Link,
@@ -147,7 +191,8 @@ function spde_latent_marginal_loglik(family, Y::AbstractMatrix, Ntr::AbstractMat
     local cholQ
     try
         cholQ = cholesky(Symmetric(Qs))
-    catch
+    catch err
+        _spde_infeasible(err) || rethrow()
         return -Inf
     end
 
@@ -183,7 +228,8 @@ function spde_latent_marginal_loglik(family, Y::AbstractMatrix, Ntr::AbstractMat
     local cholH
     try
         cholH = cholesky(Symmetric(sparse(H)))
-    catch
+    catch err
+        _spde_infeasible(err) || rethrow()
         return -Inf
     end
 
@@ -294,11 +340,13 @@ function fit_spde_latent_gllvm(Y::AbstractMatrix, nodes::AbstractMatrix,
         κ = exp(θ[p + rr + 1])
         τ = exp(θ[p + rr + 2])
         fam = _spde_make_family(family, view(θ, (dbase + 1):(dbase + nd)))
+        (isfinite(κ) && isfinite(τ) && κ > 0 && τ > 0) || return 1e12
         v = try
             Q = spde_precision(Cdiag, G, κ, τ; α = α)
             -spde_latent_marginal_loglik(fam, Y, Ntr, Λ, β, link, A, Q;
                                          maxiter = newton_maxiter, tol = newton_tol)
-        catch
+        catch err
+            _spde_infeasible(err) || rethrow()
             return 1e12
         end
         return isfinite(v) ? v : 1e12

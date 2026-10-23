@@ -330,7 +330,9 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_truncated_nbinom2_gllvm")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
@@ -349,6 +351,7 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         r = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -truncated_nbinom2_marginal_loglik_laplace(Yc, Λ, β, r;
                                      link = link, mask = msk, offset = offset,
@@ -414,6 +417,8 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
     # extra variance the latent variable absorbs), so it only warns. Unlike the NB2
     # grouped fitters' `_dispersion_group_boundary`, which flags both ends.
     converged = _truncnb2_dispersion_verdict(converged, [f.r], "fit_truncated_nbinom2_gllvm")
+    converged = _eta_cap_verdict(converged, link, f.β, offset; mask = msk,
+                                 caller = "fit_truncated_nbinom2_gllvm")
     return TruncatedNegBin2Fit(f.β, f.Λ, f.r, link, f.loglik, converged, f.iters,
                                f.θ, f.mineig)
 end
@@ -462,13 +467,14 @@ function _truncnb2_pertrait_loglik_site(fams::AbstractVector, y::AbstractVector,
     A = Symmetric(Λ' * (W .* Λ) + I)
     # Laplace breakdown guard (see TRUNCNB2_LAPLACE_EIGMIN_FLOOR). Skipped entirely at
     # the default -Inf, so the unguarded value is unchanged bit for bit.
-    (isfinite(eigmin_floor) && eigmin(A) < eigmin_floor) && return -Inf
+    # With K = 0 there is no latent precision to break down (and eigmin throws on 0x0).
+    (isfinite(eigmin_floor) && size(A, 1) > 0 && eigmin(A) < eigmin_floor) && return -Inf
     ℓ = 0.0
     @inbounds for t in 1:p
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # Smallest per-site Laplace precision eigenvalue min_s eigmin(I + Λ' diag(W_s) Λ) at the
@@ -481,6 +487,7 @@ function _truncnb2_min_site_eigen(Y::AbstractMatrix, Λ::AbstractMatrix,
     fams = TruncatedNegBin2.(float.(rvec))
     n1 = ones(Int, p)
     m = Inf
+    size(Λ, 2) == 0 && return m   # K = 0: no eigenvalues (eigmin throws on 0x0)
     @inbounds for i in axes(Y, 2)
         mi = mask   === nothing ? nothing : view(mask, :, i)
         oi = offset === nothing ? nothing : view(offset, :, i)
@@ -615,7 +622,9 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_truncated_nbinom2_gllvm_pertrait")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
@@ -645,6 +654,7 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         rvec = exp.(θ[(p + rr + 1):(p + rr + p)])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -truncated_nbinom2_pertrait_marginal_loglik_laplace(Yc, Λ, β, rvec;
                     link = link, mask = msk, offset = offset, hessian = hessian,
@@ -673,6 +683,8 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
     # Dispersion boundary (2026-09-29): see `fit_truncated_nbinom2_gllvm`.
     converged = _truncnb2_dispersion_verdict(converged, r̂,
                                              "fit_truncated_nbinom2_gllvm_pertrait")
+    converged = _eta_cap_verdict(converged, link, β̂, offset; mask = msk,
+                                 caller = "fit_truncated_nbinom2_gllvm_pertrait")
     return TruncatedNegBin2PerTraitFit(β̂, Λ̂, r̂, link, loglik, converged, iters,
                                        collect(Float64, θ̂))
 end

@@ -550,9 +550,42 @@ function _mstep_dense(y::AbstractMatrix, ss)
         quad_fit += dot(θt, ht)
     end
 
-    σ²_eps_new = max((sy2 - quad_fit) / (n * p), eps())
-    return Λ_B_new, sqrt(σ²_eps_new), σ_phy_new
+    # Residual variance can go non-positive from rounding or exactly rank-K
+    # data. The floor is a fraction of the data's own mean square
+    # `sum(y.^2)/(n*p)`, not a bare `eps()`, so rescaling y cannot flip the
+    # clamp. The floor keeps the next E-step defined, but it is not an
+    # interior MLE: callers must record the clamp and must not report
+    # `converged = true` (#753).
+    σ²_resid = (sy2 - quad_fit) / (n * p)
+    σ²_floor = _sigma_eps2_data_floor(sy2, n, p)
+    hit_floor = !isfinite(σ²_resid) || σ²_resid <= σ²_floor
+    # The decision *and* the stored clamp are relative. Lift to `eps()`
+    # only so the next E-step Cholesky stays defined when `y` is tiny.
+    σ²_eps_new = if hit_floor
+        max(σ²_floor, float(eps()))
+    else
+        σ²_resid
+    end
+    return Λ_B_new, sqrt(σ²_eps_new), σ_phy_new, hit_floor
 end
+
+# Residual-variance floor in y² units: the same 1e-8 fraction of the data
+# mean square that `fit_branch_re` uses against `var(y)`. A rank-1 residual
+# after `sy2 - quad_fit` sits at ~1e-8 of `scale` on tiny y (review of
+# #868), so an ulp-sized floor misses that path. `sy2` is `sum(abs2, y)`.
+# A zero / non-finite mean square falls back to `eps()` so the next
+# E-step stays defined.
+const _SIGMA_EPS2_BOUNDARY_FRAC = 1e-8
+
+function _sigma_eps2_data_floor(sy2::Real, n::Integer, p::Integer)
+    np = n * p
+    np == 0 && return float(eps())
+    scale = sy2 / np
+    isfinite(scale) && scale > 0 || return float(eps())
+    return _SIGMA_EPS2_BOUNDARY_FRAC * scale
+end
+_sigma_eps2_data_floor(y::AbstractMatrix) =
+    _sigma_eps2_data_floor(sum(abs2, y), size(y, 2), size(y, 1))
 
 # ---------------------------------------------------------------------------
 # Observed information matrix via Supplemented EM (Meng & Rubin 1991 JASA).
@@ -729,7 +762,9 @@ Result of `em_fit_phylo`. Fields:
 * `σ_phy`      – fitted per-trait phylo SDs (length p).
 * `logLik`     – final marginal log-likelihood (dense closed form).
 * `n_iter`     – EM iterations run.
-* `converged`  – whether the log-lik increment fell below `tol`.
+* `converged`  – whether the log-lik increment fell below `tol` *and* the
+                 M-step did not clamp `σ_eps²` to the data-relative floor
+                 `1e-8 * mean(y.^2)`.
 * `loglik_trace` – log-lik at each iteration (monotone non-decreasing).
 * `blup_phy`   – ancestral-state BLUP of the phylo effect on the data scale
                  (μ_z, length p) from the LAST E-step.
@@ -738,6 +773,9 @@ Result of `em_fit_phylo`. Fields:
                  inferior-basin safety check after it fell back to plain EM
                  from the warm start (see `em_fit_phylo_squarem`). Always
                  `false` for `em_fit_phylo` and for an unguarded SQUAREM run.
+* `sigma_eps_boundary` – `true` iff an M-step replaced `σ_eps²` with the
+                 data-relative floor `1e-8 * mean(y.^2)` (rank-K or
+                 over-specified `K_B` data). `converged` is then false.
 """
 struct EMPhyloFit
     Λ_B::Matrix{Float64}
@@ -750,12 +788,14 @@ struct EMPhyloFit
     blup_phy::Vector{Float64}
     blup_phi::Vector{Float64}
     fallback_used::Bool
-    # Default `fallback_used = false` so existing 9-argument positional
-    # constructions (in this file, em_squarem.jl, and the tests) are unchanged.
+    sigma_eps_boundary::Bool
+    # Defaults keep existing 9- and 10-argument positional constructions
+    # (this file, em_squarem.jl, and the tests) unchanged.
     function EMPhyloFit(Λ_B, σ_eps, σ_phy, logLik, n_iter, converged,
-                        loglik_trace, blup_phy, blup_phi, fallback_used = false)
+                        loglik_trace, blup_phy, blup_phi,
+                        fallback_used = false, sigma_eps_boundary = false)
         new(Λ_B, σ_eps, σ_phy, logLik, n_iter, converged,
-            loglik_trace, blup_phy, blup_phi, fallback_used)
+            loglik_trace, blup_phy, blup_phi, fallback_used, sigma_eps_boundary)
     end
 end
 
@@ -785,7 +825,10 @@ effect with covariance `(σ_phy σ_phy') ∘ Σ_phy`. Matches
 `y` is (p, n_sites). `Σ_phy` is the fixed (p × p) tree-derived species
 covariance. Warm-started from PPCA (`ppca_init`) unless `λ_init`/`σ_eps_init`
 are supplied. Returns an `EMPhyloFit` including the ancestral-state BLUPs
-from the final E-step.
+from the final E-step. If an M-step clamps `σ_eps²` to
+`1e-8 * mean(y.^2)`, the fit records `sigma_eps_boundary = true` and
+`converged` is false. The fraction matches `fit_branch_re`'s variance
+floor so rescaling `y` cannot flip the flags.
 
 When `assert_monotone` (default), a log-lik DECREASE beyond `1e-7` triggers an
 error — a monotone non-decrease is an EM invariant, so a decrease is a bug.
@@ -887,6 +930,7 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
     loglik_prev  = -Inf
     converged    = false
     iters_run    = 0
+    sigma_eps_boundary = false
     local blup_phy = zeros(Float64, p)
     local blup_phi = zeros(Float64, p)
 
@@ -905,11 +949,16 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                 error("EM log-lik decreased by $(abs(inc)) at iter $iter " *
                       "(was $loglik_prev, now $ll) — EM monotonicity violated.")
             end
+            # Increment test is the existing EM stop. The floor check below
+            # is what stops a clamped σ_eps from looking like an interior
+            # optimum (#753); it does not add an absolute objective tolerance.
             if abs(inc) < tol
-                converged = true
-                # E-step once more to refresh BLUPs at the converged params.
+                # E-step once more to refresh BLUPs at the stopped params.
+                # The increment test is the stop; the clamp veto is what
+                # keeps a floored σ_eps from looking like an interior MLE.
                 ss = estep(Λ_B, σ_eps, σ_phy)
                 blup_phy = copy(ss.μ_z); blup_phi = copy(ss.μ_φ)
+                converged = !sigma_eps_boundary
                 break
             end
         end
@@ -917,7 +966,10 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
 
         ss = estep(Λ_B, σ_eps, σ_phy)
         blup_phy = copy(ss.μ_z); blup_phi = copy(ss.μ_φ)
-        Λ_B, σ_eps, σ_phy = _mstep_dense(yf, ss)
+        Λ_B, σ_eps, σ_phy, hit_floor = _mstep_dense(yf, ss)
+        # Latch: a later M-step that stores max(floor, eps()) on tiny y
+        # can leave the relative floor, and must not clear the flag.
+        sigma_eps_boundary = sigma_eps_boundary || hit_floor
     end
 
     ll_final = loglik_check(Λ_B, σ_eps, σ_phy)
@@ -937,8 +989,14 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
         blup_phi = -blup_phi          # μ_z = diag(σ_phy) μ_φ unchanged
     end
 
+    # Final residual on the numerical floor is a boundary even if the last
+    # increment test fired before that M-step was recorded.
+    if σ_eps^2 <= _sigma_eps2_data_floor(yf)
+        sigma_eps_boundary = true
+    end
+    converged = converged && !sigma_eps_boundary
     return EMPhyloFit(Λ_B, σ_eps, σ_phy, ll_final, iters_run, converged,
-                      loglik_trace, blup_phy, blup_phi)
+                      loglik_trace, blup_phy, blup_phi, false, sigma_eps_boundary)
 end
 
 # Internal PD check for SEM I_obs (comment only; a docstring would trip missing_docs).

@@ -80,28 +80,44 @@ const _BB_MU_HI = 1 - 1e-12
 # `_dispersion_group_boundary` (`grouped_dispersion.jl`) already uses for
 # NB1/NB2 group dispersion, and is far above any φ a healthy fit reaches (this
 # family's own tests fit φ_true=12), so this never perturbs a healthy fit.
+# NOTE (#872): `betabinomial_logp` no longer switches to Binomial at this value (the
+# switch stepped the objective); it uses the cancellation-free `_bb_shift` form
+# everywhere. The constant now only marks where fitters flag φ as non-identified.
 const _BB_PHI_STABLE = 1e6
+
+# shift(x, n) = loggamma(x + n) − loggamma(x) − n·log x = Σ_{k<n} log1p(k/x),
+# without the cancellation of the three-term form at large x (#872). For x > 50
+# it uses Stirling's series for the loggamma difference,
+#   shift = (x + n − ½)·log1p(n/x) − n + S(x + n) − S(x),
+#   S(z)  = 1/(12z) − 1/(360z³) + 1/(1260z⁵) − 1/(1680z⁷)   (next term < 1e-18),
+# which tends to 0 smoothly as x → ∞, so the pmf needs no switch to Binomial.
+function _bb_shift(x, n)
+    n == 0 && return zero(x)
+    x <= 50 && return loggamma(x + n) - loggamma(x) - n * log(x)
+    S(z) = (w = inv(z * z); inv(12z) - w * inv(360z) + w * w * inv(1260z) -
+            w * w * w * inv(1680z))
+    return (x + n - 1 // 2) * log1p(n / x) - n + S(x + n) - S(x)
+end
 
 """
     betabinomial_logp(y, η, N, φ; link=LogitLink()) -> Float64
 
 Scalar beta-binomial conditional log-pmf log p(y|N,η,φ) for one trait, in the
 gllvm parameterisation `a = μφ`, `b = (1−μ)φ` with `μ = linkinv(link, η)` clamped
-to (1e-12, 1−1e-12). Uses `loggamma` (from SpecialFunctions, imported module-wide).
-At `φ ≥ $(_BB_PHI_STABLE)` returns the Binomial(N, μ) log-pmf instead (the exact
-φ→∞ limit, see `_BB_PHI_STABLE` above) — the direct formula's own cancellation
-error is unbounded past that point (#515).
+to (1e-12, 1−1e-12). Written as `lchoose + y·log μ + (N−y)·log(1−μ) +
+shift(a, y) + shift(b, N−y) − shift(φ, N)` (see `_bb_shift`), which is smooth in
+φ and tends to the Binomial(N, μ) log-pmf as φ → ∞ with no switch (#872; the
+earlier hard switch at `_BB_PHI_STABLE` stepped the objective by the full
+limit gap, 0.079 per row at N = 1000). `_BB_PHI_STABLE` remains the boundary
+past which fitters flag φ as non-identified.
 """
 function betabinomial_logp(y, η, N, φ; link::Link = LogitLink())
     μ = clamp(linkinv(link, η), _BB_MU_LO, _BB_MU_HI)
-    φ >= _BB_PHI_STABLE &&
-        return loggamma(N + 1) - loggamma(y + 1) - loggamma(N - y + 1) +
-               y * log(μ) + (N - y) * log(one(μ) - μ)
     a = μ * φ
     b = (one(μ) - μ) * φ
-    return loggamma(a + b) + loggamma(a + y) + loggamma(b + N - y) -
-           loggamma(a) - loggamma(b) - loggamma(a + b + N) +
-           loggamma(N + 1) - loggamma(y + 1) - loggamma(N - y + 1)
+    return loggamma(N + 1) - loggamma(y + 1) - loggamma(N - y + 1) +
+           y * log(μ) + (N - y) * log(one(μ) - μ) +
+           _bb_shift(a, y) + _bb_shift(b, N - y) - _bb_shift(φ, N)
 end
 
 # Per-trait score s_t = ∂log p/∂η and weight W_t = −∂²log p/∂η², via ForwardDiff
@@ -263,7 +279,7 @@ function _beta_binomial_loglik_site(y::AbstractVector, N::AbstractVector,
         W[t] = Wt
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """

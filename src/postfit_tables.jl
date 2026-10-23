@@ -356,14 +356,16 @@ refit results.
 
 The refit result's fields are read by best-effort duck typing:
 log-likelihood from `:logLik` or `:loglik`; convergence from `:converged`
-(defaults to `true` when absent); `pd_hessian` from `:pd_hessian` (defaults
+(defaults to `false` when absent); `pd_hessian` from `:pd_hessian` (defaults
 to `true` when absent — most refit targets here have no Hessian check yet).
+`best_rho` is taken only among `:ok` rows with `converged`, `pd_hessian`, and
+a finite `logLik`.
 
 Returns `(table, best_rho, fits)`, `fits === nothing` unless `keep_fits`.
 `table` is a `NamedTuple` of equal-length vectors with columns `rho, logLik,
 relative_logLik, delta_deviance, is_best, convergence, pd_hessian, status,
 error` (+ any `metrics` columns) — `relative_logLik = logLik - max(logLik)`,
-`delta_deviance = 2*(max(logLik) - logLik)`, `is_best` flags the maximiser,
+`delta_deviance = 2*(max(logLik) - logLik)`, `is_best` flags the eligible maximiser,
 `status` is `:ok`/`:error`, `error` the caught exception message (empty
 string on success).
 """
@@ -392,7 +394,7 @@ function profile_cross_rho(A_H, A_P, W, refit;
             f = refit(K, rho[i])
             fits[i] = f
             logLik[i] = Float64(_cross_rho_field(f, (:logLik, :loglik), NaN))
-            convergence[i] = Bool(_cross_rho_field(f, (:converged, :convergence), true))
+            convergence[i] = Bool(_cross_rho_field(f, (:converged, :convergence), false))
             pd_hessian[i] = Bool(_cross_rho_field(f, (:pd_hessian,), true))
             status[i] = :ok
             if metrics !== nothing
@@ -415,8 +417,13 @@ function profile_cross_rho(A_H, A_P, W, refit;
     maxll = maximum(view(logLik, finite_ll))
     relative_logLik = logLik .- maxll
     delta_deviance = 2 .* (maxll .- logLik)
+    eligible = findall(i -> status[i] == :ok && convergence[i] && pd_hessian[i], 1:n)
+    eligible = intersect(eligible, finite_ll)
+    isempty(eligible) && throw(ArgumentError(
+        "no refit with finite logLik, converged=true, and pd_hessian=true; " *
+        "see the table columns convergence, pd_hessian, and error"))
     is_best = falses(n)
-    is_best[finite_ll[argmax(view(logLik, finite_ll))]] = true
+    is_best[eligible[argmax(view(logLik, eligible))]] = true
     best_rho = rho[findfirst(is_best)]
 
     table = (rho = rho, logLik = logLik, relative_logLik = relative_logLik,

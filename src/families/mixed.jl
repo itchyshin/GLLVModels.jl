@@ -426,7 +426,7 @@ function _mixed_loglik_site(families::AbstractVector, links::AbstractVector,
         end
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """

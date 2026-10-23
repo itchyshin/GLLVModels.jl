@@ -9,6 +9,22 @@ using Test, GLLVModels, Random, Distributions
     GM = GLLVModels
     cap = quantile(Normal(), 1 - 1e-12)
 
+    # Public route only — no `_ds_z` / `_norm_upper_z`. On base this fails as an
+    # assertion at the ±7.034 clamp (the two residuals are identical), not as
+    # UndefVarError on the new helper.
+    @testset "public residuals: Poisson 40 vs 100000 under mean ~1" begin
+        Random.seed!(8)
+        Y = rand(0:3, 4, 60)
+        f = fit_poisson_gllvm(Y; K = 1)
+        Y40 = copy(Y); Y40[1, 1] = 40
+        Y1e5 = copy(Y); Y1e5[1, 1] = 100000
+        r40 = residuals(f, Y40; rng = MersenneTwister(1))[1, 1]
+        r1e5 = residuals(f, Y1e5; rng = MersenneTwister(1))[1, 1]
+        @test isfinite(r40) && isfinite(r1e5)
+        @test r40 != r1e5
+        @test r40 < r1e5
+    end
+
     @testset "Poisson fit: the issue's repro" begin
         Random.seed!(8)
         Y = rand(0:3, 4, 60)
@@ -58,6 +74,10 @@ using Test, GLLVModels, Random, Distributions
             @test GM._ds_z(lo, hi, 1 - lo, 1 - hi, v) ≈ quantile(Normal(), u) atol = 1e-10
         end
         @test isnan(GM._ds_z(NaN, NaN, NaN, NaN, 0.5))
+        # Both early-return sites in the residual helper (NaN `u`, NaN `uc`)
+        # return NaN without throwing.
+        @test isnan(GM._ds_z(NaN, 0.1, 1.0, 0.9, 0.5))
+        @test isnan(GM._ds_z(0.6, 0.9, NaN, NaN, 0.5))
     end
 
     @testset "extreme cells are finite and increase with the observation" begin

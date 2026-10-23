@@ -186,11 +186,14 @@ end
     @test 0.5 < fit.phi < 20.0
 
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
+    t_start = time()
     prof = GLLVModels._phylo_beta_xlv_profile_eta_realized(
         fit, Y, phy, X_lv, [6], eta_target;
-        level = 0.95, profile_iterations = 250,
+        level = 0.95, profile_iterations = 3000,
         profile_max_expand = 5, profile_max_bisect = 6,
         newton_maxiter = 80, newton_tol = 1e-9)
+    # Wall time of this call, so the cost of the 3000-iteration budget is visible in CI logs.
+    @info "Beta canary profile_eta_realized" profile_iterations = 3000 seconds = round(time() - t_start; digits = 1)
     @test prof.method == :profile_eta_realized
     @test prof.term == ["B_eta_realized[6,1]"]
     @test all(isnan, prof.se)
@@ -205,6 +208,22 @@ end
     @test prof.covered == [true]
     @test prof.phi_ok
     @test prof.pd_hessian
+
+    # A constrained refit that is not marked converged is neither dropped nor
+    # warned about: `dev_at` turns it into a NaN deviance, the bracket treats that
+    # as a failed refit, and the result carries NaN bounds, `:failed`,
+    # `constrained_converged = false` and `pd_hessian = false`. It must not throw.
+    prof_cap = GLLVModels._phylo_beta_xlv_profile_eta_realized(
+        fit, Y, phy, X_lv, [6], eta_target;
+        level = 0.95, profile_iterations = 3,
+        profile_max_expand = 5, profile_max_bisect = 6,
+        newton_maxiter = 80, newton_tol = 1e-9)
+    @test prof_cap.method == :profile_eta_realized
+    @test prof_cap.constrained_converged == [false]
+    @test prof_cap.endpoint_status == [:failed]
+    @test all(isnan, prof_cap.lower)
+    @test all(isnan, prof_cap.upper)
+    @test !prof_cap.pd_hessian
 
     @test_throws ArgumentError GLLVModels._phylo_beta_xlv_profile_eta_realized(
         fit, Y, phy, X_lv, Int[], eta_target)

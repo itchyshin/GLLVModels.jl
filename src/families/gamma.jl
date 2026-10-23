@@ -221,13 +221,16 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = _sanitize_missing(Y, 1.0)                   # positive placeholder
+    _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm")
+    Yc  = _sanitize_unobserved(Y, msk, 1.0)           # positive placeholder
 
     # link-scale warm start (η = g(y)); for the default log link this is exactly `log.(max.(Yc, 1e-6))`
     Zemp = [linkfun(link, max(Yc[t, i], 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_gamma_gllvm")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
@@ -262,6 +265,7 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         α = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -gamma_marginal_loglik_laplace(Yc, Λ, β, α; link = link, mask = msk,
                                            offset = offset, hessian = hessian,
@@ -276,6 +280,12 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
     res = if X_lv_fit !== nothing
         θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0), logα0)
         negll_lv = θ -> begin
+            if _eta_cap_guarded(link)   # #869: the additive η term is offset + the X_lv mean
+                Λ_g = unpack_lambda(view(θ, (p + q_lv * K + 1):(p + q_lv * K + rr)), p, K)
+                lv_g = _lv_mean_eta(Λ_g, X_lv_fit, reshape(view(θ, (p + 1):(p + q_lv * K)), q_lv, K))
+                _eta_above_clamp(view(θ, 1:p), offset === nothing ? lv_g : offset .+ lv_g;
+                                 mask = msk) && return 1e12   # #869: η-clamp plateau
+            end
             v = try
                 gamma_lv_nll_packed(θ, Yc, p, K, link;
                                     X_lv = X_lv_fit, q_lv = q_lv,
@@ -309,13 +319,19 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
         cursor += rr
         α̂ = exp(θ̂[cursor + 1])
-        return GammaFit(β̂, Λ̂, α̂, link, _fit_verdict(res)...,
+        loglik, conv, iters = _fit_verdict(res)
+        lv_hat = _lv_mean_eta(Λ̂, X_lv_fit, alpha_hat)
+        conv = _eta_cap_verdict(conv, link, β̂, offset === nothing ? lv_hat : offset .+ lv_hat;
+                                mask = msk, caller = "fit_gamma_gllvm")
+        return GammaFit(β̂, Λ̂, α̂, link, loglik, conv, iters,
                        alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         α̂ = exp(θ̂[p + rr + 1])
-        return GammaFit(β̂, Λ̂, α̂, link, _fit_verdict(res)..., nothing, Float64[], hessian,
+        loglik, conv, iters = _fit_verdict(res)
+        conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_gamma_gllvm")
+        return GammaFit(β̂, Λ̂, α̂, link, loglik, conv, iters, nothing, Float64[], hessian,
                         _stored_offset(offset))
     end
 end

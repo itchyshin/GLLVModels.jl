@@ -60,6 +60,10 @@ const _CIFit = Union{_FamilyFit, _TwoPartFit, _GroupedDispersionFit, _GroupedDis
 #              (grouped NB2/NB1/Beta/Gamma). Defaults to all-`false` via the
 #              6-arg constructor below, so every pre-existing `_FamilyCI(...)`
 #              call site is unaffected.
+#   grad     — optional exact ∇nll (θ -> vector, or `nothing` where it fails).
+#              When set, the Wald Hessian is the central difference of this
+#              gradient (2m gradient calls) instead of the O(m²)-call
+#              `_fd_hessian` of `nll` (#552). `nothing` by default.
 # ---------------------------------------------------------------------------
 struct _FamilyCI
     θ::Vector{Float64}
@@ -69,10 +73,13 @@ struct _FamilyCI
     simulate::Function
     refit::Function
     boundary::Vector{Bool}
+    grad::Union{Nothing, Function}
 end
 
 _FamilyCI(θ, nll, names, kinds, simulate, refit) =
     _FamilyCI(θ, nll, names, kinds, simulate, refit, falses(length(θ)))
+_FamilyCI(θ, nll, names, kinds, simulate, refit, boundary) =
+    _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary, nothing)
 
 # Shared GLM term names: β[t] for t in 1:p, then Λ[i,k] in pack_lambda order.
 _glm_lin_names(p::Integer, K::Integer) =
@@ -665,6 +672,29 @@ function _family_ci(fit::StudentTFit, Y::AbstractMatrix;
     return _FamilyCI(θ, nll, names, kinds, simulate, refit)
 end
 
+# Exact zero-truncated Poisson draw with no unbounded loop (#782). For μ ≥ 1 the
+# zero mass e^-μ ≤ 0.37, so invert the CDF on the remaining (1 - e^-μ) mass; for
+# μ < 1 (where 1 - e^-μ loses precision) walk the truncated pmf
+# P(Y=k | Y≥1) = μ^k / (k! expm1(μ)) from k = 1 (tail beyond k = 64 is < 1e-80).
+function _rand_truncpois(rng::AbstractRNG, μ::Real)
+    μ = max(μ, 1e-12)
+    if μ >= 1
+        p0 = exp(-μ)
+        u = min(p0 + rand(rng) * (1 - p0), prevfloat(1.0))
+        return max(1, Int(quantile(Poisson(μ), u)))
+    end
+    u = rand(rng)
+    pk = μ / expm1(μ)
+    c = pk
+    k = 1
+    while c < u && k < 64
+        k += 1
+        pk *= μ / k
+        c += pk
+    end
+    return k
+end
+
 # Zero-truncated Poisson: packing [β; pack(Λ)]; Laplace NLL via
 # truncated_poisson_marginal_loglik_laplace. Bridge ci_method guard stays
 # until after foreign #357.
@@ -692,12 +722,7 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
             η = fit.β .+ fit.Λ * randn(rng, K) .+ _ci_offcol(offset, s)
             for t in 1:p
                 μ = max(linkinv(link, _clamp_eta(η[t])), 1e-12)
-                # Reject-sample zeros (support y ≥ 1).
-                y = 0
-                while y < 1
-                    y = rand(rng, Poisson(μ))
-                end
-                Yb[t, s] = y
+                Yb[t, s] = _rand_truncpois(rng, μ)
             end
         end
         return Yb
@@ -872,7 +897,18 @@ function _family_ci(fit::NBGroupedFit, Y::AbstractMatrix;
     names = _grouped_dispersion_names(p, K, "r", G)
     kinds = vcat(fill(:linear, p + rr), fill(:log, G))
     boundary = vcat(falses(p + rr), fit.dispersion_boundary)   # T14 F1: trailing G entries are r[1..G]
-    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
+    # Exact ∇nll for the Wald Hessian (#552); the fitter's no-covariate case (q = 0).
+    X0 = zeros(p, n, 0)
+    # Only a p×n offset (what the stored-offset route passes) is used; any other
+    # form keeps the `_fd_hessian` route the objective above already handles.
+    grad_ok = link isa LogLink && (offset === nothing ||
+                                   (offset isa AbstractMatrix && size(offset) == (p, n)))
+    O0 = offset === nothing ? nothing : offset
+    grad = grad_ok ?
+        (θv -> _nb_grouped_cov_negll_grad(Yi, X0, θv, p, 0, K, rr, G, group, link, M,
+                                          fit.hessian, newton_maxiter, newton_tol;
+                                          offset = O0)) : nothing
+    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary, grad)
 end
 
 function _family_ci(fit::NB1GroupedFit, Y::AbstractMatrix;
@@ -1029,7 +1065,11 @@ function _family_ci(fit::NBGroupedCovFit, Y::AbstractMatrix;
                  ["r[$g]" for g in 1:G])
     kinds = vcat(fill(:linear, p + q + rr), fill(:log, G))
     boundary = vcat(falses(p + q + rr), fit.dispersion_boundary)   # T14 F1
-    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary)
+    # Exact ∇nll (the fitter's own gradient) for the Wald Hessian (#552).
+    grad = link isa LogLink ?
+        (θv -> _nb_grouped_cov_negll_grad(Yi, Xfit, θv, p, q, K, rr, G, group, link, M,
+                                          fit.hessian, newton_maxiter, newton_tol)) : nothing
+    return _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary, grad)
 end
 
 function _family_ci(fit::NB1GroupedCovFit, Y::AbstractMatrix;
@@ -2579,6 +2619,10 @@ end
 # if a τ momentarily loses ordering.
 function _family_ci(fit::OrdinalFit, Y::AbstractMatrix;
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    fit.alpha_lv === nothing || throw(ArgumentError(
+        "confint for fit_ordinal_gllvm(...; X_lv=...) is not carried by confint(fit, Y); " *
+        "use confint_lv_effects(fit, Y, X_lv) for Wald intervals on B_lv, " *
+        "or extract_lv_effects(fit) for point estimates"))
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); C = fit.C
     θ = vcat(pack_lambda(fit.Λ), fit.τ)
     nll = function (θv)
@@ -2992,6 +3036,37 @@ function _fd_hessian(f, x::AbstractVector)
     return H
 end
 
+# Observed information from an exact gradient: central difference of `g` (∇nll),
+# column by column, symmetrised. 2m gradient calls, against the 2m² objective calls
+# of `_fd_hessian`; on the #552 NB2 + covariates fit (m = 71) that is 142 calls
+# instead of about 10,000 Laplace evaluations. Step ∝ eps^(1/3), the optimum for a
+# central first difference. Returns `nothing` when any gradient call fails (returns
+# `nothing` or a non-finite entry), so the caller falls back to `_fd_hessian`.
+function _grad_fd_hessian(g, x::AbstractVector)
+    m = length(x)
+    H = Matrix{Float64}(undef, m, m)
+    @inbounds for i in 1:m
+        h = cbrt(eps()) * max(abs(x[i]), 1.0)
+        xp = copy(x); xp[i] += h
+        xm = copy(x); xm[i] -= h
+        gp = g(xp); gp === nothing && return nothing
+        gm = g(xm); gm === nothing && return nothing
+        (all(isfinite, gp) && all(isfinite, gm)) || return nothing
+        H[:, i] .= (gp .- gm) ./ (2h)
+    end
+    return (H .+ H') ./ 2
+end
+
+# The Wald Hessian of an adapter: from its exact gradient when it has one (falling
+# back to `_fd_hessian` if that fails), else `_fd_hessian` of its objective.
+function _family_hessian(ad::_FamilyCI)
+    if ad.grad !== nothing
+        H = _grad_fd_hessian(ad.grad, ad.θ)
+        H === nothing || return H
+    end
+    return _fd_hessian(ad.nll, ad.θ)
+end
+
 # Resolve a `parm` selector against the term names. `nothing` → all; an exact
 # name, a group prefix ("beta", "Lambda"), a dispersion name ("r"/"phi"/"alpha"),
 # or a vector of any of these.
@@ -3064,7 +3139,7 @@ end
 # bit-identical to the squared SEs reported here.
 function _family_wald(ad::_FamilyCI, sel::Vector{Int}, level::Real; hessian=nothing, covariance::Bool=false)
     m = length(ad.θ)
-    H = hessian===nothing ? _fd_hessian(ad.nll, ad.θ) : hessian
+    H = hessian===nothing ? _family_hessian(ad) : hessian
     size(H)==(m,m) || throw(DimensionMismatch("Wald Hessian dimension mismatch"))
     se=fill(NaN,m);pd=false
     V=fill(NaN,m,m)
@@ -3200,7 +3275,7 @@ function _family_profile(ad::_FamilyCI, sel::Vector{Int}, level::Real;
     cutoff = quantile(Chisq(1), level)
     ll_full = -ad.nll(ad.θ)
     # Wald SEs to seed the bracket steps (cheap relative to the refits).
-    H = _fd_hessian(ad.nll, ad.θ)
+    H = _family_hessian(ad)
     se_all = fill(NaN, m)
     if all(isfinite, H)
         Σ = try inv(Symmetric((H .+ H') ./ 2)) catch; nothing end
@@ -3580,6 +3655,8 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                  profile_g_tol::Real = 1e-4,
                  profile_max_expand::Integer = 20,
                  profile_max_bisect::Integer = 30)
+    method in (:profile, :bootstrap) &&
+        _check_optimizer_refit(fit, "confint(method=:$method)")
     ad, is_aghq = _family_confint_setup(fit, Y; method = method, level = level, N = N, X = X,
                                         mask = mask, objective = objective, offset = offset,
                                         newton_maxiter = newton_maxiter, newton_tol = newton_tol)
@@ -3960,7 +4037,11 @@ function _lv_effect_profile(nll::Function, x̂::AbstractVector, p::Integer, K::I
 end
 
 """
-    confint_lv_effects(fit, Y, X_lv; N=nothing, offset=nothing, level=0.95) -> NamedTuple
+    confint_lv_effects(fit, Y, X_lv; N=nothing, offset=nothing, level=0.95,
+                       method=:wald, n_boot=200, seed=0, bootstrap_iterations=nothing,
+                       profile_indices=nothing, profile_iterations=nothing,
+                       profile_g_tol=1e-8, profile_max_expand=nothing,
+                       profile_max_bisect=40) -> NamedTuple
 
 Wald confidence intervals for the predictor-informed latent-score trait-effect
 matrix `B_lv = Λ·α'` of an `X_lv` fit (`fit_*_gllvm(...; X_lv=...)` for Poisson,
@@ -3977,7 +4058,11 @@ and refuses one); the objective is checked against `fit.loglik` for every method
 bootstrap included, and a mismatch throws, as in [`confint`](@ref): a fit made with an
 offset is refused when bootstrapped without it. For `method = :profile`,
 `profile_indices` selects entries of `vec(B_lv)` in column-major order; `nothing`
-profiles every entry. Bootstrap refits use each family's default optimiser
+profiles every entry. `profile_iterations`, `profile_g_tol` (default `1e-8`),
+`profile_max_expand` and `profile_max_bisect` (default `40`) tune the constrained
+refits and the endpoint search; `nothing` keeps the family default. For
+`method = :bootstrap`, `n_boot` (default `200`) refits are drawn with `seed`
+(default `0`). Bootstrap refits use each family's default optimiser
 iteration cap unless `bootstrap_iterations` is supplied.
 Admitted for `K ≥ 1` (`B_lv` is rotation-invariant), complete responses, single
 ordinary latent block. Shared-cutpoint Julia-side `OrdinalFit` is admitted
@@ -4103,7 +4188,11 @@ function confint_lv_effects(fit::OrdinalFit, Y::AbstractMatrix, X_lv::AbstractMa
 end
 
 """
-    confint_lv_effects(fit::GllvmFit, Y, X_lv; level=0.95) -> NamedTuple
+    confint_lv_effects(fit::GllvmFit, Y, X_lv; N=nothing, level=0.95,
+                       method=:wald, n_boot=200, seed=0, bootstrap_iterations=nothing,
+                       profile_indices=nothing, profile_iterations=nothing,
+                       profile_g_tol=1e-8, profile_max_expand=nothing,
+                       profile_max_bisect=40) -> NamedTuple
 
 Wald intervals for `B_lv = Λ·α'` of a Gaussian `X_lv` fit
 (`fit_gaussian_gllvm(...; X_lv=...)`). The Gaussian marginal is closed-form, so
@@ -4113,9 +4202,13 @@ the observed information is the **exact ForwardDiff Hessian** of
 `df = max(n_sites - K - 1, 1)`), `:profile` (LR inversion via constrained refit;
 the Gaussian objective is AD-friendly so the constrained refits use LBFGS), or
 `:bootstrap`. For `method = :profile`, `profile_indices` selects entries of
-`vec(B_lv)` in column-major order; `nothing` profiles every entry. Bootstrap
-refits use the Gaussian fitter's default optimiser iteration cap unless
-`bootstrap_iterations` is supplied. `K ≥ 1` (`B_lv` rotation-invariant),
+`vec(B_lv)` in column-major order; `nothing` profiles every entry;
+`profile_iterations`, `profile_g_tol` (default `1e-8`), `profile_max_expand` and
+`profile_max_bisect` (default `40`) tune the constrained refits and the endpoint
+search. For `method = :bootstrap`, `n_boot` (default `200`) refits are drawn with
+`seed` (default `0`). Bootstrap refits use the Gaussian fitter's default optimiser
+iteration cap unless `bootstrap_iterations` is supplied. `N` is accepted for
+signature parity with the other families and is unused for a Gaussian fit. `K ≥ 1` (`B_lv` rotation-invariant),
 complete responses, single unit-tier latent block, no fixed-effect `X`.
 """
 function confint_lv_effects(fit::GllvmFit, Y::AbstractMatrix, X_lv::AbstractMatrix;

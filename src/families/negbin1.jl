@@ -218,7 +218,9 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_nb1_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
@@ -238,6 +240,7 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φ = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -nb1_marginal_loglik_laplace(Yc, Λ, β, φ; link = link, mask = msk, offset = offset,
                                          hessian = hessian,
@@ -254,5 +257,10 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    return NB1Fit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., hessian, _stored_offset(offset))
+    # `Optim.converged` also fires on a zero-length step far from a stationary point; require
+    # the gradient test too (#505, as in the grouped fitters).
+    ll, conv, iters = _fit_verdict(Optim.minimum(res),
+        Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm")
+    return NB1Fit(β̂, Λ̂, φ̂, link, ll, conv, iters, hessian, _stored_offset(offset))
 end

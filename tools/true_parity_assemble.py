@@ -72,12 +72,16 @@ Visible text: a behaviour label, an equivalence class's canonical, labels and ba
 ruling ref must contain at least one character in Unicode category L, N, P or S (is_visible, the
 checker's isVisible). Strings of only whitespace or format characters (U+FEFF, U+200B, U+0085) are empty.
 
-Reverse-gap decisions (itchyshin/GLLVModels.jl#684 item 3): an optional reverse-gap-decisions.json
-(schema in GATES.md) is read by build_reverse_gap. Each decision is copied, with its basis and the
-ruling, onto the matching item, whose status becomes "decided". A decision naming no reverse-gap
-item fails the run (stale). Nothing here is a signature: the file carries the ruling. The tool refuses
-to copy a ruling it does not recognise (C6_RULINGS: only #684 item 3, dated 2026-10-02, covering
-KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), a signer outside the allow-list, a decision word
+Reverse-gap decisions: an optional reverse-gap-decisions.json (schema in GATES.md) is read by
+build_reverse_gap. Each decision is copied, with its basis and item ruling, onto the matching item.
+Ordinary decisions set status "decided"; HOLD_PENDING_EVIDENCE sets status "held" and is permitted
+only for the nine explicitly approved names. That hold is C6 decision accounting only: it carries no
+twin fields and never admits a scoreboard row. A decision naming no reverse-gap item fails the run
+(stale). Nothing here is a signature: the file carries the ruling. The tool refuses a ruling it does
+not recognise (C6_RULINGS). The 2026-10-17 SCOPED_R_TWIN rule additionally requires a pinned R counterpart,
+source locations, bounded route/estimand scope, exclusions, and receipt identifiers bound to executable
+P1 rows; the general rule does not sign any individual name. The tool also refuses a signer outside
+the allow-list, a decision word
 the ruling does not cover, an empty criterion, a generator that is not a file in the tree (an absolute path,
 a path with a ".." segment anywhere, a directory), a basis with
 no visible character, or a KEPT_AS_JULIA_EXTRA basis that does not cite, exactly as docs/src/<path>.md, an
@@ -145,13 +149,20 @@ IN_BEHAVIOUR_EQUIVALENCE = "behaviour-equivalence.json"
 BEHAVIOUR_KINDS = ("route", "refusal", "error_class", "printed_fields")
 # The checker's C6_DECISION_VOCAB (keep in step).
 C6_DECISION_VOCAB = ("KEPT_AS_JULIA_EXTRA", "PORT_TO_MATCH_R", "DEPRECATE_AND_REMOVE",
-                     "RENAME_TO_AVOID_COLLISION", "EXCLUDED_INTERNAL_HELPER")
-# The checker's C6_RULINGS (keep in step): the only signature accepted on a reverse-gap decision is
-# itchyshin/GLLVModels.jl#684 item 3, signed 2026-10-02, and it covers exactly these two words.
+                     "RENAME_TO_AVOID_COLLISION", "EXCLUDED_INTERNAL_HELPER", "SCOPED_R_TWIN",
+                     "HOLD_PENDING_EVIDENCE")
+C6_HELD_NAMES = ("NBFit", "Ordinal", "TweedieFit", "ZIB", "ZINegBin",
+                 "fit_animal_latent_gllvm", "fit_kernel_latent_gllvm", "gllvm", "link_residual")
+# The checker's C6_RULINGS (keep in step): #684 item 3 covers the two original words; the 2026-10-17
+# decision record supports exact SCOPED_R_TWIN scopes with receipts and an exact-name hold disposition.
 C6_RULINGS = {
     "itchyshin/GLLVModels.jl#684 item 3": {
         "signed_on": "2026-10-02",
         "words": ("KEPT_AS_JULIA_EXTRA", "EXCLUDED_INTERNAL_HELPER"),
+    },
+    "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md": {
+        "signed_on": "2026-10-17",
+        "words": ("SCOPED_R_TWIN", "HOLD_PENDING_EVIDENCE"),
     },
 }
 # Scope of the behavioural tier (the checker's BEHAVIOURAL_INFERENCE_SOURCE_IDS and
@@ -1197,15 +1208,132 @@ def load_reverse_gap_decisions(root: Path, ledger: Path):
     for name, v in decisions.items():
         if not isinstance(v, dict) or v.get("decision") not in C6_DECISION_VOCAB:
             raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: decision must be one of {'|'.join(C6_DECISION_VOCAB)}")
-        if v["decision"] not in known["words"]:
-            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: decision {v['decision']} is not covered by {ruling['ref']} (covers {'|'.join(known['words'])})")
+        item_ruling = v.get("ruling", ruling)
+        if not isinstance(item_ruling, dict) or not all(k in item_ruling for k in ("ref", "signed_by", "signed_on")):
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: item ruling must carry ref, signed_by and signed_on")
+        item_ref = item_ruling["ref"]
+        item_known = C6_RULINGS.get(item_ref) if isinstance(item_ref, str) else None
+        if item_known is None:
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: ruling ref {json.dumps(item_ref)} is not a recognised signed ruling")
+        item_sig = signature_problem(item_ruling["signed_by"], item_ruling["signed_on"])
+        if item_sig is not None:
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: item ruling signature rejected ({item_sig})")
+        if js_trim(item_ruling["signed_on"]) != item_known["signed_on"]:
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: ruling signed_on {json.dumps(item_ruling['signed_on'])} is not the date of {item_ref} ({item_known['signed_on']})")
+        if v["decision"] not in item_known["words"]:
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: decision {v['decision']} is not covered by {item_ref} (covers {'|'.join(item_known['words'])})")
         if not is_visible(v.get("basis")):
             raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: basis must be a non-empty string")
         if v["decision"] == "KEPT_AS_JULIA_EXTRA":
             why = kept_basis_problem(v["basis"], root)
             if why:
                 raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: {why}")
+        if v["decision"] == "SCOPED_R_TWIN":
+            if "ruling" not in v or item_ref != "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md":
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: SCOPED_R_TWIN requires its explicit approved rule ruling")
+            if not (root / item_ref).is_file():
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: SCOPED_R_TWIN approval record {item_ref} is missing")
+        if v["decision"] == "HOLD_PENDING_EVIDENCE":
+            if name not in C6_HELD_NAMES:
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE name is not in the approved hold name set")
+            if "ruling" not in v or item_ref != "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md":
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE requires its explicit maintainer ruling")
+            if not (root / item_ref).is_file():
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE approval record {item_ref} is missing")
+            if any(key in v for key in ("counterpart", "scope", "receipt_ids")):
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE cannot carry twin scope or receipt fields")
+            if "no twin or parity claim" not in v["basis"] or "no scoreboard row" not in v["basis"]:
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE basis must state no twin/parity claim and no scoreboard row admission")
     return ruling, decisions
+
+
+# Exact counterpart/scope/receipt/ruling contracts signed on 2026-10-17.
+# Keep in step with the canonical Node checker; a general rule signs no new names.
+C6_APPROVED_SCOPE_SHA256 = {
+    "BetaBinom": "9cd3b96b383762cbb5b55d7d4614beedb0e4fb8b735eab9aa59d26b9710264c5",
+    "NB1": "ba276a261732c8125bcd33765ff1db054139fcab46b4ac98d2e3b5e36d7cb7fc",
+    "StudentT": "b6321a8f647f1ee2a646c6951bb85011b1b01f04b391e55bf19b13136d544279",
+    "StudentTFamily": "e571e8fa54d7a51b2d9504cdd2cf8d96cbdb9ab65895285d82820908852b5e46",
+    "TruncatedNegBin2": "174a5994c47565f760dc413a5a76a660f6de077db824011cb7b918679bea31c3",
+    "bridge_fit": "5b5c1f8e067571073f71038d0263fbb63201e19d0fe854a2ff39a77903fb3222",
+    "fit_animal_dep_gllvm": "fb8bd42aeaa88c3d3ea79ee37c8f542fe52837967513cb4b6a6efa3e2186788e",
+    "fit_dep_gllvm": "c0baa3610de08e061b21bb117e93a2faccc6c51b03fccd2debcb57b7129e0125",
+    "fit_gllvm": "a666827b39c386b01a5ef76d48ea5d3d4f354fb22f71d0d5baaaed8716193488",
+    "fit_kernel_dep_gllvm": "33475a40838b1a5fc85d26dada32b69f80bc65c0468cd1f3a07ae227e349c756",
+    "fit_kernel_indep_gllvm": "13dcb057d0794cb3b806f1825025db2817708ec402d8b13a68c5b2338c5427b8"
+}
+
+
+def approved_scope_problem(name: str, item: dict) -> str | None:
+    expected = C6_APPROVED_SCOPE_SHA256.get(name)
+    if expected is None:
+        return "SCOPED_R_TWIN name is not an exact approved Julia export"
+    contract = {k: item.get(k) for k in ("counterpart", "scope", "receipt_ids", "ruling")}
+    digest = hashlib.sha256(json.dumps(contract, sort_keys=True, ensure_ascii=False,
+                                      separators=(",", ":")).encode("utf-8")).hexdigest()
+    return None if digest == expected else "SCOPED_R_TWIN contract differs from the exact approved scope"
+
+
+def scoped_twin_problem(item: dict, root: Path, case_rows: list[dict]) -> str | None:
+    counterpart = item.get("counterpart")
+    if not isinstance(counterpart, dict):
+        return "SCOPED_R_TWIN requires a counterpart object"
+    if not is_visible(counterpart.get("r_function")):
+        return "SCOPED_R_TWIN requires counterpart.r_function"
+    if counterpart.get("r_commit") != P1_SHA:
+        return f"SCOPED_R_TWIN counterpart.r_commit must equal pinned P1 {P1_SHA}"
+    rloc = counterpart.get("r_source")
+    if not isinstance(rloc, str) or re.fullmatch(r"R/[^:\s]+:\d+(?:-\d+)?", rloc) is None:
+        return "SCOPED_R_TWIN requires counterpart.r_source as R/path:line[-line]"
+    jloc = counterpart.get("julia_source")
+    if not isinstance(jloc, str) or re.fullmatch(r"src/[^:\s]+:\d+(?:-\d+)?", jloc) is None:
+        return "SCOPED_R_TWIN requires counterpart.julia_source as src/path:line[-line]"
+    if not (root / jloc.split(":", 1)[0]).is_file():
+        return f"SCOPED_R_TWIN Julia source {jloc} does not resolve at the ref"
+    scope = item.get("scope")
+    if not isinstance(scope, dict):
+        return "SCOPED_R_TWIN requires a scope object"
+    for key in ("public_route", "family_link", "data", "estimand"):
+        if not is_visible(scope.get(key)):
+            return f"SCOPED_R_TWIN requires scope.{key}"
+    for key in ("outputs", "exclusions"):
+        value = scope.get(key)
+        if not isinstance(value, list) or not value or not all(is_visible(x) for x in value):
+            return f"SCOPED_R_TWIN requires a non-empty string array scope.{key}"
+    receipt_ids = item.get("receipt_ids")
+    if not isinstance(receipt_ids, list) or not receipt_ids or not all(is_visible(x) for x in receipt_ids):
+        return "SCOPED_R_TWIN requires non-empty receipt_ids"
+    if len(set(receipt_ids)) != len(receipt_ids):
+        return "SCOPED_R_TWIN receipt_ids must be unique"
+    for receipt_id in receipt_ids:
+        bound = False
+        for row in case_rows:
+            if receipt_id not in as_list(row.get("executable_case_ids")):
+                continue
+            if row.get("measured_against") != P1_SHA or row.get("evidence_tier") not in ("numeric", "behavioural"):
+                continue
+            paths = receipt_paths(row)
+            if not paths:
+                continue
+            safe_existing = True
+            for rel in paths:
+                if not isinstance(rel, str) or not is_visible(rel) or Path(rel).is_absolute() or ".." in Path(rel).parts:
+                    safe_existing = False
+                    break
+                try:
+                    resolved = (root / rel).resolve()
+                    if not resolved.is_relative_to(root.resolve()) or not resolved.is_file():
+                        safe_existing = False
+                        break
+                except (OSError, ValueError):
+                    safe_existing = False
+                    break
+            if safe_existing:
+                bound = True
+                break
+        if not bound:
+            return f"SCOPED_R_TWIN receipt id {receipt_id} has no executable P1 numeric or behavioural row with a resolving receipt"
+    return None
 
 
 def norm_name(s: str) -> str:
@@ -1213,7 +1341,7 @@ def norm_name(s: str) -> str:
     return re.sub(r"[_.]", "", s).lower()
 
 
-def build_reverse_gap(root: Path, ledger: Path):
+def build_reverse_gap(root: Path, ledger: Path, case_rows: list[dict]):
     p = root / ledger / IN_REVERSE_GAP
     if not p.is_file():
         raise Fail(f"missing input {ledger / IN_REVERSE_GAP} (run --refresh-reverse-gap-inputs)")
@@ -1244,10 +1372,18 @@ def build_reverse_gap(root: Path, ledger: Path):
         dec = decisions.get(it["name"])
         if dec is None:
             continue
-        it["status"] = "decided"
+        if dec["decision"] == "SCOPED_R_TWIN":
+            why = scoped_twin_problem(dec, root, case_rows) or approved_scope_problem(it["name"], dec)
+            if why:
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {it['name']}: {why}")
+        it["status"] = "held" if dec["decision"] == "HOLD_PENDING_EVIDENCE" else "decided"
         it["decision"] = dec["decision"]
         it["basis"] = dec["basis"]
-        it["ruling"] = OrderedDict((k, ruling[k]) for k in ("ref", "signed_by", "signed_on"))
+        item_ruling = dec.get("ruling", ruling)
+        it["ruling"] = OrderedDict((k, item_ruling[k]) for k in ("ref", "signed_by", "signed_on"))
+        if dec["decision"] == "SCOPED_R_TWIN":
+            for key in ("counterpart", "scope", "receipt_ids"):
+                it[key] = dec[key]
     return items
 
 
@@ -1276,7 +1412,7 @@ def generate(root: Path, ledger: Path, extra: list[Path]):
     return {
         OUT_SCOREBOARD: md,
         OUT_CASEMAP: json.dumps(cm, indent=1) + "\n",
-        OUT_REVERSE_GAP: json.dumps(build_reverse_gap(root, ledger), indent=1) + "\n",
+        OUT_REVERSE_GAP: json.dumps(build_reverse_gap(root, ledger, rows), indent=1) + "\n",
     }
 
 

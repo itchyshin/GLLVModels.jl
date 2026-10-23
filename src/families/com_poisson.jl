@@ -286,7 +286,7 @@ function _compoisson_loglik_site(y::AbstractVector, Λ::AbstractMatrix,
         W[t] = Wt
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -444,7 +444,9 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
     # observed mean so neither the intercept nor the SVD sees the placeholder.
     Zemp = [log(max(float(Yc[t, i]) + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, nothing; mask = msk,
+                           caller = "fit_compoisson_gllvm")   # #874 (rate is always log)
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
@@ -464,6 +466,7 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         ν = exp(θ[p + rr + 1])
+        _eta_above_clamp(β, nothing; mask = msk) && return 1e12   # #869: η-clamp plateau (link ignored; rate is always log)
         v = try
             -compoisson_marginal_loglik_laplace(Yc, Λ, β, ν; mask = msk, link = link,
                                                 maxiter = newton_maxiter, tol = newton_tol)
@@ -479,5 +482,9 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     ν̂ = exp(θ̂[p + rr + 1])
-    return COMPoissonFit(β̂, Λ̂, link, ν̂, _fit_verdict(res)...)
+    ll, conv, iters = _fit_verdict(res)
+    # #869: the rate is always log-linked (`link` is ignored), so check contact as LogLink.
+    conv = _eta_cap_verdict(conv, LogLink(), β̂, nothing; mask = msk,
+                            caller = "fit_compoisson_gllvm")
+    return COMPoissonFit(β̂, Λ̂, link, ν̂, ll, conv, iters)
 end
