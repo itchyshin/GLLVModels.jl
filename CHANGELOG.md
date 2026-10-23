@@ -1,6 +1,33 @@
 # Changelog
 
-## Development
+All notable changes to GLLVModels.jl are documented here.
+
+## Unreleased
+
+- **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
+  After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
+  whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose
+  `max |gradient|` is at most `100 * max(g_tol, 1e-5)` may be tagged `stopping_reason =
+  :rounding_floor` and `converged = true` only when the stored `gradient_norm` is already
+  `<= g_tol`. The fitter never reports `converged = true` when `gradient_norm > g_tol`. The 1e-3
+  acceptance (`100 * max(g_tol, 1e-5)`) is unchanged. `test/test_phylo_latent_rounding_floor.jl`
+  includes the issue's own DEP (`d = 4`, 120 tips) default-start fit.
+
+- **`_fit_phylo_binomial_xlv` default start no longer throws (#943).** The default `beta_init` called an undefined `logit`, so any call without `beta_init` raised `UndefVarError` before the optimiser ran. The start now uses `log(m / (1 - m))` on the clamped pooled proportion.
+
+- **`confint_lv_effects` docstring signatures list every keyword (#751).** The signature lines now include `method`, `n_boot`, `seed`, `bootstrap_iterations` and the `profile_*` keywords (and `N` for the Gaussian method), with their defaults; documentation only, no behaviour change. A test compares each method's keywords with its docstring.
+
+- **`fit_animal_latent_gllvm` docstring names the right twin (#823).** It is a Hadamard row-relatedness model `(Λ_phy Λ_phy') .* A`, not gllvmTMB's `Λ Λ' ⊗ A` `animal_latent`; the docstring no longer claims the same estimand class and points to `fit_kernel_latent_gllvm(Y, A, groups, d)` as the Kronecker twin. Docstring-only; no behaviour change.
+
+- **`fit_gllvm_cov` SVD loadings start is rotated, not truncated, for K >= 2 (#865 item 1).** The default start packed the raw SVD loadings with `pack_lambda`, which keeps only the lower triangle, so `ΛΛ'` of the start was not the SVD's rank-K fit. The loadings are now QR-rotated to lower-triangular form (positive diagonal, same `ΛΛ'`) by `_lower_triangular_loadings` before packing. **Behaviour change:** default starts for K >= 2 differ; converged fits should agree. Sibling fitters with the same `svd(Zc)` start are unchanged. Item 2 (zero-inflated Laplace curvature check) is not addressed.
+
+- **`fit_relaxed_clock` no longer reports `converged = true` on a clamped fit (#876).** `RelaxedClockFit` gains `tau2_boundary` and `sigma_eps_boundary` (appended fields; the old positional constructor still works), set when the free-τ² update ends at `τ²_floor` or the free-σ²_eps update ends at its floor; either leaves `converged = false`. Pinned `fix_τ²` / `fix_σ²_eps` are never boundaries. The σ²_eps floor is now `1e-8 * mean(y.^2)` instead of an absolute `1e-8`, so rescaling `y` cannot flip the flag. **Behaviour change:** constant-rate or weak-replicate data that used to report `converged = true` at `τ² = 1e-4` now reports `converged = false, tau2_boundary = true`. `show` prints the flags.
+
+- **`cv_gllvm` refuses families it cannot score and `offset` (#773, part of #772).** The generic fallback scored every family without its own `_cv_cell_eval` method (NB1, Student-t, delta, Tweedie, beta-binomial, GP1, ...) with a unit-variance Normal and stored it in `CVResult.loglik`, `residual_mean` and `residual_std` as if it were an out-of-sample log-likelihood and Dunn-Smyth residual. It is removed: `cv_gllvm` now throws an `ArgumentError` before any fit unless `family` is `Normal`, `Poisson`, `Binomial`, `NegativeBinomial`, `Beta`, `Gamma` or `Exponential`. `offset` was forwarded to the fold fits but never used in the held-out prediction; it now throws an `ArgumentError` as well. **Behaviour change:** calls that used to return a meaningless `CVResult` now throw.
+
+- **Variational fitters and ordinal marginals reject out-of-support responses (part of #730).** `fit_exponential_gllvm_va`, `fit_gamma_gllvm_va`, `fit_beta_gllvm_va`, `fit_poisson_gllvm_va`, `fit_nb_gllvm_va` and `fit_binomial_gllvm_va` now throw an `ArgumentError` naming the fitter and the first bad cell before fitting; Exponential VA used to return `loglik = 3.7e12, converged = true` for a cell `y = -1` and accepted `y = 0`. `ordinal_marginal_loglik_laplace` and its per-trait form throw an `ArgumentError` for an observed code outside `1:C` (`C = length(τ) + 1`) instead of a `BoundsError`, and the ordinal fitters' level check now names the fitter and cell. Masked cells stay legal and categories with no observations are unchanged. Not covered: a stray high code in a fitter call (a typo `9` on a 4-level scale) still reads as a 9-level scale, because the fitters infer `C` from the data.
+
+- **Test coverage: temporal likelihood internals.** `test/test_temporal_likelihood_internals.jl` checks the low-rank block nll, tier and trait blocks, parameter names, cov pieces and series rows against dense linear algebra (no `src/` change).
 
 - **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 
@@ -11,6 +38,18 @@
   optimizer results. Explicit choices refuse unsupported nested routes and profile/bootstrap
   refits that do not propagate the selected method. Gaussian mask and offset refits use and record
   the selected method alongside the warm-start solve.
+
+- **A `β_init` above the η clamp falls back to the default warm start (#874).** Follow-up to the
+  #869 behaviour change below. In the log-link fitters that accept `β_init` (Poisson, NB, NB1, grouped
+  NB and NB1, COM-Poisson, GP1, truncated Poisson, truncated NB2 and its per-trait form, censored
+  Poisson, Tweedie, Gamma, Exponential), an entry whose intercept plus offset is above the cap (30) is
+  replaced by that species' default warm start, bit-identical to `β_init = nothing`, with a warning
+  naming the species. Such a start used to end at `loglik = -Inf, converged = false`; it now reaches
+  the default-start optimum. Entries are not projected onto the cap, where the count objectives
+  already sit at failure-scale values. Data whose default warm start is itself past the cap (counts
+  around 1e14) still end at the sentinel: rescale the response or the offset. Non-log links (for
+  example identity-link Gamma) are unchanged, and the check uses the offset only, not the `X_lv`
+  mean term. The covariate (`fit_gllvm_cov`) and two-part routes take no `β_init` and are unchanged.
 
 - **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
   (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
@@ -23,6 +62,20 @@
   the cap. K = 0 fits no longer end at `loglik = -Inf` on Julia 1.12, where `logdet` of a 0×0 matrix
   throws (`_laplace_logdet`), and `fit_truncated_nbinom2_gllvm(K = 0)` and `zi_marginal_loglik_laplace`
   at K = 0 no longer throw on any Julia version.
+
+- **False `converged` on three fitters (refs #754, #753, #781).**
+  `fit_branch_re` now requires a small Nelder–Mead simplex in parameter
+  space and reports `sigma2_boundary` when a variance sits on the stated
+  `1e-8 * var(y)` floor; constant or non-finite `y` raise `ArgumentError` naming
+  the data. `em_fit_phylo` and `em_fit_phylo_squarem` record
+  `sigma_eps_boundary` when the M-step clamps `σ_eps²` to
+  `1e-8 * mean(y.^2)` and do not report `converged = true` on that
+  floor. Both floors are fractions of the data scale, so rescaling `y`
+  cannot flip the flags. SQUAREM's main path (no fallback) carries the
+  clamp flag and vetoes `converged` the same way. `fit_zinb_gllvm_cov(iterations <= 0)` is a start-only
+  transport check (`converged = false`) and rejects a non-finite
+  `θ_init`. No new absolute gradient or objective tolerance. #752 is
+  left as the next sibling PR.
 
 - **Dunn–Smyth residuals are no longer silently capped at ±7.034 (#767).** The randomized
   quantile residual was `quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))` with `u` built from
@@ -56,6 +109,20 @@
   only through `σ²_B + σ²_W + σ²_eps` and the Hessian is not positive definite) and on
   `K_W > 0` (tier-scoped summaries depend on the starting values). Warnings only: estimates,
   log-likelihood and `Σ_y` are unchanged. Test: `test/test_unidentified_tier_warning.jl`.
+
+- **`fit_zip_gllvm` Laplace log-determinant now uses the observed count curvature (refs #739).**
+  The ZIP count weight was the expected Fisher information, so `hessian = :observed` (the
+  default) and `:fisher` gave the identical objective and `fit_zip_gllvm` maximised a different
+  surface from gllvmTMB's `zi_poisson()`: logLik below it on simulated ZIP data, with a
+  higher mean ZI estimate. `:observed` is now the exact second derivative of the ZIP
+  log-density (`_tp_observed_Wc_z(::ZIPoisson, …)`), with the same eigenvalue floor as the
+  `zi_poisson()` route (`ZI_LAPLACE_EIGMIN_FLOOR`) and `converged = false` for an optimum at the
+  floor. On a p = 6, n = 50 fixture the logLik moves from -663.283 to -659.541, equal to the
+  `zi_poisson()` fit (`test/test_zip_observed_laplace.jl`). Fitted ZIP values change, in
+  `fit_zip_gllvm`, `fit_zip_gllvm_cov` and every route that reaches the ZIP two-part Laplace with
+  the default `hessian`; `hessian = :fisher` is unchanged. ZINB and ZIB still use the Fisher
+  weight (`TWOPART_KNOWN_OPEN`).
+
 - **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
   Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
   data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight
@@ -972,10 +1039,6 @@
   the four types above: Wald, `vcov` and `coef_table` on all of them, and one profile and one
   bootstrap on a variational Poisson fit and a `:fisher` truncated NB2 fit). Test:
   `test/test_confint_offset.jl`.
-
-All notable changes to GLLVModels.jl are documented here.
-
-## Unreleased
 
 ### Added
 - **`zi_poisson()`, `zi_nbinom2()`, `zi_binomial()`: twins of gllvmTMB's

@@ -78,6 +78,7 @@ GLLVModels._gauss_hermite
 GLLVModels._fit_phylo_beta_xlv
 GLLVModels._gaussian_source_loglik
 GLLVModels._source_fixed_sigma
+GLLVModels._lower_triangular_loadings
 ```
 
 ## Internal AGHQ adaptation and optimization

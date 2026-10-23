@@ -8,7 +8,8 @@
 #   1. an invalid selector throws ArgumentError up front, and
 #   2. `:fisher` and `:observed` currently produce the IDENTICAL fit for the
 #      families whose observed count-part weight is not yet specialised
-#      (everything but DeltaGamma — the recorded TWOPART_KNOWN_OPEN gap).
+#      (everything but DeltaGamma and ZIPoisson — the recorded
+#      TWOPART_KNOWN_OPEN gap), and DIFFER for ZIPoisson (#739).
 #      Bit-identity is the honest claim: the kwarg must be plumbed and inert,
 #      not plumbed and quietly doing something unmeasured.
 
@@ -44,12 +45,18 @@ using GLLVModels, Test, Random
         ff = GLLVModels.fit_delta_lognormal_gllvm(Ypos; K, hessian = :fisher)
         @test fo.loglik == ff.loglik
 
-        zo = GLLVModels.fit_zip_gllvm(Ycount; K, hessian = :observed)
-        zf = GLLVModels.fit_zip_gllvm(Ycount; K, hessian = :fisher)
+        zo = GLLVModels.fit_zinb_gllvm(Ycount; K, hessian = :observed)
+        zf = GLLVModels.fit_zinb_gllvm(Ycount; K, hessian = :fisher)
         @test zo.loglik == zf.loglik
 
-        co = GLLVModels.fit_zip_gllvm_cov(Ycount; X, K, hessian = :observed)
-        cf = GLLVModels.fit_zip_gllvm_cov(Ycount; X, K, hessian = :fisher)
+        co = GLLVModels.fit_zinb_gllvm_cov(Ycount; X, K, hessian = :observed)
+        cf = GLLVModels.fit_zinb_gllvm_cov(Ycount; X, K, hessian = :fisher)
         @test co.loglik == cf.loglik
+    end
+
+    @testset ":observed differs from :fisher for ZIPoisson (observed count weight, #739)" begin
+        zo = GLLVModels.fit_zip_gllvm(Ycount; K, hessian = :observed)
+        zf = GLLVModels.fit_zip_gllvm(Ycount; K, hessian = :fisher)
+        @test zo.loglik != zf.loglik
     end
 end

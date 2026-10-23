@@ -1,0 +1,66 @@
+{
+  "schema": "core070-first-seven-equivalence/v1",
+  "ruling": "D-319 N6/N10",
+  "classes": [
+    {
+      "canonical": "residual-check:coherent",
+      "labels": {
+        "R": [
+          "residual-check:coherent"
+        ],
+        "Julia": [
+          "residual-check:coherent"
+        ]
+      },
+      "basis": "D-319 behavioural scope; labels derived from the exact recorded public calls."
+    },
+    {
+      "canonical": "all-count:nonmixed-admitted",
+      "labels": {
+        "R": [
+          "all-count:nonmixed-admitted"
+        ],
+        "Julia": [
+          "all-count:nonmixed-admitted"
+        ]
+      },
+      "basis": "D-319 behavioural scope; labels derived from the exact recorded public calls."
+    },
+    {
+      "canonical": "guard:family-length",
+      "labels": {
+        "R": [
+          "guard:family-length"
+        ],
+        "Julia": [
+          "guard:family-length"
+        ]
+      },
+      "basis": "D-319 behavioural scope; labels derived from the exact recorded public calls."
+    },
+    {
+      "canonical": "guard:family-scale-per-trait",
+      "labels": {
+        "R": [
+          "guard:family-scale-per-trait"
+        ],
+        "Julia": [
+          "guard:family-scale-per-trait"
+        ]
+      },
+      "basis": "D-319 behavioural scope; labels derived from the exact recorded public calls."
+    },
+    {
+      "canonical": "guard:wrapper-law-refusal",
+      "labels": {
+        "R": [
+          "guard:wrapper-law-refusal"
+        ],
+        "Julia": [
+          "guard:wrapper-law-refusal"
+        ]
+      },
+      "basis": "D-319 behavioural scope; labels derived from the exact recorded public calls."
+    }
+  ]
+}
