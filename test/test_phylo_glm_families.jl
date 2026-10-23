@@ -76,7 +76,10 @@ end
     # sites while beta is free per species, so sigma2_phy is not identified; the
     # marginal loglik decreases in sigma2_phy at the fitted beta and the fit sits on
     # the sigma2_phy -> 0 boundary for both data sets. Flip to @test when fixed.
-    @test_broken fhi.σ²_phy > flo.σ²_phy
+    # @test_skip, not @test_broken: at the boundary the ordering is decided by
+    # floating-point noise, so on some platforms (Julia 1 on CI) it passes and an
+    # unexpected pass is reported as an error.
+    @test_skip fhi.σ²_phy > flo.σ²_phy
 
     # (5) converged flag and show output
     Ye = _pgf_sim(phy, Poisson(), β, 0.3, n; seed = 41)
