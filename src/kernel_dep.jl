@@ -2,8 +2,9 @@
 #
 # Twin estimand (Identity 2026-09-14; pin gllvmTMB kernel_dep roxygen b4d5fee6):
 # unstructured cross-trait covariance on a user-supplied between-unit matrix K,
-# phylo-equivalent to phylo_dep(..., vcv = K) on the twin dense path (Design 65 C1).
-# Reuses fit_gaussian_sources / SourceCovariance mode :dep — not the J3 Σ_phy block.
+# a true Kronecker model Σ_trait ⊗ K (source_fit.jl: kron(S, B)). It matches R's
+# phylo_dep(..., vcv = K) / animal_dep, NOT the Julia fit_phylo_dep_gllvm /
+# fit_animal_dep_gllvm, which are Hadamard row models (#817, #823). Reuses fit_gaussian_sources / SourceCovariance mode :dep — not the J3 Σ_phy block.
 # No @formula kernel_dep() sugar (formula recognizer exists separately).
 
 """
@@ -13,9 +14,13 @@ Standalone **kernel × dep** Gaussian fit: full-rank trait loadings (`mode = :de
 rank = p) on a fixed dense between-unit covariance matrix `K`, with units projected
 via one-based `groups` indices into the rows/columns of `K`.
 
-Same estimand class as twin `kernel_dep(unit, K = K, name = "…")` /
-`phylo_dep(0 + trait | unit, vcv = K)` on the dense supplied-kernel route
-(documentary keyword only on the R side).
+This is a true **Kronecker** model: the covariance of `vec(Y)` carries
+`Σ_trait ⊗ K` (an unstructured trait covariance Kronecker the projected `K`). It is
+the same estimand class as twin `kernel_dep(unit, K = K, name = "…")` and as R's
+`phylo_dep(0 + trait | unit, vcv = K)` / `animal_dep(0 + trait | id, A = A)` on the
+dense supplied-kernel route (documentary keyword only on the R side). It is **not**
+equivalent to [`fit_phylo_dep_gllvm`](@ref) or [`fit_animal_dep_gllvm`](@ref), which
+are Hadamard row models `(Λ_phy Λ_phy') .* Σ`.
 
 This is a **Gaussian matrix** fitter via [`fit_gaussian_sources`](@ref). It does
 **not** estimate `K`, apply `rho` attenuation, or parse long-format grouping
