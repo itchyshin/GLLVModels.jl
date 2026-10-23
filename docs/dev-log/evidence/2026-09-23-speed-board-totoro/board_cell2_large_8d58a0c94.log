@@ -1,0 +1,40 @@
+[ Info: Benchmarking size 30x100x2 (p=30 species, n=100 sites, K=2 LVs)
+[ Info:   Poisson finite vs analytic
+[ Info:   NB finite vs analytic
+[ Info:   Binomial finite vs analytic
+[ Info:   Beta finite vs analytic
+[ Info:   Gamma finite vs analytic
+GLLVModels.jl speed benchmark — Base timing, no BenchmarkTools
+grid (p, n, K): [(30, 100, 2)]   reps: 3   iterations cap: 120
+Julia 1.12.6   threads: 4
+
+==================================================================================================
+RESULTS  (median of 3 timed reps; warm-up excluded)
+==================================================================================================
+size         family    variant         seconds   MB alloc       Δloglik  note
+--------------------------------------------------------------------------------------------------
+30x100x2     Gaussian  closed           0.0016       6.43             —  
+30x100x2     Poisson   :finite         17.1318   14594.23             —  
+30x100x2     Poisson   :analytic        0.3601     222.87    -1.637e-11  speedup 47.58x vs :finite
+30x100x2     NB        :finite         16.5726   17048.30             —  
+30x100x2     NB        :analytic        1.6035    2154.25    -1.819e-12  speedup 10.34x vs :finite
+30x100x2     Binomial  :finite         24.8526   18396.30             —  
+30x100x2     Binomial  :analytic        2.5181    3138.68    -9.095e-13  speedup 9.87x vs :finite
+30x100x2     Beta      :finite         64.2854   30056.40             —  
+30x100x2     Beta      :analytic        5.5355    4564.50    -5.002e-12  speedup 11.61x vs :finite
+30x100x2     Gamma     :finite         41.2258   41572.26             —  
+30x100x2     Gamma     :analytic        3.6145    4192.65    -4.547e-13  speedup 11.41x vs :finite
+--------------------------------------------------------------------------------------------------
+Δloglik for GLM families = loglik(:analytic) − loglik(:finite) within a
+size×family cell; ~0 means :analytic reaches the same optimum.
+==================================================================================================
+
+DECISION GUIDE
+--------------
+Compare each family's :finite vs :analytic rows:
+  * speedup column = how much faster the analytic-gradient fit is;
+  * Δloglik column = accuracy gap (want ~0, i.e. same optimum).
+If :analytic is consistently faster AND Δloglik stays at noise level, it is
+safe to make that family's default `gradient = :analytic`. See
+bench/SPEED_NOTES.md for the current default decision and broader speed roadmap.
+

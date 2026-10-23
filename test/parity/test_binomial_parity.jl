@@ -31,6 +31,8 @@ using GLLVModels, RCall, Test, Random, LinearAlgebra
         jl_logL = jl_logL, r_logL = r.logLik, r_obj = r.objective,
     )
 
+    core070_record_values!("logLik"; julia = jl_logL, r = r.logLik, rtol = 1e-6,
+                           test = "@test jl_logL ≈ r.logLik rtol = 1e-6")
     @testset "log-likelihood agreement (rtol=1e-6)" begin
         @test jl_logL ≈ r.logLik rtol = 1e-6
         @test r.logLik ≈ -r.objective rtol = 0 atol = 1e-10

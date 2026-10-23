@@ -1,0 +1,11 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-binom-glmm-200x5	G-binom-glmm; grouped Binomial glmm_200x5-class	fit_gllvm Binomial grouped	0.236885	-683.3149136	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-gauss-lv-t4-p20n500	G-gauss-lv-large; T4 Gaussian (p,n,K)=(20,500,2)	fit_gaussian_gllvm	0.008802	-11924.3686	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-gauss-phylo-fit-p200	G-gauss-phylo-em adjacent; non-EM fit_phylo_gaussian p=200	fit_phylo_gaussian AugmentedPhy	0.041839	NaN	julia_abs_only; label≠EM	ok	4e976e2	totoro	4
+gllvm-gauss-unstruct-p50n2k	G-gauss-lv-large; (p,n,K)=(50,2000,2)	fit_gaussian_gllvm	0.519701	-125672.012	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-latte-gap-200x5	G-latte-gap; tip HESS-class wall / banked Latte 0.015s	fit_gllvm Poisson grouped / Latte banked	0.382988	-2025.469254	julia_abs_only; labelled_ratio_vs_latte_banked=25.53x; latte_wall_s=0.015; no_default_flip	ok	4e976e2	totoro	4
+gllvm-nb2-lv-t4-p20n500	G-nb2-lv-scale; T4 NB2 (p,n,K)=(20,500,2)	fit_nb_gllvm	4.881201	-14232.63236	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-pois-lv-t4-p20n500	G-nb-binom-lv; T4 Poisson (p,n,K)=(20,500,2)	fit_poisson_gllvm	1.645914	-13736.86047	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-pois-phylo-small	G-phylo-nongauss; Poisson phylo tip smoke 6×12	fit_phylo_glm Poisson	0.019057	-136.451457	julia_abs_only	ok	4e976e2	totoro	4
+gllvm-profile-ci-glmm	G-profile-ci; profile on small grouped Poisson	grouped_nongaussian_intervals Wald (profile not admitted)	0.009065	-303.9144915	julia_abs_only; Wald_fallback_not_profile	ok	4e976e2	totoro	4
+gllvm-spatial-gauss-small	G-spatial; SPDE Matérn Gaussian 8×8 mesh M=16	fit_spde_gaussian	0.013046	-5.216073909	julia_abs_only	ok	4e976e2	totoro	4

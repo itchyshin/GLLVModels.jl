@@ -21,37 +21,19 @@
 #   logdet Σ_i = logdet(Σ_W + n_i Σ_B) + (n_i − 1)·logdet(Σ_W)
 #   yᵢ' Σ_i⁻¹ yᵢ = n_i·m_i'(Σ_W + n_i Σ_B)⁻¹ m_i + tr(Y_ic' Σ_W⁻¹ Y_ic)
 # with m_i the per-trait mean over i's observations and Y_ic the centred
-# residuals. Individuals are independent ⇒ ℓ = Σ_i ℓ_i. Both p×p covariances are
-# ΛΛᵀ + diag, inverted by Woodbury on the well-conditioned K×K core so the path
-# stays robust as σ²_W → 0. AD-clean (verified against a central FD gradient).
+# residuals. Individuals are independent ⇒ ℓ = Σ_i ℓ_i. Both p×p covariances
+# (Σ_W and Σ_W + n_i Σ_B) are factored by a dense p×p Cholesky; p is small in the
+# two-level regime. A Woodbury solve on the K×K core is deliberately NOT used for
+# Σ_W: its subtractive form loses the quadratic form when a σ²_W[t] is tiny
+# relative to Λ_W[t,:]² (overstating ℓ by up to hundreds of nats; GATE 1b in
+# test/test_twolevel.jl). AD-clean (verified against a central FD gradient).
 #
 # μ_t (per-trait grand mean) is profiled out analytically as the GLS mean; for
 # the recovery test the data are centred so μ = 0.
 
-# ---------------------------------------------------------------------------
-# Woodbury helpers for Σ = Λ Λᵀ + diag(d).  Λ is p×K, d a length-p positive
-# vector.  Returns closures (Σ⁻¹ applied to a matrix, logdet Σ) computed from one
-# K×K cholesky — never a p×p chol of Σ — so it stays well-conditioned as d → 0.
-# ---------------------------------------------------------------------------
-function _woodbury_core(Λ::AbstractMatrix, d::AbstractVector)
-    p, K = size(Λ)
-    T = promote_type(eltype(Λ), eltype(d))
-    d_inv = one(T) ./ d                                  # length p
-    DinvΛ = d_inv .* Λ                                   # p×K (row-scaled)
-    A_K = Matrix{T}(I, K, K) + Λ' * DinvΛ                # K×K core
-    cA = cholesky(Symmetric(A_K))
-    logdetΣ = sum(log, d) + logdet(cA)
-    # Σ⁻¹ V = D⁻¹V − D⁻¹Λ (I + Λ'D⁻¹Λ)⁻¹ Λ'D⁻¹V
-    Σinv = V -> begin
-        DinvV = d_inv .* V
-        DinvV .- DinvΛ * (cA \ (Λ' * DinvV))
-    end
-    return Σinv, logdetΣ
-end
-
-# Build Σ = Λ Λᵀ + diag(σ²_diag) DENSELY (for the n_i Σ_B and Σ_W + n_i Σ_B sum,
-# whose Woodbury core would need rank K_B + p; a direct dense p×p chol is simplest
-# and p is small in the two-level regime). Symmetrised before factoring.
+# Build Σ = Λ Λᵀ + diag(σ²_diag) DENSELY (for Σ_W, Σ_B and the Σ_W + n_i Σ_B sum;
+# a direct dense p×p chol is simplest, stays accurate when a diagonal entry is
+# tiny, and p is small in the two-level regime). Symmetrised before factoring.
 function _dense_sigma(Λ::AbstractMatrix, σ²_diag::AbstractVector)
     p = size(Λ, 1)
     T = promote_type(eltype(Λ), eltype(σ²_diag))
@@ -73,13 +55,20 @@ function _twolevel_loglik(y::AbstractMatrix, ind_idx::Vector{Vector{Int}},
     T = promote_type(eltype(y), eltype(Λ_B), eltype(σ²_B), eltype(Λ_W), eltype(σ²_W))
 
     # Within block Σ_W = Λ_W Λ_Wᵀ + diag(σ²_W): used for EVERY individual's
-    # centred part, so factor once via Woodbury.
-    ΣW_inv, logdetΣW = _woodbury_core(Λ_W, σ²_W)
+    # centred part, so factor once. A dense p×p Cholesky, not a Woodbury
+    # solve: the subtractive Woodbury form D⁻¹V − D⁻¹Λ(I + ΛᵀD⁻¹Λ)⁻¹ΛᵀD⁻¹V
+    # cancels terms of size Λ²/σ²_W[t] and loses the quadratic form when a
+    # σ²_W[t] is tiny relative to Λ_W[t,:]² (see GATE 1b in
+    # test/test_twolevel.jl; same choice as src/families/gaussian_pervar.jl).
+    # A failed factorisation is reported as a failed evaluation (-Inf).
+    ΣW = _dense_sigma(Λ_W, σ²_W)
+    cW = cholesky(Symmetric(ΣW); check = false)
+    issuccess(cW) || return convert(T, -Inf)
+    logdetΣW = logdet(cW)
 
     # Between block Σ_B = Λ_B Λ_Bᵀ + diag(σ²_B): only ever enters as
     # Σ_W + n_i Σ_B, which we factor per distinct n_i. Cache by group size.
     ΣB = _dense_sigma(Λ_B, σ²_B)
-    ΣW = _dense_sigma(Λ_W, σ²_W)
     mean_cache = Dict{Int, Any}()        # n_i -> (cholesky(Σ_W + n_i Σ_B), logdet)
 
     twopi = convert(T, 2π)
@@ -90,16 +79,24 @@ function _twolevel_loglik(y::AbstractMatrix, ind_idx::Vector{Vector{Int}},
         mi = vec(sum(Yi, dims = 2)) ./ ni           # per-trait mean over obs
         Yic = Yi .- reshape(mi, p, 1)               # centred residuals
 
-        # Centred part: tr(Y_ic' Σ_W⁻¹ Y_ic)
-        quad_centered = sum(Yic .* ΣW_inv(Yic))
+        # Centred part: tr(Y_ic' Σ_W⁻¹ Y_ic) = ‖L⁻¹ Y_ic‖², Σ_W = L Lᵀ
+        quad_centered = sum(abs2, cW.L \ Yic)
 
         # Mean part: n_i · m_i' (Σ_W + n_i Σ_B)⁻¹ m_i
         cMean, logdetMean = get!(mean_cache, ni) do
             M = ΣW .+ ni .* ΣB
-            cM = cholesky(Symmetric((M + M') ./ 2))
-            (cM, logdet(cM))
+            cM = cholesky(Symmetric((M + M') ./ 2); check = false)
+            (cM, issuccess(cM) ? logdet(cM) : zero(T))
         end
+        issuccess(cMean) || return convert(T, -Inf)
         quad_mean = ni * dot(mi, cMean \ mi)
+
+        # Both quadratic forms are ≥ 0 for PD Σ_W / Σ_W + n_i Σ_B. A negative
+        # value would mean a solve lost all precision, and the formula would
+        # then return a huge spurious POSITIVE log-likelihood that the optimiser
+        # happily "converges" to. Kept as a belt-and-braces check after the
+        # dense Σ_W factorisation above: report the evaluation as failed.
+        (quad_centered < 0 || quad_mean < 0) && return convert(T, -Inf)
 
         logdet_i = logdetMean + (ni - 1) * logdetΣW
         quad_i = quad_mean + quad_centered

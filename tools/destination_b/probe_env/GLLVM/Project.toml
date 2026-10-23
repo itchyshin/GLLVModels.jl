@@ -1,0 +1,9 @@
+# Probe-only compatibility shim for the frozen S4 recorder (gllvmTMB PR #1283
+# @ 97214679c). Never registered, not part of GLLVModels, do not use elsewhere.
+# See src/GLLVM.jl for the reason and the recorder lines it serves.
+name = "GLLVM"
+uuid = "530e1681-f0ef-4870-b414-280ff3d1dd3b"
+version = "0.0.0"
+
+[deps]
+GLLVModels = "2dc8e01c-4f48-4476-aaae-e919b4a30df7"

@@ -25,7 +25,13 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/postfit-policy-batch-contract.json"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (PR #569 review finding 2: library pin + version)
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/postfit-policy-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 DEFAULT_STATE = ROOT / ".unlazy/core070-aghq/postfit-policy-batch-01"
 
 MANIFEST_ROW_COUNT = 24
@@ -51,7 +57,7 @@ def verify_contract(contract=None):
     c = contract or load_contract()
     need(c["status"] == "FROZEN_POSTFIT_POLICY_BATCH_CONTRACT", "wrong contract status")
     need(c["area"] == "postfit-policy", "wrong area")
-    need(c["reference_commit"] == "b4d5fee64def88bc768dda1f1f77c29b295edd86", "wrong reference commit")
+    need(c["reference_commit"] == REFERENCE_COMMIT, "wrong reference commit")
     need(c["manifest_row_count"] == MANIFEST_ROW_COUNT, "manifest row count drift")
 
     executable_ids = {x["case_id"] for x in c["cases"]}
@@ -159,6 +165,7 @@ def verify_state(state=DEFAULT_STATE):
          sorted(c["control_id"] for c in contract["negative_controls"]),
          "receipt negative-control id list drifted")
     need(receipt.get("julia_exit_code") == 0, "julia child exited nonzero")
+    core070_source_pin_check.check_source_pin(receipt, SELECTED_PIN, need)
     need(receipt.get("julia_results_sha256") == sha(julia_path), "julia-results.json changed since receipt")
     need(receipt.get("raw_sha256") == sha(raw_path), "results.tsv changed since receipt")
     need(receipt.get("diagnostics_sha256") == sha(diag_path), "diagnostics.log changed since receipt")
@@ -263,7 +270,10 @@ def self_test():
         raise AssertionError(f"accepted invalid postfit-policy contract: {name}")
     print("CORE070_POSTFIT_POLICY_CONTRACT_NEGATIVES_PASS", len(contract_mutations))
 
-    return len(mutations) + len(contract_mutations)
+    n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
+    print("CORE070_POSTFIT_POLICY_SOURCE_PIN_NEGATIVES_PASS", n_pin)
+
+    return len(mutations) + len(contract_mutations) + n_pin
 
 
 if __name__ == "__main__":

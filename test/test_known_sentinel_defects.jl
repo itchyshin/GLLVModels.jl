@@ -30,7 +30,8 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
     @testset "the sentinel never escapes as a converged log-likelihood" begin
         # FIXED 2026-08-26 by `_fit_verdict` (src/fit_verdict.jl), applied at 68 return
         # sites. Both cases below were reproduced BEFORE the fix and returned
-        # converged=true with loglik=-1.0e12 and aic=2.0e12.
+        # converged=true with loglik=-1.0e12 and aic=2.0e12 (case 1 then used the Gamma
+        # zero cell, which #730 now refuses before fitting).
         #
         # A sentinel INSIDE an objective closure is correct — it is a barrier keeping the
         # line search out of a bad region. The defect was only ever that
@@ -38,14 +39,21 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
         # exactly zero, so `g_converged` fires at iteration 0 and the constructor stores
         # the plateau as a log-likelihood.
 
-        # (1) One zero cell in Gamma data — no y > 0 validation, an ordinary user slip.
+        # (1) One zero cell in Gamma data — an ordinary user slip. Since #730 it is
+        # refused up front, before any objective is evaluated.
         Random.seed!(7)
         Yg = abs.(randn(6, 40)) .+ 0.5
         Yg[2, 3] = 0.0
-        fg = GLLVModels.fit_gamma_gllvm(Yg; K = 1)
-        @test !fg.converged                 # was true
-        @test fg.loglik == -Inf             # was -1.0e12
-        @test !isfinite(GLLVModels.aic(fg))      # was a clean-looking 2.0e12
+        @test_throws ArgumentError GLLVModels.fit_gamma_gllvm(Yg; K = 1)
+        # The screen itself, on a plateau no support check can catch: one in-support
+        # count that no mean inside the η clamp (μ ≤ e^30 ≈ 1.1e13) can approach, so
+        # the objective is above the failure threshold for every θ.
+        Yc = fill(5, 6, 40)
+        Yc[2, 3] = 10^15
+        fg = GLLVModels.fit_poisson_gllvm(Yc; K = 1)
+        @test !fg.converged
+        @test fg.loglik == -Inf
+        @test !isfinite(GLLVModels.aic(fg))
 
         # (2) NB grouped_cov with a non-LogLink. This failed 100% of calls under the
         # DOCUMENTED DEFAULT `hessian = :observed`, and the package's own informative
@@ -65,12 +73,13 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
         # T14 F1 (2026-09-02): this fixture happens to drive one group's dispersion to
         # the Poisson limit (r ≈ 3e9 — the free latent factor absorbs that trait's
         # overdispersion), which the grouped fits now report honestly as
-        # `dispersion_boundary` with `converged = false`. The sentinel screen must
-        # still NOT fire: the log-likelihood is a real, finite answer, and the only
-        # reason for non-convergence is the boundary flag itself.
+        # `dispersion_boundary`. The sentinel screen must still NOT fire: the
+        # log-likelihood is a real, finite answer. Since 2026-09-29 the upper end
+        # (r > 1e6, the Poisson limit) only warns, so `converged` follows the
+        # optimizer verdict; only the lower end (r < 1e-6) would make it false.
         @test isfinite(fh.loglik) && fh.loglik < 0
         @test fh.loglik != -Inf
-        @test fh.converged == !any(fh.dispersion_boundary)
+        @test fh.converged == !any(fh.r_group .< 1e-6)
 
         # The helper itself, at its boundaries.
         @test GLLVModels._fit_verdict(1.0e12, true, 0) == (-Inf, false, 0)

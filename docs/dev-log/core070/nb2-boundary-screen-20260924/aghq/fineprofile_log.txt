@@ -1,0 +1,23 @@
+stage-2 AGHQ interior point: -f=-835.29748105  max|grad|=8.39e-06  d/dlogr3=3.02e-07
+logr3=1.60 Laplace -835.4154257 (conv=true) AGHQ9 -835.2975178 (conv=true |g|=1.7e-07) [12s]
+logr3=1.70 Laplace -835.4157943 (conv=true) AGHQ9 -835.2975779 (conv=true |g|=5.1e-07) [19s]
+logr3=1.80 Laplace -835.4124916 (conv=true) AGHQ9 -835.2975695 (conv=true |g|=4.4e-07) [25s]
+logr3=1.90 Laplace -835.4058461 (conv=true) AGHQ9 -835.2974521 (conv=true |g|=1.6e-06) [32s]
+logr3=2.00 Laplace -835.3963244 (conv=true) AGHQ9 -835.2972173 (conv=true |g|=2.0e-07) [38s]
+logr3=2.20 Laplace -835.3707529 (conv=true) AGHQ9 -835.2964379 (conv=true |g|=1.2e-06) [44s]
+logr3=2.50 Laplace -835.3234090 (conv=true) AGHQ9 -835.2947807 (conv=true |g|=1.7e-07) [51s]
+logr3=1.40 Laplace -835.4037471 (conv=true) AGHQ9 -835.2976577 (conv=true |g|=6.2e-07) [58s]
+logr3=1.30 Laplace -835.3936221 (conv=true) AGHQ9 -835.2983658 (conv=true |g|=1.1e-06) [64s]
+
+sorted (logr3, Laplace-profile, AGHQ9-profile); the 1.517 row is the stage-2 point, Laplace column not profiled:
+1.300  -835.3936221  -835.2983658
+1.400  -835.4037471  -835.2976577
+1.517  -835.4252208  -835.2974811
+1.600  -835.4154257  -835.2975178
+1.700  -835.4157943  -835.2975779
+1.800  -835.4124916  -835.2975695
+1.900  -835.4058461  -835.2974521
+2.000  -835.3963244  -835.2972173
+2.200  -835.3707529  -835.2964379
+2.500  -835.3234090  -835.2947807
+total 64.6s

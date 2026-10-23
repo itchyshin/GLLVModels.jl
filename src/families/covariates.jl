@@ -24,28 +24,103 @@
 
 # --- offset-aware per-site Laplace (mirrors families/laplace.jl, with η0 = β + offset) ---
 
-function _laplace_mode_off(family, y::AbstractVector, n::AbstractVector,
-        Λ::AbstractMatrix, η0::AbstractVector, link::Link;
+# One pass of the per-site mode search. Returns `(z, converged)`. `step_weight` picks
+# the curvature that sets the step, `:fisher` (expected, never negative) or `:observed`.
+# It never changes the mode, which is the fixed point of `Λ's − z = 0` whatever W is.
+#
+# Before 2026-09-25 this loop took full Fisher-scoring steps with no damping and
+# returned whatever `z` it held when it stopped, converged or not. Gamma/log's Fisher
+# weight is the constant α, blind to y/μ, so the step overshoots when y/μ is far from 1:
+# on one site of fit_gllvm_cov's own warm start (the #479 data) it ran out to z ≈ 1e11
+# and the site returned a FINITE −7.2e22, which slipped past the fitter's 1e12 sentinel
+# and sent the line search to a log α so low that exp(log α) == 0.0.
+#
+# Now a step that lowers the per-site log-posterior is halved (the generic core's
+# `_laplace_mode` rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when the full proposed step is below `tol`,
+# the old loop's own stopping test. A heavily halved step does NOT count.
+function _laplace_mode_off_pass(family, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, η0::AbstractVector, link::Link, step_weight::Symbol;
         mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
-    K = size(Λ, 2)
+    p, K = size(Λ)
     z = zeros(K)
     for _ in 1:maxiter
         η  = _clamp_eta.(η0 .+ Λ * z)
         μ  = _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(Ref(family), μ, n, me, y)
-        W  = _glm_weight.(Ref(family), μ, n, me)
+        W  = if step_weight === :fisher
+            _glm_weight.(Ref(family), μ, n, me)
+        else
+            # Masked cells hold a placeholder `y`, so their observed weight is not evaluated.
+            [(mask === nothing || mask[t]) ?
+                _glm_obs_weight(family, μ[t], n[t], me[t], y[t], link, η[t]) : 0.0 for t in 1:p]
+        end
         if mask !== nothing
             s = ifelse.(mask, s, 0.0)            # masked ⇒ no contribution
             W = ifelse.(mask, W, 0.0)
         end
+        # A negative (or NaN) observed weight can make Λ'WΛ + I indefinite, and then the
+        # step need not point uphill. Give up rather than take it.
+        step_weight === :fisher || all(w -> w >= 0, W) || return z, false
         A  = Symmetric(Λ' * (W .* Λ) + I)
         Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _laplace_mode_logpost(family, y, n, Λ, η0, link, z; mask = mask)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _laplace_mode_logpost(family, y, n, Λ, η0, link, ztrial; mask = mask)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
-    return z
+    return z, false
+end
+
+# Per-site mode search with a convergence report. Returns `(z, converged)`.
+# Fisher scoring runs first, so every site that converged before keeps its old path.
+# Fallback: Fisher scoring converges only linearly when it is not Newton (Gamma/log,
+# Exponential/log, NB2/log), and even with halving it left sites unconverged after 100
+# iterations on healthy Gamma datasets at the fitter's warm start (measured: 6 of 4000
+# site evaluations on the #479 sibling screen, 2 of them on healthy datasets 4 and 5).
+# A damped Newton search on the observed curvature converged at all 4000, in at most 6
+# iterations. It runs only where Fisher failed and the two curvatures differ; if it also
+# fails, the Fisher pass's last iterate is returned, flagged unconverged.
+function _laplace_mode_off_conv(family, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, η0::AbstractVector, link::Link;
+        mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _laplace_mode_off_pass(family, y, n, Λ, η0, link, :fisher;
+                                   mask = mask, maxiter = maxiter, tol = tol)
+    (ok || _glm_weight_matches_observed(family, link)) && return z, ok
+    z2, ok2 = _laplace_mode_off_pass(family, y, n, Λ, η0, link, :observed;
+                                     mask = mask, maxiter = maxiter, tol = tol)
+    return ok2 ? (z2, true) : (z, false)
+end
+
+# The mode alone, for the getLV-style callers (covariate, species-covariate,
+# fourth-corner, row-effect and constrained getLV). Unchanged contract: a plain score,
+# with no convergence flag, even at a site whose search did not converge.
+function _laplace_mode_off(family, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, η0::AbstractVector, link::Link;
+        mask = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    return first(_laplace_mode_off_conv(family, y, n, Λ, η0, link;
+                                        mask = mask, maxiter = maxiter, tol = tol))
 end
 
 function _laplace_site_off(family, y::AbstractVector, n::AbstractVector,
@@ -55,9 +130,13 @@ function _laplace_site_off(family, y::AbstractVector, n::AbstractVector,
     (hessian === :fisher || hessian === :observed) || throw(ArgumentError(
         "hessian must be :fisher or :observed; got :$hessian"))
     p = size(Λ, 1)
-    # The MODE SEARCH stays on Fisher (`_laplace_mode_off` is untouched) — only
-    # the log-det takes the selector. Same role separation as the generic core.
-    z  = _laplace_mode_off(family, y, n, Λ, η0, link; mask = mask, maxiter = maxiter, tol = tol)
+    # The MODE SEARCH is Fisher first, with an observed-curvature fallback
+    # (`_laplace_mode_off_conv`); only the log-det takes the selector. Same role
+    # separation as the generic core. A site whose search does not converge returns
+    # -Inf, never a value computed at an unconverged mode, so the fitters' objective
+    # returns its 1e12 sentinel instead of a garbage surface.
+    z, ok = _laplace_mode_off_conv(family, y, n, Λ, η0, link; mask = mask, maxiter = maxiter, tol = tol)
+    ok || return -Inf
     η  = _clamp_eta.(η0 .+ Λ * z)
     μ  = _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -88,7 +167,7 @@ function _laplace_site_off(family, y::AbstractVector, n::AbstractVector,
         F = cholesky(A; check = false)
         issuccess(F) || return oftype(ℓ, -Inf)
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # Total Laplace log-marginal with an additive per-(t,s) offset matrix `O` (p×n):
@@ -105,6 +184,124 @@ function _marginal_loglik_offset(family, Y::AbstractMatrix, N::AbstractMatrix,
                                  mask = mi, kwargs...)
     end
     return acc
+end
+
+# --- exact gradient for the covariate fitters (2026-10-01) ---
+#
+# Until this change `fit_gllvm_cov` and `fit_nb_gllvm_grouped_cov` drove L-BFGS with
+# `autodiff = :finite`: 2·nθ full marginal evaluations (each n per-site Newton mode
+# searches) per gradient, plus finite-difference noise that kept the fits from reaching
+# `g_tol` (fungi 100 sites x 10 species ran to the 500-iteration cap, unconverged).
+#
+# This is the `src/laplace_grad.jl` construction with an offset: solve each site's mode
+# ẑ once at the primal θ (the SAME mode search the objective uses), then evaluate the
+# site marginal at the differentiable one-Newton-step point
+#       z(θ) = ẑ + H(ẑ,θ)⁻¹ (Λ's(ẑ;θ) − ẑ),
+# with H = Λ'W_obsΛ + I the exact Hessian of the per-site log-posterior, and take
+# ForwardDiff through it. z(θ̂) = ẑ and dz/dθ is the implicit dẑ/dθ, so the result is
+# the exact gradient of the objective, log-det and implicit terms included. The log-det
+# weight is the one the objective's own kernel uses (`_laplace_site_off` for
+# `fit_gllvm_cov`, `_nb_grouped_loglik_site` for the grouped NB2 route).
+#
+# `fams` is indexable per species (a vector), so the one kernel serves the shared-
+# dispersion route (all entries equal) and the per-trait-dispersion NB2 route.
+
+# Exact per-cell curvature −∂²ℓ/∂η² of the coded log-density (the implicit step's
+# weight). Equal to the Fisher weight where the family declares so.
+_cov_obs_weight(f, μ, n, me, y, link::Link, η) =
+    _glm_weight_matches_observed(f, link) ? _glm_weight(f, μ, n, me) :
+                                            _glm_obs_weight(f, μ, n, me, y, link, η)
+
+# Differentiable per-site Laplace marginal at the implicit-step point. `η0 = β + O[:, s]`
+# and `Λ` may carry duals; `ẑ` is the concrete (Float64) converged mode. `logdet_w(t, μ,
+# me, η)` returns the objective's log-det weight for cell t.
+function _cov_site_diffable(fams, y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix,
+        η0::AbstractVector, link::Link, ẑ::AbstractVector, logdet_w; mask = nothing)
+    p = size(Λ, 1)
+    obs(t) = mask === nothing || mask[t]
+    η  = _clamp_eta.(η0 .+ Λ * ẑ)
+    μ  = [_clamp_mu(fams[t], linkinv(link, η[t])) for t in 1:p]
+    me = mu_eta.(Ref(link), η)
+    T  = eltype(μ)
+    s  = [obs(t) ? _glm_score(fams[t], μ[t], n[t], me[t], y[t]) : zero(T) for t in 1:p]
+    Wo = [obs(t) ? _cov_obs_weight(fams[t], μ[t], n[t], me[t], y[t], link, η[t]) : zero(T)
+          for t in 1:p]
+    H  = Λ' * (Wo .* Λ) + I
+    z  = ẑ .+ (Matrix(H) \ (Λ' * s .- ẑ))
+
+    ηz  = _clamp_eta.(η0 .+ Λ * z)
+    μz  = [_clamp_mu(fams[t], linkinv(link, ηz[t])) for t in 1:p]
+    mez = mu_eta.(Ref(link), ηz)
+    Tz  = eltype(μz)
+    W   = [obs(t) ? logdet_w(t, μz[t], mez[t], ηz[t]) : zero(Tz) for t in 1:p]
+    A   = Matrix(Λ' * (W .* Λ) + I)
+    ℓ = zero(Tz)
+    @inbounds for t in 1:p
+        obs(t) || continue
+        ℓ += _glm_logpdf(fams[t], μz[t], n[t], y[t])
+    end
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
+end
+
+# Optimiser for the exact-gradient route: dense BFGS, not L-BFGS. These objectives are
+# ill-conditioned (fungi 100 x 10: R's own cond(H) is 1.2e8, with near-separated species
+# pushing intercepts and loadings far out). With the exact gradient, L-BFGS (m = 10) crawled
+# along the flat valley and hit the 500-iteration cap short of the optimum (negll 531.74 after
+# 500 iterations, 531.30 after 3000, against 530.484071); dense BFGS reaches 530.484071
+# (R's value, to 1e-8) in 190 iterations. The inverse-Hessian cost is O(nθ²) per step,
+# negligible next to the per-site mode searches at the θ sizes these fitters meet.
+_COV_BFGS() = Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+
+# Families whose marker can carry a ForwardDiff dual dispersion (NB1's field is
+# Float64-typed, so NB1 keeps the finite-difference gradient).
+_cov_ad_ok(::NB1) = false
+_cov_ad_ok(f)     = true
+
+# −∇θ of `fit_gllvm_cov`'s objective, θ = [β; γ_free; pack(Λ); (log disp)], or
+# `nothing` when any site's mode search fails (the objective is the 1e12 sentinel there)
+# or the AD pass errors; `_optimize_with_analytic` then falls back to a central finite
+# difference at that θ.
+function _cov_negll_grad(family, Yc, Nm, X_fit, θ, p, q, K, rr, has_disp, lk, msk,
+                         maxiter, tol)
+    try
+        n = size(Yc, 2)
+        β = θ[1:p]; γ = θ[(p + 1):(p + q)]
+        Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
+        fam = _cov_family(family, has_disp ? exp(θ[p + q + rr + 1]) : NaN)
+        O = _build_offset(X_fit, γ)
+        ẑs = Vector{Vector{Float64}}(undef, n)
+        for s in 1:n
+            mi = msk === nothing ? nothing : view(msk, :, s)
+            z, ok = _laplace_mode_off_conv(fam, view(Yc, :, s), view(Nm, :, s), Λ,
+                                           β .+ view(O, :, s), lk;
+                                           mask = mi, maxiter = maxiter, tol = tol)
+            ok || return nothing
+            ẑs[s] = z
+        end
+        hess = _default_hessian(fam, lk)
+        function marg(θd)
+            βd = θd[1:p]; γd = θd[(p + 1):(p + q)]
+            Λd = unpack_lambda(θd[(p + q + 1):(p + q + rr)], p, K)
+            fd = has_disp ? _cov_family(family, exp(θd[p + q + rr + 1])) : fam
+            fams = fill(fd, p)
+            fisher = hess === :fisher || _glm_weight_matches_observed(fd, lk)
+            Od = _build_offset(X_fit, γd)
+            acc = zero(eltype(θd))
+            for s in 1:n
+                y = view(Yc, :, s); nt = view(Nm, :, s)
+                mi = msk === nothing ? nothing : view(msk, :, s)
+                ldw = (t, μ, me, η) -> fisher ? _glm_weight(fd, μ, nt[t], me) :
+                                                _glm_obs_weight(fd, μ, nt[t], me, y[t], lk, η)
+                acc += _cov_site_diffable(fams, y, nt, Λd, βd .+ view(Od, :, s), lk, ẑs[s],
+                                          ldw; mask = mi)
+            end
+            return acc
+        end
+        g = ForwardDiff.gradient(marg, θ)
+        return all(isfinite, g) ? -g : nothing
+    catch
+        return nothing
+    end
 end
 
 # Offset matrix O[t,s] = Σ_k X[t,s,k]·γ_k from X::(p,n,q) and γ::length-q.
@@ -241,8 +438,10 @@ this shared-dispersion path remains the explicit opt-in. `X` is the `(p, n, q)`
 covariate array
 (same contract as the Gaussian engine); `γ` (length q) are coefficients shared
 across species (encode species-specific responses by block-expanding `X`). `Y` is
-`p × n`; `N` supplies Binomial trial counts (default all-ones). Finite-difference
-gradient. `γ_fixed` optionally fixes selected covariate coefficients to zero;
+`p × n`; `N` supplies Binomial trial counts (default all-ones). Exact gradient
+(ForwardDiff through the implicit one-Newton-step construction of
+`src/laplace_grad.jl`), with a central finite difference at any θ where it is not
+available; NB1 keeps the finite-difference gradient. `γ_fixed` optionally fixes selected covariate coefficients to zero;
 pass a Bool vector of length `size(X, 3)`, an integer index vector, or a Dict
 index=>0.
 
@@ -289,6 +488,7 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
+    Λ0 = _lower_triangular_loadings(Λ0)   # #865: pack_lambda truncates the SVD's upper triangle
     θ0 = has_disp ? vcat(β0, zeros(q), pack_lambda(Λ0), log(_cov_disp_init(family))) :
                     vcat(β0, zeros(q), pack_lambda(Λ0))
     function negll(θ)
@@ -296,9 +496,14 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         γ = θ[(p + 1):(p + q)]
         Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
         disp = has_disp ? exp(θ[p + q + rr + 1]) : NaN
-        fam = _cov_family(family, disp)
         O = _build_offset(X_fit, γ)
+        _eta_cap_guarded(lk) && _eta_above_clamp(β, O; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
+            # Built inside the `try`: a line-search step can push log-dispersion so low
+            # that exp(...) == 0.0, and Distributions then throws DomainError (Gamma,
+            # Beta and NegativeBinomial all check their parameter). That point must get
+            # the sentinel, not end the fit.
+            fam = _cov_family(family, disp)
             -_marginal_loglik_offset(fam, Yc, Nm, Λ, β, O, lk;
                                      mask = msk, maxiter = newton_maxiter, tol = newton_tol)
         catch
@@ -307,13 +512,22 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = if _cov_ad_ok(family)
+        grad = θ -> _cov_negll_grad(family, Yc, Nm, X_fit, θ, p, q, K, rr, has_disp, lk,
+                                    msk, newton_maxiter, newton_tol)
+        _optimize_with_analytic(negll, grad, θ0, _COV_BFGS(), opts)
+    else
+        Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    end
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     disp̂ = has_disp ? exp(θ̂[p + q + rr + 1]) : NaN
-    return GllvmCovFit(family, β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, disp̂, lk, _fit_verdict(res)...)
+    loglik, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, lk, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
+                            caller = "fit_gllvm_cov")
+    return GllvmCovFit(family, β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, disp̂, lk, loglik, conv, iters)
 end

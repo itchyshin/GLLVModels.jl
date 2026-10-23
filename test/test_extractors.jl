@@ -272,6 +272,23 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
 
         sub = extract_cross_correlations(fit; level = :unit, traits_i = [1], traits_j = [2, 3])
         @test sub ≈ correlation_B(fit)[[1], [2, 3]] atol = 1e-12
+
+        # extract_proportions / extract_residual_split: structure and identities (the R-vs-Julia
+        # numbers are in test_variance_decomp_p1.jl)
+        pr = extract_proportions(fit)
+        @test unique(pr.component) == [:shared_unit, :unique_unit, :shared_unit_obs, :unique_unit_obs]
+        @test pr.trait == repeat(1:p, 4)
+        @test pr.variance[pr.component .== :shared_unit] ≈ diag(fit.Λ_B * fit.Λ_B') atol = 1e-12
+        @test pr.variance[pr.component .== :unique_unit_obs] ≈ fit.σ²_W atol = 1e-12
+        @test sum(reshape(pr.proportion, p, 4); dims = 2) ≈ ones(p, 1) atol = 1e-12
+        @test extract_proportions(fit; format = :wide).shared_unit ≈ pr.proportion[pr.component .== :shared_unit]
+        @test_throws ArgumentError extract_proportions(fit; format = :tall)
+        rs = extract_residual_split(fit)
+        @test rs.sigma2_d == zeros(p)
+        @test rs.sigma2_e ≈ fit.σ²_W atol = 1e-12
+        @test rs.sigma2_total ≈ rs.sigma2_e atol = 1e-12
+        @test occursin("extract_residual_split", string(Base.Docs.doc(Base.Docs.Binding(GLLVModels, :extract_residual_split))))
+        @test occursin("TwoLevelFit", string(Base.Docs.doc(Base.Docs.Binding(GLLVModels, :extract_residual_split))))
     end
 
     @testset "non-Gaussian extract_communality / extract_correlations forward" begin
@@ -412,5 +429,34 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         Ω_total = extract_Omega(fit_g; level = :total)
         @test Ω_total ≈ Σ_R .+ (fit_g.pars.σ_eps^2) .* Matrix(I, p_g, p_g) atol = 1e-4
         @test !(Ω_total ≈ extract_Omega(fit_g))
+    end
+
+    @testset "unit-tier extractors on a has_diag fit use the identified total (#701)" begin
+        # Twin of the #701 fixture (p = 4, n = 250, one factor, centred, K = 1,
+        # has_diag = true). gllvmTMB `latent(0 + trait | site, d = 1)` fits the
+        # whole identified diagonal sum as the unit-tier unique part, so its
+        # `extract_communality(level = "unit")` equals `communality()` here
+        # (the issue's R values: 0.90672, 0.70182, 0.2196, 0.52292, at 5 dp).
+        Random.seed!(99)
+        p, n = 4, 250
+        Λ0 = [0.9, 0.7, 0.4, 0.6]
+        Y = Λ0 * randn(1, n) .+ sqrt.([0.1, 0.4, 1.5, 0.7]) .* randn(p, n)
+        Y .-= sum(Y; dims = 2) ./ n
+        fit = fit_gaussian_gllvm(Y; K = 1, has_diag = true)
+        Σ = GLLVModels.sigma_y_site(fit)
+
+        c = extract_communality(fit; level = :unit)
+        @test c ≈ communality(fit) atol = 1e-10
+        @test c ≈ diag(fit.pars.Λ * fit.pars.Λ') ./ diag(Σ) atol = 1e-10
+        # The unit-tier unique variance is the identified diagonal sum, not
+        # sigma2_B alone: communality must sit strictly below the old value.
+        c_old = diag(fit.pars.Λ * fit.pars.Λ') ./
+                (diag(fit.pars.Λ * fit.pars.Λ') .+ fit.pars.σ²_B)
+        @test all(c .< c_old)
+
+        @test extract_correlations(fit; level = :unit) ≈ correlation(fit) atol = 1e-10
+        @test extract_proportions(fit) ≈ GLLVModels.proportions(fit; component = :shared) atol = 1e-10
+        # Omega: the diagonal W tier is already inside the unit total.
+        @test diag(extract_Omega(fit)) ≈ diag(Σ) atol = 1e-10
     end
 end

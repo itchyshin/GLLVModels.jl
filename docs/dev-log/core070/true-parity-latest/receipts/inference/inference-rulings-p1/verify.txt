@@ -1,0 +1,2 @@
+self-test: 11 mutations rejected
+CORE070_INFERENCE_RULINGS_BATCH_VERIFIED

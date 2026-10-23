@@ -230,9 +230,10 @@ function fit_constrained_gllvm(Y::AbstractMatrix{<:Real}; family, X::AbstractMat
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         B = reshape(θ[(p + rr + 1):(p + rr + qK)], q, K)
         disp = has_disp ? exp(θ[p + rr + qK + 1]) : NaN
-        fam = _cov_family(family, disp)
         O = _build_offset_constrained(Λ, B, X)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(family, disp)
             -_marginal_loglik_offset(fam, Y, Nm, Λ, β, O, lk;
                                      maxiter = newton_maxiter, tol = newton_tol)
         catch

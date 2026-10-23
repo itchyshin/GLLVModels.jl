@@ -1,11 +1,32 @@
 # Diagnostics and model comparison
 
-These functions read an already-fitted model (or a pair of fits) and report
-on its health — score-centring consistency, boundary/degeneracy scans,
-residual-family checks, kernel separability — or compare two fits on the same
-species set. None of them fits a new model.
+Use this page after you have fitted a model and understood its main result.
+Diagnostics help answer three practical questions:
 
-## Single-fit diagnostics
+- Did the optimiser finish at a sensible solution?
+- Is a variance or correlation pressed against a boundary, where its estimate
+  can be fragile?
+- If two models describe the same response matrix, which differences are worth
+  investigating?
+
+Start with the fitted object and the response matrix used to fit it:
+
+```julia
+checks = fit_diagnostic_table(fit; y = Y)
+checks.check
+checks.status
+checks.message
+```
+
+The table reports a passed, failed, or unavailable check. An unavailable check
+means that this model type does not expose that calculation; it does not mean
+that the model passed by default. Read the fit summary, inspect residuals, and
+return to the data and scientific question before reporting a result.
+
+For the first Gaussian example, start with the [Quick start](quickstart.md).
+For fitted values and residuals, see [Working with a fitted model](working-with-a-fit.md).
+
+## What the detailed checks do
 
 `sanity_multi` and `gllvmTMB_diagnose`/`check_gllvmTMB` run Hessian-based
 health checks (positive-definiteness, gradient norm) and a boundary scan on
@@ -13,7 +34,10 @@ the implied `Σ_y` (near-zero variances, near-±1 correlations). The
 Hessian-based fields are only populated for `GllvmFit` (Gaussian) fits with
 `y` supplied — GLLVModels.jl has no generic Hessian path across its ~50
 non-Gaussian fit types, so those fields come back `missing` on other families
-rather than a guess. R's per-family boundary rows (binomial-prevalence
+rather than a guess. `sanity_multi` returns R's flags under R's names
+(`converged`, `max_gradient`, `sdreport_ok`, `pd_hessian`, `max_se`,
+`rr_B_min_loading`, `rr_W_min_loading`) and writes R's report lines when
+given `io = stdout`. R's per-family boundary rows (binomial-prevalence
 loading, multinomial degeneracy, ordinal cutpoint span, spatial-domain
 diameter) are not ported; only the generic variance/correlation scan is.
 
@@ -32,6 +56,11 @@ surface).
 
 `diagnose_kernel_separability` checks only the two-tier `Λ_B` vs `Λ_W` case
 GLLVModels.jl currently fits; single-tier fits report `separable = missing`.
+For a `GllvmFit`, each column of `Y` is one unit observed once, so the data
+never separate `Λ_B` from `Λ_W`: only `Λ_B Λ_B' + Λ_W Λ_W'` is identified.
+The reported angle then reflects the starting values, and
+`separable = true` does not mean the two tiers are identified (see the
+Identifiability section of [Model](model.md)).
 
 `fit_diagnostic_table` computes its summary rows directly from the raw fit
 (unlike R's `diagnostic_table`, which reads metadata already attached by a
@@ -51,6 +80,10 @@ not wire in bootstrap CIs or render R's comparison plot.
 covariance/loadings of two fits using rotation- and sign-free invariants only
 — `compare_loadings` compares `Λ1Λ1ᵀ` vs `Λ2Λ2ᵀ` (Frobenius norm) and
 principal angles between column spaces, never a signed entrywise `Λ` diff.
+R's own `compare_loadings(Lambda_a, Lambda_b)` takes two loading matrices and
+reports the Procrustes rotation, the rotated `Lambda_a`, the Frobenius
+distance after alignment and the per-factor correlations; the matrix method
+`compare_loadings(Lambda_a, Lambda_b)` returns the same fields.
 
 `compare_fits_dep_vs_two_psi` and `compare_fits_indep_vs_two_psi` bridge any
 two same-`p` fits via their implied `Σ_y` and an information-criterion

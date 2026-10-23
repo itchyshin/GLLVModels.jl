@@ -1,0 +1,299 @@
+{
+  "schema": "core070-aghq-public-policy-bind/v1",
+  "status": "PASS",
+  "scope": "T8_AGHQ_PUBLIC_POLICY_BIND_14",
+  "bound_row_ids": ["AGHQ-AUTO-K-BINOMIAL", "AGHQ-AUTO-K-POISSON", "AGHQ-AUTO-K-GAUSSIAN", "AGHQ-AUTO-K-NB2", "AGHQ-AUTO-K-ORDINAL", "AGHQ-AUTO-K-DELTA", "AGHQ-AUTO-K-TWEEDIE", "AGHQ-DEFAULT-OFF", "AGHQ-POLICY-OFF", "AGHQ-POLICY-EXPLICIT", "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF", "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF", "AGHQ-POLICY-TRAITS19", "AGHQ-POLICY-TRAITS20"],
+  "bound_count": 14,
+  "expected_count": 14,
+  "cases": {
+    "AGHQ-AUTO-K-BINOMIAL": {
+      "row_id": "AGHQ-AUTO-K-BINOMIAL",
+      "pass": true,
+      "detail": "public auto fit",
+      "observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 8 adaptation passes, stalled (no honest descent at cap 1 after backtracking); max |grad| = 2.73 (relative 0.0281) against tolerances of 0.0001 / 1e-06; final max |mode shift| = 0.0136",
+        "convergence": 0,
+        "objective": 97.140415104535606
+      },
+      "public_call": "gllvmTMB(..., family=binomial(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "binomial"
+      },
+      "expected_k": 5,
+      "helper_oracle_note": null
+    },
+    "AGHQ-AUTO-K-POISSON": {
+      "row_id": "AGHQ-AUTO-K-POISSON",
+      "pass": true,
+      "detail": "public auto fit",
+      "observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 9 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.0001, relative 5.02e-07); final max |mode shift| = 1.96e-05",
+        "convergence": 0,
+        "objective": 200.06497044229368
+      },
+      "public_call": "gllvmTMB(..., family=poisson(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "poisson"
+      },
+      "expected_k": 5,
+      "helper_oracle_note": null
+    },
+    "AGHQ-AUTO-K-GAUSSIAN": {
+      "row_id": "AGHQ-AUTO-K-GAUSSIAN",
+      "pass": true,
+      "detail": "public auto fit",
+      "observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 2.37e-05, relative 2.89e-07); final max |mode shift| = 0",
+        "convergence": 0,
+        "objective": 81.969144324021514
+      },
+      "public_call": "gllvmTMB(..., family=gaussian(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "gaussian"
+      },
+      "expected_k": 5,
+      "helper_oracle_note": null
+    },
+    "AGHQ-AUTO-K-NB2": {
+      "row_id": "AGHQ-AUTO-K-NB2",
+      "pass": true,
+      "detail": "public auto fit",
+      "observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 5.54e-05, relative 2.66e-07); final max |mode shift| = 1.02e-05",
+        "convergence": 0,
+        "objective": 207.82819066386242
+      },
+      "public_call": "gllvmTMB(..., family=nb2(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "nb2"
+      },
+      "expected_k": 5,
+      "helper_oracle_note": null
+    },
+    "AGHQ-AUTO-K-ORDINAL": {
+      "row_id": "AGHQ-AUTO-K-ORDINAL",
+      "pass": true,
+      "detail": "public auto fit",
+      "observed": {
+        "used": true,
+        "k": 9,
+        "reason": "quadrature on z_B (d = 1, k = 9, 9 nodes); 100 adaptation passes, stalled (no honest descent at cap 1 after backtracking); max |grad| = 0.000434 (relative 2.81e-06) against tolerances of 0.0001 / 1e-06; final max |mode shift| = 1.12e-07",
+        "convergence": 1,
+        "objective": 154.33977250412823
+      },
+      "public_call": "gllvmTMB(..., family=ordinal(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "ordinal"
+      },
+      "expected_k": 9,
+      "helper_oracle_note": null
+    },
+    "AGHQ-AUTO-K-DELTA": {
+      "row_id": "AGHQ-AUTO-K-DELTA",
+      "pass": true,
+      "detail": "public auto fit",
+      "observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 12 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 9.21e-05, relative 5.38e-07); final max |mode shift| = 5.43e-06",
+        "convergence": 0,
+        "objective": 171.25659493637323
+      },
+      "public_call": "gllvmTMB(..., family=delta(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "delta"
+      },
+      "expected_k": 5,
+      "helper_oracle_note": "Public fit k=5: delta_gamma() family label is 'binomial Gamma', not 'delta_gamma'; frozen helper oracle used family='delta_gamma' -> k=9."
+    },
+    "AGHQ-AUTO-K-TWEEDIE": {
+      "row_id": "AGHQ-AUTO-K-TWEEDIE",
+      "pass": true,
+      "detail": "public auto fit",
+      "observed": {
+        "used": true,
+        "k": 9,
+        "reason": "quadrature on z_B (d = 1, k = 9, 9 nodes); 9 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 7.42e-05, relative 3.73e-07); final max |mode shift| = 0",
+        "convergence": 0,
+        "objective": 198.93968140574808
+      },
+      "public_call": "gllvmTMB(..., family=tweedie(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "tweedie"
+      },
+      "expected_k": 9,
+      "helper_oracle_note": null
+    },
+    "AGHQ-DEFAULT-OFF": {
+      "row_id": "AGHQ-DEFAULT-OFF",
+      "pass": true,
+      "detail": "formals(gllvmTMBcontrol)$aghq",
+      "observed": {
+        "default_aghq": false
+      },
+      "public_call": "formals(gllvmTMBcontrol)$aghq"
+    },
+    "AGHQ-POLICY-OFF": {
+      "row_id": "AGHQ-POLICY-OFF",
+      "pass": true,
+      "detail": "aghq=FALSE -> Laplace",
+      "observed": {
+        "used": false,
+        "k": null,
+        "reason": "aghq not requested",
+        "convergence": 0,
+        "objective": 93.486379507990435
+      },
+      "public_call": "gllvmTMB(..., control=gllvmTMBcontrol(aghq=FALSE))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42
+      }
+    },
+    "AGHQ-POLICY-EXPLICIT": {
+      "row_id": "AGHQ-POLICY-EXPLICIT",
+      "pass": true,
+      "detail": "aghq=3L explicit",
+      "observed": {
+        "used": true,
+        "k": 3,
+        "reason": "quadrature on z_B (d = 1, k = 3, 3 nodes); 8 adaptation passes, stalled (no honest descent at cap 1 after backtracking); max |grad| = 2.23 (relative 0.0232) against tolerances of 0.0001 / 1e-06; final max |mode shift| = 0.0139",
+        "convergence": 0,
+        "objective": 96.079270847474518
+      },
+      "public_call": "gllvmTMB(..., control=gllvmTMBcontrol(aghq=3L))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42
+      }
+    },
+    "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF": {
+      "row_id": "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
+      "pass": true,
+      "detail": "explicit aghq=9L at n_traits=20 bypasses auto cutoff",
+      "observed": {
+        "used": true,
+        "k": 9,
+        "reason": "quadrature on z_B (d = 1, k = 9, 9 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 3.15e-05, relative 5.97e-08); final max |mode shift| = 5.35e-06",
+        "convergence": 0,
+        "objective": 528.67103060932357
+      },
+      "public_call": "gllvmTMB(..., n_traits=20, control=gllvmTMBcontrol(aghq=9L))",
+      "fixture": {
+        "p_traits": 20,
+        "n_sites": 40,
+        "seed": 120
+      }
+    },
+    "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF": {
+      "row_id": "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF",
+      "pass": true,
+      "detail": "aghq='auto' declines at n_traits=20",
+      "observed": {
+        "used": false,
+        "k": null,
+        "reason": "laplace: auto: n_traits = 20 >= cutoff 20 -- Pinheiro & Chao (2006) measure the AGHQ-over-Laplace gain falling to three-decimal agreement by cluster size ~30 at d=3 (and already small at d=2, n=20); declining to Laplace rather than paying k^(q+1) cost for a near-vanished gain",
+        "convergence": 0,
+        "objective": 529.17235712683782
+      },
+      "public_call": "gllvmTMB(..., n_traits=20, control=gllvmTMBcontrol(aghq='auto'))",
+      "fixture": {
+        "p_traits": 20,
+        "n_sites": 40,
+        "seed": 120
+      }
+    },
+    "AGHQ-POLICY-TRAITS19": {
+      "row_id": "AGHQ-POLICY-TRAITS19",
+      "pass": true,
+      "detail": "aghq='auto' stays on at n_traits=19",
+      "observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 12 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 9.59e-05, relative 2.19e-07); final max |mode shift| = 0",
+        "convergence": 0,
+        "objective": 437.88170151957206
+      },
+      "public_call": "gllvmTMB(..., n_traits=19, control=gllvmTMBcontrol(aghq='auto'))",
+      "fixture": {
+        "p_traits": 19,
+        "n_sites": 35,
+        "seed": 1
+      }
+    },
+    "AGHQ-POLICY-TRAITS20": {
+      "row_id": "AGHQ-POLICY-TRAITS20",
+      "pass": true,
+      "detail": "boundary duplicate: n_traits=20 auto decline",
+      "observed": {
+        "used": false,
+        "k": null,
+        "reason": "laplace: auto: n_traits = 20 >= cutoff 20 -- Pinheiro & Chao (2006) measure the AGHQ-over-Laplace gain falling to three-decimal agreement by cluster size ~30 at d=3 (and already small at d=2, n=20); declining to Laplace rather than paying k^(q+1) cost for a near-vanished gain",
+        "convergence": 0,
+        "objective": 529.17235712683782
+      },
+      "public_call": "same fixture as AGHQ-POLICY-AUTO-ENFORCE-CUTOFF",
+      "fixture": {
+        "p_traits": 20,
+        "n_sites": 40,
+        "seed": 120
+      }
+    }
+  },
+  "r_engine": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "gllvmTMB_version": "0.7.1",
+    "r_version": "R version 4.6.0 (2026-04-24)",
+    "load_method": "library(gllvmTMB) from the installed P1 oracle library (identified by source_pin)"
+  },
+  "model_contract": "Stage1a: latent(..., unique=FALSE), single z_B block, aghq_ridge=Inf",
+  "oracle_note": "Installed P1 oracle library; no source tree loaded.",
+  "generated_at": "2026-09-28T05:34:45+0000",
+  "parity_pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract": "docs/dev-log/core070/true-parity-latest/aghq-public-policy-contract-p1.json",
+  "contract_sha256": "ab6e4c01168fecb1d7cc31e6df948e10d8671e02d96a97d847c7d2521e242e0a",
+  "gllvmTMB_version": "0.7.1",
+  "source_pin": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "installed_tree_sha256": "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4",
+    "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+    "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+    "version": "0.7.1",
+    "marker_path": "gllvmTMB/CORE070_SOURCE_PIN.toml",
+    "marker_sha256": "5b667a7d5f1718364a2794642cec52eac1ead345ec39fff5051c2c1ca7a62218"
+  },
+  "receipt_sha256": "3674b770205cdb01e14490ea973c64259faefcb66d0af17b698301b232fa8574"
+}

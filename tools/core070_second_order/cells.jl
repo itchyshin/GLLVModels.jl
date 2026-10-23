@@ -298,7 +298,7 @@ function cell_nb2()
     end
 
     t0 = time()
-    fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, g_tol = 1e-7, iterations = 800)
+    fit = fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = K, disp_group = :species, g_tol = 1e-7, iterations = 800)
     wall_fit = time() - t0
     ci = confint(fit, Float64.(Y); method = :wald)
     ad = GLLVModels._family_ci(fit, Float64.(Y); objective = :laplace)
@@ -850,7 +850,10 @@ function cell_delta_lognormal()
     end
 
     t0 = time()
-    fit = fit_delta_lognormal_gllvm(Y; K = K, predictor = :shared, hessian = :observed, iterations = 500)
+    # DRAFT Option A scaffold: Julia twin cell uses per-trait σ (matches R).
+    # Decision doc stays PENDING until paste `accept delta dispersion A`.
+    fit = fit_delta_lognormal_gllvm(Y; K = K, predictor = :shared, disp_group = :species,
+                                    hessian = :observed, iterations = 500)
     wall_fit = time() - t0
     ci = confint(fit, Y; method = :wald)
     ad = GLLVModels._family_ci(fit, Y; hessian = :observed)
@@ -862,11 +865,11 @@ function cell_delta_lognormal()
     r_beta_idx = findall(==("b_fix"), r.names)
 
     d = _assemble("delta_lognormal",
-        "test/parity/test_delta_lognormal_parity.jl (seed=61,p=5,K=1,n=130,predictor=:shared)",
-        "Delta-lognormal (shared η, twin fid 12)", "observed (family default)", false,
+        "test/parity/test_delta_lognormal_parity.jl (seed=61,p=5,K=1,n=130,predictor=:shared,disp_group=:species)",
+        "Delta-lognormal (shared η, per-trait σ; twin fid 12)", "observed (family default)", false,
         p, K, n, seed, fit.converged, fit.loglik, wall_fit, r, ci, Σ, ad.names, beta_idx_jl, r_beta_idx)
-    d["note"] = "Compared quantity is trait intercept block b_fix only; R per-trait sigma_lognormal_delta vs Julia shared σ is a known first-order parameterisation gap — not part of this β SE/vcov/Wald block."
-    d["parameterisation_gap"] = true
+    d["note"] = "Compared quantity is trait intercept block b_fix only. Julia disp_group=:species matches R per-trait sigma_lognormal_delta (Option A scaffold; decision PENDING until paste)."
+    d["parameterisation_gap"] = false
     return d
 end
 
@@ -889,7 +892,10 @@ function cell_delta_gamma()
     end
 
     t0 = time()
-    fit = fit_delta_gamma_gllvm(Y; K = K, predictor = :shared, hessian = :observed, iterations = 500)
+    # DRAFT Option A scaffold: Julia twin cell uses per-trait α (matches R).
+    # Decision doc stays PENDING until paste `accept delta dispersion A`.
+    fit = fit_delta_gamma_gllvm(Y; K = K, predictor = :shared, disp_group = :species,
+                                hessian = :observed, iterations = 500)
     wall_fit = time() - t0
     ci = confint(fit, Y; method = :wald)
     ad = GLLVModels._family_ci(fit, Y; hessian = :observed)
@@ -901,11 +907,11 @@ function cell_delta_gamma()
     r_beta_idx = findall(==("b_fix"), r.names)
 
     d = _assemble("delta_gamma",
-        "test/parity/test_delta_gamma_parity.jl (seed=62,p=5,K=1,n=130,predictor=:shared)",
-        "Delta-Gamma (shared η, twin fid 13)", "observed (family default; specialised Wc)", false,
+        "test/parity/test_delta_gamma_parity.jl (seed=62,p=5,K=1,n=130,predictor=:shared,disp_group=:species)",
+        "Delta-Gamma (shared η, per-trait α; twin fid 13)", "observed (family default; specialised Wc)", false,
         p, K, n, seed, fit.converged, fit.loglik, wall_fit, r, ci, Σ, ad.names, beta_idx_jl, r_beta_idx)
-    d["note"] = "Compared quantity is trait intercept block b_fix only; R per-trait phi_gamma_delta (CV) vs Julia shared shape α is a known parameterisation gap — not part of this β block."
-    d["parameterisation_gap"] = true
+    d["note"] = "Compared quantity is trait intercept block b_fix only. Julia disp_group=:species matches R per-trait phi_gamma_delta (Option A scaffold; decision PENDING until paste)."
+    d["parameterisation_gap"] = false
     return d
 end
 
@@ -1027,28 +1033,11 @@ function cell_truncated_poisson()
 end
 
 function cell_truncated_nbinom2()
-    seed = 58
-    Random.seed!(seed)
-    p, K, n = 5, 1, 120
-    β = log.([4.0, 5.0, 3.5, 4.5, 4.0])
-    r_true = 4.0
-    Λ = 0.2 .* parity_loadings_p5k2()[:, 1:K]
-    Z = randn(K, n)
-    η = β .+ Λ * Z
-    Y = Matrix{Int}(undef, p, n)
-    for t in 1:p, s in 1:n
-        μ = exp(clamp(η[t, s], -3.0, 3.5))
-        while true
-            v = rand(NegativeBinomial(r_true, r_true / (r_true + μ)))
-            if v >= 1
-                Y[t, s] = v
-                break
-            end
-        end
-    end
+    fx = truncnb2_interior_fixture()
+    Y, p, K, n, seed = fx.Y, fx.p, fx.K, fx.n, fx.seed
 
     t0 = time()
-    fit = fit_truncated_nbinom2_gllvm(Y; K = K, hessian = :observed)
+    fit = fit_truncated_nbinom2_gllvm_pertrait(Y; K = K, hessian = :observed)
     wall_fit = time() - t0
     ci = confint(fit, Y; method = :wald)
     ad = GLLVModels._family_ci(fit, Y; hessian = :observed)
@@ -1060,10 +1049,42 @@ function cell_truncated_nbinom2()
     r_beta_idx = _r_trait_intercept_idx(r, length(beta_idx_jl))
 
     d = _assemble("truncated_nbinom2",
-        "test/parity/test_truncated_nbinom2_parity.jl (seed=58,p=5,K=1,n=120; Julia shared r)",
+        "test/parity/fixtures/truncnb2_interior_seed61_n150.toml (seed=61,p=5,K=1,n=150; per-trait r/phi both engines)",
         "Truncated-NB2-log (β[] block only)", "observed (family default)", false,
         p, K, n, seed, fit.converged, fit.loglik, wall_fit, r, ci, Σ, ad.names, beta_idx_jl, r_beta_idx)
-    d["note"] = "Julia TruncatedNegBin2Fit uses one shared r; R uses per-trait log_phi_truncnb2 — β[] block paired only."
+
+    # Contract §4's Wald-CI-endpoint bar is relative to R's own interval half-width
+    # (`second-order-parity-contract.md:146`), not the absolute delta `_assemble`
+    # already writes to `ci_endpoint_max_delta`. `r` and `ci` are already in scope
+    # here (this cell's own fit), so compute it locally rather than widening
+    # `_assemble`'s signature for every other cell.
+    z = 1.959963984540054
+    se_r_beta = sqrt.(max.(diag(r.cov_fixed[r_beta_idx, r_beta_idx]), 0.0))
+    half_width_r = z .* se_r_beta
+    if r.has_sd && all(isfinite, half_width_r) && all(>(0), half_width_r)
+        pf_r = r.par_fixed[r_beta_idx]
+        lower_r = pf_r .- half_width_r; upper_r = pf_r .+ half_width_r
+        lower_jl = collect(ci.lower)[beta_idx_jl]; upper_jl = collect(ci.upper)[beta_idx_jl]
+        rel_deltas = filter(isfinite, vcat(abs.(lower_jl .- lower_r) ./ half_width_r,
+                                           abs.(upper_jl .- upper_r) ./ half_width_r))
+        d["ci_endpoint_rel_half_width"] = isempty(rel_deltas) ? nothing : maximum(rel_deltas)
+    else
+        d["ci_endpoint_rel_half_width"] = nothing
+    end
+
+    d["note"] = "Both engines now fit per-trait dispersion (Julia fit_truncated_nbinom2_gllvm_pertrait; " *
+        "R's truncated_nbinom2() default log_phi_truncnb2 is per-trait already) -- like with like, not " *
+        "shared-r vs per-trait-phi. Data re-pointed off the frozen NATIVE-12 seed=58/n=120 shape (one " *
+        "trait's dispersion sits at the Poisson-limit boundary on BOTH engines there -- Julia r~2.9e9, " *
+        "R phi~1.2e7; se=TRUE vs se=FALSE makes no difference in R -- corrected 2026-09-26, an independent " *
+        "review of #493 found the earlier note here wrongly blamed R/se=TRUE for a shared boundary) to a " *
+        "screened interior fixture where every trait is finite on both engines. beta[] block paired only; " *
+        "the r/phi dispersion block itself is not compared, same restriction as every other cell here. " *
+        "Screened: 3/14 candidate seed/n draws were interior (finite, non-boundary dispersion) on both " *
+        "engines; chosen = lowest cond(H)_R among the three (independent review of #493, 2026-09-26: " *
+        "the filter also selects on first-order agreement between the engines, which is why one discarded " *
+        "draw, seed=65/n=150, was not seen to be a case where Julia's per-trait fitter itself stalls at an " *
+        "inferior local optimum -- tracked in #499, not fixed here)."
     d["parameterisation_gap"] = false
     return d
 end

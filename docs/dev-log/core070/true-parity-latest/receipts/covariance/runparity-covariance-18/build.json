@@ -1,0 +1,22 @@
+{
+  "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+  "command": [
+    "/Library/Frameworks/R.framework/Versions/4.6/Resources/bin/R",
+    "CMD",
+    "INSTALL",
+    "--no-multiarch",
+    "--library=/Users/z3437171/local-scratch/a3cov-oracle/build/library",
+    "/Users/z3437171/local-scratch/a3cov-oracle/build/source"
+  ],
+  "elapsed_seconds": 243.69366133294534,
+  "exit_code": 0,
+  "hostname": "w-kw3k3y6229.psych.ualberta.ca",
+  "installed_tree_sha256": "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4",
+  "log_sha256": "a3b543c5b6d01858d664d95a6ee0da256ee17607c930be9402a7f1af41447449",
+  "marker_sha256": "5b667a7d5f1718364a2794642cec52eac1ead345ec39fff5051c2c1ca7a62218",
+  "original_source_unchanged": true,
+  "r_version": "R version 4.6.0 (2026-04-24) -- \"Because it was There\"",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+  "tool_sha256": "5eaf43ff55d5f2c9d083414c89db1fd4f3c4a46e9f5778e42776e1c63c62ec86"
+}

@@ -1,0 +1,123 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/S3method/vcov,gllvmTMB_multi"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#656",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ns_numeric_p1.toml",
+      "sha256": "f7b6f252ecbfef1e6401e678abdf76d14f6caf0cac5190083d3521930a35474f"
+    },
+    {
+      "path": "test/fixtures/ns_gauss_p1_data.csv",
+      "sha256": "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_namespace_numeric_p1_twin.jl",
+      "sha256": "6a25daa1156e96165130a425a76d0278f38656355b41342d64a7739713d6d011"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-VCOV-TRAIT-MEAN",
+        "quantity": "vcov(fit): covariance of the six trait means (fixed-effect block of the inverse joint Hessian), 6 x 6 row-major, off-diagonals included",
+        "r_source": "test/fixtures/ns_numeric_p1.toml [main.vcov]",
+        "julia_source": "GLLVModels.vcov(fit, Y)[1:p, 1:p], as called at test/test_namespace_numeric_p1_twin.jl:109; fit as at test/test_namespace_numeric_p1_twin.jl:91",
+        "r_value": [
+          0.005812465137696424,
+          8.815674105199466e-06,
+          0.0028094632002766797,
+          0.003848832369130995,
+          -0.0021124122111516336,
+          0.0033598885718279007,
+          8.815674105198537e-06,
+          0.005147471257154949,
+          -0.0029089033150622623,
+          0.002204454544059284,
+          0.0032819738043460677,
+          -0.0014398228868661763,
+          0.0028094632002766797,
+          -0.0029089033150622606,
+          0.005350908883867587,
+          0.0007368722814414883,
+          -0.003849715199739416,
+          0.0032236393052919162,
+          0.0038488323691309944,
+          0.002204454544059285,
+          0.0007368722814414874,
+          0.005935628866448285,
+          7.890898343795433e-05,
+          0.0020600843808928834,
+          -0.0021124122111516345,
+          0.0032819738043460677,
+          -0.003849715199739418,
+          7.890898343795391e-05,
+          0.005189038942987447,
+          -0.0028405805118950217,
+          0.0033598885718279007,
+          -0.0014398228868661752,
+          0.003223639305291916,
+          0.002060084380892884,
+          -0.002840580511895021,
+          0.004426698988862243
+        ],
+        "julia_value": [
+          0.005812458220318479,
+          8.86180348130632e-06,
+          0.0028094229825729655,
+          0.0038488513503666553,
+          -0.002112368399237013,
+          0.00335986356411787,
+          8.86180348130632e-06,
+          0.005147456862065691,
+          -0.002908869453446835,
+          0.00220447505269157,
+          0.0032819442214707716,
+          -0.0014397926528444721,
+          0.0028094229825729655,
+          -0.002908869453446835,
+          0.005350865187669673,
+          0.0007368646449047609,
+          -0.003849671594233224,
+          0.0032236035827412583,
+          0.0038488513503666553,
+          0.00220447505269157,
+          0.0007368646449047609,
+          0.005935652549768564,
+          7.892115377280485e-05,
+          0.0020600838429404734,
+          -0.002112368399237013,
+          0.0032819442214707716,
+          -0.003849671594233224,
+          7.892115377280485e-05,
+          0.005188999488189776,
+          -0.002840544910756638,
+          0.00335986356411787,
+          -0.0014397926528444721,
+          0.0032236035827412583,
+          0.0020600838429404734,
+          -0.002840544910756638,
+          0.004426673458186066
+        ],
+        "abs_diff": 4.6129376107782524e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin.jl:115",
+        "tolerance_source_line": "@test isapprox(diag(Vb), diag(Vr); atol = 1e-6, rtol = 0)   # observed 4.4e-8",
+        "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; both fits reach the same optimum (logLik within 1e-6, asserted in the test). Matrix cases are compared elementwise (maximum absolute difference). Both blocks are at the joint optimum on the natural scale of the trait means (trait order t1..t6), so no reparameterisation map is needed; the test asserts the diagonal and the off-diagonal parts separately at the same tolerance and that R's block is not diagonal (largest off-diagonal above 1e-3). Julia's vcov returned only a diagonal before itchyshin/GLLVModels.jl#656."
+      }
+    ]
+  }
+}

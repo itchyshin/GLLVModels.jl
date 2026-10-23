@@ -1,0 +1,6 @@
+nb K=2 ll=-18874.0 conv=true max_rownorm=26.94 median_rownorm=2.69 relload=9.1 secs=30.0
+nb K=3 ll=-19113.1 conv=true max_rownorm=8.73 median_rownorm=1.4 relload=6.09 secs=22.0
+nb K=5 ll=-16719.6 conv=true max_rownorm=2.45 median_rownorm=1.41 relload=1.75 secs=1237.0
+binomial K=3 ll=-3769.1 conv=true max_rownorm=3.17 median_rownorm=1.46 relload=2.03 secs=11.0
+binomial K=4 ll=-3737.0 conv=false max_rownorm=156.12 median_rownorm=1.44 relload=106.19 secs=51.0
+binomial K=5 ll=-3756.3 conv=true max_rownorm=3.24 median_rownorm=1.59 relload=1.79 secs=13.0

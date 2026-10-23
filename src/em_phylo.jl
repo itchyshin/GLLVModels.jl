@@ -75,6 +75,63 @@ using ForwardDiff
 # the rank-K_B Woodbury coupling, cap = I + Λ_B' D⁻¹ Λ_B. This returns the
 # ancestral-state BLUP machinery without ever forming the dense Σ_phy.
 
+# ---------------------------------------------------------------------------
+# CHOLMOD symbolic-reuse for `chol_Q_eff` across the EM iterations of ONE
+# `em_fit_phylo` call (S7 item 4 — measured, not assumed: a throwaway
+# before/after timing on the p=1000 fixture found CHOLMOD's symbolic analysis
+# (AMD ordering + elimination tree) is ~70% of one fresh
+# `cholesky(Symmetric(Q_eff))` factorisation, well above the ledger's 10%
+# land/abandon threshold). `Q_eff`'s sparsity PATTERN depends only on the
+# tree topology and K_B, both fixed for the lifetime of an EM fit — only the
+# diagonal VALUES change as σ_phy / σ_eps update each M-step — so the
+# symbolic step is redundant on every iteration after the first.
+#
+# Mirrors `_grouped_cached_cholesky!` (src/grouped_laplace.jl, S7b) exactly:
+# pattern-checked on every call, falls back to a fresh factorisation (counted)
+# if the pattern ever differs, never silently misfactorizes. Scope is ONE
+# `chol_cache::Base.RefValue` per caller (`em_fit_phylo` builds one before its
+# loop and threads it through every `_estep_sparse` call for that fit;
+# `blup_phylo_sparse` and other one-shot callers pass `chol_cache = nothing`
+# and get the old fresh-every-call behaviour).
+mutable struct _EMPhyloCholStats
+    calls::Int      # _em_phylo_cached_cholesky! invocations counted
+    fresh::Int      # fresh cholesky(...) symbolic+numeric factorizations
+    reused::Int     # cholesky!(...) numeric-only refactorizations (cache hit)
+    fallback::Int   # a cached factor existed but its sparsity pattern changed
+end
+
+const _EM_PHYLO_CHOL_STATS = _EMPhyloCholStats(0, 0, 0, 0)
+
+_em_phylo_chol_stats_reset!() = begin
+    _EM_PHYLO_CHOL_STATS.calls = 0
+    _EM_PHYLO_CHOL_STATS.fresh = 0
+    _EM_PHYLO_CHOL_STATS.reused = 0
+    _EM_PHYLO_CHOL_STATS.fallback = 0
+    nothing
+end
+
+_em_phylo_chol_stats() = (calls = _EM_PHYLO_CHOL_STATS.calls, fresh = _EM_PHYLO_CHOL_STATS.fresh,
+    reused = _EM_PHYLO_CHOL_STATS.reused, fallback = _EM_PHYLO_CHOL_STATS.fallback)
+
+function _em_phylo_cached_cholesky!(cache::Base.RefValue,
+        A::Symmetric{Float64, <:SparseMatrixCSC{Float64, Int}})
+    _EM_PHYLO_CHOL_STATS.calls += 1
+    S = parent(A)
+    cached = cache[]
+    if cached !== nothing
+        factor, rowval, colptr = cached
+        if size(factor) == size(S) && rowval == S.rowval && colptr == S.colptr
+            _EM_PHYLO_CHOL_STATS.reused += 1
+            return cholesky!(factor, A)
+        end
+        _EM_PHYLO_CHOL_STATS.fallback += 1
+    end
+    factor = cholesky(A)
+    _EM_PHYLO_CHOL_STATS.fresh += 1
+    cache[] = (factor, copy(S.rowval), copy(S.colptr))
+    return factor
+end
+
 """
     AnBSparseSolver
 
@@ -100,18 +157,26 @@ struct AnBSparseSolver
     chol_S_K::Cholesky{Float64,Matrix{Float64}}
     σ_phy::Vector{Float64}
     α::Float64
+    X_G::Matrix{Float64}   # chol_Q_eff \ G, stored once per factor (S7 item 1:
+                            # `_estep_sparse` used to recompute this)
 end
 
 """
-    build_AnB_sparse(Λ_B, σ_eps, σ_phy, phy, n; σ²_phy=1.0) -> AnBSparseSolver
+    build_AnB_sparse(Λ_B, σ_eps, σ_phy, phy, n; σ²_phy=1.0, chol_cache=nothing) -> AnBSparseSolver
 
 Factorise the augmented-state representation of `(A + n B)` for the
 phylo_unique model. `phy::AugmentedPhy` supplies the sparse Σ_phy precision;
 `σ²_phy` scales it (Σ_phy = σ²_phy · S Q_cond⁻¹ S').
+
+`chol_cache`, when a `Base.RefValue` (see `_em_phylo_cached_cholesky!` above),
+lets `chol_Q_eff` reuse a prior call's CHOLMOD symbolic analysis when the
+sparsity pattern is unchanged (S7 item 4) — pass the SAME `Ref` across the
+EM iterations of one fit. `nothing` (default) always factorises fresh.
 """
 function build_AnB_sparse(Λ_B::AbstractMatrix, σ_eps::Real,
                           σ_phy::AbstractVector, phy::GLLVModels.AugmentedPhy,
-                          n::Integer; σ²_phy::Real = 1.0)
+                          n::Integer; σ²_phy::Real = 1.0,
+                          chol_cache::Union{Nothing,Base.RefValue} = nothing)
     p   = phy.n_leaves
     K_B = size(Λ_B, 2)
     σ²  = float(σ_eps)^2
@@ -152,7 +217,9 @@ function build_AnB_sparse(Λ_B::AbstractMatrix, σ_eps::Real,
         push!(V_q, α * σ_phy64[t]^2 * d_inv[t])
     end
     Q_eff = sparse(I_q, J_q, V_q, n_block, n_block)
-    chol_Q_eff = cholesky(Symmetric(Q_eff))
+    chol_Q_eff = chol_cache === nothing ?
+        cholesky(Symmetric(Q_eff)) :
+        _em_phylo_cached_cholesky!(chol_cache, Symmetric(Q_eff))
 
     # G[(leaf_pos[t]), j] = σ_phy[t] · d_inv[t] · Λ_B[t, j]
     G = zeros(Float64, n_block, K_B)
@@ -169,7 +236,7 @@ function build_AnB_sparse(Λ_B::AbstractMatrix, σ_eps::Real,
 
     return AnBSparseSolver(phy, n_block, leaf_pos, d_total, d_inv,
                            Λ_B64, DinvΛB, chol_cap, chol_Q_eff, G, chol_S_K,
-                           σ_phy64, α)
+                           σ_phy64, α, X_G)
 end
 
 # A⁻¹ b via Woodbury for A = D + Λ_B Λ_B'.
@@ -322,7 +389,8 @@ end
 function _estep_sparse(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_eps::Real,
                       σ_phy::AbstractVector,
                       phy::GLLVModels.AugmentedPhy{Float64};
-                      σ²_phy::Real = 1.0)
+                      σ²_phy::Real = 1.0,
+                      chol_cache::Union{Nothing,Base.RefValue} = nothing)
     p, n = size(y)
     p == phy.n_leaves ||
         throw(ArgumentError("y first dim ($p) must equal phy.n_leaves ($(phy.n_leaves))"))
@@ -330,11 +398,12 @@ function _estep_sparse(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_eps::Real,
     Λ_B64 = Matrix{Float64}(Λ_B)
     Λφ = Vector{Float64}(σ_phy)
     α = n * float(σ²_phy)
-    σ² = float(σ_eps)^2     # used to build A = Λ_B Λ_B' + σ²·I below for β
 
     # Build the augmented saddle-point solver (shares its factorisation with
     # what `solve_AnB` uses; we reuse the constructed pieces directly).
-    s = build_AnB_sparse(Λ_B, σ_eps, Λφ, phy, n; σ²_phy = σ²_phy)
+    # `chol_cache` (S7 item 4), when passed, lets `chol_Q_eff` reuse the
+    # CHOLMOD symbolic analysis across the EM iterations of one fit.
+    s = build_AnB_sparse(Λ_B, σ_eps, Λφ, phy, n; σ²_phy = σ²_phy, chol_cache = chol_cache)
     nb       = s.n_block
     leaf_pos = s.leaf_pos
     d_inv    = s.d_inv
@@ -383,24 +452,38 @@ function _estep_sparse(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_eps::Real,
     end
 
     # diag(V_φ) via Takahashi-selected inverse of Q_eff + rank-K_B Woodbury.
+    # `X_G = chol_Q_eff \ G` is now stored on `s` (built once inside
+    # `build_AnB_sparse`, S7 item 1) instead of being recomputed here, and the
+    # former p-fold loop of individual K_B × K_B solves (`chol_S_K \ collect(xg)`
+    # per leaf) is collapsed into ONE multi-RHS solve of `chol_S_K` across all
+    # p leaves at once.
     Qeff_diag = takahashi_diag(s.chol_Q_eff)             # length nb
-    # Slice X_G at leaf positions (X_G is stored on s as `chol_Q_eff \ G`).
-    # NB: AnBSparseSolver does not store X_G directly; recompute it. K_B solves.
-    X_G = s.chol_Q_eff \ s.G                              # nb × K_B
+    XG_leaf = Matrix{Float64}(undef, K_B, p)             # K_B × p, leaf rows of X_G'
+    @inbounds for t in 1:p
+        lp = leaf_pos[t]
+        for k in 1:K_B
+            XG_leaf[k, t] = s.X_G[lp, k]
+        end
+    end
+    Y_leaf = s.chol_S_K \ XG_leaf                         # K_B × p, ONE multi-RHS solve
     diag_Vφ = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
         lp = leaf_pos[t]
-        xg = @view X_G[lp, :]
+        acc = 0.0
+        for k in 1:K_B
+            acc += XG_leaf[k, t] * Y_leaf[k, t]
+        end
         # Q_eff⁻¹[lp, lp] is `Qeff_diag[lp]` (selected inverse diagonal).
-        diag_Vφ[t] = σ²_phy * (Qeff_diag[lp] + α * dot(xg, s.chol_S_K \ collect(xg)))
+        diag_Vφ[t] = σ²_phy * (Qeff_diag[lp] + α * acc)
     end
 
-    # ImβΛ = I - β · Λ_B   (K_B × K_B).
-    β = Λ_B64' / cholesky(Symmetric(begin
-        A = Λ_B64 * Λ_B64'
-        @inbounds for t in 1:p; A[t, t] += σ²; end
-        (A + A') ./ 2
-    end))
+    # ImβΛ = I - β · Λ_B   (K_B × K_B). β = Λ_B' A⁻¹ obtained via the
+    # Woodbury/capacitance factorisation already built on `s` (S7 item 1):
+    # no fresh dense p × p Cholesky of A = Λ_B Λ_B' + σ²·I here (compare the
+    # dense reference E-step, `_estep_dense`, which still needs its own dense
+    # `cA` for other quantities and so keeps the O(p³) Cholesky).
+    F_A = GLLVModels.LowRankPlusDiagChol{Float64,Matrix{Float64}}(s.d_total, s.Λ_B, s.chol_cap)
+    β = (F_A \ s.Λ_B)'                                    # K_B × p (= (A⁻¹ Λ_B)' = Λ_B' A⁻¹)
     ImβΛ = I - β * Λ_B64
 
     # μ_z = Λ_φ · μ_φ.
@@ -428,16 +511,18 @@ end
 # those coordinates, so the EM step is monotone by construction.
 #
 # σ_phy is left SIGNED (no abs / no projection). The dense fit
-# (`fit_gaussian_gllvm`) restricts σ_phy = exp(log_σ_phy) > 0; the two agree
-# when the optimum is interior to the positive orthant (all σ_phy
-# comfortably > 0), which is the regime this EM targets. A hard non-negativity
-# projection is intentionally NOT used: clamping σ_phy[t] to 0 creates an
-# absorbing boundary that traps EM away from an interior MLE, whereas naïve
-# abs() overshoots the 0 boundary and breaks monotonicity. The honest scope is
-# therefore "interior optimum"; the boundary case is documented as a known
-# limitation. The reported σ_phy take the global sign convention σ_phy[1] ≥ 0
-# (flipping ALL signs jointly is the only φ-orientation symmetry that leaves
-# every B[t,t'] = σ_phy[t] σ_phy[t'] Σ_phy[t,t'] unchanged).
+# (`fit_gaussian_gllvm`) also fits a signed σ_phy (identity link, no positivity
+# constraint), so both target the same signed MLE; the dense fit adds a
+# single-flip sign-pattern search that EM lacks, so EM can stop in a worse sign
+# pattern. A hard non-negativity projection is intentionally NOT used: clamping
+# σ_phy[t] to 0 creates an absorbing boundary that traps EM away from an
+# interior MLE, whereas naïve abs() overshoots the 0 boundary and breaks
+# monotonicity. After the loop, `em_fit_phylo` reports σ_phy with the global
+# sign convention σ_phy[argmax(abs.(σ_phy))] ≥ 0. Flipping all signs jointly
+# leaves every B[t,t'] = σ_phy[t] σ_phy[t'] Σ_phy[t,t'] unchanged; when Σ_phy
+# has zero blocks (always so for a tree-derived Σ_phy, whose root edge is
+# dropped), each block's signs can also flip on their own, and this convention
+# does not pin those.
 function _mstep_dense(y::AbstractMatrix, ss)
     p, n = size(y)
     K_B  = size(ss.H_ηy, 1)
@@ -465,9 +550,42 @@ function _mstep_dense(y::AbstractMatrix, ss)
         quad_fit += dot(θt, ht)
     end
 
-    σ²_eps_new = max((sy2 - quad_fit) / (n * p), eps())
-    return Λ_B_new, sqrt(σ²_eps_new), σ_phy_new
+    # Residual variance can go non-positive from rounding or exactly rank-K
+    # data. The floor is a fraction of the data's own mean square
+    # `sum(y.^2)/(n*p)`, not a bare `eps()`, so rescaling y cannot flip the
+    # clamp. The floor keeps the next E-step defined, but it is not an
+    # interior MLE: callers must record the clamp and must not report
+    # `converged = true` (#753).
+    σ²_resid = (sy2 - quad_fit) / (n * p)
+    σ²_floor = _sigma_eps2_data_floor(sy2, n, p)
+    hit_floor = !isfinite(σ²_resid) || σ²_resid <= σ²_floor
+    # The decision *and* the stored clamp are relative. Lift to `eps()`
+    # only so the next E-step Cholesky stays defined when `y` is tiny.
+    σ²_eps_new = if hit_floor
+        max(σ²_floor, float(eps()))
+    else
+        σ²_resid
+    end
+    return Λ_B_new, sqrt(σ²_eps_new), σ_phy_new, hit_floor
 end
+
+# Residual-variance floor in y² units: the same 1e-8 fraction of the data
+# mean square that `fit_branch_re` uses against `var(y)`. A rank-1 residual
+# after `sy2 - quad_fit` sits at ~1e-8 of `scale` on tiny y (review of
+# #868), so an ulp-sized floor misses that path. `sy2` is `sum(abs2, y)`.
+# A zero / non-finite mean square falls back to `eps()` so the next
+# E-step stays defined.
+const _SIGMA_EPS2_BOUNDARY_FRAC = 1e-8
+
+function _sigma_eps2_data_floor(sy2::Real, n::Integer, p::Integer)
+    np = n * p
+    np == 0 && return float(eps())
+    scale = sy2 / np
+    isfinite(scale) && scale > 0 || return float(eps())
+    return _SIGMA_EPS2_BOUNDARY_FRAC * scale
+end
+_sigma_eps2_data_floor(y::AbstractMatrix) =
+    _sigma_eps2_data_floor(sum(abs2, y), size(y, 2), size(y, 1))
 
 # ---------------------------------------------------------------------------
 # Observed information matrix via Supplemented EM (Meng & Rubin 1991 JASA).
@@ -644,7 +762,9 @@ Result of `em_fit_phylo`. Fields:
 * `σ_phy`      – fitted per-trait phylo SDs (length p).
 * `logLik`     – final marginal log-likelihood (dense closed form).
 * `n_iter`     – EM iterations run.
-* `converged`  – whether the log-lik increment fell below `tol`.
+* `converged`  – whether the log-lik increment fell below `tol` *and* the
+                 M-step did not clamp `σ_eps²` to the data-relative floor
+                 `1e-8 * mean(y.^2)`.
 * `loglik_trace` – log-lik at each iteration (monotone non-decreasing).
 * `blup_phy`   – ancestral-state BLUP of the phylo effect on the data scale
                  (μ_z, length p) from the LAST E-step.
@@ -653,6 +773,9 @@ Result of `em_fit_phylo`. Fields:
                  inferior-basin safety check after it fell back to plain EM
                  from the warm start (see `em_fit_phylo_squarem`). Always
                  `false` for `em_fit_phylo` and for an unguarded SQUAREM run.
+* `sigma_eps_boundary` – `true` iff an M-step replaced `σ_eps²` with the
+                 data-relative floor `1e-8 * mean(y.^2)` (rank-K or
+                 over-specified `K_B` data). `converged` is then false.
 """
 struct EMPhyloFit
     Λ_B::Matrix{Float64}
@@ -665,14 +788,28 @@ struct EMPhyloFit
     blup_phy::Vector{Float64}
     blup_phi::Vector{Float64}
     fallback_used::Bool
-    # Default `fallback_used = false` so existing 9-argument positional
-    # constructions (in this file, em_squarem.jl, and the tests) are unchanged.
+    sigma_eps_boundary::Bool
+    # Defaults keep existing 9- and 10-argument positional constructions
+    # (this file, em_squarem.jl, and the tests) unchanged.
     function EMPhyloFit(Λ_B, σ_eps, σ_phy, logLik, n_iter, converged,
-                        loglik_trace, blup_phy, blup_phi, fallback_used = false)
+                        loglik_trace, blup_phy, blup_phi,
+                        fallback_used = false, sigma_eps_boundary = false)
         new(Λ_B, σ_eps, σ_phy, logLik, n_iter, converged,
-            loglik_trace, blup_phy, blup_phi, fallback_used)
+            loglik_trace, blup_phy, blup_phi, fallback_used, sigma_eps_boundary)
     end
 end
+
+# Post-fit: `_nparams` unlocks generic `dof`/`aic`/`bic` in src/postfit.jl.
+function _nparams(fit::EMPhyloFit)
+    p, K_B = size(fit.Λ_B)
+    return 1 + (p * K_B - div(K_B * (K_B - 1), 2)) + length(fit.σ_phy)
+end
+
+# The EM's convergence tolerance, as ONE definition. test_sparse_phy_identities.jl's
+# G7.3 derives its identity bound from this, so the two cannot drift apart. It was
+# previously read out of this file by regex, which matched the DOCSTRING copy above
+# the signature rather than the signature itself.
+const EM_DEFAULT_TOL = 1e-9
 
 """
     em_fit_phylo(y, K_B, Σ_phy;
@@ -680,15 +817,18 @@ end
                  tol=1e-9, max_iter=1000, assert_monotone=true,
                  phy=nothing, force_dense_estep=false) -> EMPhyloFit
 
-Gradient-free EM fit of the Gaussian phylo_unique GLLVM: `K_B` site latent
-factors plus one per-trait phylogenetic random effect with covariance
-`(σ_phy σ_phy') ∘ Σ_phy`. Matches `fit_gaussian_gllvm(y; K = K_B,
-has_phy_unique = true, Σ_phy = Σ_phy)`.
+Gradient-free EM fit of the Gaussian phylogenetic row-model GLLVM (signed
+σ_phy): `K_B` site latent factors plus one per-trait phylogenetic random
+effect with covariance `(σ_phy σ_phy') ∘ Σ_phy`. Matches
+`fit_gaussian_gllvm(y; K = K_B, has_phy_unique = true, Σ_phy = Σ_phy)`.
 
 `y` is (p, n_sites). `Σ_phy` is the fixed (p × p) tree-derived species
 covariance. Warm-started from PPCA (`ppca_init`) unless `λ_init`/`σ_eps_init`
 are supplied. Returns an `EMPhyloFit` including the ancestral-state BLUPs
-from the final E-step.
+from the final E-step. If an M-step clamps `σ_eps²` to
+`1e-8 * mean(y.^2)`, the fit records `sigma_eps_boundary = true` and
+`converged` is false. The fraction matches `fit_branch_re`'s variance
+floor so rescaling `y` cannot flip the flags.
 
 When `assert_monotone` (default), a log-lik DECREASE beyond `1e-7` triggers an
 error — a monotone non-decrease is an EM invariant, so a decrease is a bug.
@@ -706,11 +846,28 @@ cost differs. Set `force_dense_estep = true` to use the dense E-step even when
 the only option when `phy` is omitted, since an `AugmentedPhy` cannot be
 recovered from the dense `Σ_phy` alone). When `phy === nothing` the dense path
 is always used regardless of `force_dense_estep`.
+
+Note on `σ_phy` (#136; see the gllvmTMB parity page): here `σ_phy` is the
+signed row-model parameter of `fit_gaussian_gllvm` with no `Λ_phy` columns,
+so it enters the likelihood only through `B = (σ_phy * σ_phy') .* Σ_phy`.
+Signs are identified only within each group of rows that `Σ_phy` links by
+nonzero entries (inside a group the relative signs set the sign of each
+`B[t, t′]`); each group's sign can flip on its own. For a tree-derived
+`Σ_phy` the root's daughter clades are always separate groups, because
+`sigma_phy_dense` drops the root edge.
+Read `abs.(σ_phy)` as the per-row scales, and the sign pattern within each
+group up to one flip. EM can stop in a worse sign pattern;
+compare its log-likelihood with `fit_gaussian_gllvm` on the same data, or
+warm-start EM from that fit. gllvmTMB's `phylo_unique` (now `phylo_indep()`,
+or `phylo_latent(..., unique = TRUE)`) is a different model term, an
+independent phylogenetic field per trait with its own scale, so compare
+fitted models, not these parameters, and do not expect them to agree, even in
+absolute value.
 """
 function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       λ_init = nothing, σ_eps_init = nothing,
                       σ_phy_init = nothing,
-                      tol = 1e-9, max_iter = 1000, assert_monotone = true,
+                      tol = EM_DEFAULT_TOL, max_iter = 1000, assert_monotone = true,
                       phy::Union{Nothing,GLLVModels.AugmentedPhy{Float64}} = nothing,
                       force_dense_estep::Bool = false)
     p, n = size(y)
@@ -728,10 +885,29 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
     # fall back to the dense E-step when `phy` is omitted (no AugmentedPhy to
     # build from the dense Σ_phy) or when `force_dense_estep` is requested.
     use_sparse = phy !== nothing && !force_dense_estep
+    # S7 item 4: ONE cache, shared across every E-step call of this fit, so
+    # `chol_Q_eff`'s CHOLMOD symbolic analysis is done once (iteration 1) and
+    # reused via `cholesky!` thereafter — the sparsity pattern is fit-invariant
+    # (tree topology + K_B fixed; only σ_phy/σ_eps values change per M-step).
+    chol_cache = use_sparse ? Ref{Any}(nothing) : nothing
     estep = if use_sparse
-        (LB, σe, σp) -> _estep_sparse(yf, LB, σe, σp, phy; σ²_phy = 1.0)
+        (LB, σe, σp) -> _estep_sparse(yf, LB, σe, σp, phy; σ²_phy = 1.0, chol_cache = chol_cache)
     else
         (LB, σe, σp) -> _estep_dense(yf, LB, σe, σp, Σ_phy)
+    end
+    # S7 item 2: the per-iteration monotonicity CHECK is numerically the same
+    # closed-form Gaussian marginal log-lik regardless of which E-step ran,
+    # but `gaussian_marginal_loglik`'s J3 phylo path (likelihood.jl:212-244)
+    # forms TWO dense p × p Choleskys every call. When the sparse E-step is
+    # selected, route the check through the O(p) sparse-precision path
+    # instead (`gaussian_marginal_loglik_sparse_phy`, likelihood_sparse_phy.jl)
+    # — numerically equivalent, see that function's docstring.
+    loglik_check = if use_sparse
+        (LB, σe, σp) -> GLLVModels.gaussian_marginal_loglik_sparse_phy(yf, LB, σe;
+                                            σ_phy = σp, phy = phy, σ²_phy = 1.0)
+    else
+        (LB, σe, σp) -> GLLVModels.gaussian_marginal_loglik(yf, LB, σe;
+                                            σ_phy = σp, Σ_phy = Σ_phy)
     end
 
     # ----- Warm start (PPCA for Λ_B, σ_eps; small phylo SD to start) -----
@@ -754,15 +930,17 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
     loglik_prev  = -Inf
     converged    = false
     iters_run    = 0
+    sigma_eps_boundary = false
     local blup_phy = zeros(Float64, p)
     local blup_phi = zeros(Float64, p)
 
     for iter in 1:max_iter
         iters_run = iter
-        # Marginal log-lik at the CURRENT parameters (dense closed form), i.e.
-        # at the output of the previous M-step ⇒ sequence is monotone.
-        ll = GLLVModels.gaussian_marginal_loglik(yf, Λ_B, σ_eps;
-                                            σ_phy = σ_phy, Σ_phy = Σ_phy)
+        # Marginal log-lik at the CURRENT parameters (closed form — sparse
+        # when the sparse E-step is selected, dense otherwise; see
+        # `loglik_check` above), i.e. at the output of the previous M-step
+        # ⇒ sequence is monotone.
+        ll = loglik_check(Λ_B, σ_eps, σ_phy)
         push!(loglik_trace, ll)
 
         if iter > 1
@@ -771,11 +949,16 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                 error("EM log-lik decreased by $(abs(inc)) at iter $iter " *
                       "(was $loglik_prev, now $ll) — EM monotonicity violated.")
             end
+            # Increment test is the existing EM stop. The floor check below
+            # is what stops a clamped σ_eps from looking like an interior
+            # optimum (#753); it does not add an absolute objective tolerance.
             if abs(inc) < tol
-                converged = true
-                # E-step once more to refresh BLUPs at the converged params.
+                # E-step once more to refresh BLUPs at the stopped params.
+                # The increment test is the stop; the clamp veto is what
+                # keeps a floored σ_eps from looking like an interior MLE.
                 ss = estep(Λ_B, σ_eps, σ_phy)
                 blup_phy = copy(ss.μ_z); blup_phi = copy(ss.μ_φ)
+                converged = !sigma_eps_boundary
                 break
             end
         end
@@ -783,11 +966,13 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
 
         ss = estep(Λ_B, σ_eps, σ_phy)
         blup_phy = copy(ss.μ_z); blup_phi = copy(ss.μ_φ)
-        Λ_B, σ_eps, σ_phy = _mstep_dense(yf, ss)
+        Λ_B, σ_eps, σ_phy, hit_floor = _mstep_dense(yf, ss)
+        # Latch: a later M-step that stores max(floor, eps()) on tiny y
+        # can leave the relative floor, and must not clear the flag.
+        sigma_eps_boundary = sigma_eps_boundary || hit_floor
     end
 
-    ll_final = GLLVModels.gaussian_marginal_loglik(yf, Λ_B, σ_eps;
-                                              σ_phy = σ_phy, Σ_phy = Σ_phy)
+    ll_final = loglik_check(Λ_B, σ_eps, σ_phy)
     if !isempty(loglik_trace) && ll_final > loglik_trace[end]
         push!(loglik_trace, ll_final)
     end
@@ -795,16 +980,32 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
     # Global φ-orientation convention: flipping ALL σ_phy signs jointly leaves
     # every B[t,t'] = σ_phy[t] σ_phy[t'] Σ_phy[t,t'] unchanged (and flips μ_φ,
     # leaving the data-scale BLUP μ_z = diag(σ_phy) μ_φ invariant). Anchor the
-    # sign so the dominant-magnitude trait's σ_phy is ≥ 0, matching the dense
-    # fit's σ_phy = exp(log_σ_phy) > 0 convention for interior optima.
+    # sign so σ_phy[argmax(abs.(σ_phy))] ≥ 0, the same post-hoc anchor that
+    # `fit_gaussian_gllvm` (without `X_lv`) applies to its signed,
+    # identity-link σ_phy.
     t_anchor = argmax(abs.(σ_phy))
     if σ_phy[t_anchor] < 0
         σ_phy = -σ_phy
         blup_phi = -blup_phi          # μ_z = diag(σ_phy) μ_φ unchanged
     end
 
+    # Final residual on the numerical floor is a boundary even if the last
+    # increment test fired before that M-step was recorded.
+    if σ_eps^2 <= _sigma_eps2_data_floor(yf)
+        sigma_eps_boundary = true
+    end
+    converged = converged && !sigma_eps_boundary
     return EMPhyloFit(Λ_B, σ_eps, σ_phy, ll_final, iters_run, converged,
-                      loglik_trace, blup_phy, blup_phi)
+                      loglik_trace, blup_phy, blup_phi, false, sigma_eps_boundary)
+end
+
+# Internal PD check for SEM I_obs (comment only; a docstring would trip missing_docs).
+function _observed_information_is_pd(I_obs::AbstractMatrix{<:Real})
+    n = size(I_obs, 1)
+    size(I_obs) == (n, n) ||
+        throw(ArgumentError("I_obs must be square; got $(size(I_obs))"))
+    H = Symmetric((I_obs .+ I_obs') ./ 2)
+    return isposdef(H)
 end
 
 """
@@ -842,7 +1043,8 @@ Returns a NamedTuple with fields:
                              delta method (σ_ε via exp, others identity)
   * `term::Vector{String}` — parameter names matching `confint(fit).term`
                              when fit is a dense fit on the same model
-  * `pd::Bool`             — whether `I_obs` is positive-definite
+  * `pd::Bool`             — whether `I_obs` is positive-definite **and**
+                             `emf.converged` (SEM requires an EM fixed point)
 
 Refs: Louis (1982) JRSSB 44:226–233; Meng & Rubin (1991) JASA 86:899–909.
 """
@@ -882,18 +1084,14 @@ function em_observed_information(emf::EMPhyloFit, y::AbstractMatrix,
     A1   = I_complete * (Matrix{Float64}(I, Ipar, Ipar) - DM)
     I_obs = (A1 + A1') ./ 2                        # symmetrise round-off
 
-    pd = true
-    cov_ = try
-        inv(Symmetric(I_obs))
-    catch
-        pd = false
+    Hobs = Symmetric(I_obs)
+    pd = emf.converged && _observed_information_is_pd(I_obs)
+    cov_ = if pd
+        inv(Hobs)
+    else
         fill(NaN, Ipar, Ipar)
     end
     diag_cov = diag(cov_)
-    if any(!isfinite(v) || v ≤ 0 for v in diag_cov)
-        pd = false
-    end
-
     se = [v > 0 ? sqrt(v) : NaN for v in diag_cov]
 
     # Raw-scale SEs (delta method): σ_ε = exp(log σ_ε) ⇒ SE_σ_ε = σ_ε · SE_log σ_ε.
@@ -913,4 +1111,11 @@ function em_observed_information(emf::EMPhyloFit, y::AbstractMatrix,
             term = terms, pd = pd)
 end
 
+"""
+    fit_em_phylo(y, K_B, Σ_phy; kwargs...) -> EMPhyloFit
+
+Alias of [`em_fit_phylo`](@ref), spelled with the `fit_` prefix of the other fitters.
+Same arguments and the same [`EMPhyloFit`](@ref) result; see [`em_fit_phylo`](@ref)
+for the keyword arguments.
+"""
 const fit_em_phylo = em_fit_phylo

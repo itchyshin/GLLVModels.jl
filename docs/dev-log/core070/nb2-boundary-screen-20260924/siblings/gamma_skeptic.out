@@ -1,0 +1,27 @@
+GLLVModels loaded from: /Users/z3437171/local-scratch/gllvm-nb2-finite-20260924/src/GLLVModels.jl
+julia 1.10.12; threads 1; BLAS threads 1
+Y: size=(5, 80) min=1.0340e-02 max=1.3805e+01 all finite=true all positive=true
+
+PUBLIC FIT: loglik=-610.224727 converged=true iterations=2 α̂=[2.0192, 1.981, 2.0192, 2.0, 2.0] boundary=Int64[]
+
+CHECK 1: negll(θ̂_fit)=610.224727185  -fit.loglik=610.224727185  |diff|=0.000e+00  -> PASS
+         replicated optimizer from θ0: -min=-610.224727185  |Δ vs fit.loglik|=0.000e+00  max|θ diff|=1.110e-16
+         replicated run: iterations=2 converged=true g_residual=53.4470001034925 x_abschange=0.0
+         negll(θ0) = 1.416906e+23 (the warm start itself)
+
+ALT (a) fresh logα=0: iterations=38 converged=true g_residual=5.998384586593687e-6
+         ll(a)=-567.232613  (claimed -567.232613)  α̂=[1.7194, 1.6579, 3.5142, 2.1255, 1.7341]
+ALT (c) restart from θ̂_fit: ll=-567.232613 iterations=36 α̂=[1.7194, 1.6579, 3.5142, 2.1255, 1.7341]
+
+CHECK 2: θ̂_a finite=true  negll not penalty (567.232613 < 1e11)=true  α finite & inside [1e-6,1e6]=true
+         max|β̂_a|=1.567  max|Λ̂_a|=0.536
+         inner mode search at θ̂_fit: non-converged sites=[7]  worst last step=0.0475202195923614  worst |∇ log-post|=0.15319366893304698
+         inner mode search at θ̂_a  : non-converged sites=Int64[]  worst last step=9.588561451688737e-10  worst |∇ log-post|=1.0805880634734422e-9
+
+INDEPENDENT Laplace: at θ̂_fit -610.225135 (pkg -610.224727, |d|=4.08e-04); at θ̂_a -567.232613 (pkg -567.232613, |d|=7.25e-10)
+IMPORTANCE-SAMPLED true marginal loglik: θ̂_fit -610.3006 ; θ̂_a -567.2894 ; gain 43.0112
+
+CHECK 3: ll(a) - fit.loglik = 42.992114  (> 1e-3: true); restart-from-fit gain = 42.992114
+fit gradient check: |∇negll(θ̂_fit)|∞ via central FD = 5.345e+01 ; at θ̂_a = 5.912e-06
+
+VERDICT inputs: check1=true check2=true check3=true

@@ -1,0 +1,15 @@
+# Arcs: speed78-20260919 (GLLVM.jl / GLLVModels.jl)
+
+| id | arc | ledger | status |
+|---|---|---|---|
+| S4 | three profiles, no src/: `bench/profile_laplace_allocs.jl` (Profile.Allocs split of value vs gradient per-site Newton solves, `_poisson_site_diffable` Dual allocs, chunk machinery, at p=20/50), `bench/profile_grouped_glmm.jl` (the Latte 200x5 fixture, warm wall split into outer FD evals x inner Newton x fresh symbolic analyses), `bench/profile_em_phylo_scaling.jl` (wall per EM iteration at p=200/1000/5000, exponent, verdict on the step-8 dispute) | leaf-S4 | DONE 2026-09-19 08:03 (commits eb8b868ac, d1ef337e9; G4.1 baseline re-stated: 95.6 ms current vs 170.5 ms stale bank) |
+| S6 | per-site route, tests first: share one mode solve per theta between value and gradient inside `fg!` (`src/families/poisson.jl:302-325`); one `GradientConfig` per fit with chunk measured over 12/24/32; allocation-free `_poisson_site_diffable` (`src/laplace_grad.jl:62-96`); wire `test/test_poisson_grad_perf.jl` into runtests.jl; extend the R2 hoist to NB/Gamma/Beta only if the profile ranks it | leaf-S6 (written) | todo, THIRD in this lane: S4 measured the mode-solve share at 7%; the levers are the Dual allocations (383 MB per gradient at p=50) and the chunk config |
+| S7b | grouped route (`src/families/grouped_laplace.jl:219-246`): `cholesky!` symbolic reuse across the inner Newton, analytic instead of finite-difference outer gradient; only if S4 puts the Latte 12x on this route | leaf-S7b (written) | TRIGGERED by S4 (1,345 fresh symbolic analyses per 0.19 s fit; Latte 0.015 s): FIRST in this lane |
+| S7 | sparse-phylo/EM hoists, only what the p^3-vs-p^1 verdict names: per-fit workspace for Q_cond and one symbolic then `cholesky!` per evaluation; `takahashi_diag` once per gradient; Woodbury capacitance for any dense p x p inside the E-step; monotonicity check through the sparse loglik | leaf-S7 (written) | TRIGGERED by S4 (driver p^2.4; two dense p x p Choleskys per iteration in likelihood.jl:212-244, a third at em_phylo.jl:399-403): SECOND in this lane |
+| verify | Haiku mechanical re-verify; Opus judgment (refute one passed gate); draft PR by the orchestrator; Rose sign-off per repo AGENTS.md | orchestrator | after S6/S7 |
+
+Order re-set 2026-09-19 08:05 by the orchestrator on S4's numbers (adaptive deviation from the plan's S6-first; recorded for the plan-vs-actual): S7b -> S7 -> S6.
+
+| S7c | grouped route, warm-started inner Laplace fits across the finite-difference outer evaluations (each inner fit starts from the previous evaluation's mode); identity rtol 1e-8; count inner Newton iterations before/after (621 baseline); then Shinichi decides on the analytic outer gradient with that number | leaf-S7c (write before dispatch) | Shinichi's choice 2026-09-19 09:36; runs AFTER S7 |
+
+S7b outcome 2026-09-19: identity landed (1,540 -> 236 fresh analyses, 0 fallbacks), wall unchanged 0.192 -> 0.195 s; the 12x is the 118 inner fits the FD outer gradient demands. Order now: S7 -> S7c -> S6.

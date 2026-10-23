@@ -1,0 +1,46 @@
+# Standalone project for the S4 public phylo_dep probe's "clean Julia
+# environment" preflight (docs/dev-log/plans/2026-09-16-s4-probe-julia-checklist-paste-gated.md).
+#
+# The frozen gllvmTMB recorder's `run-destination-b-s4-public-phylo-dep-isolated.R`
+# (`s4_public_phylo_dep_clean_julia_probe()`) activates GLLVM_S4_JULIA_ENV and
+# runs `using LogExpFunctions; ...; using GLLVM` before touching anything else.
+# LogExpFunctions is not a direct dependency of the root Project.toml (only a
+# transitive one via SpecialFunctions/Distributions), so that first `using`
+# fails against the root project directly. This project adds it, and is kept
+# separate from the root project rather than adding LogExpFunctions there, to
+# avoid widening the package's own declared dependency surface for a probe-only
+# need.
+#
+# GLLVModels *is* listed in [deps] below, with the package's own UUID taken
+# from the root Project.toml (mirrors test/parity/Project.toml's rationale).
+# The harness / `tools/destination_b/run_s4_public_phylo_dep_probe.jl` do not
+# call `Pkg.develop` themselves; the recorder's clean-Julia-probe activates
+# this project as-is and asserts `Base.pkgdir(GLLVM) == julia_project`, so
+# this project's (gitignored) Manifest must be instantiated once before use.
+# Because [deps] also lists the unregistered `GLLVM` shim (see below), a
+# one-step `Pkg.develop(path="../../.."); Pkg.instantiate()` fails with
+# `expected package GLLVM [530e1681] to be registered`. Use the two-step
+# setup at the end of this comment, run from this directory. With the entries
+# already present here, those `Pkg.develop` calls have nothing to rewrite in
+# this file, so they only touch the Manifests.
+#
+# Shim (maintainer decision 2026-09-24, option A): the package was renamed
+# GLLVM -> GLLVModels (#423) but the frozen recorder still runs `using GLLVM`.
+# `GLLVM` below is the probe-only local shim in ./GLLVM (never registered, not
+# part of the package), which re-exports `GLLVModels.bridge_fit`. Because the
+# recorder asserts `Base.pkgdir(GLLVM) == GLLVM_DESTINATION_B_PROJECT` and that
+# the embedded active project is `<that path>/Project.toml`, the probe passes
+# the shim directory as `--julia-project`. `using GLLVM` resolves only here and
+# in ./GLLVM; the repository root project cannot load it. One-time setup
+# (Manifests are gitignored), run from this directory:
+#   julia --project=GLLVM -e 'using Pkg; Pkg.develop(path="../../.."); Pkg.instantiate()'
+#   julia --project=. -e 'using Pkg; Pkg.develop([PackageSpec(path="../../.."), PackageSpec(path="GLLVM")]); Pkg.instantiate()'
+
+[deps]
+GLLVM = "530e1681-f0ef-4870-b414-280ff3d1dd3b"
+GLLVModels = "2dc8e01c-4f48-4476-aaae-e919b4a30df7"
+LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
+
+[compat]
+LogExpFunctions = "0.3"
+julia = "1.10"

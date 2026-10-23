@@ -1,0 +1,65 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-01-LOGIT-NATIVE-MODEL",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-binomial",
+  "harness_cell": "NATIVE-02-BINOMIAL",
+  "fixture": "test/parity/test_binomial_parity.jl",
+  "measures": "Bernoulli logit, p=5 traits, n=60 sites, K=2, seed 43; toy fixture, likelihood-level agreement only",
+  "cell_status": "success",
+  "cell_assertions": {
+    "passed": 6,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "NATIVE-02-BINOMIAL"
+  ],
+  "run_status": "success",
+  "run_failure_reason": null,
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/run.toml": "d9516075ed251d720b4390e86cccb4ce35bc439eafe36e0dc20ad15eddaf03c0",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/values-NATIVE-02-BINOMIAL.toml": "49b7810c7bf86f4976242ee42a17963a0f7057775aad0a5b4fbedfe9ff912607",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/verify.txt": "8edee6b33ed5b177e51df25dec42539b94b3ac07bff921727461510fe9281771",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/cell-NATIVE-02-BINOMIAL.toml": "34e9c83236599153fb36a31a9f41e2a759d55d738e7482c331753e29257ecd55"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/values-NATIVE-02-BINOMIAL.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-binomial/cell-NATIVE-02-BINOMIAL.toml"
+  ],
+  "registration": "CORE070-FAMILY-01-LOGIT-NATIVE-MODEL is paid by harness cell NATIVE-02-BINOMIAL by the maintainer's P0 registration decision (docs/dev-log/core070/family-reconciliation-2026-09-01.json); carried unchanged",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-01-LOGIT-NATIVE-MODEL",
+        "quantity": "logLik",
+        "max_abs_diff": 1.8172841009800322e-10,
+        "tolerance": 0.00019468198623424557,
+        "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -194.68198623424558,
+        "julia_value": -194.68198623406386,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

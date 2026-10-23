@@ -77,11 +77,19 @@ const _TNB2_SEED = 58
         @test d["policy"]=="truncnb2_default_then_public_bfgs_v1"
         @test d["same_data_map"]
         @test d["native_nfree"]==d["r_nfree"]==15
-        @test d["r_gradient_max"]<=1e-4
+        # R's gradient is recorded, not a gate (decision 2026-09-29, as #608 for NB2):
+        # on main 852cabd this cell passed 21/21 on one runner and gave 5.9e-4 on another,
+        # whose receipts differed although the code did not. R's convergence code
+        # (r.converged) and the logLik agreement below stay gates, as in
+        # test_nb2_finite_dispersion_parity.jl.
+        println("  gllvmTMB r_gradient_max = ", d["r_gradient_max"], " (recorded, not a gate)")
         @test d["native_gradient_max"]<=1e-4
         @test d["fd_stability"]<=1e-4
         @test d["native_objective_delta"]<=1e-8
         @test abs(d["samepoint_delta"])<=1e-6
+        core070_record_values!("objective at the R optimum"; julia = d["samepoint_native_nll"],
+                               r = d["r_objective"], atol = 1e-6,
+                               test = "@test abs(d[\"samepoint_delta\"])<=1e-6")
         @test abs(d["r_loglik"]+d["r_objective"])<=1e-8
         @test all(isfinite,d["native_parameters"]) && all(isfinite,d["r_parameters"])
     end
@@ -93,6 +101,8 @@ const _TNB2_SEED = 58
         jl_logL = jl_logL, r_logL = r.logLik, r_obj = r.objective,
     )
 
+    core070_record_values!("logLik"; julia = jl_logL, r = r.logLik, rtol = 1e-6,
+                           test = "@test jl_logL ≈ r.logLik rtol = 1e-6")
     @testset "log-likelihood agreement (rtol=1e-6)" begin
         @test jl_logL ≈ r.logLik rtol = 1e-6
         @test r.logLik ≈ -r.objective rtol = 0 atol = 1e-10

@@ -1,0 +1,182 @@
+{
+  "level": "cluster2",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "glvmodels_commit": "db5b9ed2e2467e296b153e24671874a017496907",
+  "evidence_kind": "name_parity_by_call_plus_paired_gaussian_fit",
+  "verdict": "PASS",
+  "row_status": "receipt only: no case-map or scoreboard row is created and nothing is classified; the row naming (GRP- versus RD- prefix, Packet 2 row A3) is an open maintainer decision",
+  "name_parity": {
+    "keyword": "cluster2",
+    "verdict": "PASS",
+    "method": "measured by calling each engine with the keyword (the paired fit) and with a misspelt keyword (negative control); signatures were not read",
+    "r": {
+      "function": "gllvmTMB::gllvmTMB",
+      "keyword_accepted": true,
+      "call": "value ~ 0 + trait + indep(0 + trait | cluster2_id); unit = unit, cluster2 = cluster2_id",
+      "negative_control": {
+        "keyword": "cluster2_zz_not_a_keyword",
+        "rejected": true,
+        "message": "unused argument (cluster2_zz_not_a_keyword = \"cluster2_id\")"
+      }
+    },
+    "julia": {
+      "function": "GLLVModels.fit_gllvm",
+      "keyword_accepted": true,
+      "call": "fit_gllvm(Y; family=Normal(), grouping=[GroupingTerm(:cluster2; mode=:indep)], cluster2=<labels>, iterations=1000)",
+      "fit_type": "GroupedGaussianFit",
+      "term_names": [
+        "cluster2"
+      ],
+      "negative_control": {
+        "keyword": "cluster2_zz_not_a_keyword",
+        "message": "MethodError: no method matching fit_grouped_gaussian(::Matrix{Float64}; terms::Vector{GroupingTerm}, unit::Nothing, unit_obs::Nothing, cluster::Nothing, cluster2::Vector{Symbol}, cluster2_zz_not_a_keyword::Vector{Symbol})\n\nClosest candidates are:\n  fit_grouped_gaussian(::AbstractMatrix{<:Real}; terms, unit, unit_obs, cluster, cluster2, X, coefficient_names, start, g_tol, iterations) got unsupported keyword argument \"cluster2_zz_not_a_keyword\"\n   @ GLLVModels ~/local-scratch/grouping-receipts-wt/src/grouped_fit.jl:359\n",
+        "rejected": true
+      }
+    },
+    "membership_control": {
+      "r": {
+        "moved_obs_row": 1,
+        "to_group": "k2",
+        "logLik": -64.4888288337483
+      },
+      "julia": {
+        "converged": true,
+        "logLik": -64.48882883374763,
+        "moved_obs_row": 1,
+        "to_group": "k2"
+      },
+      "rule": "observation 1 moved to the group of the first later observation whose group differs; refit on each engine"
+    }
+  },
+  "fixture": {
+    "path": "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/cluster2.csv",
+    "sha256": "f66c68823cfde7850eae6f239b3c07b7a93694d0a6623a6be258e832a53ef1b8",
+    "n_long_rows": 96,
+    "n_groups": 6,
+    "generator": "tools/core070_grouping_p1_fixtures.py"
+  },
+  "fits": {
+    "model": "value_ti = beta_t + u_{t,g(i)} + eps_ti, u_{t,g} ~ N(0, sd_t^2) diagonal (indep), eps ~ N(0, sigma_eps^2), ML",
+    "r": {
+      "call": "value ~ 0 + trait + indep(0 + trait | cluster2_id); unit = unit, cluster2 = cluster2_id",
+      "convergence": 0,
+      "optimizer_message": "relative convergence (4)",
+      "max_abs_gradient": 2.19172312040477e-05,
+      "fit_seconds": 0.0254650115966797
+    },
+    "julia": {
+      "call": "fit_gllvm(Y; family=Normal(), grouping=[GroupingTerm(:cluster2; mode=:indep)], cluster2=<labels>, iterations=1000)",
+      "converged": true,
+      "iterations": 8,
+      "fit_seconds": 0.08032679557800293,
+      "start": "fitter default (independent of R)"
+    },
+    "structural_zero": {
+      "Sigma_offdiag_r": 0,
+      "Sigma_offdiag_julia": 0.0,
+      "note": "diagonal by construction on both engines; recorded, not compared"
+    }
+  },
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "grouping-p1/cluster2/logLik",
+        "quantity": "logLik",
+        "r_value": -59.9317788136872,
+        "julia_value": -59.931778813682065,
+        "max_abs_diff": 5.137223979545524e-12,
+        "tolerance": 1e-06,
+        "tolerance_rule": "1e-6 absolute on the marginal log-likelihood",
+        "n_values": 1,
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved R and Julia values"
+      },
+      {
+        "case_id": "grouping-p1/cluster2/beta",
+        "quantity": "beta",
+        "r_value": [
+          -0.200408329711038,
+          -0.353344317548667
+        ],
+        "julia_value": [
+          -0.20040824356112055,
+          -0.3533438699118703
+        ],
+        "max_abs_diff": 4.4763679674098e-07,
+        "tolerance": 1e-05,
+        "tolerance_rule": "1e-5 absolute per trait intercept (optimizer-convergence scale)",
+        "n_values": 2,
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved R and Julia values"
+      },
+      {
+        "case_id": "grouping-p1/cluster2/Sigma_diag",
+        "quantity": "Sigma_diag",
+        "r_value": [
+          0.14011838468374,
+          0.102424916811146
+        ],
+        "julia_value": [
+          0.14011840024010344,
+          0.10242485443892382
+        ],
+        "max_abs_diff": 6.23722221787526e-08,
+        "tolerance": 1e-05,
+        "tolerance_rule": "1e-5 absolute per diagonal variance of the level's trait covariance (optimizer-convergence scale)",
+        "n_values": 2,
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved R and Julia values"
+      },
+      {
+        "case_id": "grouping-p1/cluster2/sigma_eps",
+        "quantity": "sigma_eps",
+        "r_value": 0.400008155001563,
+        "julia_value": 0.40000818068488336,
+        "max_abs_diff": 2.5683320359348727e-08,
+        "tolerance": 1e-05,
+        "tolerance_rule": "1e-5 absolute on the residual SD (optimizer-convergence scale)",
+        "n_values": 1,
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved R and Julia values"
+      },
+      {
+        "case_id": "grouping-p1/cluster2/membership_control_logLik",
+        "quantity": "membership_control_logLik",
+        "r_value": -64.4888288337483,
+        "julia_value": -64.48882883374763,
+        "max_abs_diff": 6.679101716144942e-13,
+        "tolerance": 1e-06,
+        "tolerance_rule": "1e-6 absolute on the refit after moving observation 1 to another group",
+        "n_values": 1,
+        "within_tolerance": true,
+        "diff_source": "recomputed from the saved R and Julia values"
+      }
+    ]
+  },
+  "batch_verifier": {
+    "tool": "tools/core070_grouping_p1_receipts.py",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/grouping/run/verify.txt"
+  },
+  "not_covered": [
+    "Gaussian only; non-Gaussian pairing of grouping levels is out of scope here.",
+    "Diagonal (indep) trait covariance only; latent (rank-reduced) and full (dep) forms are not paired.",
+    "One grouping term per fit; joint terms (e.g. unit + unit_obs, cluster + cluster2) are not paired.",
+    "Two traits, one small toy fixture per level; no realistic-size, recovery, interval or coverage evidence.",
+    "Point estimates and logLik only; no standard errors, confidence intervals or REML.",
+    "Direct engines only (R TMB engine vs Julia fit_gllvm); the engine = 'julia' R bridge is not exercised."
+  ],
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/run/run-commit.json": "1a05e442e5165227f295c4086a96f2d411980a9efbd849155c7b5c3b2fe9db05",
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/run/r-results.json": "9ea4cea70c19b0c99e09e442e4fb2af51a07f4c2fd754928fcac89b952cc62ce",
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/run/julia-results.toml": "ff60ef3c9779467e035e26503652b331eb0ee2383041e5859cd2e872d71fdcfc",
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/run/verify.txt": "9f17a85135c997520468163fd1c51bc3ef932a2b593ee5cc23991b37a91b9dc8",
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/manifest.json": "8ccff95a45a19273c40138fbccc2bf779fd7584e1a3e64c3b8e3d4e3c536624f",
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/unit.csv": "553c89bcf06b7d864dd1bba5ed72288170c93caa6a5374091b0e305288fb9f7b",
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/unit_obs.csv": "590ee4b9f67b2736daa3510d52819b42ca34b93bfac5a8317ecf237853537bcf",
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/cluster.csv": "eed99dade526648ce54fdbe794003c2667ca20a59775e3b77151f571ffe58338",
+    "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/cluster2.csv": "f66c68823cfde7850eae6f239b3c07b7a93694d0a6623a6be258e832a53ef1b8"
+  }
+}

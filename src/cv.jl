@@ -18,7 +18,6 @@
 using Random
 using LinearAlgebra
 using Statistics
-using Distributions
 using Printf
 
 @doc raw"""
@@ -37,7 +36,7 @@ Fields:
 - `fold_mses::Vector{Float64}` — out-of-sample MSE for each fold
 - `fold_residual_means::Vector{Float64}` — mean of quantile residuals per fold
 - `fold_residual_stds::Vector{Float64}` — standard deviation of quantile residuals per fold
-- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$
+- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$ (for `Binomial` with trial counts `N`, the expected count $N\hat{\mu}$, on the scale of `Y`)
 - `residuals::Matrix{Float64}` — $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
 - `fits::Vector{Any}` — fitted model objects from each training fold
 """
@@ -105,7 +104,16 @@ function _cv_extract_params(fit)
     end
 end
 
-function _cv_site_mode(fit::GllvmFit, family::Normal, Y::AbstractMatrix, s::Int, mask_s, N_mat, train_species::Vector{Int})
+# Fixed-effect mean `X[t, s, :] ⋅ β` of a Gaussian fold fit; 0 when it has no β.
+function _cv_gaussian_mean(fit::GllvmFit, X, t::Int, s::Int)
+    β = fit.pars.β
+    (β === nothing || isempty(β)) && return 0.0
+    X === nothing && _has_intercept_design(fit) && return _intercept_mean(fit)[t]   # intercepts (#519)
+    return dot(view(X, t, s, :), β)
+end
+
+function _cv_site_mode(fit::GllvmFit, family::Normal, Y::AbstractMatrix, s::Int, mask_s, N_mat, train_species::Vector{Int};
+                       X = nothing)
     p_fit = size(fit.pars.Λ, 1)
     K = size(fit.pars.Λ, 2)
 
@@ -114,7 +122,8 @@ function _cv_site_mode(fit::GllvmFit, family::Normal, Y::AbstractMatrix, s::Int,
 
     Λ_obs = fit.pars.Λ[obs_in_train, :]
     y_obs = Y[train_species[obs_in_train], s]
-    μ_obs = _fitted_mean(fit, view(Y, train_species, s:s), nothing)[obs_in_train, 1]
+    Xs = X === nothing ? nothing : X[train_species, s:s, :]
+    μ_obs = _fitted_mean(fit, view(Y, train_species, s:s), Xs)[obs_in_train, 1]
 
     σ_eps = fit.pars.σ_eps
     Ψ_obs = (σ_eps^2) * I(length(obs_in_train))
@@ -124,7 +133,8 @@ function _cv_site_mode(fit::GllvmFit, family::Normal, Y::AbstractMatrix, s::Int,
     return z
 end
 
-function _cv_site_mode(fit, family, Y::AbstractMatrix, s::Int, mask_s, N_mat, train_species::Vector{Int})
+function _cv_site_mode(fit, family, Y::AbstractMatrix, s::Int, mask_s, N_mat, train_species::Vector{Int};
+                       X = nothing)
     Λ, β, link = _cv_extract_params(fit)
     K = size(Λ, 2)
     p_fit = size(Λ, 1)
@@ -132,11 +142,23 @@ function _cv_site_mode(fit, family, Y::AbstractMatrix, s::Int, mask_s, N_mat, tr
     obs_in_train = [i for (i, t) in enumerate(train_species) if mask_s === nothing || mask_s[t]]
     isempty(obs_in_train) && return zeros(Float64, K)
 
+    n_train = length(train_species)
     y_sub = Y[train_species, s]
-    n_sub = N_mat === nothing ? fill(1, p_fit) : N_mat[train_species, s]
+    n_sub = N_mat === nothing ? fill(1, n_train) : N_mat[train_species, s]
     mask_sub = [mask_s === nothing ? true : mask_s[t] for t in train_species]
+    # Non-Normal :species folds fit all p rows with held-out species masked, so
+    # Λ and β stay length p while y_sub drops those rows. Score the site mode
+    # with the matching training-species loading layout (#768).
+    if p_fit == n_train
+        Λ_sub, β_sub = Λ, β
+    elseif p_fit >= maximum(train_species)
+        Λ_sub = Λ[train_species, :]
+        β_sub = length(β) == p_fit ? β[train_species] : β
+    else
+        throw(DimensionMismatch("cv site mode: loadings have $p_fit rows; cannot score $(n_train) training species"))
+    end
 
-    return _laplace_mode(family, y_sub, n_sub, Λ, β, link; mask = mask_sub)
+    return _laplace_mode(family, y_sub, n_sub, Λ_sub, β_sub, link; mask = mask_sub)
 end
 
 # -----------------------------------------------------------------------------
@@ -252,14 +274,6 @@ function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::I
     return (ll, r)
 end
 
-# Fallback for other families
-function _cv_cell_eval(fit, family, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
-    d = Normal(μ, 1.0)
-    ll = logpdf(d, y)
-    r = y - μ
-    return (ll, r)
-end
-
 # -----------------------------------------------------------------------------
 # Main cv_gllvm entry point
 # -----------------------------------------------------------------------------
@@ -283,6 +297,14 @@ Supported `split` strategies:
 - `:random` (or `:cell`, `:entry`) — Random entry-wise split across all observed cells.
 - `:site` (or `:site_block`, `:site_level`, `:column`) — Site-level block cross-validation holding out entire site columns.
 - `:species` (or `:species_block`, `:species_level`, `:row`) — Species-level block cross-validation holding out entire species rows.
+
+For the Gaussian family, a fixed-effect design `X` (a `p×n×q` array, as for
+[`fit_gaussian_gllvm`](@ref)) may be passed as `X = X`; it is subset with each
+fold's training data, and held-out cells are predicted at `X[t, s, :] ⋅ β̂`.
+Other families reject `X`. `offset` is not supported and is rejected.
+
+Only `Normal`, `Poisson`, `Binomial`, `NegativeBinomial`, `Beta`, `Gamma` and
+`Exponential` can be scored; any other `family` throws an `ArgumentError`.
 
 Returns a [`CVResult`](@ref) containing out-of-sample log-likelihood, MSE,
 Dunn–Smyth randomized quantile residuals, predictions, and per-fold metrics.
@@ -324,6 +346,27 @@ function cv_gllvm(Y::AbstractMatrix;
         :species
     else
         throw(ArgumentError("Unknown split :$split. Supported: :random, :site, :species"))
+    end
+
+    # Only families with a `_cv_cell_eval` method have an out-of-sample density and
+    # Dunn–Smyth residual; refuse the rest before any fit (#773).
+    family isa Union{Normal, Poisson, Binomial, NegativeBinomial, Beta, Gamma, Exponential} ||
+        throw(ArgumentError(
+            "cv_gllvm cannot score family $(family): it has no out-of-sample log-density " *
+            "or Dunn–Smyth residual. Supported families: Normal, Poisson, Binomial, " *
+            "NegativeBinomial, Beta, Gamma, Exponential."))
+    haskey(kwargs, :offset) && throw(ArgumentError(
+        "cv_gllvm does not support `offset`: the fold fits would use it but the held-out " *
+        "predictions would not, which inflates CV error (#772)."))
+
+    # A Gaussian fixed-effect design X (p×n×q) is subset alongside each fold's data.
+    X = get(kwargs, :X, nothing)
+    fit_kw = Base.structdiff(values(kwargs), NamedTuple{(:X,)})
+    if X !== nothing
+        family isa Normal || throw(ArgumentError(
+            "cv_gllvm supports a fixed-effect design X only for the Gaussian family"))
+        (X isa AbstractArray{<:Real, 3} && size(X, 1) == p && size(X, 2) == n) ||
+            throw(ArgumentError("X must be a p×n×q array matching Y ($p×$n); got size $(size(X))"))
     end
 
     # Determine base observation mask (ignoring missing values)
@@ -419,13 +462,18 @@ function cv_gllvm(Y::AbstractMatrix;
         # Fit model on training fold
         fit_k = if family isa Normal
             if all(train_mask)
-                fit_gaussian_gllvm(Y; K = K_actual, kwargs...)
+                X === nothing ? _fit_gaussian_trait_intercepts(Y; K = K_actual, fit_kw...) :
+                                fit_gaussian_gllvm(Y; K = K_actual, X = X, fit_kw...)
             elseif split_mode === :site
                 train_sites = findall(s -> any(view(train_mask, :, s)), 1:n)
-                fit_gaussian_gllvm(view(Y, :, train_sites); K = K_actual, kwargs...)
+                Xk = X === nothing ? nothing : X[:, train_sites, :]
+                Xk === nothing ? _fit_gaussian_trait_intercepts(view(Y, :, train_sites); K = K_actual, fit_kw...) :
+                                 fit_gaussian_gllvm(view(Y, :, train_sites); K = K_actual, X = Xk, fit_kw...)
             elseif split_mode === :species
                 train_species = findall(t -> any(view(train_mask, t, :)), 1:p)
-                fit_gaussian_gllvm(view(Y, train_species, :); K = K_actual, kwargs...)
+                Xk = X === nothing ? nothing : X[train_species, :, :]
+                Xk === nothing ? _fit_gaussian_trait_intercepts(view(Y, train_species, :); K = K_actual, fit_kw...) :
+                                 fit_gaussian_gllvm(view(Y, train_species, :); K = K_actual, X = Xk, fit_kw...)
             else
                 # Random cell split: impute unobserved cells with species mean + PPCA refinement
                 Y_imputed = Matrix{Float64}(undef, p, n)
@@ -436,12 +484,15 @@ function cv_gllvm(Y::AbstractMatrix;
                         Y_imputed[t, s] = train_mask[t, s] ? Float64(Y[t, s]) : m_t
                     end
                 end
-                fit_init = fit_gaussian_gllvm(Y_imputed; K = K_actual, kwargs...)
-                Z_init = getLV(fit_init, Y_imputed; rotate = false)
+                fit_init = X === nothing ? _fit_gaussian_trait_intercepts(Y_imputed; K = K_actual, fit_kw...) :
+                                           fit_gaussian_gllvm(Y_imputed; K = K_actual, X = X, fit_kw...)
+                Z_init = getLV(fit_init, Y_imputed; X = X, rotate = false)
                 for (t, s) in test_cells
-                    Y_imputed[t, s] = dot(view(fit_init.pars.Λ, t, :), view(Z_init, s, :))
+                    Y_imputed[t, s] = _cv_gaussian_mean(fit_init, X, t, s) +
+                                      dot(view(fit_init.pars.Λ, t, :), view(Z_init, s, :))
                 end
-                fit_gaussian_gllvm(Y_imputed; K = K_actual, kwargs...)
+                X === nothing ? _fit_gaussian_trait_intercepts(Y_imputed; K = K_actual, fit_kw...) :
+                                fit_gaussian_gllvm(Y_imputed; K = K_actual, X = X, fit_kw...)
             end
         else
             if N !== nothing
@@ -460,7 +511,7 @@ function cv_gllvm(Y::AbstractMatrix;
         # Precompute per-site conditional latent scores using training observations
         Z_hat = zeros(Float64, n, size(Λ, 2))
         for s in 1:n
-            Z_hat[s, :] = _cv_site_mode(fit_k, family, Y, s, view(train_mask, :, s), N, train_spec_vec)
+            Z_hat[s, :] = _cv_site_mode(fit_k, family, Y, s, view(train_mask, :, s), N, train_spec_vec; X = X)
         end
 
         fold_ll = 0.0
@@ -473,13 +524,21 @@ function cv_gllvm(Y::AbstractMatrix;
 
             # For species-block split, map to fitted row or use average
             t_idx = findfirst(==(t), train_spec_vec)
-            β_t = (t_idx !== nothing && t_idx <= length(β)) ? β[t_idx] : (isempty(β) ? 0.0 : mean(β))
+            β_t = if fit_k isa GllvmFit && X !== nothing
+                _cv_gaussian_mean(fit_k, X, t, s)   # β is a covariate vector, not per-species
+            else
+                (t_idx !== nothing && t_idx <= length(β)) ? β[t_idx] : (isempty(β) ? 0.0 : mean(β))
+            end
             Λ_t_dot_z = (t_idx !== nothing && t_idx <= size(Λ, 1)) ? dot(@view(Λ[t_idx, :]), z_s) : 0.0
             η = β_t + Λ_t_dot_z
             μ = linkinv(link, η)
 
-            predictions[t, s] = μ
-            sq_err = (Float64(y_val) - Float64(μ))^2
+            # Binomial with trial counts: `y` is a count out of N[t, s], so the
+            # prediction is the expected count N * μ, not the probability (#769).
+            # `_cv_cell_eval` below keeps μ: its log-density takes (N, μ).
+            pred = (family isa Binomial && N !== nothing) ? Float64(N[t, s]) * Float64(μ) : Float64(μ)
+            predictions[t, s] = pred
+            sq_err = (Float64(y_val) - pred)^2
             push!(fold_errs, sq_err)
             push!(all_sq_errs, sq_err)
 

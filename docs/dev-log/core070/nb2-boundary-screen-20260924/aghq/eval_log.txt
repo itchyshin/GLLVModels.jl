@@ -1,0 +1,67 @@
+seed46 package fit loglik -835.369277  negll check -835.369277  r=[1.089, 1.115, 2.736, 1.617, 0.8083]  (12.4s)
+seed46 boundary reopt (start logr3=30) loglik -835.052315  logr=[0.087, 0.112, 30.0, 0.465, -0.214]  conv=true iters=35 (13.7s)
+┌ Warning: NB2 grouped-dispersion fit reached the per-group boundary (r_group outside [1e-6, 1e6]) for group(s) [2]; those groups' overdispersion is not distinguishable from the Poisson/extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them.
+└ @ GLLVModels ~/local-scratch/gllvm-nb2-finite-20260924/src/families/grouped_dispersion.jl:418
+seed52 package fit loglik -833.181377  r=[0.8885, 7.385e12, 1.067, 1.289, 0.8469]  (21.5s)
+seed52 interior reopt (reset logr2=0) loglik -833.608480  logr=[-0.112, 0.078, 0.064, 0.276, -0.177] conv=true iters=37 (23.1s)
+
+==== AGHQ evaluation ====
+seed46 interior        logr=[0.086, 0.109, 1.006, 0.48, -0.213]
+   Laplace (package)       -835.369276691
+   AGHQ k=1                -835.369276691   (k=1 minus Laplace: -2.274e-13)
+   AGHQ k=3                -835.321078539   (k=1 minus Laplace: -)
+   AGHQ k=5                -835.319353723   (k=1 minus Laplace: -)
+   AGHQ k=9                -835.319344157   (k=1 minus Laplace: -)
+   AGHQ k=15               -835.319344158   (k=1 minus Laplace: -)
+   AGHQ k=21               -835.319344158   (k=1 minus Laplace: -)
+   trapezoid L=9  h=0.1    -835.319344158   (edge log-ratio -35.5)
+   trapezoid L=10 h=0.07   -835.319344158   (edge log-ratio -43.0)
+seed46 boundary        logr=[0.087, 0.112, 30.0, 0.465, -0.214]
+   Laplace (package)       -835.052314886
+   AGHQ k=1                -835.052314886   (k=1 minus Laplace: -4.547e-13)
+   AGHQ k=3                -835.532810668   (k=1 minus Laplace: -)
+   AGHQ k=5                -835.287479141   (k=1 minus Laplace: -)
+   AGHQ k=9                -835.290912887   (k=1 minus Laplace: -)
+   AGHQ k=15               -835.290835444   (k=1 minus Laplace: -)
+   AGHQ k=21               -835.290835316   (k=1 minus Laplace: -)
+   trapezoid L=9  h=0.1    -835.290835315   (edge log-ratio -25.0)
+   trapezoid L=10 h=0.07   -835.290835315   (edge log-ratio -29.6)
+seed52 interior        logr=[-0.112, 0.078, 0.064, 0.276, -0.177]
+   Laplace (package)       -833.608480093
+   AGHQ k=1                -833.608480093   (k=1 minus Laplace: -1.137e-13)
+   AGHQ k=3                -833.375526990   (k=1 minus Laplace: -)
+   AGHQ k=5                -833.364059536   (k=1 minus Laplace: -)
+   AGHQ k=9                -833.363926134   (k=1 minus Laplace: -)
+   AGHQ k=15               -833.363926140   (k=1 minus Laplace: -)
+   AGHQ k=21               -833.363926140   (k=1 minus Laplace: -)
+   trapezoid L=9  h=0.1    -833.363926140   (edge log-ratio -32.4)
+   trapezoid L=10 h=0.07   -833.363926140   (edge log-ratio -39.3)
+seed52 boundary        logr=[-0.118, 29.63, 0.065, 0.254, -0.166]
+   Laplace (package)       -833.181376880
+   AGHQ k=1                -833.181376880   (k=1 minus Laplace: -4.547e-13)
+   AGHQ k=3                -833.409246135   (k=1 minus Laplace: -)
+   AGHQ k=5                -832.965737923   (k=1 minus Laplace: -)
+   AGHQ k=9                -832.945325899   (k=1 minus Laplace: -)
+   AGHQ k=15               -832.945298984   (k=1 minus Laplace: -)
+   AGHQ k=21               -832.945301524   (k=1 minus Laplace: -)
+   trapezoid L=9  h=0.1    -832.945301498   (edge log-ratio -21.5)
+   trapezoid L=10 h=0.07   -832.945301497   (edge log-ratio -25.2)
+
+==== boundary minus interior (positive = boundary higher) ====
+seed46 Laplace +0.316962
+seed46 AGHQ k=1  +0.316962
+seed46 AGHQ k=3  -0.211732
+seed46 AGHQ k=5  +0.031875
+seed46 AGHQ k=9  +0.028431
+seed46 AGHQ k=15 +0.028509
+seed46 AGHQ k=21 +0.028509
+seed46 trapezoid +0.028509
+seed52 Laplace +0.427103
+seed52 AGHQ k=1  +0.427103
+seed52 AGHQ k=3  -0.033719
+seed52 AGHQ k=5  +0.398322
+seed52 AGHQ k=9  +0.418600
+seed52 AGHQ k=15 +0.418627
+seed52 AGHQ k=21 +0.418625
+seed52 trapezoid +0.418625
+total 41.8s

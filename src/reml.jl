@@ -8,7 +8,7 @@
 #   M  = Σ_i X_iᵀ Σ_y⁻¹ X_i  (q×q),   β̂_GLS = M⁻¹ Σ_i X_iᵀ Σ_y⁻¹ y_i.
 #
 # The Σ_y⁻¹ solves reuse the SAME Woodbury factorisation as the marginal
-# (Σ_y = Λ_B Λ_Bᵀ + diag(d_total)); ℓ_ML at β̂ reuses `gaussian_marginal_loglik`
+# (Σ_y = Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ + diag(d_total)); ℓ_ML at β̂ reuses `gaussian_marginal_loglik`
 # UNCHANGED. AD-clean (ForwardDiff flows through the Cholesky / solves), and by the
 # envelope theorem the gradient through β̂ is correct (∂ℓ_ML/∂β = 0 at β̂_GLS).
 #
@@ -16,14 +16,10 @@
 # σ²_W) with fixed effects X. REML is for the GAUSSIAN family only (maintainer
 # directive); non-Gaussian fits stay ML.
 
-# Per-trait diagonal d_total[t] = σ_eps² + (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t].
-function _gaussian_d_total(p::Integer, σ²::Real, T::Type, Λ_W, σ²_B, σ²_W)
+# Per-trait diagonal d_total[t] = σ_eps² + σ²_B[t] + σ²_W[t]. The W tier is
+# not part of it: Λ_W enters with its full Λ_W Λ_W' block (issue #135).
+function _gaussian_d_total(p::Integer, σ²::Real, T::Type, σ²_B, σ²_W)
     d = fill(convert(T, σ²), p)
-    if Λ_W !== nothing
-        @inbounds for t in 1:p, k in 1:size(Λ_W, 2)
-            d[t] += Λ_W[t, k]^2
-        end
-    end
     σ²_B !== nothing && (d .+= σ²_B)
     σ²_W !== nothing && (d .+= σ²_W)
     return d
@@ -41,14 +37,16 @@ function _gaussian_gls(y::AbstractMatrix, X::AbstractArray{<:Real, 3},
         Λ_W = nothing, σ²_B = nothing, σ²_W = nothing)
     p, n = size(y); q = size(X, 3)
     T = promote_type(eltype(y), eltype(Λ_B), eltype(X), typeof(σ_eps^2))
-    d_total = _gaussian_d_total(p, σ_eps^2, T, Λ_W, σ²_B, σ²_W)
+    d_total = _gaussian_d_total(p, σ_eps^2, T, σ²_B, σ²_W)
     d_inv = one(T) ./ d_total
-    DinvΛ = d_inv .* Λ_B
-    cA = cholesky(Symmetric(I + Λ_B' * DinvΛ))            # K×K Woodbury core
+    # Λ = hcat(Λ_B, Λ_W): the W tier carries its full cross-trait block (issue #135).
+    Λ_U = Λ_W === nothing ? Λ_B : hcat(Λ_B, Λ_W)
+    DinvΛ = d_inv .* Λ_U
+    cA = cholesky(Symmetric(I + Λ_U' * DinvΛ))            # K×K Woodbury core
     # Σ_y⁻¹ V = D⁻¹V − D⁻¹Λ (I + Λ'D⁻¹Λ)⁻¹ Λ'D⁻¹V
     Sinv = V -> begin
         DV = d_inv .* V
-        DV .- DinvΛ * (cA \ (Λ_B' * DV))
+        DV .- DinvΛ * (cA \ (Λ_U' * DV))
     end
     M = zeros(T, q, q)
     vrhs = zeros(T, q)

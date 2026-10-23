@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-gauss-unstruct-p50n2k	G-gauss-lv-large; (p,n,K)=(50,2000,2)	fit_gaussian_gllvm	0.519701	-125672.012	julia_abs_only	ok	4e976e2	totoro	4

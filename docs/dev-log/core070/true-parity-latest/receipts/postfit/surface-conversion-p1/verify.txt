@@ -1,0 +1,3 @@
+CORE070_SURFACE_CONVERSION_VERIFY_SELF_TEST_OK rejected_mutations=11 cases=20 deferred=21
+CORE070_SURFACE_CONVERSION_CONTRACT_OK cases=20 deferred=21 total_target_rows=41
+CORE070_SURFACE_CONVERSION_STATE_OK /Users/z3437171/local-scratch/a3pf-runs-v2/surface-conversion-p1

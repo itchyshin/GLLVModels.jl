@@ -19,7 +19,7 @@ fit_gllvm(Yb; family = Binomial(), K = 2, link = LogitLink())
 # Count data — Laplace marginal
 fit_gllvm(Yc; family = Poisson(), K = 2)
 
-# Overdispersed counts — per-species r by default (NBGroupedFit)
+# Overdispersed counts: one shared r by default (NBFit); disp_group = :species for per-species r
 fit_gllvm(Yc; family = NegativeBinomial(), K = 2)
 
 # Proportions in (0,1) — per-species φ by default (BetaGroupedFit)
@@ -83,8 +83,8 @@ supports `LogitLink()` (default), `ProbitLink()`, and `CLogLogLink()`.
 | `COMPoisson()` | ✅ available | log | Laplace | dispersion exponent `ν` (tag payload) | counts with under- or over-dispersion (`ν>1` / `ν<1`; `ν=1 ⇒ Poisson`); `fit_gllvm` / named `fit_compoisson_gllvm`; Julia-forward |
 | `GeneralizedPoisson1(α)` | ✅ available | log | Laplace | signed dispersion `α` (tag payload) | counts with over- **or** under-dispersion (`α>0` / `α<0`); `fit_gllvm` / named `fit_gp1_gllvm`; Julia-forward (no twin counterpart) |
 | `OrderedBeta()` | ✅ available | logit | Laplace | precision `φ`, cutpoints `c₀<c₁` (tag payloads) | proportions / cover with point masses at 0 and 1; `fit_gllvm` / named `fit_ordered_beta_gllvm`; Julia-forward |
-| `DeltaLogNormal()` | ✅ available | logit × identity(log) | two-part Laplace | log-SD `σ` (tag payload) | occurrence × positive lognormal; `fit_gllvm` / named `fit_delta_lognormal_gllvm` |
-| `DeltaGamma()` | ✅ available | logit × log | two-part Laplace | shape `α` (tag payload) | occurrence × positive Gamma; `fit_gllvm` / named `fit_delta_gamma_gllvm` |
+| `DeltaLogNormal()` | ✅ available | logit × identity(log) | two-part Laplace | log-SD `σ` (tag payload) | occurrence × positive lognormal; `fit_gllvm` / named `fit_delta_lognormal_gllvm`; default is per-species `σ` (`disp_group = :species`), shared `σ` via `disp_group = :shared` |
+| `DeltaGamma()` | ✅ available | logit × log | two-part Laplace | shape `α` (tag payload) | occurrence × positive Gamma; `fit_gllvm` / named `fit_delta_gamma_gllvm`; default is per-species `α` (`disp_group = :species`), shared `α` via `disp_group = :shared` |
 | `BetaHurdle()` | ✅ available | logit × logit | two-part Laplace | precision `φ` (tag payload) | occurrence × positive Beta; `fit_gllvm` / named `fit_beta_hurdle_gllvm`; Julia-forward |
 | `HurdlePoisson()` | ✅ available | logit × log | two-part Laplace | — | occurrence × zero-truncated Poisson; `fit_gllvm` / named `fit_hurdle_poisson_gllvm` |
 | `HurdleNB()` | ✅ available | logit × log | two-part Laplace | dispersion `r` (tag payload) | occurrence × zero-truncated NB2; `fit_gllvm` / named `fit_hurdle_nb_gllvm`; Julia-forward |
@@ -122,7 +122,9 @@ fit = fit_gllvm(Y; family = Normal(), K = 2)
 The Gaussian GLLVM admits a **closed-form marginal** (no Laplace approximation).
 The latent integral is conjugate, so the optimiser works directly on the exact
 log-likelihood. This is the fastest and most accurate path. The response matrix
-`Y` is `p × n` (responses × sites).
+`Y` is `p × n` (responses × sites). The closed-form fitter needs at least as many
+sites as responses (`n_sites ≥ p`) and throws an `ArgumentError` otherwise; the
+Laplace-fitted families below do not (see [Common pitfalls](pitfalls.md)).
 
 ### Binomial — `Binomial()`
 
@@ -234,22 +236,31 @@ is no R-bridge route for it.
 ### Negative Binomial — `NegativeBinomial()`
 
 ```julia
-fit = fit_gllvm(Yc; family = NegativeBinomial(), K = 2)   # per-species r (default)
+fit = fit_gllvm(Yc; family = NegativeBinomial(), K = 2)   # shared r (default)
+fit = fit_gllvm(Yc; family = NegativeBinomial(), K = 2, disp_group = :species)   # per-species r
 ```
 
 For overdispersed counts. The NB2 variance function is Var = μ + μ²/r. The
-public `fit_gllvm` default estimates **per-species** dispersion (returns
-`NBGroupedFit`; `fit.r_group`), matching gllvmTMB's length-`p` `log_phi_nbinom2`.
-With shared site covariates (`@formula` / bridge `X`), the default is
+public `fit_gllvm` default estimates **one shared** `r` (returns `NBFit`, via
+[`fit_nb_gllvm`](@ref)). This was chosen on a simulation grid: when the true `r`
+is common to all species, shared `r` recovers it better, and per-species `r`
+costs 110 to 260 times the fitting time. Per-species `r` is better when `r`
+really varies across species. Pass `disp_group = :species` for per-species `r`
+(returns `NBGroupedFit`; `fit.r_group`). The `@formula` front end (with or
+without covariates) and the R bridge keep per-trait `r`, matching gllvmTMB's
+length-`p` `log_phi_nbinom2`; with shared site covariates the per-trait route is
 [`fit_nb_gllvm_grouped_cov`](@ref) (per-trait `r` + shared `γ`). As `r → ∞` the
-negative binomial collapses to Poisson. For a single shared `r` across species,
-call [`fit_nb_gllvm`](@ref) (no-X) or [`fit_gllvm_cov`](@ref) (with X).
+negative binomial collapses to Poisson. For a single shared `r` with covariates,
+call [`fit_gllvm_cov`](@ref).
 
-The recorded NB2 comparison currently fails the stricter likelihood and
-fit-health checks: its Julia convergence flag accompanies an unstable numerical
-gradient. A scalar-density precision problem at large size has been identified
-and is awaiting a tested repair. Do not infer verified parity or parameter
-recovery from the convergence flag alone.
+The NB2 route is still experimental for demanding fits. The recorded R
+comparison currently fails the stricter likelihood and fit-health checks: its
+Julia convergence flag accompanies an unstable numerical gradient, and a
+scalar-density precision problem at large size has been identified and is
+awaiting a tested repair. A convergence message alone is not enough to
+establish reliable estimates, verified parity, or parameter recovery: inspect
+the fit and use the documented Gaussian routes when you need the established
+teaching path.
 
 ### Negative binomial type-1 — `NB1()`
 
@@ -399,10 +410,14 @@ otherwise convert a typo into a converged-looking garbage fit.
 #### Limits
 
 The outer optimisation is Optim LBFGS with a **finite-difference** gradient over
-the packed vector, not a hand-coded analytic outer gradient. Neither
-`TruncatedNegBin2Fit` nor `TruncatedNegBin2PerTraitFit` has a `confint` dispatch,
-so `confint(fit, Y)` is not available for this family, and there is no R-bridge
-route for it.
+the packed vector, not a hand-coded analytic outer gradient. Both
+`TruncatedNegBin2Fit` and `TruncatedNegBin2PerTraitFit` have a `confint` dispatch
+(`confint(fit, Y; method = :wald | :profile | :bootstrap)`). The interval for the
+dispersion `r` on the shared-r route is under investigation: on one test draw the
+Wald interval was far narrower than a hand-computed profile of `r`, and
+`method = :profile` returned `status = :failed`, so treat Wald and profile
+intervals for `r` with caution until that is resolved. There is no R-bridge route
+for this family.
 
 ### Beta — `Beta()`
 
@@ -434,8 +449,15 @@ cutpoints carry the category levels. The fitted cutpoints are available as
 For native `gllvmTMB` bridge parity, use `fit_ordinal_gllvm_pertrait()` (no-X)
 or `fit_ordinal_gllvm_pertrait_cov()` / `@formula`+X / bridge X (shared site-X):
 per-trait cutpoints with τ₁=0 fixed and K−2 free log-spacings, plus shared `γ`
-under X (twin API B). The shared-cutpoint `fit_ordinal_gllvm()` route remains a
-Julia-side comparator and is **not** the public X default.
+under X (twin API B). [`ordinal_logit()`](@ref) is the name-twin of
+gllvmTMB's `ordinal_logit()` (family_id 20, gllvmTMB ≥ 0.7.1): it fits the
+identical model through this same per-trait route with `link = LogitLink()`,
+so it changes no numerics, but returns its own [`OrdinalLogit`](@ref) marker
+rather than `Ordinal()` itself, so the link stays pinned — `Ordinal()` carries
+no link of its own, so an explicit `link = ProbitLink()` at the fit call site
+is refused under the `ordinal_logit()` name rather than silently honoured.
+The shared-cutpoint `fit_ordinal_gllvm()` route remains a Julia-side
+comparator and is **not** the public X default.
 
 The shared-cutpoint route also admits predictor-informed latent-score means:
 
@@ -474,7 +496,7 @@ before routing through it.
 
 Categories must be coded `1:K` with **`K ≥ 3`**. Both constraints fail loud:
 any `y < 1` (or `y > K`) throws `"multinomial requires y ∈ {1, …, K}; found
-y=$v"`, and `K = 2` throws `"multinomial requires K ≥ 3 categories; K = 2 is
+y=<observed value>"`, and `K = 2` throws `"multinomial requires K ≥ 3 categories; K = 2 is
 binomial-logit — use Binomial() / LogitLink()"`. `K` itself comes from
 `n_categories` when you pass it; **when `n_categories` is left unset, `K` is
 inferred as `maximum(y)`** — so pass it explicitly whenever the top category
@@ -503,8 +525,9 @@ that does `using GLLVModels, Distributions` the bare name `Multinomial` is
 undefined rather than resolving to either one. Always write
 `GLLVModels.Multinomial()` (and `Distributions.Multinomial(...)` for the count
 law). Because v1 has no latent variables, `Multinomial` is **not yet a general
-GLLVM workflow**. It is a fixed-effects model for one unordered categorical
-response.
+GLLVM workflow** in the same sense as the families above: it is a fixed-effects
+model for one unordered categorical response. Treat it as a narrow model form
+rather than a general latent-variable analysis.
 
 ### Gamma — `Gamma()`
 
@@ -576,13 +599,14 @@ fit = fit_gllvm(Yp; family = Gamma(), K = 2)   # Yp > 0; shared α (no-X)
     20–60× smaller error. The previous behaviour remains available:
 
     ```julia
-    ll = gamma_marginal_loglik_laplace(Y, Λ, β, α; hessian = :fisher)
+    ll = GLLVModels.gamma_marginal_loglik_laplace(Y, Λ, β, α; hessian = :fisher)
     ```
 
-    Other families are **unchanged** and keep the Fisher default. This was a
-    per-family decision made on per-family evidence, not a global switch — for
-    some families the observed curvature is *not* closer to the exact marginal,
-    so each is decided on its own measurements.
+    This was a per-family decision on per-family evidence, not a global switch.
+    `_default_hessian` still falls back to `:fisher` for families without a
+    family-specific override; several other routes override that default to
+    `:observed` (see the notes above and
+    `docs/design/capability-status.md` § *Laplace curvature*).
 
 !!! note "Laplace curvature: TweedieED and Binomial-probit use the observed Hessian (changed 2026-08-28)"
     A 2026-08-28 maintenance decision established that
@@ -602,8 +626,10 @@ fit = fit_gllvm(Yp; family = Gamma(), K = 2)   # Yp > 0; shared α (no-X)
       the probit binomial log-likelihood is globally concave in η (Pratt 1981,
       *JASA*), so unlike Beta/Student-t the positive-definiteness guard is not
       expected to fire for this family.
-    - Binomial/**cloglog** is explicitly excluded and stays `:fisher` — the
-      diagnosed Laplace saturation pathology above, not a pending flip.
+    - Binomial/**cloglog** now defaults to **observed**, matching TMB /
+      `gllvmTMB` (confirmed 2026-09-01); `:fisher` was a Julia-side defect.
+      Extreme-η Laplace saturation remains a separate post-fit health diagnostic,
+      not a reason to keep Fisher as the default.
     - The Tweedie **grouped** route accepts `hessian = :observed` (default)
       or `:fisher`. This selects the Laplace curvature; the mode-search policy
       stays separate. Comparisons must use the same curvature and power model.
@@ -629,6 +655,8 @@ Jacobian `−Σ log y`.
 `ArgumentError("lognormal requires y > 0; found non-positive response")`.
 Only `LogLink()` is supported — any other link throws
 `ArgumentError("fit_lognormal_gllvm: only LogLink is supported (twin lognormal)")`.
+Because it reuses the Gaussian fitter, `Lognormal()` also needs `n_sites ≥ p`
+and throws an `ArgumentError` with fewer sites than responses.
 
 `Lognormal` is distinct from `Distributions.LogNormal` and from the two-part
 `DeltaLogNormal()` hurdle (occurrence × positive lognormal, fid 12) — this is
@@ -654,16 +682,18 @@ Note that you must supply `η` yourself: `LognormalFit` defines no `getLV`,
 `predict`, or `link_residual` method, so latent scores and fitted linear
 predictors are not extracted from the fit object on this engine.
 
-**Surface limits.** There is no Wald confidence-interval route —
-`LognormalFit` is not in the native `confint` family union — and the R bridge
-rejects CI requests loudly, requiring `ci_method = "none"`. On the bridge,
+**Surface limits.** Natively, `confint(fit, Y; method)` covers `LognormalFit`,
+but the R bridge rejects CI requests loudly, requiring `ci_method = "none"`. On the bridge,
 lognormal is a **no-X** family: fixed-effect `X`, `X_lv`, and missing-response
 masks are all fenced as follow-ups, and bridge `scores` come back empty with
 `Sigma` / `correlation` assembled from the shared block `ΛΛᵀ` alone
 (communality `1`). `fit_lognormal_gllvm` itself declares no `X` keyword; it
 forwards remaining keywords to `fit_gaussian_gllvm`, but no test exercises an
 X-covariate route through the lognormal entry point, so treat it as
-unsupported.
+unsupported. It refuses `mask` and `lambda_constraint`: a `LognormalFit` does not
+record pins, so its intervals would treat pinned loadings as parameters. Fit a
+confirmatory model to the centred `log(Y)` with `fit_gaussian_gllvm(...;
+lambda_constraint = M)` instead.
 
 ### Tweedie — `fit_tweedie_gllvm`
 
@@ -720,8 +750,9 @@ Student-t is a **no-X** surface: `fit_gllvm` and `gllvm(@formula(y ~ 1), …)` a
 admitted. Shared and per-species dispersion are supported; this does not
 establish arbitrary dispersion-group, covariate or row-effect support. The fit
 records `estimated_nu`, so AIC counts free degrees-of-freedom parameters only
-when they were estimated. See [Student-t parity limits](studentt-parity.md):
-the recorded R comparison still does not converge reliably.
+when they were estimated. See [Student-t parity limits](studentt-parity.md) for
+the current boundary: the recorded R comparison still does not converge
+reliably, so the full R comparison is not yet established.
 
 ### Conway–Maxwell–Poisson — `COMPoisson()`
 
@@ -794,13 +825,21 @@ fit = fit_gllvm(Y; family = DeltaLogNormal(9.0), K = 2)  # same — marker σ ne
 ```
 
 Two-part Laplace: Bernoulli occurrence (`π = logistic(β^z)`, `Λ_z = 0` in v1) times
-a positive lognormal with meanlog `η^c = β^c + Λ_c z` and shared sdlog `σ`. The
-marker's `σ` is a **tag payload** — always estimated (returned as `fit.σ`). Named
-fitter [`fit_delta_lognormal_gllvm`](@ref) remains available.
+a positive lognormal with meanlog `η^c = β^c + Λ_c z` and sdlog `σ`. The marker's
+`σ` is a **tag payload** — always estimated (returned as `fit.σ`). Named fitter
+[`fit_delta_lognormal_gllvm`](@ref) remains available.
+
+**`disp_group` (per-trait dispersion, default since 2026-09-24):** `σ` is now
+one sdlog **per species** by default (`fit.σ` a length-`p` vector,
+`disp_group = :species`), matching gllvmTMB's per-trait
+`log_sigma_lognormal_delta`. Pass `disp_group = :shared` (on the named fitter,
+or `fit_gllvm(...; disp_group = :shared)`) for the previous one-scalar-per-model
+behaviour. **Existing code that omitted `disp_group` will see `fit.σ` change
+from a scalar to a vector.**
 
 Delta-lognormal is a **no-X** surface: `fit_gllvm` and `gllvm(@formula(y ~ 1), …)`
-are open; covariates, `disp_group`, and `row_eff` are not admitted. No bridge /
-R-parity claim.
+are open, including `disp_group`; covariates and `row_eff` are not admitted. No
+bridge / R-parity claim.
 
 **`predictor` mode (2026-08-28):** [`fit_delta_lognormal_gllvm`](@ref) takes a
 `predictor::Symbol` kwarg, `:separate` (default, the behaviour above) or
@@ -818,12 +857,19 @@ fit = fit_gllvm(Y; family = DeltaGamma(4.0), K = 2)  # same — marker α never 
 ```
 
 Two-part Laplace: Bernoulli occurrence times a positive Gamma with log-link mean
-`μ = exp(η^c)` and shared shape `α` (`Var = μ²/α`). The marker's `α` is a **tag
+`μ = exp(η^c)` and shape `α` (`Var = μ²/α`). The marker's `α` is a **tag
 payload** — always estimated (returned as `fit.α`). Named fitter
 [`fit_delta_gamma_gllvm`](@ref) remains available.
 
-Delta-Gamma is a **no-X** surface: same fence as Delta-lognormal (no +X, no
-`disp_group`, no `row_eff`, no bridge / R-parity claim).
+**`disp_group` (per-trait dispersion, default since 2026-09-24):** `α` is now
+one shape **per species** by default (`fit.α` a length-`p` vector,
+`disp_group = :species`), matching gllvmTMB's per-trait `log_phi_gamma_delta`.
+Pass `disp_group = :shared` for the previous one-scalar-per-model behaviour.
+**Existing code that omitted `disp_group` will see `fit.α` change from a scalar
+to a vector.**
+
+Delta-Gamma is a **no-X** surface: same fence as Delta-lognormal (no +X,
+`disp_group` admitted, no `row_eff`, no bridge / R-parity claim).
 
 **`predictor` mode (2026-08-28):** same kwarg as Delta-lognormal above —
 [`fit_delta_gamma_gllvm`](@ref)'s `predictor::Symbol`, `:separate` (default)
@@ -861,15 +907,17 @@ starting value.
 
 ### Per-species and grouped dispersion
 
-For `NegativeBinomial`, `Beta`, `NB1`, and `BetaBinom`, the public `fit_gllvm`
-default already uses per-species dispersion (`disp_group = :species`). Pass an
-integer `disp_group` vector for custom grouping, or call the named shared fitters
-(`fit_nb_gllvm` / `fit_beta_gllvm` / `fit_nb1_gllvm` /
-`fit_beta_binomial_gllvm`) for one dispersion across all species.
+For `Beta`, `NB1`, and `BetaBinom`, the public `fit_gllvm` default already uses
+per-species dispersion (`disp_group = :species`). Pass an integer `disp_group`
+vector for custom grouping, or call the named shared fitters (`fit_beta_gllvm` /
+`fit_nb1_gllvm` / `fit_beta_binomial_gllvm`) for one dispersion across all
+species.
 
-The remaining dispersion families (`Gamma`, Tweedie) still default to a shared
-parameter on `fit_gllvm` / their named drivers; use a `_grouped` driver or
-`disp_group = :species` to vary by species (gllvm's `disp.group`):
+`NegativeBinomial` defaults to one shared `r` on `fit_gllvm` (`NBFit`); pass
+`disp_group = :species` for per-species `r`. The remaining dispersion families
+(`Gamma`, Tweedie) also default to a shared parameter on `fit_gllvm` / their
+named drivers; use a `_grouped` driver or `disp_group = :species` to vary by
+species (gllvm's `disp.group`):
 
 ```julia
 fit_nb_gllvm_grouped(Yc;  K = 2, group = group)   # NB2 dispersion r per group
@@ -884,7 +932,8 @@ fit_tweedie_gllvm_grouped(Yc; K = 2)             # Tweedie dispersion φ per spe
 per-species. The beta-binomial drivers additionally need the trial counts `N`.)
 
 ```julia
-fit_gllvm(Yc; family = NegativeBinomial(), K = 2)                 # default = per-species
+fit_gllvm(Yc; family = NegativeBinomial(), K = 2)                 # default = shared r
+fit_gllvm(Yc; family = NegativeBinomial(), K = 2, disp_group = :species)  # per-species r
 fit_gllvm(Yc; family = NB1(), K = 2)                              # default = per-species
 fit_gllvm(Yb; family = BetaBinom(), K = 2, N = trials)            # default = per-species; N required
 fit_gllvm(Yp; family = Beta(), K = 2, disp_group = group)         # custom groups
@@ -957,8 +1006,8 @@ end
 The formula interface can build the same complete design. `y ~ 1 + site_x`
 includes one intercept per trait and a shared slope. `y ~ 0 + site_x` removes
 the intercepts; `y ~ 0` is a zero-mean model. Omitting the intercept marker
-(`y ~ site_x`) includes trait intercepts. This applies to `pervar=true`; the
-existing shared-variance formula route is unchanged. Complete long tables and
+(`y ~ site_x`) includes trait intercepts. The same design is used with
+`pervar=true` and by the default shared-variance route. Complete long tables and
 categorical contrast choices use the same per-variance route.
 
 ```@example pervar_design
@@ -1073,6 +1122,7 @@ fit = fit_zip_gllvm(Y;             K = 2)   # counts; structural zero × Poisson
 fit = fit_zip_gllvm_cov(Y; X = X,  K = 2)   # ZIP + shared site-X (separate γz/γc; Λz=0)
 fit = fit_zinb_gllvm(Y;            K = 2)   # counts; structural zero × NB2, shared r
 fit = fit_zinb_gllvm_cov(Y; X = X, K = 2)   # ZINB + shared site-X (separate γz/γc; Λz=0; shared r)
+# iterations ≤ 0 evaluates the start only and returns converged = false
 fit = fit_zib_gllvm(Y;             K = 2, N = N)  # binomial counts; structural zero × Binomial(N, μ)
 fit = fit_gllvm(Y; family = OrderedBeta(), K = 2)          # proportions; 0/1 masses + Beta interior
 fit = fit_gllvm(Y; family = OrderedBeta(0.0, 2.0, 3.0), K = 2)  # same — marker tags never read
@@ -1140,15 +1190,86 @@ zero-inflation only, evaluated point-estimate bias/RMSE and the fitter's own
 convergence diagnostic — **no coverage or SE evaluation was done**, so it says
 nothing about interval calibration for any of the three families.
 
+### `zi_poisson()` / `zi_nbinom2()` / `zi_binomial()` — gllvmTMB twins (P1)
+
+gllvmTMB 0.7.1 (commit `9539352f6`, the P1 pin) exports `zi_poisson()`,
+`zi_nbinom2()` and `zi_binomial()`. The same names in GLLVModels.jl fit R's
+model, not the Julia fitters above:
+
+```julia
+fit = fit_gllvm(Y; family = zi_poisson(), K = 1)
+fit = fit_gllvm(Y; family = zi_nbinom2(), K = 1)
+fit = fit_gllvm(Y; family = zi_binomial(), K = 1, trials = N)  # N: p×n trials
+fit.zi     # per-trait structural-zero probability (R: fit$report$zi)
+fit.phi    # zi_nbinom2 only: per-trait NB2 dispersion, Var = μ + μ²/φ
+```
+
+R's model is a true zero-inflation mixture with a per-trait, intercept-only
+structural-zero probability (no covariates and no latent loadings on the zero
+part), the count process active at every observation, one NB2 dispersion per
+trait, and binomial trials per observation. A `zi_binomial()` trait whose rows
+all have one trial is refused, as in R: with 0/1 data the structural-zero
+probability and the success probability are not separately identified. The
+Laplace log-determinant uses the observed curvature, as TMB does.
+
+How this differs from Julia's own routes, which stay available unchanged:
+
+| | `zi_poisson()` / `zi_nbinom2()` / `zi_binomial()` | `ZIPoisson()` / `ZINegBin()` / `ZIB(N)` |
+|---|---|---|
+| Laplace log-det count weight | observed (as TMB) | expected (Fisher) |
+| NB2 dispersion | one per trait | one shared across traits |
+| binomial trials | per observation, `N = 1` traits refused | one shared integer `N`, `N = 1` admitted |
+| covariates on the count part | not offered | `_cov` fitters |
+
+On the ZIP twin fixture the Julia `ZIPoisson` marginal evaluated at R's optimum
+is 3.62 log-likelihood units away from R's logLik, while the `zi_poisson()`
+route matches to 1.4e-8 (optimum against optimum). Twin evidence:
+`test/test_zi_twin.jl` (which also carries the R-pinned NB2 breakdown datasets);
+known-DGP recovery: `test/test_zi_recovery.jl`. Recovery has been shown only for
+loadings with `|λ| <= 0.6` (p = 4, n = 350, K = 1). With stronger loadings
+(`|λ|` from 0.8 to 1.8, Poisson, measured on three draws) the default starts of both
+gllvmTMB and this route land in a lower basin, far below the log-likelihood at the
+true parameters (on one draw both engines converge to the same point, 711 units below
+it, and both report convergence). That is a start-quality gap shared by both engines,
+not a guard artefact; a multi-start would address it on either side.
+
+**Laplace breakdown guard.** At `y = 0` the mixture's observed curvature can be
+negative, so the per-site Laplace precision `A = I + Λ' diag(W) Λ` can approach
+singularity and the Laplace value inflates. On one NB2 dataset the Laplace maximum
+sat 363 log-likelihood units above the exact marginal there, and gllvmTMB's own
+objective returns the same inflated value (R reached the sensible optimum only
+through its start, and stopped in that region with `convergence = 1` on 2 of 20
+draws). This route refuses a site whose `A` has an eigenvalue below
+`ZI_LAPLACE_EIGMIN_FLOOR` (0.1), reports an optimum at the floor with
+`converged = false` (`fit.min_site_eigen` records the value), and starts NB2 fits
+from a moment estimate of `phi`. A fit that ends at the guard is retried once from a
+shrunk start (loadings at a tenth of the default start) and the retry is kept only if
+it ends off the guard. Measured on 35 NB2 draws (20 at the reviewer's setting, 15 at
+the recovery-test setting): 30 fits converge off the guard, and the 5 that end flagged
+are all draws on which gllvmTMB also fails (an error or `convergence = 1`). Before the
+retry, one further draw (1 of the 15) stalled at the guard where gllvmTMB reached a
+sensible optimum; the retry reaches that optimum (logLik -3820.2665, matching R). So
+the start and retry reach the sensible optimum on every measured draw where gllvmTMB
+does, not on every dataset. The guard does not remove Laplace error above the floor.
+Missing responses (`missing` or `NaN`) are refused with an `ArgumentError` (gllvmTMB
+masks them per row).
+
+Only the no-covariate model is offered on this route,
+and `predict`, `confint`, `simulate` and the extractors below are not wired for
+its [`ZiFit`](@ref) result yet.
+
 ## Extractors
 
 The same post-fit extractors (`communality`, `correlation`, `sigma_y_site`, …)
-work for all implemented families:
+work for all implemented families. Only the Gaussian fit supports the
+one-argument `communality(fit)` / `correlation(fit)` / `sigma_y_site(fit)`; the
+non-Gaussian fits take the response matrix too, as `(fit, Y)`, and `getLV` takes
+`Y` for every response family on this page:
 
 ```julia
-communality(fit)   # shared-variance fraction per response
-correlation(fit)   # cross-response correlation matrix
-getLV(fit)         # latent variable scores (sites × K)
+communality(fit, Y)   # shared-variance fraction per response
+correlation(fit, Y)   # cross-response correlation matrix
+getLV(fit, Y)         # latent variable scores (sites × K)
 ```
 
 See [Working with a fit](working-with-a-fit.md) for the full extractor reference.

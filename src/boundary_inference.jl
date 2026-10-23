@@ -5,10 +5,17 @@
 # boundary. Self & Liang (1987) / Stram & Lee (1994): the null LRT follows a χ̄²
 # MIXTURE of χ² distributions, not a single χ²_q.
 #
-# Use cases in GLLVModels.jl: K-selection / over-factoring ("is the K-th latent factor real?"),
-# and the RE variances (σ_row, the grouped/structured σ_u, the random-slope Σ_b diagonals,
-# the Poisson OLRE ψ_t) — all are variances tested against 0. Methods-sharing with DRM
-# (MIT/GPL clean).
+# Use cases in GLLVModels.jl: the RE variances (σ_row, the grouped/structured σ_u, the
+# random-slope Σ_b diagonals, the Poisson OLRE ψ_t) — all are variances tested against 0.
+# Methods-sharing with DRM (MIT/GPL clean).
+#
+# NOT a valid reference for choosing the number of latent dimensions (K vs K+1). There the
+# extra loading column is zero under the null and its direction is unidentified, so the
+# problem is not one variance on a boundary: Wilks' theorem fails and the null LRT is not a
+# χ̄² mixture (Hayashi, Bentler & Yuan 2007, Struct. Equ. Modeling 14:505–526; Drton 2009,
+# Ann. Statist. 37:979–1012 — the limit involves Wishart eigenvalues). Use a parametric
+# bootstrap for that test, or an information criterion via `select_lv`. (Corrected
+# 2026-09-27, lane auto-d; the line previously listed K-selection as a use case.)
 
 """
     chibar2_pvalue(LRT, q) -> Float64
@@ -21,12 +28,15 @@ on the boundary), so
     p = Σ_{j=1}^{q} C(q,j) 2^{-q} · P(χ²_j ≥ LRT)          (the j=0 atom contributes 0 for LRT>0).
 
 For `q = 1` this is the familiar `½ P(χ²_1 ≥ LRT)` (half the naive χ²_1 p-value). Returns
-1.0 for `LRT ≤ 0` (no evidence). NOTE: the independent-variances mixture; a variance that
+1.0 for `LRT ≤ 0` (no evidence). Throws `ArgumentError` for a `NaN` `LRT` — mirroring
+gllvmTMB's `R/chibar.R`, which refuses a missing/non-numeric `LRT` rather than silently
+reporting "no evidence" for it. NOTE: the independent-variances mixture; a variance that
 is also correlated with others (a ρ → ±1 boundary) needs the cone-geometry weights — a
 documented follow-on.
 """
 function chibar2_pvalue(LRT::Real, q::Integer)
     q ≥ 1 || throw(ArgumentError("q (number of boundary variances) must be ≥ 1; got $q"))
+    isnan(LRT) && throw(ArgumentError("LRT must be a single, non-missing numeric value; got NaN"))
     LRT > 0 || return 1.0
     p = 0.0
     @inbounds for j in 1:q
@@ -42,9 +52,14 @@ Boundary likelihood-ratio test that `n_boundary` variance components are 0, from
 maximised log-likelihoods (full model vs the reduced model with those variances fixed at
 0). Returns `(LRT, pvalue, n_boundary)` with the χ̄² mixture p-value
 ([`chibar2_pvalue`](@ref)). The naive `2·ΔlogLik ~ χ²` p-value would OVER-state the
-evidence's conservatism (be too large) — the boundary correction halves (q=1) it.
+evidence's conservatism (be too large) — the boundary correction halves (q=1) it. Throws
+`ArgumentError` if `ℓ_full` or `ℓ_reduced` is `NaN` — mirroring gllvmTMB's `R/chibar.R`,
+which refuses a missing/non-numeric log-likelihood rather than silently reporting "no
+evidence" for it.
 """
 function variance_lrt(ℓ_full::Real, ℓ_reduced::Real; n_boundary::Integer = 1)
+    (isnan(ℓ_full) || isnan(ℓ_reduced)) &&
+        throw(ArgumentError("ℓ_full and ℓ_reduced must each be a single, non-missing numeric value; got NaN"))
     LRT = 2 * (float(ℓ_full) - float(ℓ_reduced))
     return (LRT = LRT, pvalue = chibar2_pvalue(LRT, n_boundary), n_boundary = n_boundary)
 end

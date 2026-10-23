@@ -1,44 +1,142 @@
 # GLLVModels.jl
 
-Development grouping route: `fit_gllvm(Y; grouping=[GroupingTerm(:unit;
-mode=:indep)], unit=labels)` jointly fits shared effects for Gaussian and the
-four named non-Gaussian families. Formula
-routing, interval diagnostics, full fixed-effect `vcov` and structured summaries are described in
-[Joint named grouping models](docs/src/grouped-models.md). Full Destination B
-qualification remains in progress. The explicit Gaussian `phylo=PrecisionPhy`
-route supports precision-only fits and a bounded joint independent-grouping
-model; source-specific covariance and full-marginal interval diagnostics remain
-separate from frozen-R admission and recovery evidence.
-GLLVModels.jl remains an experimental partial R-to-Julia bridge, not 0.7 parity.
-Precision-only fitting offers `residual_mode=:shared` alongside the unchanged
-trait-specific default; the joint grouping route remains trait-specific.
-Eligible independent Gaussian grouping models also have an explicit
-`grouped_gaussian_variance_profile(Y, fit; term=:unit, trait=1)` route;
-inspect its status and limitations in the grouping guide before using endpoints.
-The explicit Julia multivariate precision route is documented in the
-[development bridge guide](docs/src/precision-bridge-development.md);
-public R `phylo_rr` admission is still closed.
-
 [![Build Status](https://github.com/itchyshin/GLLVModels.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/itchyshin/GLLVModels.jl/actions/workflows/CI.yml)
 [![Coverage](https://codecov.io/gh/itchyshin/GLLVModels.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/itchyshin/GLLVModels.jl)
 
 Fast Generalised Linear Latent Variable Models (GLLVMs) in Julia, with a broad,
 status-tracked GLM response-family surface.
 
+A GLLVM asks which responses vary together. You measure several responses on the
+same sites, individuals or species (for example, many species counted at many
+sites, or several traits measured on many animals). The model finds a few hidden
+shared patterns that explain how the responses move together, and keeps the
+variation that is unique to each response separate. Optional parts add fixed
+effects, phylogenetic structure and spatial structure.
+
+It is written for ecologists, evolutionary biologists and statisticians who use
+R packages such as `gllvm` and `gllvmTMB` and want a fast Julia engine. It is
+an experimental, partial R-to-Julia bridge, not a drop-in copy of those
+packages. Read the [development status](#development-status) before you rely on
+a result, and the [docs](https://itchyshin.github.io/GLLVModels.jl/dev/) for
+guides and a list of what can be fitted today.
+
 > API may change before v1.0.
 
-`fit_gaussian_sources(...; sigma_eps_fixed=s)` also supports a specified positive
-residual SD; omitted means it is estimated. Fixed coordinates are excluded from
-`dof`, gradients and Hessians. This does not establish full source-model parity.
+## Install
 
-Local development candidate: `SourceCovariance` and `fit_gaussian_sources`
-represent fixed covariance among source nodes with explicit observation-to-node
-projections. Targeted numerical checks and six retained comparisons with R
-0.7.0 pass. This evidence is limited to those fixed Gaussian source models;
-explicit-source Gaussian formulas support fixed predictors with a complete mean
-design. R bridge support, calibrated uncertainty and performance improvements
-remain unverified. See the structured-dependence guide for covariance axes
-and the nearly singular unique-variance case.
+```julia
+using Pkg
+Pkg.add(url = "https://github.com/itchyshin/GLLVModels.jl")
+```
+
+Families such as `Poisson()` and `Normal()` come from Distributions.jl. If you
+use them, also run `Pkg.add("Distributions")`.
+
+## Quick start
+
+```julia
+using GLLVModels, Distributions, Random
+
+# `using GLLVM` cannot resolve after the package rename. After loading
+# GLLVModels, `GLLVModels.GLLVM` is a temporary deprecated source-level alias.
+
+# Simulate the per-response-residual Gaussian model used for the R comparison
+Random.seed!(0)
+p, K, n = 20, 2, 200
+Λ_true = randn(p, K); for i in 1:K, k in 1:K; if i < k; Λ_true[i, k] = 0; end; end
+for k in 1:K; Λ_true[k, k] = abs(Λ_true[k, k]) + 0.5; end
+ψ_true = 0.15 .+ 0.10 .* rand(p)           # one residual variance per response
+y = Λ_true * randn(K, n) .+ sqrt.(ψ_true) .* randn(p, n)  # responses × sites
+
+# Fit the matching diagonal-residual model
+fit = fit_gaussian_pervar_gllvm(y; K = K)
+
+# Inspect
+fit.Λ                                 # estimated loadings (p × K)
+fit.ψ²                                # residual variance of each response
+fit.loglik                            # log-likelihood
+fit.converged                         # check this before reading results
+```
+
+This is the matrix-first companion to the ordinary R
+[`gllvmTMB`](https://itchyshin.github.io/gllvmTMB/) teaching route:
+`traits(...) + latent(...)` also implies
+`Sigma = Lambda * Lambda' + Psi`, with one diagonal residual variance per
+response. Julia stores responses in rows (`p x n`), whereas the R wide table
+stores units in rows. The simpler `fit_gaussian_gllvm` route uses one shared
+residual SD, so it is a restricted model and is **not** identical to this
+per-response-residual teaching fit. The two packages have partial parity, not
+a drop-in equivalence; use R for the richer formula-first documentation and
+read its current limits before making a same-model or inference claim.
+
+The published Gaussian speed benchmark is deliberately separate: it compares
+the shared-residual closed-form special case against a matched R configuration.
+Its speed numbers do not establish speed for this per-response route or for
+non-Gaussian models.
+
+## Confidence intervals
+
+Three methods, matching the surface of R's `confint()` from the
+`gllvmTMB` package. The per-response fit above does not have interval methods
+yet, so this block fits the simpler shared-residual model to the same data and
+passes the data matrix `y` to each call:
+
+```julia
+fit_shared = fit_gaussian_gllvm(y; K = K)
+GLLVModels.confint(fit_shared; y = y)                                 # Wald (default)
+GLLVModels.profile_ci(fit_shared, "sigma_eps"; y = y)                 # profile likelihood
+GLLVModels.bootstrap_ci(fit_shared; y = y, n_boot = 20, seed = 42)    # parametric bootstrap; use 1000 or more for real work
+```
+
+## Choosing the outer optimizer
+
+The ordinary Gaussian, Poisson Laplace, and shared-r NB2 fitters accept
+`optimizer = :lbfgs` or `:bfgs`; the default `optimizer = nothing` preserves
+their existing behavior. The default per-trait NB2 formula route accepts the
+same choice without changing its dispersion model. Explicit choices run
+directly, without the legacy Poisson/NB2 BFGS continuation. Inspect the actual
+stages with `optimizer_info(fit)`. AGHQ, grouped covariance, and other nested
+routes reject explicit selection. Profile and bootstrap intervals also reject
+fits made with an explicit choice because their internal refits do not yet
+forward it.
+
+For a quick Poisson comparison, `Y` is a count matrix with responses in rows
+and sites in columns. Omitting `optimizer` keeps the existing default policy;
+select either supported solver explicitly and inspect the recorded method:
+
+```julia
+using GLLVModels
+
+fit_bfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :bfgs)
+fit_lbfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :lbfgs)
+optimizer_info(fit_bfgs)
+optimizer_info(fit_lbfgs)
+```
+
+See the [tutorial](docs/src/tutorial.md) for a matched-start comparison and
+convergence and likelihood checks.
+
+```julia
+Y_count = [1 0 3 2 0 1 4 0 2 1 0 3;
+           0 2 1 0 3 1 0 4 1 0 2 1;
+           2 1 0 3 1 0 2 1 4 0 1 2]
+K_count = 1
+β_start = [0.1, -0.1, 0.2]
+Λ_start = reshape([0.12, -0.06, 0.08], 3, K_count)
+
+fit_lbfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
+    β_init = β_start, Λ_init = Λ_start, optimizer = :lbfgs)
+fit_bfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
+    β_init = β_start, Λ_init = Λ_start, optimizer = :bfgs)
+@show fit_lbfgs.converged fit_bfgs.converged
+@show fit_lbfgs.loglik fit_bfgs.loglik
+optimizer_info(fit_lbfgs)
+optimizer_info(fit_bfgs)
+```
+
+Both fits use the same count matrix, family, latent rank, and supplied starting
+values, so this compares optimizer paths without changing the model. Compare
+their convergence flags and likelihoods; different local optima remain possible.
 
 ## Why
 
@@ -75,73 +173,6 @@ algorithmic difference, not a language one. Non-Gaussian families use a dense
 Laplace on both sides and the measured factors are far smaller (Gamma ≈ 1.6×,
 zero-truncated Poisson ≈ 2.2×). Do not read the headline as a general claim
 about the package; the Benchmarks page opens with the same warning.
-
-Corrected 2026-08-25: this previously read "matched to 1e-7 in log-likelihood
-and 1e-5 in Σ_y". Both bounds are exceeded by the package's own published
-table — worst case 2.343e-07 and 4.424e-05 respectively. The benchmarks page
-was already accurate; the summary here was not.
-
-Corrected 2026-08-26: the speedup claim in the same sentence read "often
-10-100× faster". Every cell in the package's own wall-clock table is between
-161× and 698×, so no measured cell fell inside the advertised range — it
-understated the repo's own data. The 2026-08-25 pass fixed the agreement
-bounds and left the neighbouring clause untouched.
-
-## Quick start
-
-```julia
-using Pkg
-Pkg.add(url = "https://github.com/itchyshin/GLLVModels.jl")
-using GLLVModels
-
-# `using GLLVM` cannot resolve after the package rename. After loading
-# GLLVModels, `GLLVModels.GLLVM` is a temporary deprecated source-level alias.
-
-# Simulate the per-response-residual Gaussian model used for the R comparison
-using Random
-Random.seed!(0)
-p, K, n = 20, 2, 200
-Λ_true = randn(p, K); for i in 1:K, k in 1:K; if i < k; Λ_true[i, k] = 0; end; end
-for k in 1:K; Λ_true[k, k] = abs(Λ_true[k, k]) + 0.5; end
-ψ_true = 0.15 .+ 0.10 .* rand(p)           # one residual variance per response
-y = Λ_true * randn(K, n) .+ sqrt.(ψ_true) .* randn(p, n)  # responses × sites
-
-# Fit the matching diagonal-residual model
-fit = fit_gaussian_pervar_gllvm(y; K = K)
-
-# Inspect
-fit.pars.Λ                            # estimated loadings
-fit.pars.σ_eps                        # observation SD
-fit.logLik                            # log-likelihood
-fit.cputime                           # wall-clock seconds
-```
-
-This is the matrix-first companion to the ordinary R
-[`gllvmTMB`](https://itchyshin.github.io/gllvmTMB/) teaching route:
-`traits(...) + latent(...)` also implies
-`Sigma = Lambda * Lambda' + Psi`, with one diagonal residual variance per
-response. Julia stores responses in rows (`p x n`), whereas the R wide table
-stores units in rows. The simpler `fit_gaussian_gllvm` route uses one shared
-residual SD, so it is a restricted model and is **not** identical to this
-per-response-residual teaching fit. The two packages have partial parity, not
-a drop-in equivalence; use R for the richer formula-first documentation and
-read its current limits before making a same-model or inference claim.
-
-The published Gaussian speed benchmark is deliberately separate: it compares
-the shared-residual closed-form special case against a matched R configuration.
-Its speed numbers do not establish speed for this per-response route or for
-non-Gaussian models.
-
-## Confidence intervals
-
-Three methods, matching the surface of R's `confint()` from the
-`gllvmTMB` package:
-
-```julia
-GLLVModels.confint(fit)                                    # Wald (default)
-GLLVModels.profile_ci(fit, "sigma_eps")                    # profile likelihood
-GLLVModels.bootstrap_ci(fit; n_boot = 1000, seed = 42)     # parametric bootstrap
-```
 
 ## Comparison to MixedModels.jl
 
@@ -182,7 +213,9 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
 - Per-species / grouped dispersion (`disp.group`) for NB2, NB1, Beta, beta-binomial,
   Gamma, and Tweedie via the `_grouped` drivers — per-species is the `fit_gllvm`
   default for NB2, NB1, Beta, and beta-binomial (`family = NB1()`,
-  `family = BetaBinom()`), matching gllvmTMB
+  `family = BetaBinom()`), matching gllvmTMB. Delta-lognormal and Delta-Gamma
+  likewise default to per-species dispersion (`disp_group = :species`); shared
+  dispersion remains available via `disp_group = :shared`
 - Two-part / mixture families: Delta-lognormal, Delta-Gamma, Hurdle-Poisson,
   Hurdle-NB, Beta-hurdle, and ordered-beta via `family = DeltaLogNormal()` /
   `DeltaGamma()` / `HurdlePoisson()` / `HurdleNB()` / `BetaHurdle()` /
@@ -204,6 +237,14 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
   `predict` / `getLV` / `ordination`, and an `@formula` front-end
   (wide formula tables require one row per site, including intercept-only fits;
   an empty table is allowed when there are no covariates)
+- Automatic latent-dimension selection: omitting `K` from `fit_gllvm(Y;
+  family)` sweeps `K` (guarded against non-converged, non-improving, and
+  runaway fits) and returns the chosen fit with a one-line message; call
+  `select_lv` directly for the full per-`K` comparison table
+  (`Kmax`, `criterion = :bic_sites` default). See the tutorial's
+  "Choosing the number of latent dimensions" section — the chosen `K` is
+  an estimate, not ground truth, and downstream intervals are conditional
+  on it.
 - Wald / profile / bootstrap CI routes across scalar-dispersion GLM, grouped
   NB2/NB1/Beta/Gamma, and two-part families; grouped Tweedie, per-trait
   ordinal, and bridge-only edge rows remain status-gated before promotion
@@ -228,16 +269,62 @@ partial grouping and site covariates remain unsupported.
 The truncated-Poisson R→Julia bridge rejects fractional, non-finite, or
 inexactly representable counts before fitting; it never rounds the response.
 
-## Citation
+## Development status
 
-If you use `GLLVModels.jl` in published work, please cite:
+This section keeps the project's internal status notes. They describe what has
+and has not been checked against R. They are not needed to run the Quick start.
 
-> Nakagawa, S. (2026). GLLVModels.jl: Generalised Linear Latent Variable Models in
-> Julia. <https://github.com/itchyshin/GLLVModels.jl>
+### Grouping, precision and phylogenetic routes
 
-## License
+Development grouping route: `fit_gllvm(Y; grouping=[GroupingTerm(:unit;
+mode=:indep)], unit=labels)` jointly fits shared effects for Gaussian and the
+four named non-Gaussian families. Formula
+routing, interval diagnostics, full fixed-effect `vcov` and structured summaries are described in
+[Joint named grouping models](docs/src/grouped-models.md). Full Destination B
+qualification remains in progress. The explicit Gaussian `phylo=PrecisionPhy`
+route supports precision-only fits and a bounded joint independent-grouping
+model; source-specific covariance and full-marginal interval diagnostics remain
+separate from frozen-R admission and recovery evidence.
+GLLVModels.jl remains an experimental partial R-to-Julia bridge, not 0.7 parity.
+Precision-only fitting offers `residual_mode=:shared` alongside the unchanged
+trait-specific default; the joint grouping route remains trait-specific.
+Eligible independent Gaussian grouping models also have an explicit
+`grouped_gaussian_variance_profile(Y, fit; term=:unit, trait=1)` route;
+inspect its status and limitations in the grouping guide before using endpoints.
+The explicit Julia multivariate precision route is documented in the
+[development bridge guide](docs/src/precision-bridge-development.md);
+public R `phylo_rr` admission is still closed. The named Julia twin of R's bare
+Gaussian `phylo_latent(species, d = K)` is `fit_phylo_latent_gllvm(Y, species;
+d, tree)` (species matched by label; paired R and Julia receipts at gllvmTMB
+P1; promotion pending).
 
-MIT
+### Fixed-covariance source models
+
+`fit_gaussian_sources(...; sigma_eps_fixed=s)` also supports a specified positive
+residual SD; omitted means it is estimated. Fixed coordinates are excluded from
+`dof`, gradients and Hessians. This does not establish full source-model parity.
+
+Local development candidate: `SourceCovariance` and `fit_gaussian_sources`
+represent fixed covariance among source nodes with explicit observation-to-node
+projections. Targeted numerical checks and six retained comparisons with R
+0.7.0 pass. This evidence is limited to those fixed Gaussian source models;
+explicit-source Gaussian formulas support fixed predictors with a complete mean
+design. R bridge support, calibrated uncertainty and performance improvements
+remain unverified. See the structured-dependence guide for covariance axes
+and the nearly singular unique-variance case.
+
+### Benchmark wording corrections
+
+Corrected 2026-08-25: this previously read "matched to 1e-7 in log-likelihood
+and 1e-5 in Σ_y". Both bounds are exceeded by the package's own published
+table — worst case 2.343e-07 and 4.424e-05 respectively. The benchmarks page
+was already accurate; the summary here was not.
+
+Corrected 2026-08-26: the speedup claim in the same sentence read "often
+10-100× faster". Every cell in the package's own wall-clock table is between
+161× and 698×, so no measured cell fell inside the advertised range — it
+understated the repo's own data. The 2026-08-25 pass fixed the agreement
+bounds and left the neighbouring clause untouched.
 
 ### Poisson AGHQ candidate
 
@@ -260,3 +347,12 @@ coefficients carry through prediction and inference. Gaussian AGHQ uses a real
 outer quadrature fit, even though the exact marginal is available as a check.
 Its interval objective is the fitted frozen-node surrogate. See the quickstart
 for an executed example; this does not establish the whole parity programme.
+
+## Citation
+
+If you use `GLLVModels.jl` in published work, please cite:
+
+> Nakagawa, S. (2026). GLLVModels.jl: Generalised Linear Latent Variable Models in
+> Julia. <https://github.com/itchyshin/GLLVModels.jl>
+
+## License

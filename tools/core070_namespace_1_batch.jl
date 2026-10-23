@@ -145,17 +145,62 @@ to_json(x::AbstractFloat) = isfinite(x) ? repr(x) : "null"
 to_json(x::AbstractVector) = "[" * join(to_json.(x), ",") * "]"
 to_json(x::AbstractDict) = "{" * join(("\"$(json_escape(string(k)))\":" * to_json(v) for (k, v) in x), ",") * "}"
 
-const CONTRACT_PATH = joinpath(@__DIR__, "..", "docs/dev-log/core070/namespace-1-batch-contract.json")
+# Pin selection: GLLVM_PARITY_PIN via the shared pin source
+# (test/parity/core070_pin.jl reads tools/core070_oracle_pins.toml; default P0).
+# The contract is the one frozen at the selected pin's reference_commit, so P0
+# resolves to the original contract exactly as before.
+include(joinpath(@__DIR__, "..", "test", "parity", "core070_pin.jl"))
+
+const CONTRACT_PATHS = [
+    joinpath(@__DIR__, "..", "docs/dev-log/core070/namespace-1-batch-contract.json"),
+    joinpath(@__DIR__, "..", "docs/dev-log/core070/true-parity-latest/namespace-1-batch-contract-p1.json"),
+]
 
 function load_contract()
-    isfile(CONTRACT_PATH) ||
-        error("FATAL: contract not found at $CONTRACT_PATH -- refusing to run with no state.")
-    return json_read(CONTRACT_PATH)
+    for path in CONTRACT_PATHS
+        isfile(path) || continue
+        contract = json_read(path)
+        if get(contract, "reference_commit", nothing) == _CORE070_REFERENCE_COMMIT
+            _core070_check_frozen_contract_pin(contract, path)
+            return contract
+        end
+    end
+    error("FATAL: no namespace-1 contract frozen at $(_CORE070_REFERENCE_COMMIT) " *
+          "(GLLVM_PARITY_PIN=$(repr(get(ENV, "GLLVM_PARITY_PIN", nothing)))) -- refusing to run with no state.")
 end
 
 # The one check this tier performs, exposed as a function so --self-test can
 # call it directly without touching disk.
 symbol_exists(mod::Module, sym::AbstractString) = isdefined(mod, Symbol(sym))
+
+# Measured facts about one symbol (review of #559: `isdefined` alone let an unexported helper or
+# a type pass as a twin). `exported` is Base.isexported; `callable` is true only for a Function
+# (a type is constructible but is not the R function's twin); `kind` names what the binding is;
+# `own_methods` / `first_own_method` count and locate methods defined in GLLVModels itself, so a
+# re-exported generic with no GLLVModels method is visible in the receipt.
+function symbol_facts(mod::Module, sym::AbstractString)
+    s = Symbol(sym)
+    exists = isdefined(mod, s)
+    d = Dict{String, Any}("exists" => exists)
+    exists || return d
+    val = getfield(mod, s)
+    d["exported"] = Base.isexported(mod, s)
+    d["callable"] = val isa Function
+    d["kind"] = val isa Function ? "Function" : val isa DataType ? "DataType" :
+                val isa UnionAll ? "UnionAll" : val isa Module ? "Module" : string(typeof(val))
+    if val isa Function
+        own = [m for m in methods(val) if m.module === mod]
+        d["own_methods"] = length(own)
+        if !isempty(own)
+            m = first(sort(own; by = m -> (string(m.file), m.line)))
+            file = string(m.file)
+            root = normpath(joinpath(@__DIR__, ".."))
+            startswith(file, root) && (file = relpath(file, root))
+            d["first_own_method"] = "$(file):$(m.line)"
+        end
+    end
+    return d
+end
 
 const SYNTHETIC_NEG_SYMBOL = "gllvmTMB_julia_bridge_nonexistent_surface_zzz"
 
@@ -171,7 +216,7 @@ function collect_facts(contract)
 
     facts = Dict{String, Any}()
     for sym in symbols
-        facts[sym] = Dict{String, Any}("exists" => symbol_exists(GLLVModels, sym))
+        facts[sym] = symbol_facts(GLLVModels, sym)
     end
     return facts
 end
@@ -191,6 +236,7 @@ function main()
         "schema" => "core070-namespace-1-julia-facts/v1",
         "status" => "OK",
         "julia_version" => string(VERSION),
+        "reference_commit" => contract["reference_commit"],
         "symbol_count" => length(facts),
         "facts" => facts,
     )

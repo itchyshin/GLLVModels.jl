@@ -1,19 +1,2042 @@
 # Changelog
 
-## Development
+All notable changes to GLLVModels.jl are documented here.
 
+## Unreleased
+
+- **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
+  After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
+  whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose
+  `max |gradient|` is at most `100 * max(g_tol, 1e-5)` may be tagged `stopping_reason =
+  :rounding_floor` and `converged = true` only when the stored `gradient_norm` is already
+  `<= g_tol`. The fitter never reports `converged = true` when `gradient_norm > g_tol`. The 1e-3
+  acceptance (`100 * max(g_tol, 1e-5)`) is unchanged. `test/test_phylo_latent_rounding_floor.jl`
+  includes the issue's own DEP (`d = 4`, 120 tips) default-start fit.
+
+- **`_fit_phylo_binomial_xlv` default start no longer throws (#943).** The default `beta_init` called an undefined `logit`, so any call without `beta_init` raised `UndefVarError` before the optimiser ran. The start now uses `log(m / (1 - m))` on the clamped pooled proportion.
+
+- **`confint_lv_effects` docstring signatures list every keyword (#751).** The signature lines now include `method`, `n_boot`, `seed`, `bootstrap_iterations` and the `profile_*` keywords (and `N` for the Gaussian method), with their defaults; documentation only, no behaviour change. A test compares each method's keywords with its docstring.
+
+- **`fit_animal_latent_gllvm` docstring names the right twin (#823).** It is a Hadamard row-relatedness model `(Λ_phy Λ_phy') .* A`, not gllvmTMB's `Λ Λ' ⊗ A` `animal_latent`; the docstring no longer claims the same estimand class and points to `fit_kernel_latent_gllvm(Y, A, groups, d)` as the Kronecker twin. Docstring-only; no behaviour change.
+
+- **`fit_gllvm_cov` SVD loadings start is rotated, not truncated, for K >= 2 (#865 item 1).** The default start packed the raw SVD loadings with `pack_lambda`, which keeps only the lower triangle, so `ΛΛ'` of the start was not the SVD's rank-K fit. The loadings are now QR-rotated to lower-triangular form (positive diagonal, same `ΛΛ'`) by `_lower_triangular_loadings` before packing. **Behaviour change:** default starts for K >= 2 differ; converged fits should agree. Sibling fitters with the same `svd(Zc)` start are unchanged. Item 2 (zero-inflated Laplace curvature check) is not addressed.
+
+- **`fit_relaxed_clock` no longer reports `converged = true` on a clamped fit (#876).** `RelaxedClockFit` gains `tau2_boundary` and `sigma_eps_boundary` (appended fields; the old positional constructor still works), set when the free-τ² update ends at `τ²_floor` or the free-σ²_eps update ends at its floor; either leaves `converged = false`. Pinned `fix_τ²` / `fix_σ²_eps` are never boundaries. The σ²_eps floor is now `1e-8 * mean(y.^2)` instead of an absolute `1e-8`, so rescaling `y` cannot flip the flag. **Behaviour change:** constant-rate or weak-replicate data that used to report `converged = true` at `τ² = 1e-4` now reports `converged = false, tau2_boundary = true`. `show` prints the flags.
+
+- **`cv_gllvm` refuses families it cannot score and `offset` (#773, part of #772).** The generic fallback scored every family without its own `_cv_cell_eval` method (NB1, Student-t, delta, Tweedie, beta-binomial, GP1, ...) with a unit-variance Normal and stored it in `CVResult.loglik`, `residual_mean` and `residual_std` as if it were an out-of-sample log-likelihood and Dunn-Smyth residual. It is removed: `cv_gllvm` now throws an `ArgumentError` before any fit unless `family` is `Normal`, `Poisson`, `Binomial`, `NegativeBinomial`, `Beta`, `Gamma` or `Exponential`. `offset` was forwarded to the fold fits but never used in the held-out prediction; it now throws an `ArgumentError` as well. **Behaviour change:** calls that used to return a meaningless `CVResult` now throw.
+
+- **Variational fitters and ordinal marginals reject out-of-support responses (part of #730).** `fit_exponential_gllvm_va`, `fit_gamma_gllvm_va`, `fit_beta_gllvm_va`, `fit_poisson_gllvm_va`, `fit_nb_gllvm_va` and `fit_binomial_gllvm_va` now throw an `ArgumentError` naming the fitter and the first bad cell before fitting; Exponential VA used to return `loglik = 3.7e12, converged = true` for a cell `y = -1` and accepted `y = 0`. `ordinal_marginal_loglik_laplace` and its per-trait form throw an `ArgumentError` for an observed code outside `1:C` (`C = length(τ) + 1`) instead of a `BoundsError`, and the ordinal fitters' level check now names the fitter and cell. Masked cells stay legal and categories with no observations are unchanged. Not covered: a stray high code in a fitter call (a typo `9` on a 4-level scale) still reads as a 9-level scale, because the fitters infer `C` from the data.
+
+- **Test coverage: temporal likelihood internals.** `test/test_temporal_likelihood_internals.jl` checks the low-rank block nll, tier and trait blocks, parameter names, cov pieces and series rows against dense linear algebra (no `src/` change).
+
+- **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
+
+- **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
+  and the default per-trait NB2 Laplace formula route accept `optimizer=:lbfgs`, `:bfgs`, or a
+  configured `Optim.LBFGS()` / `Optim.BFGS()`. `optimizer=nothing` retains prior defaults and
+  continuation behavior. Per-fit `optimizer_info(fit)` receipts report actual stages and raw
+  optimizer results. Explicit choices refuse unsupported nested routes and profile/bootstrap
+  refits that do not propagate the selected method. Gaussian mask and offset refits use and record
+  the selected method alongside the warm-start solve.
+
+- **A `β_init` above the η clamp falls back to the default warm start (#874).** Follow-up to the
+  #869 behaviour change below. In the log-link fitters that accept `β_init` (Poisson, NB, NB1, grouped
+  NB and NB1, COM-Poisson, GP1, truncated Poisson, truncated NB2 and its per-trait form, censored
+  Poisson, Tweedie, Gamma, Exponential), an entry whose intercept plus offset is above the cap (30) is
+  replaced by that species' default warm start, bit-identical to `β_init = nothing`, with a warning
+  naming the species. Such a start used to end at `loglik = -Inf, converged = false`; it now reaches
+  the default-start optimum. Entries are not projected onto the cap, where the count objectives
+  already sit at failure-scale values. Data whose default warm start is itself past the cap (counts
+  around 1e14) still end at the sentinel: rescale the response or the offset. Non-log links (for
+  example identity-link Gamma) are unchanged, and the check uses the offset only, not the `X_lv`
+  mean term. The covariate (`fit_gllvm_cov`) and two-part routes take no `β_init` and are unchanged.
+
+- **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
+  (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
+  hurdle, delta, `fit_gllvm_cov`, grouped Gamma/NB1/Tweedie) now return the failure sentinel when an
+  intercept plus its additive term is above the η clamp (30), and report `converged = false` for a
+  fit that ends at the cap. Before, such a fit could report `converged = true` at a clamped, meaningless
+  log-likelihood. **Behaviour change:** an explicit `β_init` above the cap, or data on a scale where
+  the intercept belongs past it (counts around 1e14), now ends at `loglik = -Inf, converged = false`
+  (some fitters used to backtrack off a start at 35). Rescale the response or the offset, or start inside
+  the cap. K = 0 fits no longer end at `loglik = -Inf` on Julia 1.12, where `logdet` of a 0×0 matrix
+  throws (`_laplace_logdet`), and `fit_truncated_nbinom2_gllvm(K = 0)` and `zi_marginal_loglik_laplace`
+  at K = 0 no longer throw on any Julia version.
+
+- **False `converged` on three fitters (refs #754, #753, #781).**
+  `fit_branch_re` now requires a small Nelder–Mead simplex in parameter
+  space and reports `sigma2_boundary` when a variance sits on the stated
+  `1e-8 * var(y)` floor; constant or non-finite `y` raise `ArgumentError` naming
+  the data. `em_fit_phylo` and `em_fit_phylo_squarem` record
+  `sigma_eps_boundary` when the M-step clamps `σ_eps²` to
+  `1e-8 * mean(y.^2)` and do not report `converged = true` on that
+  floor. Both floors are fractions of the data scale, so rescaling `y`
+  cannot flip the flags. SQUAREM's main path (no fallback) carries the
+  clamp flag and vetoes `converged` the same way. `fit_zinb_gllvm_cov(iterations <= 0)` is a start-only
+  transport check (`converged = false`) and rejects a non-finite
+  `θ_init`. No new absolute gradient or objective tolerance. #752 is
+  left as the next sibling PR.
+
+- **Dunn–Smyth residuals are no longer silently capped at ±7.034 (#767).** The randomized
+  quantile residual was `quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))` with `u` built from
+  `cdf`, so every cell with a tail probability below 1e-12 returned exactly ±7.034 whatever
+  the observation (a Poisson count of 40 and one of 100000 under a mean near 1 got the same
+  value). `residuals` now forms the quantile in the nearer tail from `ccdf`
+  (`_ds_z` in `src/postfit.jl`), and when the tail probability itself underflows it uses the
+  log mass of the observed cell and inverts the normal tail on the log scale, so a gross
+  outlier gets a finite residual that increases with the observation. Applies to the
+  Binomial (incl. AGHQ), Poisson (incl. AGHQ), NB2, NB1, GP-1, Beta, Gamma, Exponential,
+  ordinal (logit/probit, shared and per-trait cutpoints), delta-lognormal, delta-Gamma,
+  hurdle-Poisson, hurdle-NB, ZIP/ZINB, ZIB, beta-hurdle and grouped-NB residuals.
+  Continuous families have no log-mass fallback and floor the tail at `floatmin`
+  (|z| ≈ 37.5). Cells whose tail probability exceeds 1e-12 are unchanged to rounding.
+  **Still capped:** the Tweedie residual (its CDF is a 200-point Simpson quadrature with no
+  upper tail, so a larger |z| would be noise; the cap is now documented in the source) and
+  the `cv_gllvm` residuals in `src/cv.jl`.
+
+- **Phylogenetic xlv point fitters (binomial, NB2, Gamma): `converged` now requires a small
+  gradient (refs #505).** `_fit_phylo_binomial_xlv`, `_fit_phylo_nb_xlv` and `_fit_phylo_gamma_xlv`
+  took `converged` from `Optim.converged`, which also fires on a zero-length line-search step, and
+  reported `converged = true` at finite-difference gradients of order 1-100 (a huge `sigma2_phy`
+  start, a species with all-zero counts). A new `_phylo_xlv_verdict` adds the stall test
+  `fit_phylo_gaussian` uses (a relative gradient bound, not the optimiser's own `g_tol`), and the
+  fits gain a `stop_reason` field (`:converged`, `:not_converged`, `:gradient_not_small`,
+  `:gradient_at_failure_value`, `:objective_failure`).
+
+- **`fit_zip_gllvm` Laplace log-determinant now uses the observed count curvature (refs #739).**
+  The ZIP count weight was the expected Fisher information, so `hessian = :observed` (the
+  default) and `:fisher` gave the identical objective and `fit_zip_gllvm` maximised a different
+  surface from gllvmTMB's `zi_poisson()`: logLik below it on simulated ZIP data, with a
+  higher mean ZI estimate. `:observed` is now the exact second derivative of the ZIP
+  log-density (`_tp_observed_Wc_z(::ZIPoisson, …)`), with the same eigenvalue floor as the
+  `zi_poisson()` route (`ZI_LAPLACE_EIGMIN_FLOOR`) and `converged = false` for an optimum at the
+  floor. On a p = 6, n = 50 fixture the logLik moves from -663.283 to -659.541, equal to the
+  `zi_poisson()` fit (`test/test_zip_observed_laplace.jl`). Fitted ZIP values change, in
+  `fit_zip_gllvm`, `fit_zip_gllvm_cov` and every route that reaches the ZIP two-part Laplace with
+  the default `hessian`; `hessian = :fisher` is unchanged. ZINB and ZIB still use the Fisher
+  weight (`TWOPART_KNOWN_OPEN`).
+
+- **Observation weights on the Poisson Laplace route (DATA-W-* rows).** `fit_gllvm(Y; family =
+  Poisson(), K, weights)`, `fit_poisson_gllvm(Y; K, weights)` and `gllvm(@formula(y ~ 1), Y,
+  data; family = Poisson(), weights)` take observation weights with gllvmTMB's meaning: a weight
+  multiplies its cell's conditional log-density (0 drops the cell, fractional weights are
+  allowed). The weights enter the shared Laplace mode code (`src/families/laplace.jl`): score,
+  Fisher weight, log-det weight and log-density of each cell are scaled by its weight, and
+  `weights = nothing` takes the old statements unchanged; `test/test_weights_byte_identity.jl`
+  compares twelve unweighted fits (Poisson, NB2 shared and grouped, binomial, Gaussian,
+  delta-Gamma, Poisson AGHQ, the Poisson marginal) bit for bit with origin/main's outputs captured
+  in a separate process. Shapes: a scalar, a length-`n` vector (one weight per unit), or a `p×n`
+  matrix (`1×n` / `p×1` stretch); values must be finite and non-negative at observed cells, and
+  unobserved cells are ignored. Every other route refuses weights with an `ArgumentError` naming
+  what blocks it (other families; binomial, whose gllvmTMB weights are trial counts; `row_eff`,
+  `disp_group`, `pervar`, grouping, phylo, `X_lv`, AGHQ, an estimated `K`, formula covariates).
+  A weighted `PoissonFit` stores its weights; `fit.loglik` holds the maximised weighted
+  objective, `getLV` / `predict` use the weighted modes on the training data, and
+  `loglikelihood` / `aic` / `bic` / `confint` / `latent_score_sd` refuse a weighted fit, as
+  gllvmTMB's `logLik()` aborts for non-unit weights. Fit-level twins against gllvmTMB P1
+  (`test/test_weights_twins_p1.jl`, one Poisson data set, p = 6, n = 120) cover all 13 weights
+  rows and all 13 bind. For the five mask rows and W-ZERO, whose R batch case is a
+  helper-internal vector shape with no Julia counterpart, the twin compares the fit-level
+  consequence, accepted by the maintainer ruling of 2026-10-06. Not covered: weights on any
+  family other than Poisson.
+
+- **Six covariance rows bound to P1 fit twins (COV-ORD-LATENT-BARE, -DEFAULT, -COMMON;
+  COV-PHYLO-DEP, -A-ALIAS, -FOLDED-UNIQUE).** These scoreboard rows carried only R-side
+  formula-grammar checks with no fit number. Each is now bound by a fit-level twin: R fits at
+  gllvmTMB P1 recorded in a tracked fixture against Julia fits of the same data. The ordinary
+  `latent()` rows (`test/test_cov_ord_latent_p1.jl`, receipts by
+  `tools/true_parity_cov_ord_latent_receipt.jl`) fit one Gaussian rank-1 data set (60 sites,
+  4 traits) with `fit_gaussian_sources` for `unique = FALSE`, the default auto-unique diagonal
+  and `common = TRUE`, and match R in logLik, intercepts, the trait covariance, and Julia's
+  objective at R's optimum and at an off-optimum probe point. The phylo rows
+  (`test/test_cov_phylo_twins_p1.jl`, receipts by section 12f of
+  `tools/true_parity_julia_receipts.jl`) fit one 120-tip, 4-trait Gaussian data set with
+  `fit_phylo_latent_gllvm` for `phylo_dep` (as `d = 4`), `phylo_latent(A = A)` (identical to the
+  `vcv = A` spelling on both sides) and `phylo_latent(unique = TRUE)`, and match R in logLik,
+  intercepts, residual SD, the phylogenetic trait covariance and Julia's objective at R's
+  optimum. From its default start the `d = 4` fit stops at max |gradient| 4.0e-5, above
+  `g_tol = 1e-5`, so it reports `converged = false`; a ForwardDiff gradient of the same likelihood
+  agrees, so this is the objective's rounding floor rather than finite-difference noise. The
+  twin test therefore adds one warm restart from that fit's parameters shifted by -0.01, which
+  reports `converged = true` (max |gradient| 8.6e-7) at an objective within 3e-12 of the default
+  stop; no source code changed. `tools/core070_covariance_p1_receipts.py` gains one overlay
+  registry (`COV_TWINS`) for all six rows, with `--apply-twins` to re-derive the twin rows of
+  `case-map-covariance.json` and `--check` to verify them. Not covered: non-Gaussian families,
+  rank > 1 for `latent()`, `rho != 1` for the phylo terms, and the `.dep` and duplicate-companion
+  guards.
+- **Docstring corrections for two phylogenetic fitters.** `fit_phylo_dep_gllvm` claimed the
+  same estimand class as gllvmTMB's `phylo_dep(0 + trait | species)`. It is a row-phylogeny
+  model: the rows of `Y` are the tree's tips and the phylogenetic block is
+  `(Λ_phy Λ_phy') .* Σ_phy`, whereas R's `phylo_dep` is `Σ_trait ⊗ A`. The docstring now says
+  what is fitted and names `fit_phylo_latent_gllvm(...; d = n_traits)` as the twin of R's
+  `phylo_dep`. The `fit_phylo_latent_gllvm` docstring no longer calls `unique = true` an extra
+  outside the twin; it corresponds to the folded diagonal of gllvmTMB's
+  `phylo_latent(..., unique = TRUE)`. No code changed.
+- **Mixed-family fits take an offset (DATA-OFF-MIXED).** `fit_mixed_gllvm(Y; families, K,
+  offset)` adds a known offset to each trait's linear predictor, η = β + offset + Λz. `offset`
+  is a p×n matrix, a scalar or a length-p vector, normalised as in `fit_gllvm`; the usual use is
+  an exposure `log(e)` on the count traits with a zero offset on a Normal (or other non-count)
+  trait, which is what gllvmTMB's offset gate admits in one mixed-family fit. Admission is
+  row-wise per trait, as in gllvmTMB's `gll_prepare_offset` at P1: a nonzero offset is accepted
+  only on a count trait (`Poisson()`, gllvmTMB `poisson`; `NegativeBinomial()`, gllvmTMB
+  `nbinom2`), and a nonzero finite offset on a `Normal()`, `Binomial()`, `Gamma()` or `Beta()`
+  trait raises an `ArgumentError` naming the trait and family. A zero offset is accepted on every
+  trait. The fit keeps the training offset in `fit.offset` (`nothing` without one), and `getLV`
+  and `predict` on a mixed fit follow #787's rule, extended in #807: a `Y` of the training size
+  uses the stored offset, new units take `offset = O`, and new units from an offset fit without
+  one raise an `ArgumentError`. `link_residual`, `sigma_y_site`, `correlation` and `communality`
+  on an offset fit now use the offset-aware fitted means for a `Y` of the training size only;
+  they take no `offset` argument, so on new units from an offset fit they raise the same
+  `ArgumentError` as `predict`. Offset-free fits, and their `getLV`, `predict` and `correlation`,
+  are unchanged bit for bit (checked with `isequal` against the previous code on a
+  Poisson/Normal/NB2 and a Binomial/Gamma/Beta fit), and the old 11-argument `MixedFamilyFit`
+  constructor still works (it stores no offset). Mixed fits have no `residuals` method, so there
+  is nothing to change there. P1 twin: `test/test_off_mixed_twin_p1.jl` (one p = 6, n = 150
+  poisson/gaussian/nbinom2 fit with `offset(log(e))`, zero on the gaussian trait) matches
+  gllvmTMB at P1 in logLik (2.6e-8), intercepts (8.5e-6), ΛΛᵀ (2.3e-6) and dispersions, and the
+  offset-free refit matches R's offset-free logLik (3.7e-8) and scores lower by 179.5. The same
+  fit with a nonzero offset on the gaussian trait is refused by both (R's message is recorded in
+  the fixture). This binds the scoreboard row data/DATA-OFF-MIXED.
+- **The shared-dispersion fits keep their training offset (#788, second part).** `GammaFit`,
+  `BetaFit`, `NB1Fit`, `GP1Fit`, `ExponentialFit`, `HurdleNBFit`, `ZIPFit`, `ZINBFit`, `ZIBFit`,
+  `DeltaLogNormalFit` and `DeltaGammaFit` accepted `offset` at fit time but did not keep it, so
+  `getLV`, `predict` and `residuals` silently used a zero offset. They now store the p×n training
+  offset in `fit.offset` (`nothing` without one) and follow #787's rule: a `Y` of the training
+  size uses the stored offset; new units take `offset = O` (a p×n matrix, a scalar or a length-p
+  vector); new units from an offset fit without one raise an `ArgumentError`. On the two-part
+  fits the offset is on the count / positive-part predictor `η^c`, as at fit time for `predictor = :separate`. Delta fits with
+  `predictor = :shared` are not covered: their post-fit mode already ignores the occurrence
+  loadings, a separate older bug. On p = 5,
+  n = 50, K = 1 fits with a `0.8 * randn` offset, the training-row link predictor missed
+  `β + O + Λẑ_O` by 2.0 to 3.2 (by family) before and by at most 4.4e-16 after.
+  `link_residual` on Gamma and Beta fits now includes the offset in the fitted trait means, as
+  it already did on Poisson, NB2 and binomial fits. Offset-free fits and their `getLV`,
+  `predict` and `residuals` are unchanged bit for bit, and the old positional constructors still
+  work (they store no offset). The truncated fits have no `getLV`/`predict`/`residuals` and are
+  unchanged. Tests: `test/test_predict_offset_shared.jl` (mode = zero of the finite-difference
+  score of the offset-aware log posterior, written from the Distributions.jl densities; the
+  stored offset reproduces `fit.loglik`; residuals at the offset-aware mean; new-unit rule;
+  compat constructors).
+- **The direct profile and bootstrap entry points refuse a `lambda_constraint` fit (refs #794).**
+  `profile_ci`, `tmbprofile_wrapper`, `bootstrap_ci`, `bootstrap_ci_derived` and
+  `profile_ci_derived` refit without the loading pins, so on a pinned fit they answered for a
+  different model: the review of #802 found that on a p = 5, n = 200, K = 1 fit with
+  `M[2,1] = 0.3`, `profile_ci` on the pinned `Lambda_B[2,1]` returned (0.687, 0.919), an interval
+  that excludes the pinned value.
+  `confint(...; method = :profile | :bootstrap)` already refused such fits; the direct entry
+  points now raise the same kind of `ArgumentError`, naming `loading_profile(fit; y)` (which
+  profiles the free loadings with the pins held) and Wald `confint`. The wrappers built on them
+  (`profile_curve_targets`, `profile_phylo_signal`, `profile_ci_total_variance`,
+  `profile_ci_phylo_signal`, `loading_profile_exploratory`, `bootstrap_Sigma`, and
+  `confint_inspect`) refuse a pinned fit too. Unpinned fits are unchanged. Tests:
+  `test/test_confint_method_routes.jl`.
+- **Masked Gaussian fits no longer throw `PosDefException` (#716).** `fit_gaussian_gllvm(Y; K,
+  X, mask)` optimises the masked observed-data likelihood with LBFGS. A line-search trial point
+  could drive `log σ` far below the optimum (about −100 in the issue's example); for a unit with
+  more observed traits than `K`, `Λ_oΛ_oᵀ + σ²I` was then not positive definite to working
+  precision and `cholesky` threw instead of the line search backing off. The objective now
+  factors with `check = false` and returns `+Inf` at such points. On a one-off sweep run
+  outside the test suite of seven mask
+  patterns from the issue (single cell, trait 1 in every 7th unit, traits 2 and 5 in every
+  10th unit, random 5% and 20% of cells, two block patterns) × 5 seeds × `K ∈ {1, 2}` × with
+  and without a one-hot trait-intercept `X` (p = 6, n = 200), 49 of 140 fits threw before and
+  0 of 140 after; all 140 converge, report a log-likelihood within 9.1e-13 of an independent
+  dense `MvNormal` observed-data log-likelihood at the returned parameters, and have a
+  largest oracle score of 4.4e-5. Unmasked fits (exact and `aghq = 3`) and masked fits that
+  fitted before, with their `confint`, are unchanged bit for bit (SHA-256 of the estimates
+  checked against main): the new branch is taken only where the old code threw. Not changed, now
+  documented in the `fit_gaussian_gllvm` docstring: a masked fit with `X = nothing` is a
+  zero-mean model (#577), and `predict_missing` still needs the mask passed again. Tests:
+  `test/test_masked_gaussian_posdef.jl` (six of the patterns, one seed, with `X`).
+
+- **The grouped-dispersion fits keep their training offset (#788, first part).** The formula
+  front end sends `family = NegativeBinomial()` to `fit_nb_gllvm_grouped` (`disp_group = :species`,
+  gllvmTMB's per-trait `r`), which accepted `offset` but returned an `NBGroupedFit` that did not
+  keep it, so `getLV`, `predict` and `residuals` on the default NB route silently used a zero
+  offset. `NBGroupedFit`, `NB1GroupedFit`, `BetaGroupedFit` and `GammaGroupedFit` now store the
+  p×n training offset in `fit.offset` (`nothing` without one), and their post-fit methods follow
+  the rule #787 introduced for the Poisson, NB2, binomial and hurdle-Poisson fits: a `Y` of the
+  training size uses the stored offset; new units take `offset = O` (a p×n matrix, a scalar or a
+  length-p vector); new units from an offset fit without one raise an `ArgumentError`. An
+  explicit matrix offset whose size differs from `Y` is still a `DimensionMismatch`. On a p = 5,
+  n = 50 NB2 fit through `gllvm(@formula(y ~ 1), Y, data; family = NegativeBinomial(), offset = O)`
+  the training-row link predictor missed `β + O + Λẑ_O` by up to 1.83 before and by 4.4e-16
+  after. Offset-free fits are unchanged bit for bit, and the old positional constructors still
+  work (they store no offset). The covariate fits (`NBGroupedCovFit` and siblings) take no data
+  offset and are unchanged. Tests: `test/test_predict_offset_grouped.jl` (mode = zero of the
+  finite-difference score of the offset-aware log posterior; the stored offset reproduces
+  `fit.loglik`; formula route; new-unit rule).
+- **`extract_Gamma` and `extract_coevolution_modules` gain methods on a fitted kernel tier.**
+  New methods `extract_Gamma(fit::GaussianSourcesFit; level, row_traits, col_traits,
+  trait_names = nothing, scale = :shape)` and `extract_coevolution_modules(fit::GaussianSourcesFit;
+  level, row_traits, col_traits, trait_names = nothing, scale = :shape, n_modules = nothing,
+  tol = sqrt(eps()))` are gllvmTMB's `extract_Gamma()` and `extract_coevolution_modules()` for a
+  `fit_kernel_latent_gllvm` / `fit_gaussian_sources` fit. They use R's orientation: the shared
+  trait covariance `Lambda Lambda'` of the source named `level` is sliced by trait (rows
+  `row_traits`, columns `col_traits`, in the order given; names need `trait_names`, or pass
+  positional indices). `extract_coevolution_modules` returns R's layout (`R`, `modules` with
+  `module_1`, ..., `row_axes` and `col_axes` long tables) and R's relative eigenvalue tolerance.
+  `scale = :effect` raises an `ArgumentError`, because a `GaussianSourcesFit` does not record the
+  cross-kernel `rho`. The existing `extract_Gamma(::GllvmFit)` method (positional over the stacked
+  species of the Hadamard fit) and the matrix method of `extract_coevolution_modules` are
+  unchanged. Twinned numerically against gllvmTMB 0.7.1 (P1) in `test/test_cross_lineage_p1.jl`
+  on a Gaussian cross-lineage `kernel_latent(d = 3)` fit (8 host and 8 partner species,
+  complete data): the Gamma block and a reordered call within 2e-6, the module matrix,
+  singular values, squared shares and both axis tables within 1e-6 (axes up to one joint sign per
+  module), log-likelihoods within 2e-10.
+- **`sanity_multi` and the `loading_profile` grid leave `lambda_constraint` pins out (refs #794).**
+  On a fit made with `lambda_constraint`, `sanity_multi` took the gradient and Hessian over every
+  packed parameter, pinned loadings included, so a fit at its constrained optimum failed the
+  gradient check (toy fit with one pin at 0.3: `max_gradient` 27.0, `pass = false`; now 5.3e-7,
+  `pass = true`). gllvmTMB maps pinned loadings off, so R's gradient and `pdHess` cover the free
+  parameters only; `max_gradient`, `gradient_norm`, `gradient_ok`, `sdreport_ok` and `pd_hessian`
+  now do the same. `max_se` was not affected (a `lambda_constraint` fit has no fixed effects).
+  `loading_profile` sets its grid width from a Wald SE that now uses the free-block covariance, as
+  `confint(...; method = :wald)` does; the profile objective is unchanged, only the grid spacing moves. The starting bracket step of direct `profile_ci` and `tmbprofile_wrapper` calls on a pinned fit also changes, by bisection-tolerance amounts. Unpinned fits
+  give byte-identical `sanity_multi` output.
+- **Wald intervals on a `lambda_constraint` fit use the free-parameter covariance (#794).**
+  On a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`, `confint`, `vcov`,
+  `loading_ci`, `raw_loading_wald_ci` and the derived-quantity Wald intervals inverted the observed
+  information of every packed parameter, pinned loadings included; gllvmTMB's `cov.fixed` covers
+  the free parameters only. They now drop the pinned rows and columns before inverting, as
+  `flag_unreliable_loadings` already did: a pinned loading has `se = 0`, `lower = upper =
+  estimate` and zero rows and columns in `vcov`, and `loading_ci` marks it `pinned = true`. On the
+  `ns_gauss_p1_data.csv` twin (K = 2, `Λ[1,2] = Λ[2,1] = 0`) the SE of `Λ[3,1]` was 0.0730 against
+  R's 0.0552 and the pinned `Λ[2,1]` had SE 0.081; at gllvmTMB's estimates the loading SEs now
+  agree with R to 6e-8. The confirmatory refit also now runs under the base fitter's optimiser
+  controls (`g_tol = 1e-6`, `x_tol = 1e-8`, `f_tol = 0`, `iterations = 500`) and takes a
+  user's `g_tol`, `x_tol`, `f_tol` and `iterations`; it had a hard-coded `g_tol = 1e-4`, ignored the
+  user's, and stopped at a free gradient of 0.019 while reporting `converged = true`. Its
+  `converged` is now the refit's own Optim verdict. On the twin, logLik moves from 1.5e-6 to
+  1.2e-11 of gllvmTMB's and the loadings from 7.0e-5 to 1.0e-7. A constraint whose only numeric
+  entry is a structural zero (for example `M[1,2] = 0` alone with K = 2) now marks the fit as
+  confirmatory, as gllvmTMB's gate `sum(!is.na(M)) > 0` does, so `flag_unreliable_loadings`
+  accepts it instead of refusing it with "Without pins"; the fit is the ordinary one, and
+  `confint`'s profile and bootstrap routes stay available on it. `loading_ci(...; method =
+  :profile)` is now refused on a fit with pins, whose refits it did not hold. Fits without pins
+  are unchanged, bit for bit.
+- **`sanity_multi` reports gllvmTMB's flags; `compare_loadings` gains R's matrix form.**
+  `sanity_multi(fit; y)` now returns R's flags under R's names and in R's order
+  (`converged`, `max_gradient`, `sdreport_ok`, `pd_hessian`, `max_se`, `rr_B_min_loading`,
+  `rr_W_min_loading`), ahead of the existing `pass`, `loadings_finite`, `gradient_norm`,
+  `gradient_ok` and `messages`, which are unchanged (so `pass` is unchanged). As in R, some fields
+  are conditional: `sdreport_error` follows `sdreport_ok` only when `sdreport_ok` is `false`,
+  `rr_B_min_loading` only when the fit has a latent term, and `rr_W_min_loading` only on a
+  `GllvmFit` with within-unit loadings. New keywords `gradient_thresh = 1e-2` and
+  `se_thresh = 100` are R's thresholds, and `io = stdout` writes R's report lines in R's layout;
+  nothing is printed by default. The new method
+  `compare_loadings(Lambda_a::AbstractMatrix, Lambda_b::AbstractMatrix)` is R's
+  `compare_loadings()`: orthogonal Procrustes alignment, returning `R`, `Lambda_a_rot`, `frobenius`
+  and `cor_per_factor`. The two-fit method `compare_loadings(fit1, fit2)` is unchanged.
+  Twinned numerically against gllvmTMB 0.7.1 (P1) in `test/test_diagnostics_p1.jl`: from
+  `sanity_multi`, `max_se` and `rr_B_min_loading` on Gaussian rank-1 and rank-2 fits (each engine
+  fitting the same data); `rr_W_min_loading` is unit-tested only, and `max_gradient` is not
+  compared (it is each optimiser's stopping gradient). `compare_loadings` is twinned as a function
+  on identical inputs (R's fitted `Lambda_B` and the simulating loadings, plus a random pair with
+  a reflection, fed to both engines), not as a fit-then-compare twin.
+- **`fit_gaussian_mi_fiml` accepts missing responses.** `y` may now contain `missing` or `NaN`
+  cells: they contribute nothing, and the rest of each site enters the observed-data likelihood,
+  as gllvmTMB's `miss_control(response = "include", predictor = "model")` (before, any missing cell
+  in `y` raised a `MethodError`). A site with no observed response contributes only its covariate
+  density when `x` is observed there, and nothing otherwise; every trait needs at least one observed
+  response (`ArgumentError` otherwise). The conditional modes `eblup_x`, and so `imputed(fit, x)`,
+  use only the observed responses of each site. The result has a new field `n_missing_y` (the
+  number of missing response cells). With missing responses the fit uses a backtracking line search, and a trial point whose Woodbury factor is not positive definite scores `+Inf` instead of throwing `PosDefException`. A complete `y` gives the same fit as before (bit for bit, element type kept). Binds the
+  true-parity rows `data/DATA-MISS-MODEL`, `data/DATA-MISS-BOTH` and the namespace row
+  `S3method/imputed,gllvmTMB` with twins against gllvmTMB P1 (`test/test_data_twins_2_p1.jl`:
+  logLik within 2e-9, conditional modes within 2e-6; the masked twin includes units with no response). Not covered: R's `imputed()` standard errors
+  (Julia reports none), and non-Gaussian responses.
+- **New: `flag_unreliable_loadings(fit, y; null_region = (-0.1, 0.1), conf_level = 0.95)`,
+  the counterpart of gllvmTMB's `flag_unreliable_loadings()`.** On a confirmatory Gaussian fit
+  (`fit_gaussian_gllvm(y; K, lambda_constraint = M)`) it returns one row per loading with the raw
+  Wald interval and `unreliable = true` when the interval overlaps `null_region` (`missing` for a
+  pinned entry). The intervals come from the observed information of the free parameters, with the
+  pinned loadings removed, which is the covariance R uses. A fit without pins is refused, as in R. A
+  second method adds the flags to rows that already carry `estimate`, `lower`, `upper` and
+  `pinned`. Binds the true-parity namespace row `export/flag_unreliable_loadings` with a twin
+  against gllvmTMB P1, together with the rows `export/gllvmTMB_wide` and
+  `S3method/ordiplot,gllvmTMB_multi` on the same Gaussian data
+  (`test/test_namespace_gaussian_w1_p1.jl`). Not covered: R's `"wald_asym"` and `"profile"` routes
+  and the standardized scale.
+
+- **`predict`, `getLV` and `residuals` on a Laplace fit made with an `offset` now use it.** The
+  Laplace Poisson, NB2 (shared `r`), binomial and hurdle-Poisson fits did not keep the offset they
+  were fitted with, so `getLV(fit, Y)` searched the latent mode of an offset-free model and
+  `predict(fit, Y)` returned `β + Λẑ` without the offset (on the data of the P1 exposure twin, the
+  training-row link predictor missed gllvmTMB's `predict` by up to 1.886; after the fix, 2.2e-5).
+  These Laplace fits now store the training offset as a `p×n` matrix in `fit.offset` (`nothing`
+  without one, and on an AGHQ fit, which keeps its offset in `integration.data.offset`), and the
+  post-fit calls follow gllvmTMB's `predict`: a `Y`
+  of the training size uses the stored offset; new units need their own, passed as
+  `offset = O` (a matrix, a scalar or a length-`p` vector, as at fit time), and new units from an
+  offset fit without one are refused with an `ArgumentError` rather than predicted at a zero
+  offset (R aborts when `newdata` lacks the offset variable). The AGHQ Poisson and binomial routes
+  are unchanged and stricter: they decide "training data" by a digest of the observed data, so a
+  different `Y` of the training size from an offset fit also needs an explicit offset there. `link_residual` on these fits includes the offset
+  in its fitted trait means as well. Binds the true-parity row `data/DATA-OFF-TRAIN-STORED` with a
+  twin against gllvmTMB P1 (stored offset and training-row link predictor,
+  `test/test_predict_offset_twin_p1.jl`). Not covered: `simulate` on these Laplace fits still
+  draws at a zero offset, and the other fit types that accept an offset (Gamma, Beta, NB1, the
+  grouped-dispersion, truncated, Delta and zero-inflated fits) still keep none.
+
+- **`fit_gllvm(...; offset = c)` with a scalar `c` now works, and an offset it cannot read
+  unambiguously is refused with an `ArgumentError`.** A scalar offset (the analogue of R's
+  `offset(log(2))`) was accepted by the count, continuous and two-part routes but returned
+  `loglik = -Inf`, `converged = false`; the Normal, Lognormal and AGHQ routes threw a
+  `DimensionMismatch`. Cause: the Laplace marginal slices the offset per unit
+  (`view(offset, :, i)`), which throws on a scalar, and every fitter runs its objective inside
+  `try ... catch` that turns any exception into a sentinel value, so the optimiser saw a flat
+  objective and stopped at the warm start (0 iterations). The dispatcher now applies Julia's own
+  broadcast rule once, before any fitting (the same rule applies to `gllvm(@formula(...))`): a
+  real scalar becomes `fill(c, p, n)`; a `p×n` matrix is passed through untouched (always read as
+  traits × units, so for `p == n` an `n×p` matrix is read transposed); a `1×n` matrix (one offset
+  per unit), a `p×1` matrix or a length-`p` vector (one offset per trait) is stretched to `p×n`.
+  Refused with an `ArgumentError` that says what to pass: a length-`n` vector or an `n×p` matrix
+  when `p ≠ n`; a bare vector when `p == n` (it cannot be told from a per-unit vector, and read per
+  trait the intercepts absorb it, so a per-unit effort vector silently did nothing; pass
+  `reshape(o, 1, n)` or `reshape(o, p, 1)`); a non-finite scalar; and a `NaN`, `Inf` or `missing`
+  at an observed cell (the two-part and zero-inflated routes turned it into a `-Inf` fit). A cell
+  that is masked out (`mask` is `false` there) or `missing` in `Y` may still carry one, and
+  `missing` there is read as `NaN` (Poisson and Gamma used to throw a `MethodError` on it); the
+  routes with no `mask` (Lognormal and the two-part and zero-inflated families) have no such cell,
+  so a non-finite offset anywhere is refused and the message says so. The routes that take no
+  offset at all (the families `StudentTFamily`, `Ordinal`/`OrdinalLogit` also with `aghq`,
+  `COMPoisson`, `BetaBinom`, `BetaHurdle`, `OrderedBeta`, `Multinomial`, the gllvmTMB-twin
+  zero-inflated markers `ZiPoisson`/`ZiNbinom2`/`ZiBinomial`, and the `pervar`, `row_eff`,
+  `grouping` and `phylo` routes) now raise `ArgumentError: offset is not supported for ...` naming
+  the route, not a raw `MethodError` or a misleading shape error; `offset = nothing` is "no
+  offset" on every route.
+
+  **The named fitters take the same shapes.** The same check now runs first thing in every named
+  fitter that takes an `offset` keyword (`fit_gaussian_gllvm`, `fit_poisson_gllvm`,
+  `fit_binomial_gllvm`, `fit_nb_gllvm`, `fit_nb1_gllvm`, `fit_beta_gllvm`, `fit_gamma_gllvm`,
+  `fit_exponential_gllvm`, `fit_gp1_gllvm`, `fit_censored_poisson_gllvm`,
+  `fit_truncated_poisson_gllvm`, `fit_truncated_nbinom2_gllvm` and its `_pertrait` form, the
+  `_grouped` and `_aghq` fitters, `fit_lognormal_gllvm`, and the seven two-part and zero-inflated
+  fitters `fit_zip_gllvm`, `fit_zinb_gllvm`, `fit_zib_gllvm`, `fit_hurdle_poisson_gllvm`,
+  `fit_hurdle_nb_gllvm`, `fit_delta_lognormal_gllvm`, `fit_delta_gamma_gllvm`). A direct call
+  therefore broadcasts a scalar, stretches a length-`p` vector or a `1×n` / `p×1` matrix, and
+  raises the same `ArgumentError` (naming the fitter you called) for any other shape, instead of
+  handing it to the engine unchecked. Fits without an offset are bit-identical to before (checked
+  against the commit before this work: 65 two-part fits and 30 fits across the other named
+  fitters, same logLik, convergence flag, iteration count and parameters). The two-part warm
+  start also checks the shape it indexes, so it cannot read past the end of an offset.
+
+  **Fits made with the old calls.** Measured against the code before this change: a scalar gave
+  `-Inf` or threw, as above. A `1×n` matrix was correct on the Laplace routes and threw on Normal,
+  Lognormal and AGHQ. A length-`p` vector was correct on the Laplace count and continuous routes
+  and on six of the seven two-part fitters (ZIP, ZINB, ZIB, hurdle-Poisson, hurdle-NB,
+  delta-lognormal: the engine adds it by broadcast, a per-trait constant is absorbed, and 35 of
+  36 fits, six simulated data sets each, reproduced the no-offset logLik; the 36th, a ZINB fit,
+  was 0.139 lower, a different local optimum reached from the unshifted start) and threw on
+  Normal, Lognormal and AGHQ; **`DeltaGamma` is the exception**, where the warm start indexed
+  the vector as a matrix under `@inbounds` (an out-of-bounds read), so a length-`p` offset could
+  return a converged but wrong fit (the review measured logLik -411.1 against -213.7 for the
+  same offsets as a `p×n` matrix).
+  **A `p×1` matrix was wrong on every route that did not throw**: a finite, wrong fit on Poisson,
+  Binomial and zero-truncated Poisson, and an unconverged or `-Inf` fit on NB2, NB1, Beta, Gamma,
+  Exponential, the delta, hurdle and zero-inflated families and Tweedie. A per-unit effort vector
+  passed bare with `p == n` was read per trait and had no effect. These measurements apply to
+  direct calls of the named fitters too, which passed the offset to the engine as given. Anyone
+  who fitted with those calls should refit with the call that now works. Test:
+  `test/test_offset.jl`.
+
+- **`fit_gllvm(Y; family = Lognormal(), offset = ...)` now applies the offset.**
+  `fit_lognormal_gllvm` centred `log(Y)` by its offset-free trait means and only then handed the
+  offset to a zero-mean Gaussian fit, so the intercepts never absorbed it: a constant offset
+  changed the logLik (scalar `log(2)`, p = 6, n = 40: -270.25 against -184.42 without it, both
+  reported converged) and the offset was not in `β`. A `p×n` matrix offset was already wrong this
+  way before the scalar work; the scalar, `1×n`, `p×1` and length-`p` forms threw a
+  `DimensionMismatch`, and without this fix the scalar work would have turned them into the same
+  silent wrong fit. The offset is now subtracted from `log(Y)`
+  before the trait means are taken, as for the other families (`η = β + offset + Λz`, `β` the
+  offset-free intercept): a constant offset leaves the logLik unchanged and shifts `β` by exactly
+  its negative, and a non-constant offset gives the Normal fit of `log(Y)` with that offset
+  (minus `Σ log y`). Earlier Lognormal fits made with an offset were wrong and should be refitted.
+  `LognormalFit` stores no offset, and has no `predict`/`fitted` method that would need it back.
+  `fit_lognormal_gllvm` (and `fit_gllvm(...; family = Lognormal(), mask = ...)`) now also refuses a
+  `mask` with an `ArgumentError`. It was accepted before but only reached the Gaussian fit of the
+  centred log-responses: the trait means and the `-Σ log y` term ran over every cell, so a masked
+  fit came back with wrong intercepts and logLik (two masked cells of 180: `β` off by up to 0.009
+  and logLik 1.6 lower than the masked Normal fit of `log(Y)` minus `Σ log y` over the observed
+  cells). Refit masked data without the mask, or on the observed cells.
+
+- **Zero-inflated, hurdle and delta fits start from the offset-free warm start.** The count-part
+  intercept start of `fit_zip_gllvm`, `fit_zinb_gllvm`, `fit_zib_gllvm`, `fit_hurdle_poisson_gllvm`,
+  `fit_hurdle_nb_gllvm`, `fit_delta_lognormal_gllvm` and `fit_delta_gamma_gllvm` ignored the offset
+  (`fit_delta_gamma_gllvm` removed it from the loadings start only), so with an offset the optimiser
+  began a constant away from the optimum and on some data stopped at a different local optimum
+  than the same fit without one (a constant offset must leave the logLik unchanged: ZIP differed by
+  4.5 and ZINB by 3.4 on two simulated data sets, both reported converged). The start now removes
+  each trait's mean offset over its positive cells, so a constant offset runs the no-offset path
+  shifted by its negative. Fits without an offset are bit-identical. This is a better start, not
+  a search for the global optimum: with a non-constant offset a fit can still stop at a local
+  optimum, and on some data it now stops at a different one than before (the review compared 132
+  fits with non-constant offsets: 8 differed by more than 1e-4 in logLik, four higher and four
+  lower, all reported converged).
+- **`confint(fit, Y; method = ...)` on a Gaussian fit runs the method you ask for or refuses it by name.**
+  On a fit without a retained data record (the default `fit_gaussian_gllvm(Y; K)` and every
+  structured fit with `has_diag`, `K_W`, `K_phy` or `has_phy_unique`), `method = :profile` and
+  `method = :bootstrap` returned the Wald interval (route tag `wald_packed`), `method = :bogus` was
+  accepted, and every other keyword (`n_boot`, `seed`, `mask`, a misspelling) was dropped. Measured on
+  the inference-batch fixtures (structured `sigma_B[1]`, plain `sigma_eps`): `:wald`, `:profile`,
+  `:bootstrap` and `:bogus` all gave the same Wald interval. Now `:profile` calls `profile_ci` for each
+  selected term (fields `status` and `method`), `:bootstrap` calls `bootstrap_ci` (fields `n_converged`,
+  `replicates`, `method`), and an unknown or non-Symbol `method`, an unknown keyword, or a data-less
+  profile or bootstrap request is an `ArgumentError` that names what is available, for example
+  `method = :bogus is not available for Gaussian GllvmFit / parm sigma_B[1]; available: :wald, :profile, :bootstrap`.
+  The keyword-only form `confint(fit; y = Y, method = ...)` takes the same routes, and a fit made with
+  `lambda_constraint` pins takes `:wald` only (profile and bootstrap refits would drop the pins). The
+  default call is unchanged: 21 outputs (the default and `:wald` calls in both forms, the record
+  route's profile and bootstrap, `vcov`, `stderror`, and the non-Gaussian `confint` and `coef_table`)
+  compared bit for bit against main. `stderror` on a Gaussian fit refuses a
+  non-Wald `method` with an `ArgumentError` (it would otherwise reach the new routes and fail on the
+  missing `se` field).
+- **`confint` reaches the derived quantities by `parm`.** `parm = "communality[t]"`, `"icc[t]"`
+  (`"repeatability"`), `"rho[i,j]"` (`"correlation"`), `"proportion:<component>[t]"` and
+  `"phylo_signal[t]"` (leave `[..]` out for every trait or pair; gllvmTMB's tier spellings such as
+  `communality:unit:t` are refused, because they name gllvmTMB's aligned estimands, which differ
+  from these quantities) take `method = :wald` (the default;
+  `communality_wald_ci`, `icc_wald_ci`, `correlation_wald_ci`, `phylo_signal_wald_ci`, with one Hessian
+  for all requested quantities), `:profile` (`profile_ci_derived`, or `profile_ci_phylo_signal`,
+  clamped to the quantity's natural range) and `:bootstrap` (`bootstrap_ci_derived`). The intervals equal
+  the direct functions' value for value (`test/test_confint_method_routes.jl`). `icc` is
+  `extract_ICC_site`. gllvmTMB (9539352f6) withdrew the profile interval for icc, communality, rho and
+  proportion, and `confint(...; method = :profile)` here still returns the exploratory penalty-based
+  profile for them; refusing it is one edit to `_CONFINT_DERIVED_METHODS`. Until PR #696 lands,
+  `bootstrap_ci` reports SD terms on the log scale; the new bootstrap route converts them so
+  its SD terms are on the raw scale, and the conversion does nothing once #696 is in.
+- **NB1 near its Poisson limit (φ → 0): accurate density, and per-species fits converge.**
+  Two defects, found while checking the NB1 grouped fitters after #615.
+  - Precision: the NB1 density, score and observed and Fisher curvatures differenced
+    loggamma, digamma or trigamma of r = μ/φ, which loses the result as r grows. At
+    φ = 1e-6 the derivative in log φ was 40 times too large, so the gradient was noise
+    near the limit. The density now uses the NB2 routine (`_nb2_logpdf_mean` with
+    r = μ/φ), and the digamma and trigamma differences are summed directly
+    (`_nb1_rise_diffs`). Against a BigFloat reference over φ from 5 to 1e-12, the
+    largest relative error is now 4e-15 for the density and 4e-14 for the curvature.
+    This applies to every NB1 fit.
+  - Ridge: like NB2 in #615, per-species fits crawled toward φ = 0 until the iteration
+    cap. `fit_nb1_gllvm_grouped` and `fit_nb1_gllvm_grouped_cov` now use the NB2
+    Poisson-limit polish, mirrored: groups with φ < 1e-3 are fixed at φ = 1e-10, the
+    rest is refit with BFGS, and a refit is kept only if it is no worse. The fitter
+    already warns at φ < 1e-6.
+  - Evidence: on main, 6 of 6 per-species fits in the hardest cells (p = 24) failed to
+    converge, while shared φ converged on all 6. On the 72-cell NB1 grid (p = 6, 12, 24;
+    n = 60, 120, 300; K = 1, 2; φ = 0.1, 1, 5 or varied on [0.05, 5]; 20 reps) with
+    these fixes, 1,432 of 1,440 per-species fits converge, and so do all shared-φ fits.
+    The 8 that do not are spread over cells. Shared φ recovers φ better in all 54
+    common-φ cells. Per-species φ recovers φ better in 17 of 18 varied-φ cells and gives
+    better loadings in 16 of 18, at 7 to 15 times the fitting time.
+  - Test: `test/test_nb1_poisson_ridge.jl` (literal fixture
+    `test/fixtures/nb1_grouped_poisson_ridge.toml`; it fails on main on macOS and
+    Linux).
+- **Beta and Gamma fits now optimise the link they are asked for (bug fix).**
+  `fit_beta_gllvm` and `fit_gamma_gllvm` accepted `link = ...`, used it for the warm start and
+  stored it on the fit, but built their objective without it. Any Beta fit with a non-logit link
+  (probit, cloglog, identity) and any Gamma fit with a non-log link (identity) therefore
+  optimised the logit / log model, reported `converged = true`, and stored a `loglik` that is
+  the logit / log marginal, not the marginal of the requested link. Measured on simulated data
+  (p = 8, n = 150): the stored `loglik` differed from the requested-link Laplace marginal at the
+  returned parameters by 388 to 510 (Beta probit), 2681 to 2707 (Beta cloglog), 17210 to 17416
+  (Beta identity) and 5104 to 5651 (Gamma identity) log-likelihood units. The bug was in the
+  first commit of each fitter (2026-05-31, `79a6929b0` and `abee8a2ac`), so it affects every
+  release that contains them. Default-link fits (Beta logit, Gamma log) were never affected and
+  are bit-identical before and after this change. The fix passes `link` to the objective, the
+  predictor-informed (`X_lv`) objective (`beta_lv_nll_packed`, `gamma_lv_nll_packed`) and the
+  Gamma warm start, and restricts the hand-coded analytic gradients (logit-only for Beta,
+  log-only for Gamma) to their own link; other links use finite differences of the real
+  objective. Same pattern, fixed here: the NB2 `X_lv` objective (`nb_lv_nll_packed`) dropped
+  `link`, and the Poisson and NB2 analytic gradients (log-link only) were also used for
+  identity-link fits, which then stopped at a point where the true gradient is 12.1 (Poisson)
+  and 3.9 (NB2) with `converged = true`, 24.7 and 13.2 log-likelihood units below the optimum.
+  The variational fitters `fit_beta_gllvm_va`, `fit_binomial_gllvm_va`, `fit_nb_gllvm_va`,
+  `fit_gamma_gllvm_va`, `fit_exponential_gllvm_va` and `fit_delta_gamma_gllvm_va` accept a
+  `link` keyword but their ELBO is derived for one link only (logit for Beta and Binomial, log
+  for the rest); a different link was silently ignored. They now throw `ArgumentError` for any
+  other link. Not changed here: the per-trait grouped Beta and Gamma fitters (what `fit_gllvm`
+  and the `@formula` front end call for Beta) honour the link in their objective, but their
+  default `hessian = :observed` is only supported for the logit / log link, so a non-default
+  link returns `loglik = -Inf, converged = false` (loud, not silent). Beta works with
+  `hessian = :fisher`; grouped Gamma with the identity link still fails because its warm
+  start is on the log scale. Left for a follow-up. The R bridge routes for Beta and Gamma pass
+  the default link only, so bridge results were not affected. Test:
+  `test/test_link_honoured.jl`.
+- **`NBGroupedFit` and `NBGroupedCovFit` gain `predict`, `fitted`, `residuals` and
+  `getResidualCor` (#555).** The default per-species NB2 routes (`fit_nb_gllvm_grouped`
+  and `fit_nb_gllvm_grouped_cov`) had `getLV` and `confint` but threw a `MethodError` on
+  these four post-fit calls. `predict(fit, Y; type = :link / :response)` (and
+  `predict(fit, Y, X; ...)` for the covariate fit) returns `η = β + Xγ + Λẑ` or
+  `exp(η)` at each site's Laplace latent mode, the same mode `getLV` returns.
+  `fitted(fit, Y, X)` is the response-scale form. `residuals(...; type = :dunnsmyth)` gives
+  randomized quantile residuals under the NB2 CDF with each species' own size
+  `r_group[group[t]]`; `type = :pearson` gives `(Y - μ) / sqrt(μ + μ²/r)`. A group whose
+  fitted `r` sits at the Poisson limit (`r >= 1e6 * max(μ, 1)`) uses the Poisson CDF,
+  because the `NegativeBinomial(r, r/(r+μ))` CDF loses accuracy from about `r = 1e12` and is
+  constant at 1 once `r/(r+μ)` rounds to 1, and fitted groups reach `r` of 1e20 and more.
+  `getResidualCor(fit)` is `cov2cor(ΛΛ')`, the same matrix as gllvmTMB's `getResidualCor()`
+  (link residual `"none"`, no unique variance in these fits). These are new methods: no
+  existing function returns different numbers. Not covered here:
+  `getResidualCov` and the `extract_residual_*` spellings for these fits, the other grouped
+  families (`NB1GroupedFit`, `BetaGroupedFit`, `GammaGroupedFit`, `TweedieGroupedFit`), and
+  `NBGroupedAGHQFit`. Test: `test/test_nb_grouped_postfit.jl`.
+
+- **Ordinal (per-trait) logit no longer stalls with `converged = true` (#574); binomial runaway-loading warning (#498).**
+  The per-site Laplace mode search for per-trait ordinal fits was an undamped Newton iteration
+  that could overshoot into a far worse site mode, giving the marginal ~50-unit cliffs under
+  1e-5 parameter steps; L-BFGS then stopped on a zero-length step (|g| ~ 1e6) and reported
+  convergence tens of logLik units below the optimum (simulated 13 x 75, K = 2: -1425.3 from a
+  1.7 x probit start vs the true -1348.36). The search now halves a step that lowers the site
+  log-posterior; accepted full steps are unchanged. `fit_binomial_gllvm` now warns, without
+  changing estimates or `converged`, when loadings run away (gllvmTMB's rule: a trait's max |Λ|
+  at least 25 x the typical size, or at least 8). Tests: `test/test_convergence_sweep.jl`.
+
+- **ZIP and ZINB fits no longer stop below the Poisson / NB2 fit they contain (#573).**
+  A zero-inflated model contains its count model (zero-inflation probability 0), so its
+  best fit can never be worse. On mvabund::spider (12 x 28, K = 2) `fit_zip_gllvm` stopped
+  at -888.23 against Poisson -845.69, and `fit_zinb_gllvm` at -744.98 against the
+  shared-r NB2 -713.73. The cause was the starting point, not the per-site mode search:
+  the ZI surface has a second basin where structural zeros absorb the zeros that the
+  latent factors explain, and the excess-zero warm start (zero-inflation up to 0.8) led
+  L-BFGS into it. At the -888.23 endpoint every site search converges, the gradient is
+  about 0.01 and the Hessian has no material negative curvature. Both fitters now also
+  fit the nested model (`fit_poisson_gllvm` / `fit_nb_gllvm`). If the ZI fit ends below
+  it, they refit from the nested optimum with zero-inflation near 0 (beta_z = -10) and
+  keep the better fit. A fit already at or above the nested fit is returned
+  bit-identically; the extra cost is one nested fit, plus a refit only when needed.
+  spider now gives ZIP -843.07 and ZINB -713.08 (both `converged = false`; the fits that
+  push beta_z toward -Inf leave nearly flat directions). Test:
+  `test/test_zip_zinb_stall.jl` (spider subsets; fails on main).
+
+- **Bootstrap CIs: drop non-converged refits (#140) and report SDs on the raw scale (#156).**
+  `bootstrap_ci` and `bootstrap_ci_derived` now leave out refits that did not converge when
+  they take the percentile bounds. Before, a refit that stopped at the iteration cap far from
+  the optimum, with finite but biased estimates, was mixed into the percentiles while
+  `n_converged` was reported separately. This is the rule gllvmTMB's `bootstrap_Sigma` uses
+  (`opt$convergence != 0` is excluded and counted in `n_failed`). Both functions now return
+  `converged` (per refit), `n_used` (refits that entered the percentiles) and `n_dropped`
+  (`n_boot - n_used`), and warn once per call when more than half of the refits are dropped.
+  The old fields keep their meaning; `replicates` still holds every refit, so non-converged
+  rows remain available for inspection. `bootstrap_ci_derived` and `bootstrap_ci` use
+  `n_used >= 10` as the floor for finite bounds, as before but counted over used refits.
+  Separately, `bootstrap_ci` returned `sigma_eps`, `sigma_B[t]` and `sigma_W[t]` on the log
+  scale (the packed value) under the same term names `confint` and `profile_ci` report on the
+  raw scale. It now returns them on the raw scale: `estimate` is `exp(log sd)` and the
+  bounds are percentiles of `exp(draws)`. The signed `sigma_phy[t]`, `beta` and `Lambda_*`
+  terms are not transformed, and `replicates` stays on the packed scale. **Numbers that
+  change:** for every fit, the `sigma_eps`/`sigma_B`/`sigma_W` rows of `bootstrap_ci`
+  (estimate, lower, upper; also the bridge's bootstrap CI table) are now `exp()` of what was
+  returned before, e.g. an estimate of -0.68 becomes 0.51; this also applies to the
+  Gaussian-record route (`aghq`, `mask`, `offset` fits). Bounds of any term change only when
+  some refits did not converge. Tests: `test/test_bootstrap_decisions.jl`; two older
+  assertions that encoded the log-scale output were updated (`test_confint_bootstrap.jl`,
+  `test_aghq_public_gaussian.jl`). Not covered: `bootstrap_Sigma` calls `bootstrap_ci_derived`
+  once per entry, so it can repeat the dropped-refit warning and its `n_valid` can exceed the
+  refits used for its bounds (`confint_derived_wald.jl`, another lane's file).
+
+- **Derived-quantity profile CIs: natural-bounds clamp (#142).** `profile_ci_derived` takes a
+  new keyword `bounds = (lo, hi)`, the natural support of the quantity: `(0, 1)` for a
+  communality, ICC or phylogenetic signal, `(-1, 1)` for a correlation. A bound outside the
+  support is set to the edge. A `NaN` bound is checked at the edge: it becomes the edge when
+  the deviance there is at or below the chi-square cutoff (a flat profile), and stays `NaN`
+  when the deviance there is above the cutoff or the refit there fails. A new `boundary` field
+  is `true` when a bound was set to an edge. `bounds` must contain the estimate, so finite
+  bounds always satisfy `lower <= estimate <= upper`. On #670's near-singular fit, the
+  communality of trait 1 (estimate 0.99967) had upper bound 1.0435; with `bounds = (0, 1)` it
+  is 1.0. Without `bounds` the result is unchanged and has no `boundary` field, and a bound
+  inside the support is never changed. The limits are the natural ones, not R's 0.001/0.999,
+  so the interval always contains its estimate. `profile_ci_total_variance` and
+  `profile_ci_phylo_signal` now pass `bounds` (`(0, Inf)` and `(0, 1)`) instead of
+  post-processing with `_profile_ci_bounded`; the clamp and flat-profile rules are the same as
+  before. Their numbers can change only when a side of the search was `NaN`, because the check
+  at the edge now refits from the search's last accepted point with the caller's
+  `penalty_weight` (before: from the MLE with the default weight), and includes the fitted
+  intercepts of a `fit_gllvm` Normal fit when `X = nothing` (before they were omitted, so the
+  deviance at the edge was wrong and such a side stayed `NaN`). `_profile_ci_bounded` applies
+  the same rules, includes those intercepts, and throws `ArgumentError` when the bounds do not
+  contain the estimate. Test: `test/test_derived_decisions.jl`.
+
+- **Fewer sites than species (`n_sites < p`), part of #149; the issue stays open.** The
+  closed-form Gaussian fitter's `n_sites >= p` check is now an `ArgumentError` that reports
+  `n_sites` and `p` and names the routes that use it, in place of an `@assert`
+  (`AssertionError: Need n_sites ≥ p for a well-posed Gaussian GLLVM`). The condition is
+  unchanged and no returned number changes. Every route built on `fit_gaussian_gllvm`
+  inherits the check: `family = Normal()` (also through `@formula`), the masked / offset /
+  `aghq` Gaussian route (its warm start is the closed-form fit), `family = Lognormal()`
+  (a Gaussian fit to `log(Y)`, so not a Laplace route), and the R bridge's `"gaussian"`
+  and `"lognormal"` families. Two visible effects: code that caught `AssertionError` here must
+  now catch `ArgumentError`; and with `n_sites < p`, `select_lv(Y; family = Normal())`
+  and `fit_gllvm(Y; family = Normal())` with `K` omitted now stop at K = 1 with this
+  error, where before every K failed and `select_lv` threw
+  `ErrorException: select_lv: no K in 1:Kmax was accepted`.
+  The Laplace-fitted families needed no change. On a 12-trait, 8-site grid, Poisson,
+  binomial, NB2, NB1, beta, gamma, exponential, ordinal, COM-Poisson, ZIP, hurdle-Poisson,
+  both delta families, beta-binomial and Poisson with fixed or random row effects (at
+  K = 1 and 2), and Student-t (fixed and estimated degrees of freedom), truncated and
+  censored Poisson, truncated NB2, GP1, ZINB, ZIB, hurdle-NB, beta-hurdle, ordered beta,
+  Tweedie, ordinal logit and probit, binomial probit, the `ZiPoisson` / `ZiNbinom2`
+  markers and the bridge's `"poisson"` family (at K = 1) all run and return a finite
+  log-likelihood. Several report `converged = false` (binomial typically runs into the
+  Laplace saturation region and warns), which is the flag doing its job; beta at K = 2
+  returned an inflated log-likelihood (about 6.7e6) with `converged = false`, a separate
+  small-data behaviour that this change does not touch. Poisson also runs down to 2
+  sites, through `gllvm(@formula(...))`, with `X_lv`, and with a mask. The Laplace
+  objective itself has no n-dependence: at fixed parameters the n = 16 log-likelihood
+  equals the sum of its two n = 8 halves, and each equals a hand-written per-site
+  Newton/Laplace reference to 1e-9.
+  The Gaussian guard is kept because the approved scope relaxed the Laplace routes only.
+  It is not a property of the likelihood, which is exact at n < p: a bounded maximum
+  needs K below the rank of the (centred) data, not n >= p. In a scratch run with the
+  guard removed, K = 1 on 5 traits and 3 sites fitted normally, while K at or above that
+  rank drove the residual SD to 0 (unbounded likelihood) and 2 sites crashed with a
+  `DomainError`. Whether to replace the guard by a rank rule is an open maintainer
+  decision. Documented in the `fit_gaussian_gllvm` and `fit_lognormal_gllvm` docstrings
+  and `docs/src/pitfalls.md`. Fits with n >= p are numerically unchanged (pinned from the
+  tree before the change). Test: `test/test_n_lt_p.jl`.
+
+- **The W-tier reduced-rank term now carries the full cross-trait covariance, as in
+  gllvmTMB (#135).** The W-tier scores are now one vector per unit, shared by all traits,
+  so `Λ_W` adds the whole `Λ_W Λ_Wᵀ` block to the per-unit covariance:
+  `Σ = Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ + diag(σ²_B + σ²_W + σ²_eps)`. Before, only the diagonal of
+  `Λ_W Λ_Wᵀ` was used, so the W tier acted as extra per-trait variance and the
+  off-diagonal pattern of `Λ_W` was never estimated. The C++ engine adds
+  `sum_k Lambda_W(t, k) * z_W(k, ss)` with `z_W` shared within a unit; at a fixed
+  parameter point the Julia log-likelihood now equals the gllvmTMB objective to 1e-8
+  (fixture provenance: `test/fixtures/gen_wtier_crosscov_twin.R`). Changed numbers, for
+  models with `K_W > 0` (or `Λ_W` passed) only: `gaussian_marginal_loglik`,
+  `gaussian_nll_packed`, `gaussian_profile_nll` / `profile_recover`,
+  `gaussian_marginal_loglik_sparse_phy`, `gaussian_marginal_loglik_edge_phy` and
+  `gaussian_reml_loglik` return different values; `fit_gaussian_gllvm(...; K_W > 0)`
+  returns different estimates and log-likelihoods; `sigma_y_site`, `correlation`,
+  `extract_Sigma(fit; level = :site)` and `getLV` now include the off-diagonal
+  `Λ_W Λ_Wᵀ` terms (diagonals are unchanged at fixed parameters); parametric-bootstrap
+  and derived-CI replicates are drawn from the full covariance. Models without a W tier
+  give the same log-likelihoods as before (pinned in the new test). Parameter packing and
+  the public API are unchanged. Note: with one unit per column of `y`, only
+  `Λ Λᵀ + Λ_W Λ_Wᵀ` is identified, not the split between the two tiers; in our checks a
+  `K = 1, K_W = 1` fit reaches the same log-likelihood as a single-tier `K = 2` fit.
+  (`σ²_B`, `σ²_W` and `σ²_eps` were already identified only through their sum.) So for a
+  `K_W > 0` fit, any output that reports one tier on its own depends on the starting
+  values and should not be interpreted: `communality`, `proportions`, `extract_Sigma` at
+  `level = :unit` or `:unit_obs`, the default tier-scoped `extract_communality`,
+  `extract_correlations`, `extract_proportions` and `extract_ICC_site`, `getLV`, and
+  the `diagnose_kernel_separability` angle. In our checks two fits of the same data from
+  different starts agreed in log-likelihood (to 2e-12) and `sigma_y_site` (to 3e-9) but
+  not in `Λ` or `communality`, and Wald SEs for single `Λ` / `Λ_W` entries were `NaN` or
+  in the thousands. Use `sigma_y_site`, `correlation` or `extract_Sigma(fit; level =
+  :site)` for the identified total, or `fit_twolevel_gaussian` with repeated observations
+  per unit for a between / within split. These caveats are now in the docstrings, the
+  Model page (Terms, closed form and Identifiability, which still described the old
+  diagonal-only W tier), the post-fit extractor and diagnostics pages, and the gllvmTMB
+  parity page, whose "Between / within (multilevel)" row now points to
+  `fit_twolevel_gaussian` instead of `K_W`. No returned numbers change from this
+  documentation. The
+  `test/test_W_and_diag.jl` dense reference and recovery fixture now use the shared-score
+  model (recovery moved to p = 8 traits, n = 1000, because the rank-2 model at p = 5 hits
+  a zero unique variance on that seed). Test: `test/test_wtier_crosscov.jl`.
+
+- **Docs: `σ_phy` is not gllvmTMB's `phylo_unique` scale (#136).** Maintainer
+  decision (2026-10-02 issue sweep): keep Julia's signed row-model `σ_phy` and
+  document the difference. The docstrings of `fit_gaussian_gllvm` (and the
+  internal exact fitter), `gaussian_marginal_loglik`, `confint`, `profile_ci`,
+  `profile_phylo_signal` and the EM fitters, and the gllvmTMB parity page, now
+  say which sign flips leave the likelihood unchanged: when `K_phy = 0`, the
+  sign of each group of rows that `Σ_phy` links (for a tree-derived `Σ_phy`,
+  always at least the root's two daughter clades, since the root edge is
+  dropped); when `K_phy ≥ 1`, `σ_phy` is not separately identified from
+  `Λ_phy`. The fitter docstrings and the
+  parity page add that `X_lv` fits skip the sign-pattern search and sign
+  anchor, and that gllvmTMB's `phylo_unique` (`phylo_indep()`) is a different
+  model term, with `fit_kernel_indep_gllvm` and
+  `fit_phylo_latent_gllvm(...; unique = true)` as the Julia counterparts.
+  `docs/src/structured-dependence.md` now calls `σ_phy` per-trait signed
+  scales, and stale comments that described the dense fit as `σ_phy > 0` are
+  corrected (including a testset name in `test/test_em_phylo.jl`). No code or
+  numbers change.
+
+- **`select_lv` result prints the same nine fields as gllvmTMB's `print.gllvmTMB_select_lv`.**
+  `LVSelection` gains `aicc` (R's formula `AIC + 2k(k+1)/(n - k - 1)`, `n` the same `p*n`
+  as BIC, `NaN` when `n - k - 1 <= 0`), `converged` (the optimiser's flag, R's `conv`),
+  `pd_hessian` (R's `pdHess`, `missing` = NA unless `select_lv(...; pd_hessian = true)`)
+  and `criterion`. `show` prints `d npar logLik AIC BIC AICc conv pdHess` in R's order and
+  layout, with R's rounding and `TRUE`/`FALSE`/`NA`. Which `K` is chosen and the default
+  criterion are unchanged; `LVSelection` is now built with 13 positional fields. Julia still
+  keeps a rank with `conv = false` or `pdHess = false` eligible, where R drops it.
+- **`fit_phylo_gaussian` no longer reports `converged = true` after a zero-length step
+  (part of #505, the remaining #485 class).** Optim also counts a zero-length line-search
+  step as convergence, so a start the finite-difference gradient cannot leave could be
+  reported converged at a gradient of ~1e9 or NaN (reproduced with log-variance starts of
+  (30, -30)). The fitter now also requires a finite gradient residual no larger than
+  `max(g_tol, 1e-2 * max(1, |nll|))`. The stall residuals are 1e8 to 1e15. Healthy
+  fits stopped on f/x criteria sit at 1e-5 to 3e-4, which straddles `g_tol * |nll|`
+  differently on macOS and Linux, so that tighter bound wrongly flagged a healthy animal-Ainv
+  fit in CI. Estimates and
+  log-likelihoods are unchanged; only `converged` can flip to `false`. Not covered here:
+  scalar `fit_nb1_gllvm` (no failing reproduction found), `fit_nb1_gllvm_grouped_cov`
+  (another lane's file), the other `_fit_verdict(res)` sites, and ordered beta (#501).
+
+- **Input validation sweep (#134 #139 #141 #150 #151 #153 #159 #162).** `gaussian_marginal_loglik`
+  now throws `ArgumentError` when `Λ_phy`/`σ_phy` are given without `Σ_phy` (#134) or when
+  `size(Λ_B, 1) != p` (#150); `low_rank_chol` rejects non-positive `d` (#151); `augmented_phy`
+  rejects unary and multifurcating nodes per node (#153); `size(::LowRankPlusDiagChol, i)` returns 1
+  for `i > 2` (#159); the edge wrapper validates loadings before building the dense `Σ_phy` (#162);
+  `bridge_fit` accepts integral doubles for `d` and rejects non-integral values (#139);
+  `correlation` returns `NaN` (with a warning) for traits with non-positive variance (#141).
+  Valid inputs are numerically unchanged. Test: `test/test_input_validation.jl`.
+
+- **Robustness sweep (#138, #143, #145, #146, #147, #158, #161).** The bridge no longer turns
+  every `getLV` failure into empty scores (only a missing method does, with a warning).
+  Transformed-Wald CIs report non-PD when the Hessian is indefinite. `em_fa` takes an `rng`
+  keyword and its default start is now reproducible (fixed-seed). The SQUAREM premature-stop
+  fallback returns the best of polished / warm-start plain-EM, not the known-worse point. The
+  Beta family clamps y to [1e-12, 1-1e-12] like gllvmTMB (interior unchanged). Docstring and
+  comment corrections for the contrasts no-loadings case and the `em_fa` init. Test:
+  `test/test_robustness_sweep.jl`.
+
+- **Derived-profile CI: constraint gate on refits (#137).** A constrained refit in
+  `profile_ci_derived` whose achieved `g(θ)` misses the target by more than 0.05
+  (R's `.fix_and_refit_constraint_tol`) is now a failed refit instead of a silently
+  under-enforced one. Valid refits are unchanged. Test: `test/test_derived_ci_sweep.jl`.
+
+- **Tweedie series density is allocation-free and about 390x faster (#575).** `_tweedie_logA`
+  rebuilt a doubling window of `loggamma` terms from scratch on every pass and allocated
+  a vector each time, which dominated `fit_tweedie_gllvm_grouped`. It now climbs to the
+  mode and sums outward in one pass with the same 37-nat truncation. Measured on
+  vegan::varespec (species present in >= 12 plots, 8 species x 24 plots, K = 1,
+  1 thread): 8,000 density calls 3.11 s to 0.008 s; `fit_tweedie_gllvm_grouped` 141.5 s
+  to 4.7 s, log-likelihood identical (-352.3148323214431). Max relative difference in
+  `log a(y, phi, p)` vs the old code over a 250-point grid (y 1e-6 to 5000, p 1.01 to
+  1.99): 8.9e-16. Test: `test/test_tweedie_speed.jl` (the allocation assertion fails on
+  the previous code: 2,496 bytes per call).
+- **Breaking: `fit_gllvm(Y; family = NegativeBinomial())` now fits one shared `r` (#615).**
+  Maintainer decision 2026-10-01. On the #615 grid (72 cells, 20 reps), shared r
+  recovered r better in every common-r cell and per-species r took 110 to 260 times
+  longer; per-species r is better when r really varies across species. Bare
+  `NegativeBinomial()` on `fit_gllvm` (and so `cv_gllvm` and `select_lv`) now returns
+  an `NBFit` from `fit_nb_gllvm`; pass `disp_group = :species` for the previous
+  per-species fit (`NBGroupedFit`). Unchanged: `gllvm(@formula(...))` with or without
+  covariates and the R bridge keep per-trait r, gllvmTMB's estimand, and Beta, NB1
+  and BetaBinom keep their per-species defaults. Because the forced `:species` is
+  gone, bare NB with `row_eff = :random` or `:fixed` now fits instead of throwing.
+  The gllvmTMB parity tests and the tests of the per-species route now pass
+  `disp_group = :species` explicitly.
+- **Per-species NB2 polish refits use dense BFGS instead of L-BFGS (#615).** After
+  #659, 17 of the 1,440 per-species fits in the #615 grid still reported
+  `converged = false`, all with common r = 20 at p = 24. They were close to their
+  optimum, with a real gradient left over (finite differences agree from h = 1e-4 to
+  1e-6), and each further 500-iteration L-BFGS run gained at most 9e-5. From the same
+  points, dense BFGS converged on 17 of 17 within 126 iterations. The polish refits
+  now use BFGS (new keyword `alg`); the first fit, the rounds and the rule for keeping
+  a refit are unchanged, and the exact-gradient route of `fit_nb_gllvm_grouped_cov`
+  (#658) already used the same BFGS. Rerunning the 389 grid fits that reach the
+  polish: all 389 converge (1,440 of 1,440 in the grid), total time 68.4 h down to
+  45.9 h, log-likelihood within -4.6e-6 to +3.4e-4 of before. Test:
+  `test/test_nb_grouped_poisson_ridge.jl`, whose p = 24 fixture is now seed 656001
+  (fails on main, macOS and Linux); the file runs in about 2 min, down from about 4.
+- **Per-species NB2 fits: up to three more polish rounds when still not converged (#615).**
+  After #655, 128 of the 1,440 per-species fits in the #615 grid still reported
+  `converged = false`, 90 of them at p = 24 with common r = 20. Tracing 11 of them
+  showed two causes. The refit stopped at the 500-iteration cap just short of
+  convergence, and a species below r = 1e3 could keep crawling up the ridge. A fit
+  that is still not converged now runs up to three more rounds from where it stopped.
+  Each round fixes the species then above 1e3 at r = 1e10 and refits the rest, falling
+  back to a plain continuation with nothing fixed. A round is kept only if it is no
+  worse. Converged fits are unchanged, and a fit can now reach a finite optimum that
+  the old polish left behind. Applies to the same three fitters as #655. Test:
+  `test/test_nb_grouped_poisson_ridge.jl` (new literal fixture
+  `test/fixtures/nb_grouped_poisson_ridge_p24.toml`).
+- **Per-species NB2 fits no longer stall on the ridge to the Poisson limit (#615).**
+  As a species' r grows, the likelihood in log r flattens but keeps rising, so L-BFGS
+  could crawl toward r = ∞ until the 500-iteration cap and report `converged = false`.
+  In the #615 grid only 10 to 50% of per-species fits converged at p = 24, and the three
+  stalls examined were all on this ridge. Such a fit is now refit with the species at
+  r > 1e3 fixed at r = 1e10 (all together, then each alone), and the refit is kept
+  only if it is no worse than the stalled point. On two stalled grid fits (p = 12, n = 60) the refit converges, 2.7e-4
+  and 3.6e-5 log-likelihood units higher, at a cost of 10 to 20 s per fit. The fixed
+  species report `r_group = 1e10`, which already triggers the Poisson-limit warning.
+  Converged fits are unchanged. Applies to `fit_nb_gllvm_grouped`,
+  `fit_nb_gllvm_grouped_cov` and `fit_truncated_nbinom2_gllvm_pertrait`. Test:
+  `test/test_nb_grouped_poisson_ridge.jl` (literal fixture
+  `test/fixtures/nb_grouped_poisson_ridge.toml`).
+- **Bootstrap intervals no longer lose every parameter when one dispersion sits at its
+  limit.** `_family_bootstrap` dropped a refit with any `upper_boundary` flag from all
+  parameters' quantiles. Where a per-group dispersion sits at the limit on most draws
+  (12 of 12 truncated-NB2 per-trait refits in #645), no replicate was left and the β
+  and Λ intervals were NaN as well. A converged flagged refit now contributes to every
+  unflagged parameter; the flagged parameters are still left out and still count
+  toward the `Inf` upper-bound rule. Test:
+  `test/test_confint_bootstrap_boundary_per_param.jl`.
+- **Student-t (shared σ) Laplace mode search reaches the higher of two peaks (#626).**
+  The Student-t log joint in z is non-concave wherever a residual exceeds σ√ν, and
+  there it can have a second, higher peak. The local Newton search from z = 0 reached
+  the nearer one: on the #623 fixture two of 120 sites stopped 0.24 and 2.85 below the
+  global mode, so their Laplace values were too low by about that much. After the
+  search, the trait with the largest residual beyond σ√ν now gives one restart (from
+  the point that fits that trait exactly), and the higher peak is kept. Single-peak
+  sites keep the same mode, and other families are unchanged (new hook
+  `_laplace_mode_alt_starts`, default a no-op). Cost: `test_studentt.jl` takes about
+  74 s against 58 s on main on the same machine. Test: `test/test_mode_search_623.jl`
+  now requires the global mode at every site.
+- **Shared-r NB2 (`fit_nb_gllvm`) now warns at the Poisson limit.** On Poisson
+  data the fitted `r` ran to 1e6 or beyond (1.7e7 on the fixture, Julia 1.10; 1.6e7
+  on 1.13) with no message. Maintainer decision 2026-09-29 ("NB upper end: warn only
+  everywhere"): above 1e6 the fitter warns and keeps the optimizer's `converged`
+  (gllvmTMB 0.7.1 itself reaches this end on most ordinary per-trait NB fits); below
+  1e-6 it reports `converged = false`. The reported `loglik` is unchanged. Test:
+  `test/test_nb_shared_r_boundary.jl` (literal fixture
+  `test/fixtures/nb_shared_r_boundary.toml`).
+- **Grouped NB fits: the Poisson limit now warns instead of making `converged` false.**
+  Maintainer decision 2026-09-29 ("NB upper end: warn only everywhere"): gllvmTMB 0.7.1
+  itself puts one trait's NB2 dispersion above 1e6 on 4 of 5 ordinary per-trait fits, so
+  flagging the Poisson limit would mark about 80% of normal fits as not converged. In
+  `fit_nb_gllvm_grouped` and `fit_nb_gllvm_grouped_cov` that limit is `r > 1e6`: it only
+  warns, and `r < 1e-6` (unidentified extreme overdispersion) still gives
+  `converged = false`. NB1 (`Var = μ(1+φ)`) has its Poisson limit at the other end, so in
+  `fit_nb1_gllvm_grouped` and `fit_nb1_gllvm_grouped_cov` `φ < 1e-6` only warns and
+  `φ > 1e6` gives `converged = false`. Each warning says whether `converged` is affected. The `dispersion_boundary` field is unchanged and still flags
+  both ends, so the Wald and bootstrap interval code and `_nb_boundary_restart` behave as
+  before. Shared-r `fit_nb_gllvm` and the per-trait truncated NB2 route are handled
+  separately. Changed assertions: `test_nb_boundary_restart.jl`, `test_known_sentinel_defects.jl`,
+  `test_grouped_dispersion.jl`, `test_bridge_x.jl`, `test_gamma_beta_upper_boundary.jl`
+  (upper-end fits now expect the optimizer verdict). New `test_nb_grouped_upper_warn.jl` on
+  literal data (`test/fixtures/nb_grouped_upper_warn.toml` plus `[nb_upper]`).
+
+- **Grouped Beta fits with a large precision now report converged.** With φ above
+  about 1e5 (near-deterministic proportions) the intercept curvature grows like φ
+  (about 1e9 at φ = 9.6e7), so a stationary point shows a raw finite-difference
+  gradient of 1 to 10 and never met the #480 gradient gate. When that gate fails,
+  `fit_beta_gllvm_grouped` and `fit_beta_gllvm_grouped_cov` now take a diagonal
+  Newton polish (kept only if it lowers the objective) and judge the gradient in
+  standard-error units, |g_i| / sqrt(H_ii), against the same threshold
+  `max(g_tol, g_tol * |nll|)`. On the φ = 1e8 fixture this reaches 2.5e-4 against
+  0.0152, and the log-likelihood rises by 1.2e-4. Fits that already met the gate are
+  unchanged, and a caller's very small `g_tol` still gives `converged = false` (#480
+  d01 with `g_tol = 1e-12`). Test: `test/test_gamma_beta_upper_boundary.jl`.
+- **Tweedie and Student-t inner mode search reach the mode (#623).** Both families
+  used the undamped shared `_laplace_mode`. Tweedie with two latent variables could
+  diverge: one fixture site returned z = [-5.2e10, 8.4e8] where the mode is
+  [-1.975, 0.389], and the site's Laplace value was off by 1.35e21. Student-t on the
+  default shared-σ route overshot because its Fisher weight is (ν+3)/ν below the
+  observed curvature, cycling around the mode when ν < 3 and crawling along
+  non-concave ridges. Tweedie now backtracks on the μ-dependent kernel of its
+  log-density (the series normaliser is constant in μ, so no series is evaluated in
+  the line search; the 2026-08-27 opt-in was reverted for that cost). Student-t
+  backtracks on small steps too (a change at rounding level is always accepted) and
+  doubles an accepted full step while that gains more than rounding level.
+  Both take mode-search steps with the weight max(observed, Fisher), as the Beta
+  grouped kernel does (#503). Three hooks in `laplace.jl`
+  (`_laplace_mode_merit_term`, `_laplace_mode_robust`, `_laplace_mode_step_weight`)
+  default to the previous behaviour, so every other family is unchanged. On the
+  audit datasets, bad sites fell from up to 41 per dataset to 0. Known remaining
+  limitation: where the Student-t joint has two peaks, the search reaches a local
+  one (2 of 120 fixture sites); tracked separately. Test:
+  `test/test_mode_search_623.jl`.
 - **Package renamed to GLLVModels.jl.** Install and load it as
   `GLLVModels`; modelling functions such as `gllvm`, `fit_gllvm`, and `bf`
   retain their existing API. `GLLVModels.GLLVM` is a temporary source-level
   alias, but `using GLLVM` cannot remain available after a Julia package rename.
   The GitHub repository rename and Pages migration remain separate maintainer
   gates; historical development records retain their original spelling.
+- **`fit_multinomial_gllvm` reports `converged = false` under complete separation.**
+  When a covariate orders every observation into its own category, the softmax MLE
+  does not exist: the log-likelihood approaches 0 only as the slopes run to infinity.
+  L-BFGS stopped on its gradient test along that ridge and the fit reported
+  `converged = true` at loglik -1.19e-5 with slopes of size 66 (12 observations,
+  3 categories, one covariate). A per-family verdict (`_multinomial_verdict`) now
+  reports `converged = false` when every observation's fitted probability of its
+  observed category exceeds 0.9999 (per-observation negative log-likelihood at most
+  `_MN_SEPARATION_NLL = 1e-4`, ten times the default `g_tol`). The log-likelihood is
+  still reported as computed. Quasi-complete separation is not covered. Six healthy
+  fits keep their log-likelihoods exactly. `test/test_multinomial_separation.jl`,
+  fixture `test/fixtures/multinomial_separation.toml`.
+- **GP-1 fits now reach the true optimum (#611).** The GP-1 inner Laplace mode
+  search did not use the damped backtracking that NB1 and censored Poisson use, so
+  undamped Fisher steps from z = 0 could stop far from a site's conditional mode.
+  Measured on a healthy fixture site: the search stopped at z = 0.705 (log-joint
+  gradient -42.8) while the single mode is at -1.624, and the site's Laplace value
+  was 36.6 too low. That error switched on and off as the parameters moved by
+  1e-6, so `fit_gp1_gllvm` stopped at the edge of the jump and reported
+  `converged = true` at different values from different starts (spread up to 20
+  log-likelihood units on one dataset). GP-1 now opts into the backtracking. On
+  six healthy fixture datasets, five optima move up by 0.23 to 34.9
+  log-likelihood units and one is unchanged, and fits from different starts now
+  agree. GP-1 logliks, AIC and BIC from earlier versions can therefore differ.
+  Test: `test/test_gp1_mode_backtrack.jl`.
+- **Ordinal fitters now reject observed levels below 1.** `fit_ordinal_gllvm`,
+  `fit_ordinal_gllvm_pertrait` and `fit_ordinal_gllvm_pertrait_cov` indexed a
+  per-category count vector by the observed level inside an `@inbounds` loop, and
+  nothing checked that levels were at least 1. A level of 0 or a negative level
+  therefore wrote out of bounds when bounds checks were off (the per-trait routes
+  then returned `converged = false, loglik = -Inf` with no error) and threw a
+  `BoundsError` otherwise. Each fitter now throws an `ArgumentError` naming the
+  offending value before any level-indexed loop. Masked cells are not checked, so
+  a placeholder under `mask = false` is still accepted; valid data is unchanged.
+  Test: `test/test_ordinal_level_check.jl`.
+- **Ordered-beta `confint(..., method = :bootstrap)` now runs.** The `simulate`
+  closure of the `OrderedBetaFit` CI adapter (`src/confint_family.jl`) was a stub
+  that threw; `_family_bootstrap` caught the throw in every replicate, so the call
+  returned NaN bounds with `n_converged = 0` rather than an error. It now draws
+  from the law `ordered_beta_logp` scores: `z ~ N(0, I_K)` per site,
+  `η = β + Λz`, `P(y = 0) = σ(c0 - η)`, `P(y = 1) = σ(η - c1)`, otherwise
+  `y ~ Beta(μφ, (1 - μ)φ)` with `μ = σ(η)` clamped as in the likelihood. Wald and
+  profile intervals are unchanged. Test: `test/test_confint_bootstrap_ordered_beta.jl`
+  (analytic moment checks of the draws, and an end-to-end bootstrap on the
+  literal fixture `test/fixtures/ordered_beta_boot.toml`).
+- **`confint` on a fit made with an `offset` now infers on that offset (silent wrong-answer fix).**
+  `confint(fit, Y)` rebuilt the marginal log-likelihood from `Y`, `N`, `X` and `mask` only, so a
+  fit made with an `offset` (log-exposure, effort) got the Hessian, profile refits and bootstrap
+  draws of an offset-free model, with no warning. Measured on Poisson fits with `p = 5`, `n = 80`,
+  `K = 1` and offset `0.5 * randn(p, n)` over 30 seeds: at the fit's own optimum the offset-free
+  log-likelihood sat 45 to 130 below the fit's, the standard errors were off by a median of 10%
+  (up to a factor of 2), and in one seed the offset-free Hessian was not positive definite
+  (smallest eigenvalue -243 against +26.9 for the fit's own objective), so `confint` reported
+  `pd_hessian = false` and no interval for 3 of the 10 terms on a regular fit. `confint(fit, Y; offset = O)` (also
+  `vcov`, `coef_table`, and `confint_lv_effects` for Wald and profile) now takes the offset given
+  to the fitter (a scalar, a `p x n` matrix, `p x 1`, `1 x n`, or a length-`p` vector, the shapes
+  `fit_gllvm` stretches to `p x n`) and uses it in the Wald Hessian, the profile refits and the
+  bootstrap draws and refits. This holds for every fit type whose fitter takes an offset: Poisson,
+  Binomial, NB2, NB1, GP1, Beta, Gamma, Exponential, the NB2 / NB1 / Beta / Gamma / Tweedie
+  grouped-dispersion fits without covariates, truncated Poisson and NB2, and the delta, hurdle
+  and zero-inflated two-part families (`predictor = :shared` delta fits put the offset on both
+  parts, as the fitters do). Fit objects have no field for the offset (adding one would touch
+  every fit constructor), so `confint` checks that the objective it rebuilds reproduces
+  `fit.loglik` at the fitted values and throws an `ArgumentError` otherwise: a fit made with an
+  offset and a call without it, or with a different one, is refused instead of answered with the
+  intervals of another model. The same check refuses a wrong `N` or a dropped `mask` on those fit
+  types. Also refused: an offset for a fit type whose fitter takes none, an offset with
+  `objective = :va` (the variational marginal has no offset route), and an offset with
+  `confint_lv_effects(...; method = :bootstrap)`. `confint_lv_effects(...; method = :bootstrap)`
+  now runs the same objective check as the Wald and profile routes, so an `X_lv` fit made with an
+  offset and bootstrapped without it is refused (it used to return before the check and refit an
+  offset-free model). The check compares like with like: a variational fit
+  (`fit_{poisson,nb,binomial,beta,gamma,exponential,delta_gamma}_gllvm_va`, whose `loglik` is the
+  ELBO) is compared with the variational objective, and a `hessian = :fisher` fit of
+  `DeltaGammaFit` (separate or shared predictor), `TruncatedNegBin2Fit` or
+  `TruncatedNegBin2PerTraitFit` (whose structs do not record the curvature) with the Fisher
+  objective, so offset-free calls on those fits run exactly as before. The Wald, profile and
+  bootstrap objective itself is unchanged for them (the adapters of these four types still use
+  the `:observed` curvature on a `:fisher` fit, as before). The error text names the possible
+  causes (offset, `N`, `X`, `mask`, variational objective, curvature, non-default link). **Behaviour
+  change for Beta fits with a link other than logit and Gamma fits with a link other than log:**
+  `fit_beta_gllvm` and `fit_gamma_gllvm` optimise the default-link objective (their marginal call
+  carries no `link`), so the fit's own objective cannot be rebuilt from its `link`; `confint`
+  returned `pd_hessian = false` there and now throws an `ArgumentError` saying the fit's own
+  objective could not be reproduced (a known issue with non-default links), rather than computing
+  on the wrong objective. The check cannot see a wrong offset at cells that do not enter the
+  likelihood (masked cells; the `y = 0` cells of hurdle and separate-predictor delta fits, where
+  the offset sits on the positive part only), and an offset error below about `3e-4` per cell
+  passes. Unchanged: AGHQ Poisson and binomial fits keep their offset and need no keyword, and the
+  Gaussian route already read the offset from the fit. Fits without an offset give the same
+  intervals (checked bit for bit on Poisson, NB2, Gamma, ZIP, Delta-Gamma, grouped NB2 and
+  Binomial, on the variational fits of all seven families, and on `hessian = :fisher` fits of
+  the four types above: Wald, `vcov` and `coef_table` on all of them, and one profile and one
+  bootstrap on a variational Poisson fit and a `:fisher` truncated NB2 fit). Test:
+  `test/test_confint_offset.jl`.
 
-All notable changes to GLLVModels.jl are documented here.
-
-## Unreleased
+### Added
+- **`zi_poisson()`, `zi_nbinom2()`, `zi_binomial()`: twins of gllvmTMB's
+  zero-inflated family exports at the P1 pin (`9539352f6`), with R's semantics.**
+  A true zero-inflation mixture with a per-trait, intercept-only structural-zero
+  probability, the count process active at every observation, one NB2 dispersion
+  per trait, per-observation binomial trials (single-trial-only traits refused),
+  and a Laplace log-determinant from the observed curvature, as TMB computes it.
+  New `fit_zi_gllvm` / `ZiFit` / `zi_marginal_loglik_laplace`, reachable as
+  `fit_gllvm(Y; family = zi_poisson(), K)`. Julia's own `ZIPoisson()` /
+  `ZINegBin()` / `ZIB(N)` routes are unchanged and remain a documented extra:
+  they use the Fisher count weight in the log-determinant (3.62 log-likelihood
+  units off R's logLik at R's optimum on the ZIP fixture), a shared NB2
+  dispersion, and a shared trials count. Twin fixtures:
+  `test/fixtures/zi_p1.toml`, test `test/test_zi_twin.jl`.
+  The route carries a Julia-side Laplace breakdown guard (`ZI_LAPLACE_EIGMIN_FLOOR`):
+  at y = 0 the mixture's observed curvature can be negative, the site Laplace
+  precision can approach singularity, and the Laplace value then inflates (on one
+  NB2 dataset 363 units above the exact marginal; gllvmTMB's objective returns the
+  same inflated value). Sites below the floor are refused, an optimum at the floor is
+  reported with `converged = false`, the NB2 start was hardened, and a fit that ends
+  at the guard is retried once from a shrunk start (35 NB2 draws: 30 converge, the 5
+  flagged are draws gllvmTMB also fails on). Recovery is shown for `|lambda| <= 0.6`
+  only. Missing responses (`missing` or `NaN`) are refused with an `ArgumentError`.
+  Recovery test: `test/test_zi_recovery.jl` (R-pinned breakdown datasets in
+  `test/test_zi_twin.jl`); note:
+  `docs/dev-log/decisions/2026-09-27-zi-laplace-breakdown-guard.md`.
+- **`gllvm_anova(fits...; test = :chibar)` and `GllvmAnovaTable`** (`src/model_comparison.jl`):
+  a twin of gllvmTMB's `anova.gllvmTMB_multi()` / `print.anova.gllvmTMB_multi()`
+  (R/aghq-report.R, pin `9539352f66f2db2cc26b1c393e67212a359b60c9`, "P1").
+  Sequential nested likelihood-ratio comparison of two or more fits, sorted by
+  free-parameter count (`dof`); classifies each adjacent step as a rank
+  (latent-dimension) boundary step (Self–Liang chi-bar-square via the
+  existing `chibar2_pvalue`) or an interior fixed-effect step (plain Wilks
+  chi-square), or leaves it unclassified with an explanatory note when
+  neither pattern is detected. `AIC.gllvmTMB_multi` / `BIC.gllvmTMB_multi`
+  needed no new code: GLLVModels.jl's existing `aic`/`bic`/`dof`/`nobs`
+  already reproduce R's `length(opt$par)`/`nobs()` conventions exactly once
+  the SAME model is compared (verified against a real gllvmTMB P1 fit to
+  ~1e-8; see `src/model_comparison.jl` for the zero-mean-vs-intercept model
+  caveat this surfaced). `update.gllvmTMB_multi` has **no twin**: reading its
+  R definition shows it does nothing but replay a stored call for
+  non-`temporal_latent` fits (an R-only capability), and GLLVModels.jl fit
+  structs retain no such call to replay. Twin test:
+  `test/test_model_comparison.jl`, fixture generated by
+  `test/fixtures/generate_gllvmtmb_anova_fixture.R` (JSON output, converted
+  exactly to the committed TOML fixture by
+  `test/fixtures/convert_gllvmtmb_anova_fixture_to_toml.jl`, so the test
+  loads under `julia --project=.` with stdlibs only).
+### Tests
+- **`chibar2_pvalue`/`variance_lrt` twinned against gllvmTMB's `R/chibar.R` at pin P1
+  (`9539352f66f2db2cc26b1c393e67212a359b60c9`).** The two were classed
+  `semantic_divergence` in the P1 case map on name match alone; a line-by-line read
+  showed the R functions are, by their own header, "a direct, faithful port" of these
+  two GLLVModels.jl functions — identical Self & Liang (1987)/Stram & Lee (1994)
+  chi-bar-square mixture weights, identical scope note, identical argument names.
+  `test/test_chibar2_variance_lrt_p1_twin.jl` checks both against a literal fixture
+  (`test/parity/fixtures/chibar2_p1_fixture.toml`, sha256-guarded, generated by
+  `test/parity/fixtures/generate_chibar2_p1_fixture.R` against the real installed
+  gllvmTMB package at the P1 pin) to 1e-12, across `LRT ∈ {negative, 0, tiny, textbook,
+  large}` and `q ∈ {1, 2, 3}`, plus gllvmTMB's own `chibar2_pvalue()`/`variance_lrt()`
+  unit-test inputs and its reachable argument refusals, including a `NaN`
+  log-likelihood/LRT (see the paired `Fixed` entry below).
+### Added
+- **`fit_gllvm` estimates the number of latent dimensions when `K` is
+  omitted.** It sweeps `K = 1:Kmax` (default `min(5, p − 1)`) through
+  `select_lv` and returns the chosen fit with a one-line message. Previously
+  omitting `K` threw, so no working call changes. New keyword `Kmax`, valid only
+  when `K` is omitted; `row_eff` and `pervar` still need an explicit `K`.
+- **`select_lv(...; criterion = :bic_sites)`**: BIC with `log(n)`, `n` the
+  number of sites; `LVSelection` gains `bic_sites` and `attempts`.
+- **Loading ridge for binary data.** `fit_binomial_gllvm(...; loading_ridge = τ)`
+  (Laplace route) minimises the negative marginal log-likelihood plus
+  `½Σλ²/τ²`, the same penalty as gllvmTMB's `aghq_ridge`; the fit's reported
+  log-likelihood is the unpenalised one at that optimum, and `fit.loading_ridge`
+  records τ (`Inf` = off, the default). `select_lv` sweeps single-trial binomial
+  data with `binary_ridge = 2` (set `Inf` to turn it off); most unpenalised
+  Bernoulli fits beyond `K = 1` run away at ecological sample sizes. The ridge
+  applies only on the Laplace `fit_binomial_gllvm` route; with `aghq`,
+  `row_eff`, `grouping`, `phylo`, `disp_group` or `pervar` the sweep runs
+  unpenalised and says so in `attempts`. `confint` and `confint_lv_effects`
+  refuse a ridge fit, because it is a penalised estimate.
 
 ### Changed
+- **`select_lv` now defaults to `criterion = :bic_sites`** (was `:bic`, which
+  penalises by `log(p·n)` observed cells). In a recovery simulation (17 687
+  datasets with known K; Gaussian, Poisson, negative binomial, binomial; 30 to
+  300 sites, 10 or 20 species) `:bic_sites` recovered the true K most often for
+  Gaussian and Poisson responses; `:bic` picked too few dimensions at small
+  sample sizes. Negative-binomial recovery is being re-measured on the
+  corrected negative-binomial fitting code, so no rate is claimed for it yet. Existing `select_lv` calls without
+  `criterion` may choose a different K; pass `criterion = :bic` for the old rule.
+- **`select_lv` no longer chooses a broken fit.** Every attempted K is recorded
+  in `attempts` with a status. A K whose fit threw, whose log-likelihood fell
+  below a smaller K, or whose loadings ran away (a trait's latent SD above
+  `max_latent_sd = 10` on the link scale, or for binomial data one trait's
+  loadings `ratio_max = 25` times the median) is never chosen; it is first
+  refitted once from the last accepted solution where the family fitter accepts
+  `β_init`/`Λ_init`. A fit whose optimiser did not report convergence is kept
+  and flagged unless it also fails those checks (`require_converged = true`
+  rejects it). Interrupts are no longer swallowed; an `ArgumentError` at `K = 1`
+  is raised; `mask` reaches the criteria.
+- **`extract_latent_scores(fit, y; level=:unit)`, the Julia twin of gllvmTMB's
+  `extract_latent_scores()` (P1 pin `9539352f6`, gllvmTMB 0.7.1).** Twins
+  `.default` and `.gllvmTMB_multi`; `level = :unit` is
+  `getLV(fit, y; rotate=false)`, passing `component=:innovation` too on the
+  seven fit types whose `getLV` accepts that keyword (`GllvmFit`,
+  `BinomialFit`, `PoissonFit`, `NBFit`, `BetaFit`, `OrdinalFit`, `GammaFit`;
+  every other fit type has no predictor-informed latent-score mean at all, so
+  `:total` and `:innovation` are structurally identical for it and passing
+  `component` would raise `MethodError`). Fit types whose `getLV` needs an
+  extra required positional argument (`GllvmCovFit`, `ZIPCovFit`,
+  `ConstrainedOrdinationFit`, `FourthCornerFit`, and others — see
+  `src/extract_latent_scores.jl`) raise a named `ArgumentError` pointing at
+  the `getLV` call to make directly, rather than silently misrouting it.
+  `RRRFit` raises its own, differently-worded `ArgumentError`: its
+  `getLV(fit, X; rotate)` is a plain 2-argument call, but `X` there is a
+  deterministic, fully predictor-driven reduced-rank-regression projection
+  with no latent innovation at all, so "innovation" does not apply.
+  `_ComponentAwareGllvmFit`, `_PlainGllvmFit` (the remaining fit types with no
+  `X_lv`/`component` support), and `_PositionalArgGllvmFit` are three
+  explicit, disjoint `Union`s built by reading every `getLV` method's
+  signature; a test asserts every `AnyGllvmFit` member with a `getLV` method
+  is in exactly one of them, so a newly added fit type with an unclassified
+  `getLV` method turns that test red instead of silently defaulting.
+  Verified against a live P1 R fit at each side's own fitted `Λ`/`β`
+  (isolating the shared posterior-mean/mode definition from optimiser-path
+  differences) for three families: Gaussian (test tolerance `1e-8`, measured
+  `5.6e-15` — machine precision), Poisson (test tolerance `1e-6`, measured
+  `7.2e-11` — Laplace-mode Newton tolerance), and NB2 per-trait dispersion via
+  `NBGroupedFit` (test tolerance `1e-6`, measured `5.7e-11`, on a fit where
+  3 of 6 traits' dispersion is boundary-hugging — irrelevant to this
+  identity, which holds at whatever parameters R fitted, not at the truth).
+  `level = :unit_obs` always returns `nothing`: R's within-unit `z_W` tier
+  belongs to gllvmTMB's two-tier `latent(0 + trait | site, d)` trait-table
+  formula grammar (unbalanced replication per unit), which this package's
+  single-tier wide-format `Y` GLLVM engine does not implement at all — not a
+  per-fit "this model happens to lack that tier" check.
+  `extract_latent_scores.gllvmTMB_site_trait_sim` and
+  `extract_latent_scores.gllvmTMB_va` are excluded from this twin per the P1
+  case map (PR #526): Julia has neither a site-trait-simulation class nor a
+  variational-approximation fit class. See
+  `src/extract_latent_scores.jl` and `test/test_extract_latent_scores.jl`.
+- **`ordinal_logit()`: name-twin of gllvmTMB's `ordinal_logit()` (family_id 20,
+  gllvmTMB >= 0.7.1).** Fits exactly the model `Ordinal()` already fits with
+  `link = LogitLink()` (`fit_ordinal_gllvm_pertrait` /
+  `fit_ordinal_gllvm_pertrait_cov`), so it changes no numerics, but returns
+  its own `OrdinalLogit` marker rather than `Ordinal()` itself: `Ordinal()`
+  carries no link of its own, so a bare alias would let
+  `fit_gllvm(Y; family = ordinal_logit(), link = ProbitLink())` silently fit
+  a probit model under the logit name. `OrdinalLogit` pins the link and
+  refuses any other one, at both the `fit_gllvm` and `@formula` entry points.
+  Twin-verified against a real gllvmTMB 0.7.1 install (commit `9539352f6`) on
+  a fixed fixture dataset: logLik agrees to 3.1e-9 absolute at each side's own
+  optimum (test tolerance `atol = 1e-6`), and Julia's own Laplace marginal
+  evaluated at R's fitted coordinates reproduces R's logLik to 2.7e-11.
+  Per-trait cutpoints agree to at most 5.4e-6 (test tolerance `atol = 1e-3`)
+  and `Lambda * Lambda'` (loadings are only sign-identified) to at most 4.2e-5
+  (test tolerance `atol = 1e-3`) (`test/test_ordinal_logit_twin.jl`, tagged
+  `gllvm-parity-tag: P1`).
+
+### Fixed
+- **Gaussian `profile_ci` returned exponentiated bounds for the signed `sigma_phy[t]`.**
+  `sigma_phy` (the per-trait phylogenetic unique effect, `has_phy_unique = true`) is on an
+  identity, signed link, as the Wald `confint` already treats it, but `profile_ci` labelled
+  it `:log_sd` and applied `exp` to its bounds. `profile_ci`, `tmbprofile_wrapper`,
+  `profile_phylo_signal` and the bridge's Gaussian profile route returned intervals on the
+  wrong scale, for example [0.082, 12.19] around an estimate of -0.217, which the interval
+  did not contain. The bounds are now on the parameter's own scale ([-2.50, 2.50] for that
+  fit, which is wide because the parameter is weakly identified there).
+  `test/test_profile_sigma_phy_identity.jl`.
+- **Zero-truncated NB2 (shared r) Wald intervals now treat r at the Poisson limit as a
+  boundary.** The shared-r `_family_ci` adapter now sets the fit-level boundary flag for an
+  r above 1e6, as the per-trait adapter already did, so the Wald interval conditions that r
+  out of the Hessian instead of giving it a meaningless finite standard error. The bootstrap
+  refits still do not report `upper_boundary`: the bootstrap drops a flagged replicate from
+  every parameter's quantiles, and on per-trait data with one trait at the limit every
+  refit is flagged, so it would leave no intervals. `test/test_truncnb2_ci_boundary.jl`.
+- **Family profile intervals report 0 for an open lower end on a log-scale parameter.**
+  When a dispersion or SD's profile deviance stays below the chi-square cutoff as the
+  parameter goes to 0, no lower crossing exists and `confint(...; method = :profile)`
+  returned `lower = NaN` with `status = :partial` (zero-truncated NB2 r on the #581
+  fixture draw 104: D levels off at about 2.35 as r goes to 0). A refit at 1e-6 times the
+  estimate, run before the lower bracket search, now checks whether the deviance is still
+  below the cutoff there; if so the bound is reported as 0 with `status = :profile` and the
+  search (583 s on that draw) is skipped. A failed or non-finite refit falls through to the
+  search. Other log-scale intervals pay one extra refit. `test/test_family_profile_open_lower.jl`.
+- **Gamma and Beta grouped fits no longer treat a large dispersion as a
+  boundary.** `fit_gamma_gllvm_grouped`, `fit_gamma_gllvm_grouped_cov`,
+  `fit_beta_gllvm_grouped` and `fit_beta_gllvm_grouped_cov` flagged any fitted
+  shape α or precision φ above `1e6` in `dispersion_boundary` and forced
+  `converged = false`. That rule fits NB r, whose large end is the flat Poisson
+  limit, but a large Gamma α or Beta φ is the near-deterministic end, which the
+  data identify: on data drawn with α = 1e8 or φ = 1e8 the fits estimate 8.9e7
+  to 1.3e8. These routes now flag only the lower end (`1e-6`, via
+  `_dispersion_group_lower_boundary`); NB2 and NB1 grouped fits keep both ends,
+  and the bootstrap adapters already left the Gamma/Beta upper end unflagged
+  (#565, #568). Grouped Gamma fits with a large α now report `converged = true`.
+  Grouped Beta fits with a large φ are no longer flagged but still report
+  `converged = false`: the #480 gradient test is not met for φ above about 1e5
+  (a separate issue, recorded as `@test_broken`). Log-likelihoods are unchanged.
+  Test: `test/test_gamma_beta_upper_boundary.jl` (literal fixture
+  `test/fixtures/gamma_beta_upper_boundary.toml`).
+- **Zero-truncated NB2 fits reported `converged = true` at a degenerate dispersion.**
+  With one count of 10^13 in otherwise ordinary data, `fit_truncated_nbinom2_gllvm`
+  stopped at r = 3.1e-46 and `fit_truncated_nbinom2_gllvm_pertrait` at r_1 = 1.7e-52,
+  both flagged converged. Both fitters now report `converged = false` with a warning
+  when any `r` is below 1e-6. Above 1e6 (the Poisson limit) they only warn that `r` is
+  not identified: such fits are usually sound (trait 5 of the seed-58 parity data ends at
+  r = 9.5e9 with the log-likelihood matching gllvmTMB), so this differs from the NB2
+  grouped fitters' `_dispersion_group_boundary`, which flags both ends.
+  `test/test_truncnb2_dispersion_boundary.jl`.
+- **Per-trait zero-truncated NB2 fits could stop at a worse optimum with the wrong trait at
+  the Poisson limit.** On two ordinary draws (p = 4, n = 120, true r_t 2 to 5),
+  `fit_truncated_nbinom2_gllvm_pertrait` ended 0.35 and 2.0 log-likelihood units below
+  gllvmTMB's fit of the same model, with one trait's r stalled near 1e9 where the
+  likelihood is nearly flat. The fitter now restarts any trait whose r ends outside
+  `[1e-6, 1e6]` from r = 1, as the NB2 grouped fitters do (`_nb_boundary_restart`, #477),
+  and keeps the restart only if it improves the fit. Both draws then match gllvmTMB's
+  log-likelihood to four decimal places. `test/test_truncnb2_pertrait_boundary_restart.jl`.
+- **Student-t fits with estimated ν no longer stop at the Gaussian limit when an interior
+  optimum is higher.** When an estimated ν ran to the ν → ∞ boundary, `fit_studentt_gllvm`
+  kept that fit, although the per-trait ν profile can have a higher interior peak that
+  L-BFGS passed from its start at ν = 3. On the near-Gaussian parity data the default fit
+  ended at ν₁ ≈ 5e9 (logLik −1430.162) while gllvmTMB found ν₁ = 17.7 (−1430.097). Such fits
+  now restart the boundary traits from ν = 20 and ν = 50 and keep the best optimum; fits
+  whose ν stays finite are unchanged, and boundary fits cost up to two extra optimisations.
+- **Gaussian `@formula(y ~ x)` fitted no species intercepts (#520).** The
+  default Gaussian formula branch passed a site-only design to
+  `fit_gaussian_gllvm`. `y ~ x` and `y ~ 1 + x` now fit one intercept per trait
+  plus shared slopes, as the docstring states and as the other formula routes
+  and gllvmTMB's `value ~ 0 + trait + x` do; `y ~ 0 + x` is unchanged.
+  **Gaussian formula results with covariates change.**
+- **Gaussian `fit_gllvm` without `X` fitted no species intercepts (#519).**
+  `fit_gllvm(Y; family = Normal(), K)` routed to `fit_gaussian_gllvm`, whose
+  `X = nothing` means a zero mean, so shifting `Y` changed the log-likelihood.
+  It now estimates one intercept per trait, as every other family, `pervar =
+  true` and gllvmTMB do. `@formula(y ~ 1)` and `cv_gllvm` with `Normal()` use the
+  same route; `@formula(y ~ 0)`, explicit `X` and `fit_gaussian_gllvm` itself are
+  unchanged. Post-fit and interval routines apply the intercepts when `X` is
+  omitted. **Gaussian results change for uncentred data.**
+- **Two-level Gaussian fits could report `converged = true` at a spurious
+  loglik of +1e22 or more, which collapsed the ICC bootstrap lower bound; more
+  generally the two-level marginal was inaccurate when a within-individual
+  variance was tiny.** `_twolevel_loglik` (`src/twolevel.jl`) evaluated the
+  within-individual quadratic form through a subtractive Woodbury solve,
+  which cancels terms of size `Λ_W[t,:]² / σ²_W[t]`. Two failure modes
+  followed. (1) Sign: at extreme variance ratios (for example `σ²_W`
+  spanning 1e-37 to 1e15) the quadratic form came out negative, which is
+  impossible for a positive definite `Σ_W`, and L-BFGS ran to those points.
+  On the CORE070 CI-ROUTE-011 fixture (`repeatability_ci(...; method =
+  :bootstrap, nsim = 200, seed = 11)`), 8 of the 153 retained bootstrap
+  refits sat there, with repeatability near 0 or 1. They pulled the lower
+  bounds for traits 2 and 4 down to 1.1e-7 and 4.5e-40, against gllvmTMB's
+  0.126 and 0.414. (2) Precision: before the sign flips, the value is
+  finite but wrong. At the fixture's point fit with one `σ²_W[t]` set to
+  1e-15 the log-likelihood was already overstated by about 0.5 to 1.5 nats
+  against an exact BigFloat evaluation, and by up to 600 nats at 1e-17 to
+  1e-18, with nothing to flag it. `Σ_W` is
+  now factored by a dense `p × p` Cholesky and the quadratic form computed as
+  `‖L⁻¹ Y_ic‖²`, as `src/families/gaussian_pervar.jl` already does. The error
+  against BigFloat is at most 2.5e-14 relative over a sweep of `σ²_W[t]` from
+  1e-12 to 1e-30 and 20 random extreme points. A failed factorisation, or a
+  negative quadratic form, returns `-Inf` so the optimiser rejects the step.
+  On the bootstrap call above the lower bounds become 0.60, 0.15, 0.11 and
+  0.40 (gllvmTMB: 0.57, 0.13, 0.13, 0.41); with `nsim = 1000` they are 0.56,
+  0.13, 0.13 and 0.41. The point fit moves by about 1e-8 in repeatability.
+  Other Woodbury quadratic forms in the package (`likelihood.jl`,
+  `profile.jl`, `reml.jl`, the sparse-phylogenetic paths,
+  `lowrank_cholesky.jl`) are not changed here and are being audited
+  separately.
+- **Truncated NB2 (shared r) could report `converged = true` at a Laplace
+  breakdown point, including a spurious global maximum.**
+  `fit_truncated_nbinom2_gllvm` uses the observed curvature in the Laplace
+  log-determinant, which is negative for small r, so a site's Laplace
+  precision could approach singularity and inflate the value. On 20 draws
+  (Julia 1.10; p = 4, n = 150, K = 1, r = 0.3), 4 fits converged with a smallest site
+  eigenvalue of 8e-6 to 1.3e-4 and a Laplace value 40 to 139 units above the
+  exact marginal; on one draw that point beat the healthy optimum by 23 units.
+  The fitter now walls off sites whose Laplace precision has an eigenvalue
+  below 0.1 (the zi_* route's floor, PR #557), reports an optimum within 10% of
+  that floor as not converged with a warning, retries once with a moment-based
+  start for r when the first fit ends at the guard (if both end there, the
+  higher-loglik fit is reported, still flagged), and records
+  `min_site_eigen` on `TruncatedNegBin2Fit`. All breakdown draws now reach the
+  healthy optimum (4 of 4 on Julia 1.10, 2 of 2 on a 1.13 sweep); 30 of 34
+  healthy fits are unchanged to 1e-10, one moves to a higher healthy optimum
+  (+2.11), and three end up to 5e-4 lower at a gradient-converged point where
+  main's fit had stopped on `f_converged` alone (gradient norm up to 45) on the
+  upper lip of a pre-existing discontinuity of about 5.5e-4 in the Laplace
+  objective. The public
+  marginal functions and the per-trait fitter are unchanged (`eigmin_floor`
+  defaults to `-Inf` there). Decision note:
+  `docs/dev-log/decisions/2026-09-27-truncnb2-laplace-breakdown-guard.md`;
+  test: `test/test_truncnb2_laplace_breakdown.jl`.
+- **`getLV` on a plain grouped-dispersion fit had no way to use the fit's `offset`.**
+  `fit_nb_gllvm_grouped`, `fit_nb1_gllvm_grouped`, `fit_beta_gllvm_grouped` and
+  `fit_gamma_gllvm_grouped` accept `offset`, but their `getLV` methods did not, so the
+  scores for an offset fit were the modes of a different linear predictor from the one
+  the fit maximised. The four methods now take `offset = nothing` (p×n, the same matrix
+  given to the fitter), pass it to the grouped mode search, and throw
+  `DimensionMismatch` on a wrong-sized offset. Scores without an offset are unchanged.
+  `test/test_grouped_getlv_offset.jl` checks that a per-trait constant offset gives the
+  same scores as shifting `β` by that constant, for all four families. The `_cov`
+  variants are unaffected: they take no user offset and already pass `Xγ`.
+- **Two-part fitters scored an observed NaN or negative value as an observed zero.**
+  Every two-part log-density branches on `y > 0`, so NaN and negative values took the
+  zero branch and the fit reported `converged = true`; `fit_beta_hurdle_gllvm` also
+  clamped values `>= 1` into (0,1). The twelve public fitters (`fit_zip_gllvm`,
+  `fit_zip_gllvm_cov`, `fit_zinb_gllvm`, `fit_zinb_gllvm_cov`, `fit_zib_gllvm`,
+  `fit_zib_gllvm_cov`, `fit_hurdle_poisson_gllvm`, `fit_hurdle_nb_gllvm`,
+  `fit_delta_lognormal_gllvm`, `fit_delta_gamma_gllvm`, `fit_delta_gamma_gllvm_va`,
+  `fit_beta_hurdle_gllvm`) now throw `ArgumentError` naming the value, its index and
+  the support before fitting: NaN and negatives for the count families; NaN,
+  negatives and `Inf` for the delta families; NaN, negatives and values `>= 1` for
+  beta-hurdle. NaN is not a missing-value marker in this package. A non-integer count
+  (0.5), a huge finite value (1e300) and a ZIB count above `N` are not refused up
+  front: they already end on the fitter's failure verdict (`converged = false`), and
+  the #504 bootstrap-verdict tests rely on that. Valid data fits exactly as before.
+  `test/test_twopart_input_check.jl`.
+- **Grouped per-site mode search no longer 2-cycles around the mode (zero-truncated NB2
+  objective; NB1, truncated-Poisson and censored-Poisson grouped `getLV`).** In
+  `_grouped_laplace_mode`, Fisher scoring overshoots by about 2x where the observed
+  curvature is about twice the Fisher weight, and steps below `1e-3(1 + |z|)` skipped
+  every check. The loop stopped wherever `maxiter` fell, so the truncated-NB2 Laplace
+  objective jumped by 5.5e-4 for a 1e-5 step in log r (seed-103 audit draw, site
+  y = [121, 1, 1, 2]). A step is now halved while the gradient along it at the trial point has
+  turned past minus one half of its starting value, on large and small steps alike; a full
+  step that passes is unchanged. Families without `_laplace_mode_should_backtrack`
+  (NB2, Beta, Gamma, ...) are untouched. `test/test_truncnb2_mode_search.jl`.
+- **`chibar2_pvalue`/`variance_lrt` silently returned a p-value of 1.0 for a `NaN`
+  `LRT` or log-likelihood instead of refusing it.** `LRT > 0` is `false` for `NaN`, so
+  a missing or non-finite input fell through to the "no evidence against the reduced
+  model" branch unnoticed — a silent p = 1 is exactly the failure class this repo
+  exists to catch, and gllvmTMB's `R/chibar.R` already refuses this input (classed
+  errors `gllvmTMB_chibar2_bad_LRT` / `gllvmTMB_variance_lrt_bad_loglik`; see the P1
+  twin above). `chibar2_pvalue` now throws `ArgumentError` for a `NaN` `LRT`, and
+  `variance_lrt` throws `ArgumentError` for a `NaN` `ℓ_full`/`ℓ_reduced`, before either
+  could reach that branch. An infinite `LRT` is unaffected and still returns a valid
+  p-value (`is.na(Inf)` is `FALSE` in R too, so gllvmTMB does not refuse it either).
+  No caller in this package passes a `NaN` to either function.
+- **Ordered-beta fits could report `converged = true` at a non-stationary point,
+  with a restart reaching a genuinely better optimum (#501).** The per-site
+  inner mode search (`_ordered_beta_mode`, `src/families/ordered_beta.jl`) ran
+  undamped Newton and returned whatever `z` it held at `maxiter`, converged or
+  not, the same defect class as #479/#484/#503. The per-site conditional
+  density here is a nonconvex mixture of two point masses (at 0 and 1) and an
+  interior Beta piece, so an undamped step can overshoot across a local ridge
+  between two competing per-site modes; independent verification measured the
+  returned mode's central finite-difference gradient scaling as `1/h` across
+  five step sizes spanning four orders of magnitude, the signature of a jump
+  discontinuity in the *outer* marginal negative log-likelihood as the outer
+  parameters cross a threshold, not a smooth steep slope, tripping the outer
+  optimiser's own x/f convergence test (the #485-class failure). The search now
+  halves any step that lowers the per-site log-posterior (so small and accepted
+  full steps are bit-identical to the old loop), certifies convergence only
+  when the full proposed step is below `tol`, retries once with a 20x iteration
+  budget for a genuinely slow-but-healthy site (mirrors #509's Student-t /
+  #507's NB1 review retry; there is no second, alternate curvature to fall
+  back to here, unlike Gamma/NB1's LogLink fallback, since this family's
+  per-trait weight is already the single, clamped-positive observed
+  curvature), and returns `-Inf` for a site whose search still fails, so the
+  fitter's own `1e12` sentinel fires instead of scoring a garbage surface. On a
+  seed that reproduced the defect on this platform, the fit moved from
+  `loglik = -371.9454` (reported converged, one non-stationary site verified by
+  an independent ForwardDiff Newton-decrement check) to `-172.616763`,
+  matching an independent restart to 3.7e-5 and reaching 0 non-stationary sites
+  across all three of the issue's flagged seeds (120 sites probed). `getLV`/
+  `predict` are unaffected in signature (they take the best available mode
+  regardless of convergence, as the shared generic core does).
+- The `chibar2_pvalue` notes no longer list choosing K (K vs K+1) as a use case:
+  that test is non-regular and needs a parametric bootstrap.
+- **Conway-Maxwell-Poisson fits no longer report a value from a diverged inner
+  search (#503).** `_compoisson_mode` (`src/families/com_poisson.jl`, this
+  family's own per-site Laplace mode search — it shares no code with the
+  generic `_laplace_mode` core) ran an undamped Newton step every iteration
+  and returned whatever `z` it held at `maxiter`, converged or not, the same
+  defect class as #479/#480/#484/#500/#507/#509: measured 7/266 non-mode
+  stress-probe sites. A step that lowers the per-site log-posterior is now
+  halved, and "converged" requires both the proposed step and the
+  log-posterior gradient itself to be small (mirrors the Student-t grouped
+  fix, #509 — a large, well-conditioned curvature can solve for a tiny step
+  while the gradient is still far from zero). `_compoisson_loglik_site` now
+  returns `-Inf` when a site cannot certify a stationary point, so the
+  fitter's `1e12` sentinel fires instead of a garbage finite value; a
+  genuinely healthy but ill-conditioned site is retried once at a 20x
+  iteration budget before giving up (mirrors #507/#509). Values at sites
+  where the old undamped loop already converged are unchanged (to 1e-8).
+  **Not covered by this fix:** a separate, unconfirmed anomaly noted by a
+  sibling audit (2/10 fits showing an enormous outer finite-difference
+  gradient, no better restart) is documented in this PR's body rather than
+  fixed — restart evidence does not support a missed optimum, and the
+  `compoisson_logz` branch switch this fix's PR re-checked directly is
+  continuous in value and derivative across the crossover, so the
+  suspected mechanism is this same class of undamped-search sensitivity,
+  not a kink in the normalizer.
+- **Mixed-family fits (`fit_mixed_gllvm`) no longer report convergence from a
+  diverged inner search (#503).** The per-site Laplace mode search inside
+  `_mixed_laplace_mode` (a GLLVM where different traits carry different response
+  families on one shared latent block) took undamped Fisher-scoring steps and
+  had no convergence flag: a site could be left far from its stationary point
+  while `_mixed_loglik_site` still returned a finite log-likelihood. A
+  re-measure on `main` across three family mixes (Poisson/Binomial/Gamma;
+  Normal/NegativeBinomial/Beta; a four-trait Poisson/Gamma/Beta/Binomial mix)
+  found 120/1200 finite-non-mode sites using the class audit's own
+  gradient-of-the-score probe. The search now halves any step that lowers the
+  per-site log-posterior. It declares convergence when both the step `|Δ|` is
+  below the caller's `tol` (default `1e-9`) and the Newton decrement `|g'Δ|` is
+  below `1e-6`. The decrement replaces an absolute bound on the
+  gradient `g` because `Λ'WΛ + I` can be badly scaled (a Normal trait whose
+  fitted σ is driven near zero makes `W = 1/σ²` enormous), and there a genuine
+  mode leaves a large raw `g` in the stiff direction purely from rounding. At a
+  mode reached to rounding the step can stall at the floating-point floor
+  (measured 1e-9 to 2e-8) and never fall below `tol`, so a decrement below
+  `1e-12` also counts as convergence, but only when the step can no longer
+  move: at the floor with the step no longer shrinking, or when the line
+  search cannot move `z`. An earlier revision accepted any decrement below
+  `1e-12` outright; that ignored a caller's tighter `tol` (the Gamma
+  cross-kernel test asks for `tol = 1e-13`) and failed that test in CI, so the
+  clause is now restricted to steps that have stopped making progress.
+  Once a full-size step has been rejected in a call, later steps skip
+  the small-step shortcut and go through the line search, because the undamped
+  Fisher map is not always a contraction near the mode (a Gamma trait with
+  shape 0.7 far into its tail oscillates otherwise); this latch is off once the
+  step is at the floating-point floor, where the line search could only compare
+  rounding noise. A site that still cannot certify a stationary point within a
+  20x-widened iteration budget returns `-Inf`, so the fitter's own `1e12`
+  failure sentinel fires instead of a silently wrong log-likelihood.
+  `getLV`/`predict` call `_mixed_laplace_mode` directly and keep their prior
+  no-sentinel behaviour. Whole-fit check (20 simulated datasets, 5 family
+  mixes, Julia 1.10 only): of the 16 fits that were healthy on `main`
+  (converged, every site independently certified stationary), none got worse;
+  15 moved by at most 1.8e-8 in log-likelihood and one (Normal/NB2/Beta) rose
+  by 0.014. Of the 4 fits that were not healthy on `main`, 3 now reach a higher
+  log-likelihood (by 0.24, 14.4 and 1749; `main`'s value in the last case was
+  computed at non-mode sites) and one still hits the outer iteration limit, as
+  on `main`, at the same value. Total fit time was 47.4 s against 45.0 s on
+  `main`; per fit the ratio ranged from 0.08 to 2.1. These figures are specific
+  to those datasets, not a general bound.
+  An independent review of the earlier revision (15 datasets, its own seeds,
+  6 family mixes) found
+  none of 10 healthy fits worse beyond outer-optimiser noise (one lower by
+  1.2e-6 on a flat Gamma-shape ridge, where the kernel reproduces `main`'s value
+  at `main`'s parameters) and a total fit time of 1.5x `main`. It also set the
+  limits of the ill-conditioning argument: with one latent variable it holds
+  down to a Normal σ of about 1e-13, below which rounding keeps `|g'Δ|` above
+  both tolerances and the site returns `-Inf`; with two or more latent
+  variables and σ at or below 1e-9, `A` is too ill-conditioned (condition number
+  above 1e16) for the step to be trusted and the site returns `-Inf` where
+  `main` returned a finite wrong value. A floor on the Normal σ is the remedy
+  and is not in this change.
+- **`confint(..., method = :profile)` and `method = :bootstrap` could accept a
+  silently failed inner refit.** `_family_profile_refit` and `_family_bootstrap`
+  (`src/confint_family.jl`) judged a refit's success only by `isfinite` on its
+  objective or parameter vector, never checking `Optim.converged` or the refit's
+  own convergence flag — so a constrained refit that landed on the package's
+  `1e12` failure sentinel (whose finite-difference gradient is exactly flat, so
+  `Optim.converged` reports `true` at iteration 0 regardless) was counted as a
+  success, and likewise for a bootstrap replicate (#504). `_family_profile_refit`
+  now requires `Optim.converged` in addition to a non-sentinel minimum (shared
+  `_fit_verdict` helper, the same guard used on the point-fit path). `ad.refit`
+  adapters may now report their own verdict as `(θ = ..., converged = ...,
+  loglik = ...)`; a `false` `converged` or a sentinel-valued `loglik` is rejected
+  even though `θ` is finite, and `n_converged` reflects the stricter count.
+  Existing per-family bootstrap adapters still return a bare parameter vector
+  (the prior `isfinite`-only path) and are migrated to the richer contract one
+  family at a time in follow-up PRs; healthy fits and profile brackets that were
+  already at a genuine optimum are unchanged. A caller of
+  `confint(...; method = :profile)` may now see a bracket endpoint report
+  `:partial` or `:failed` where it previously returned a plain number (e.g. a
+  Beta grouped-dispersion `phi` upper bound of `1.09e19` on `main` was never a
+  real confidence bound and now correctly reports `:partial` with `NaN`).
+- **NB1 grouped kernel (`fit_nb1_gllvm_grouped`): the per-site Laplace mode search
+  took undamped Fisher-scoring steps and could report `converged = true` at a
+  non-mode point with a finite but incorrect log-likelihood.** The search now
+  halves any step that lowers the per-site log-posterior, falls back to a damped
+  Newton search on the observed curvature under `LogLink` when Fisher scoring
+  stalls, and returns `-Inf` for a site whose search still fails, so the fitter's
+  own convergence sentinel fires correctly. A genuinely converging site that
+  simply needs more than the default 100 Fisher-scored iterations under
+  ill-conditioned curvature now gets a 20x-iteration-budget retry before falling
+  back to the observed-curvature search, so it is no longer misreported as
+  `-Inf` (2/200 independently-healthy sites in an external reviewer's stress
+  probe). On every healthy site the returned log-likelihood is unchanged to
+  1.6e-9 under this PR's own probe (Lambda scale up to 3x and a beta/phi
+  perturbation varied separately); this figure is specific to that probe's
+  conditions, not a general bound — the same reviewer's harsher probe, which
+  stacks a 3x Lambda scale together with a ±50% perturbation on every parameter,
+  measured up to 8.5e-7 (#503, #507).
+- **Beta grouped kernel (`fit_beta_gllvm_grouped`, the default route for
+  `fit_gllvm(...; family = Beta())`): the per-site Laplace mode search could
+  2-cycle and score a point away from the mode.** Where responses sit near 0 or 1,
+  undamped Fisher scoring overshoots; on one measured site it alternated around the
+  mode and the site value was off by up to 15 log-likelihood units. The search now
+  halves any step that lowers the per-site log-posterior, falls back under
+  `LogitLink` to a step weighted by the larger of the observed and Fisher curvature
+  (the observed Beta weight alone can be negative), then to a 20x Fisher retry, and
+  returns `-Inf` if all fail. On 18,000 simulated sites every site where the old
+  loop converged is bit-identical; the 4 sites it got wrong now match an
+  independent reference. Four whole fits tested gave identical log-likelihoods. On
+  the #480 screen dataset d05 the corrected surface sent L-BFGS to a different
+  stationary point (log-likelihood 269.30, one precision drifting to about 1100 on a
+  flat plateau), which meets the gradient test. The #480 restart (from every `φ = 1`
+  and from the returned point, keeping only a better run) now also fires when a
+  group's precision is more than 100 times the median, and d05 again reaches 272.61.
+  Part of #503.
+- **`getLV` on grouped Beta fits now returns the per-site mode.** `getLV` (and so
+  the R bridge `scores` and `ordination`) used the generic mode search, which stops
+  off the mode at the same sites the Beta likelihood used to get wrong (off by up to
+  about 4e-4 on the measured panel). It now uses the Beta likelihood's own mode search,
+  so the scores are the modes the fit's objective was evaluated at. Log-likelihoods
+  and estimates do not change.
+- **NB2 grouped kernel (`fit_nb_gllvm_grouped`, the default route for
+  `fit_gllvm(...; family = NegativeBinomial())`): the per-site Laplace mode search
+  could 2-cycle and report `converged = true` at a poor optimum.** Where a count
+  sits far above its mean, the Fisher weight understates the observed curvature,
+  the undamped step overshoots, and the site returned a value away from its mode.
+  The search now halves any step that lowers the per-site log-posterior, falls
+  back to exact observed-curvature Newton under `LogLink`, then to a 20x Fisher
+  retry, and returns `-Inf` if all fail. Fitted NB2 results change on the default
+  route: on a 48-cell panel 18 fits reached higher log-likelihoods (by up to
+  5,340), 28 were unchanged, and none got genuinely worse. More fits now report
+  `converged = false` through the existing dispersion-boundary warning, and NB2
+  grouped fits run about 70% slower. `fit_nb_gllvm_grouped`,
+  `fit_nb1_gllvm_grouped` and `fit_beta_gllvm_grouped` now accept `β_init` and
+  `Λ_init`, as `fit_nb_gllvm` does (#503, #521).
+- **`getLV` on grouped NB2, NB1 and Gamma fits now returns the per-site mode.**
+  `getLV` (and so the R bridge `scores` and `ordination`) used a generic mode search
+  whose undamped small steps could oscillate where a count or a Gamma response sits
+  far above its mean, and it stopped silently at 100 iterations. It now uses the
+  same mode search as each family's likelihood. At converged fits about 0.3 to 4.5%
+  of site scores move, by up to about 1e-3 on the latent scale; scores that were
+  already at the mode are unchanged to 1e-8. Log-likelihoods, estimates and
+  intervals do not change. Known limits: `getLV` for the no-covariate grouped fits
+  takes no `offset`, so a fit made with an offset gets scores without it; and
+  `getLV` always uses the default inner tolerance, not a fit's `newton_tol`. Beta
+  grouped scores are unchanged (follow-up).
+- **Gamma grouped fits no longer report convergence from a diverged inner search.**
+  The per-site mode search inside `fit_gamma_gllvm_grouped` and its covariate and
+  shared-shape routes could diverge at the fitter's own start and still return a
+  finite value, so a fit could report `converged = true` far below the optimum (43
+  log-likelihood units on the case in #479). The search now halves steps that lower
+  the site objective and, under the log link, falls back to damped Newton; a site that
+  still does not converge returns `-Inf`, so the fitter's failure sentinel fires.
+  Values where the old search converged are unchanged (to 1e-8). Healthy fits run
+  about 20 to 25 percent slower.
+- **Parity tools now refuse a wrong `GLLVM_PARITY_R_LIBS`, dev-only.** Seven `tools/core070_*`
+  parity scripts and `test/parity/parity_helpers.jl` called `library(gllvmTMB)` directly, so a
+  library named by `GLLVM_PARITY_R_LIBS` with no gllvmTMB was silently ignored in favour of R's
+  default library. They now route through the same guard as `tools/core070_second_order`
+  (`second_order_r_lib()`) and refuse instead. No effect on `gllvm`/`fit_gllvm`.
+- **Beta grouped fits no longer report convergence at a non-stationary point.**
+  `fit_beta_gllvm_grouped` (the default route for `fit_gllvm(...; family = Beta())`)
+  and `fit_beta_gllvm_grouped_cov` could report `converged = true` after Optim stopped
+  on a zero-length line-search step with a large gradient, well below a better point
+  (#480). They now report convergence only when the gradient meets a scale-aware test,
+  `g_residual <= max(g_tol, g_tol * |nll|)` (the rule the Tweedie fitter uses), and
+  otherwise restart once from a neutral start and once from the returned point,
+  keeping the best only if it is better. Some fits that used to claim convergence now
+  report `converged = false`; the cause there is the inner mode search (#482).
+- **NB1 grouped fits no longer report convergence at a non-stationary point.**
+  `fit_nb1_gllvm_grouped` (the default route for `fit_gllvm(...; family = NB1())`)
+  could report `converged = true` after Optim stopped on a zero-length line-search
+  step (`x_converged`/`f_converged`) with a large gradient (#485). It now reports
+  convergence only when the gradient also meets the same scale-aware test the Beta
+  and Tweedie grouped fitters use, `g_residual <= max(g_tol, g_tol * |nll|)`
+  (`_nb1_grouped_g_met`, #480/#483 precedent), applied only inside this one fitter.
+  Fits that were already at a genuine stationary point are unchanged.
+- **Zero-inflated, hurdle and delta fits no longer score an unfinished inner search.**
+  The per-site mode search behind `fit_zip_gllvm`, `fit_zinb_gllvm` and
+  `fit_zib_gllvm` (and their `_cov` variants), the hurdle Poisson and NB fitters, the
+  delta Gamma and lognormal fitters and `fit_beta_hurdle_gllvm` took full Fisher steps
+  and stopped after 100 of them with no signal. The site was then scored wherever the
+  search had stopped, and the value was finite, so a fit could report
+  `converged = true` well below the optimum: -935.296 on the ZIP case in #484, where a
+  restart reaches -920.603. The search now halves steps that lower the site objective
+  and, where Fisher scoring does not converge, continues with damped Newton on the
+  observed curvature. A site that still does not converge returns `-Inf`, so the
+  fitter's failure sentinel fires. Site values where the old search converged are
+  unchanged (to 1e-8) for ZIP and hurdle Poisson (checked directly on one dataset
+  each) and, per the audit datasets below, for the two ZINB fits that had already
+  converged. ZIB and the delta families were not independently re-verified in this
+  pass. It is NOT true for HurdleNB (see the next entry).
+  On the audit datasets three ZIP and ZINB fits rose by 7.5 to 34.7 log-likelihood
+  units and now stop at a stationary point; two clean fits stayed at the same point.
+  `getLV` for these families uses the same search. A near-converged site could still
+  be walked away from and returned as `-Inf` for zero-inflated families with
+  occurrence loadings (`Lambda_z != 0`, only reachable through the exported
+  `zip`/`zinb`/`zib`/`twopart_marginal_loglik_laplace` functions' `Lambda_z` keyword,
+  never through a fitter or `getLV`, which always use `Lambda_z = 0`): the small-step
+  branch of the damped-Newton fallback accepted any small step unconditionally, and
+  that stage's step matrix mixes a Fisher occurrence weight with an observed count
+  weight and omits their cross-curvature, so a "small" step could still lower the
+  site objective. With `Lambda_z = 0` that gap does not exist (the Newton matrix is
+  the exact Hessian of the site objective or larger after clipping), so the fix below
+  is scoped to `Lambda_z != 0` only; widening it to every small step broke
+  `fit_delta_gamma_gllvm(...; disp_group = :species)` (a per-trait shape estimate blew
+  up to 4e5 with `Lambda_z = 0`). A step that would lower the objective is now halved
+  (falling back to keeping the current iterate only when halving also cannot raise
+  the objective and the gradient there already meets a relaxed tolerance) rather than
+  being accepted unconditionally or declaring outright failure. The `Lambda_z = 0`
+  fast path used by every existing fitter is untouched, so this adds no runtime cost
+  there (see the next bullet for the #484 cost that does apply to every fitter, via
+  the per-site mode search itself). ZINB and ZIB fits on the audit datasets ran
+  within 2 to 23 percent of their pre-#484 (`origin/main`) time. Fixes #484.
+- **The `Lambda_z != 0` small-step guard above could itself return a false `-Inf`
+  (#500 verify pass).** The first version of that guard, when a small step lowered
+  `q(z)` and the gradient there was not already within a relaxed tolerance, declared
+  outright failure with no attempt to halve the step, unlike every other step in the
+  search; a healthy, near-converged site could hit this if the small step's own
+  floating-point noise made it look like a descent step (found: 35 of 11,560 sites
+  on a perturbed-start probe, ZIP/ZINB/ZIB, loadings x2/x3/x5). Fixed by trying the
+  same step-halving loop a large step uses before declaring failure. This is not
+  reachable from any fitter (Lambda_z = 0 everywhere they call in), so no fitted
+  result changes. A second, sharper regression showed up while fixing this: trying
+  halving before the relaxed-gradient check, rather than after, turned 1637 of 4672
+  correct relaxed-converged sites into false failures, because near the mode a
+  halving loop can "succeed" on floating-point noise and keep the outer search
+  spinning through `maxiter` iterations instead of returning immediately. Checking
+  the relaxed exit first, as before, removes that regression.
+- **Runtime cost of the #484 damping, measured and partly recovered (#500).** The
+  step-halving / damped-Newton fallback needs the site log-posterior `q(z)` at least
+  twice per large step; #500 removes one of the two `_twopart_logpost` calls by
+  summing `logf` inside the per-iteration pieces loop that already runs (for the
+  gradient and step matrix) to get `q0` for free, instead of a second full
+  evaluation. Measured on two fits where the fitted value and iteration count match
+  the pre-#484 `origin/main` result (to 1e-8, so this isolates cost, not a different
+  optimum), minimum of 3 warm runs, macOS aarch64, Julia 1.10.12:
+  `fit_hurdle_poisson_gllvm` (p = 6, n = 150, K = 2) 1.06 s on `main` vs 1.27 s on
+  this branch (+20%, 25 L-BFGS iterations both); `fit_zip_gllvm` (p = 6, n = 150,
+  K = 2) 4.36 s on `main` vs 5.43 s on this branch (+25%, 30 vs 31 iterations). The
+  remaining overhead is the per-site mode search itself (an extra pass of Fisher
+  scoring plus, where that does not converge, the Newton fallback), which #484
+  added and #500 does not remove.
+- **HurdleNB estimates, log-likelihood and AIC change (chain-rule fix, #484).**
+  The `HurdleNB` positive-part score gained the missing NB2 chain-rule factor
+  `a = r/(r + mu)` (`d/d eta log NB = a(y - mu)`), so the per-site mode search now
+  climbs the true log-density instead of a score that was not its derivative; the
+  Laplace log-det weight changes with it. Both move for essentially every HurdleNB
+  fit, not just ones that previously failed to converge. Measured on one simulated
+  dataset (p = 6, n = 150, K = 2, true r = 6): `fit_hurdle_nb_gllvm` log-likelihood
+  -1766.970 with r = 1.32e7 (pinned at the Poisson boundary, 173 iterations) moves to
+  -1746.342 with r = 3.576 (48 iterations); the Laplace marginal at the true
+  parameters moves from -2003.994 to -1758.200. Loadings shrink too (one trait's
+  `diag(Lambda Lambda')` goes from 1.292 to 0.952). The "unchanged to 1e-8" claim
+  above does not hold for HurdleNB.
+- **NB2 with per-trait dispersion: fewer fits stuck at the Poisson boundary.**
+  `fit_nb_gllvm_grouped`, the default no-covariate route for
+  `fit_gllvm(...; family = NegativeBinomial())`, could stop with a trait's `r`
+  pushed toward the Poisson limit, well below a better point (#477). When a group
+  ends at the boundary, the fit now restarts with the boundary groups at `r = 1`,
+  together and each on its own, and keeps the best result only if it raises the
+  log-likelihood. On 16 datasets of the NATIVE-06 design this lifted 7 fits by 0.46
+  to 2.59 log-likelihood units and lowered none
+  (`docs/dev-log/core070/nb2-boundary-screen-20260924/`). Fits that never reach the
+  boundary are unchanged. On small data the NB2 likelihood can have several maxima,
+  so a fit is not guaranteed to reach the highest one. The covariate route
+  (`fit_nb_gllvm_grouped_cov`, used by `gllvm(@formula(...), ...)` with NB2 and site
+  covariates) gets the same restart; it had the same stall on 3 of 10 screened datasets.
+- **Gamma with fixed-effect covariates no longer throws `DomainError`.**
+  `fit_gllvm_cov(Y; family = Gamma(...), X, K)` stopped with
+  `DomainError("Gamma: alpha > 0")` on ordinary Gamma data, and so did
+  `fit_gllvm_speciescov`, `fit_fourthcorner_gllvm`, `fit_roweffect_gllvm` and
+  `fit_constrained_gllvm`, which share its per-site Laplace search. That search took
+  undamped steps and could return a finite value from a diverged site (about -7.2e22
+  at the fitter's own start), which sent the optimizer to a shape of 0. The search now
+  halves steps that lower the site objective, falls back to damped Newton on the
+  observed curvature, and returns `-Inf` for a site that still does not converge, so
+  the fitter's failure sentinel fires. The dispersion is also built inside the
+  objective's guard, so an out-of-range value returns the sentinel instead of an
+  error. On the #479 data the Gamma fit now reaches -569.700833, the same optimum as
+  `fit_gamma_gllvm`. Values where the old search converged are unchanged (to 1e-8).
+  **Behaviour change:** `fit_gllvm_cov` with Binomial went from converged to NOT
+  converged on 2 of 8 screened datasets, with loadings running away (largest 42.2 and
+  41.2, was 3.5 and 3.1) at a higher log-likelihood (-211.64, was -236.13; -214.44,
+  was -241.08). The old fits had stopped where unconverged sites fed the optimizer
+  wrong values; the no-covariate `fit_binomial_gllvm` runs away on the same data too.
+  Very dispersed Gamma data with responses near 1e-29 (true shape 0.1) now fail with
+  log-likelihood `-Inf` and `converged = false` instead of throwing. Healthy fits run
+  about 20 percent slower.
+- **Student-t grouped fits no longer report convergence from a diverged inner search
+  (#503).** `_studentt_grouped_loglik_site` (the per-trait-scale route reached by
+  default from `fit_gllvm(...; family = StudentTFamily())` when `nu` is estimated, and
+  from `fit_gllvm(...; family = StudentTFamily(), disp_group = :species)`) ran an
+  undamped per-site Fisher-scoring search with no convergence flag, so a non-mode
+  site could still return a finite log-likelihood: measured at 90/500 stress-probe
+  sites (about 18%), the same defect class as #479/#480/#484. The search now halves
+  any step that lowers the per-site log-posterior and requires the log-posterior
+  gradient itself to be small before declaring convergence (this family's Fisher
+  weight is a constant, so a step-size-only test — the rule every other grouped
+  kernel uses — is not sufficient here); a site that still cannot certify a
+  stationary point within a 20x-widened iteration budget returns `-Inf`, so the
+  fitter's failure sentinel fires. Values at sites where the old search's own 100-
+  iteration convergence test already fired are unchanged (max 9.1e-9 on a 500-site
+  stress probe). **Residual, not covered by this fix:** the per-site Student-t
+  log-posterior is not globally concave (a heavy-tailed outlier can create more than
+  one local mode), and about 25/500 stress-probe sites converge to a genuine but
+  non-global local mode rather than the site a from-scratch restart would find — a
+  real but far milder issue than the silent divergence this fix closes (differences
+  of a few log-posterior units, not the astronomic finite-garbage values #479
+  measured). The nu-boundary honesty guard in `fit_studentt_gllvm` (`nu_boundary`) is
+  unrelated and unchanged. The generic Laplace core's own Student-t route
+  (`disp_group = :shared`, reached by `fit_gllvm(...; family = StudentTFamily())` with
+  a fixed `nu`, or via `fit_studentt_gllvm(...; disp_group = :shared)`) shares no code
+  with the grouped kernel fixed here and is NOT covered by this PR (measured 78/500
+  stress-probe sites non-mode on the same audit).
+- **BetaBinomial fits no longer report convergence from a diverged inner search
+  (#503).** `_beta_binomial_mode` (the single per-site Laplace mode search shared by
+  every `BetaBinom` route — `fit_beta_binomial_gllvm`, its grouped and grouped+X
+  variants, and their `getLV`/`predict`) ran an undamped Newton loop on the clamped
+  observed curvature (`_bb_score_weight` floors the weight to keep `Λ'WΛ + I` SPD, but
+  does not keep any step a descent step) with no convergence flag, so a non-mode site
+  could still return a finite value: the class audit (Λ scaled up to 3x, warm start
+  perturbed ±50%) measured 27/500 non-mode sites. The search now halves any step that
+  lowers the per-site log-posterior and certifies convergence only when the full
+  proposed step is below `tol`; a site that still cannot converge is retried once at a
+  20x iteration budget (mirrors #507/#509) before the fitting objective's per-site
+  log-marginal returns `-Inf`, so the fitter's failure sentinel fires. Values at sites
+  where the old search converged are unchanged: a 220-site stress probe measured 0
+  finite non-stationary sites and 0 false `-Inf` at healthy sites, with a maximum
+  healthy-site value change of 4.3e-11. `getLV`/`predict` are unaffected in their
+  public behaviour (still return `z`) but now run the same damped, retried search.
+- **BetaBinomial fits no longer report `converged = true` at an impossible
+  log-likelihood (#515).** `betabinomial_logp` (`src/families/beta_binomial.jl`)
+  computed the log-pmf as a sum of six `loggamma` terms in `a = μφ`,
+  `b = (1-μ)φ`; each term grows like `φ log φ` while the sum stays O(1), so at
+  large `φ` the Float64 result is dominated by cancellation error (about 2e-10
+  at `φ = 1e6`, 1e-3 at `1e12`, unbounded beyond, against a 256-bit BigFloat
+  reference). The outer L-BFGS search read that error as room to improve and ran
+  `φ` to 1e21 to 1e85, where `fit_beta_binomial_gllvm` reported
+  `converged = true` at loglik up to +1.3e74. Measured on origin/main 1385b0490
+  (Julia 1.10.12, 100 simulated datasets per loading scale): 0/100 at loading
+  sd 0.9, 2/100 at sd 4.5; a third dataset diverges only on Julia 1.13.0. Near-binomial data is far more exposed: an independent review found 4 of 6
+  datasets with true `φ` of 1e3 to 1e5 diverging on main. At
+  `φ >= 1e6` the log-pmf now returns the exact Binomial(N, μ) limit, and a
+  per-family verdict (`_beta_binomial_verdict`) reports `loglik = -Inf`,
+  `converged = false` for a non-finite, sentinel, or positive objective, and
+  `converged = false` when `φ` sits at that boundary. All three diverging
+  datasets now reach an ordinary optimum (loglik -910 to -1072, `φ` 2.8 to
+  11.1) on both Julia versions; 20 healthy fits keep the same loglik (to 12 significant
+  digits) and converged flag. The grouped routes
+  (`fit_beta_binomial_gllvm_grouped`, `fit_beta_binomial_gllvm_grouped_cov`)
+  benefit from the stabilised log-pmf but do not yet have the verdict gate.
+- **GP-1 fits no longer report `converged = true` at an impossible
+  log-likelihood when a count is huge.** With one cell of healthy GP-1 data
+  (p = 4, n = 120, K = 1) set to 10^18, `fit_gp1_gllvm` on origin/main
+  863ee0f78 reported `converged = true` at loglik +6795.99 (Julia 1.10.12) and
+  +4939.22 (Julia 1.13.0). The GP-1 log-pmf (`src/families/gp1.jl`) subtracts
+  terms of size `y log y` (about 4e19 at y = 10^18), so near the per-site mode
+  its Float64 value was rounding noise: +9216.0 at the fitted α = 0.0361,
+  μ = 8.23e10, against -59.8232 in 256-bit BigFloat. For α > 0 and y >= 10^6
+  the log-pmf is now evaluated in a rearranged form (Stirling's series with the
+  `y log y` terms cancelled algebraically), which matches the BigFloat
+  reference to 1e-12 relative or 1e-6 absolute across α in {0.036, 0.2, 1},
+  μ from 1 to e^30 and y from 10^6 to 10^18. Below 10^6 the direct formula is
+  unchanged. A per-family verdict (`_gp1_verdict`) now screens each inner
+  `(β, Λ)` solve: a non-finite, sentinel, or positive objective reports
+  `loglik = -Inf`, `converged = false`, so such a point can never be selected
+  as the profile optimum. The same data now fits at loglik -1934.67 (1.10.12)
+  and -1814.33 (1.13.0); six healthy fits keep their origin/main loglik
+  (to 1e-8) and converged flag on both versions. Test:
+  `test/test_gp1_verdict.jl` with the literal fixture
+  `test/fixtures/gp1_verdict.toml`.
+  benefit from the stabilised log-pmf; their verdict gate is the next entry.
+- **Grouped BetaBinomial fits no longer report `converged = true` with a
+  group's `φ` past the 1e6 boundary (part of #515).**
+  `fit_beta_binomial_gllvm_grouped` and `fit_beta_binomial_gllvm_grouped_cov`
+  (`src/families/beta_binomial.jl`) now pass the shared `_fit_verdict` result
+  through `_beta_binomial_verdict` at the largest group precision
+  (`_beta_binomial_grouped_verdict`): a positive or non-finite objective
+  reports `loglik = -Inf`, `converged = false`, and any group at `φ >= 1e6`
+  reports `converged = false` with the loglik kept. At that `φ` the log-pmf is
+  exactly Binomial, so the objective is flat in `φ` and Optim's zero-gradient
+  stop says nothing about an optimum in it. Measured on origin/main 52ed4281b
+  (Julia 1.10.12 and 1.13.0; the 13 fixture datasets from #522, per-species
+  and one-group, both routes: 52 fits per version): three per-species fits reported
+  `converged = true` at `φ` from 8.5e11 to 7.6e15 on both versions, and a
+  fourth (seed 9002) crosses 1e6 on 1.13 only. Their logliks are unchanged;
+  only the flag changes. The other fits (49 on 1.10, 47 on 1.13) are
+  bitwise identical to main in loglik, `φ`, iterations and converged flag.
+  Per-species fits that stop just below the boundary (`φ` near 1e5) are not
+  caught; this is a boundary tripwire, not an identifiability test.
+- **Poisson `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (#504).** The Laplace-route `refit` closure in
+  `_family_ci(fit::PoissonFit, ...)` (`src/confint_family.jl`) returned a bare
+  parameter vector, so `_bootstrap_refit_ok` (the richer `(θ = ..., converged
+  = ..., loglik = ...)` contract added in #508) could only check `isfinite` on
+  it: a replicate whose refit did not converge, or landed on the fitter's own
+  `1e12` failure sentinel, was still counted as a successful draw. The closure
+  now returns the fit's real `converged` and `loglik` alongside `θ`, so such a
+  replicate is excluded and `n_converged` reflects the stricter count. Fits
+  where every replicate already converged are unchanged (bootstrap interval
+  endpoints identical to before, to full precision). This is the first family
+  migrated to the richer contract for #504; the AGHQ route (`objective =
+  :aghq`) already checked `fb.converged` and is untouched. Other families
+  (Binomial, NB, Gamma, ...) still use the bare-vector adapter and are
+  migrated one at a time in follow-up PRs.
+- **Binomial `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The Laplace-route refit closure in
+  `_family_ci(fit::BinomialFit, ...)` returned a bare parameter vector, so a
+  replicate whose refit ended on the fitter's `1e12` failure sentinel (its θ
+  is the finite warm start) was counted as a good draw. The closure now
+  returns `(θ = ..., converged = ..., loglik = ...)`, as Poisson's has since
+  #516; such replicates are excluded and `n_converged` counts only the ones
+  kept. When every replicate converges, bootstrap endpoints are identical to
+  before. The AGHQ route already checked `fb.converged` and is unchanged.
+- **Gamma `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `GammaFit`,
+  `GammaGroupedFit` and `GammaGroupedCovFit` (`src/confint_family.jl`)
+- **Beta `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `BetaFit`,
+  `BetaGroupedFit` and `BetaGroupedCovFit` (`src/confint_family.jl`)
+- **Zero-inflated `confint(..., method = :bootstrap)` now reports the refit's
+  own convergence verdict (part of #504).** The refit closures for `ZIPFit`,
+  `ZIPCovFit`, `ZINBFit`, `ZINBCovFit` and `ZIBFit` (`src/confint_family.jl`)
+  returned a bare parameter vector, so a replicate whose refit ended on the
+  fitter's failure sentinel (its θ is the finite warm start) was counted as a
+  good draw. They now return `(θ = ..., converged = ..., loglik = ...)`, as
+  Poisson's does since #516; such replicates are excluded and `n_converged`
+  counts only the ones kept. When every replicate converges, bootstrap
+  endpoints are identical to before. The shape α is deliberately not given
+  a boundary flag: a large α is not a flat-likelihood limit (on data with
+  true α = 1e8 every route estimates α close to the truth).
+  endpoints are identical to before. The precision φ is not given a boundary
+  flag: a large φ is the near-deterministic end, which the data identify.
+- **NB1 `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `NB1Fit`,
+  `NB1GroupedFit` and `NB1GroupedCovFit` (`src/confint_family.jl`) returned
+  a bare parameter vector, so a replicate whose refit ended on the fitter's
+  failure sentinel (its θ is the finite warm start) was counted as a good
+  draw. They now return `(θ = ..., converged = ..., loglik = ...)`, as
+  Poisson's does since #516; such replicates are excluded and `n_converged`
+  counts only the ones kept. When every replicate converges, bootstrap
+  endpoints are identical to before. No boundary flag: NB1's common boundary
+  is the Poisson limit `φ → 0`, a lower boundary.
+- **Tweedie `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `TweedieFit`,
+  `TweedieGroupedFit` and `TweediePerTraitPowerFit` (`src/confint_family.jl`)
+  returned a bare parameter vector, so a replicate whose refit ended on the
+  fitter's failure sentinel (`_tweedie_verdict`'s `:objective_failed`, with the
+  finite warm start as θ) was counted as a good draw. They now return
+  `(θ = ..., converged = ..., loglik = ...)`, as Poisson's does since #516; such
+  replicates are excluded and `n_converged` counts only the ones kept. When
+  every replicate converges, bootstrap endpoints are identical to before. No
+  boundary flag is added: the power is held fixed in the CI layer, and the
+  Tweedie verdict already reports a power at the edge of (1, 2) as not
+  converged.
+- **Ordinal `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `OrdinalFit`,
+  `OrdinalPerTraitFit` and `OrdinalPerTraitCovFit` (`src/confint_family.jl`)
+  returned a bare parameter vector, so a replicate whose refit did not
+  converge was counted as a good draw. They now return
+  `(θ = ..., converged = ..., loglik = ...)`, as Poisson's does since #516;
+  such replicates are excluded and `n_converged` counts only the ones kept.
+  A replicate whose category count differs from the original fit is still
+  dropped, as before. When every replicate converges, bootstrap endpoints
+  are identical to before. No boundary flag is added.
+  endpoints are identical to before. No boundary flag is added for the ZINB
+  size `r`.
+- **Hurdle and delta `confint(..., method = :bootstrap)` now reports the refit's
+  own convergence verdict (part of #504).** The refit closures for
+  `HurdlePoissonFit`, `HurdleNBFit`, `DeltaLogNormalFit` and `DeltaGammaFit`
+  (`src/confint_family.jl`; both the default two-predictor closure and the
+  `predictor = :shared` one for each delta family) returned a bare parameter
+  vector, so a replicate whose refit ended on the fitter's failure sentinel (its
+  θ is the finite warm start) was counted as a good draw. They now return
+  `(θ = ..., converged = ..., loglik = ...)`, as Poisson's does since #516; such
+  replicates are excluded and `n_converged` counts only the ones kept. When every
+  replicate converges, bootstrap endpoints are identical to before. No boundary
+  flag is added for the hurdle-NB size `r`.
+- **Zero-truncated `confint(..., method = :bootstrap)` now reports the refit's
+  own convergence verdict (part of #504).** The refit closures for
+  `TruncatedPoissonFit`, `TruncatedNegBin2Fit` and `TruncatedNegBin2PerTraitFit`
+  (`src/confint_family.jl`) returned a bare parameter vector, so a replicate
+  whose refit ended on the fitter's failure verdict with a finite θ was counted
+  as a good draw. They now return `(θ = ..., converged = ..., loglik = ...)`, as
+  Poisson's does since #516; such replicates are excluded and `n_converged`
+  counts only the ones kept. When every replicate converges, bootstrap endpoints
+  are identical to before. No boundary flag is added for the truncated-NB2
+  size `r`.
+- **Exponential, lognormal, Student-t and GP-1 `confint(..., method =
+  :bootstrap)` now report the refit's own convergence verdict (part of
+  #504).** The refit closures for `ExponentialFit`, `LognormalFit`,
+  `StudentTFit` (shared and per-species σ) and `GP1Fit`
+  (`src/confint_family.jl`) returned a bare parameter vector, so a replicate
+  whose refit ended on the fitter's failure verdict (its θ is the finite warm
+  start) was counted as a good draw. They now return `(θ = ..., converged =
+  ..., loglik = ...)`, as Poisson's does since #516; such replicates are
+  excluded and `n_converged` counts only the ones kept. When every replicate
+  converges, bootstrap endpoints are identical to before. No boundary flag is
+  added for the GP-1 dispersion α or the Student-t σ.
+- **Beta-hurdle and ordered-beta `confint(..., method = :bootstrap)` refits now
+  report their own convergence verdict (part of #504).** The refit closures for
+  `BetaHurdleFit` and `OrderedBetaFit` (`src/confint_family.jl`) returned a bare
+  parameter vector, so a replicate whose refit ended on the fitter's failure
+  verdict (its θ is the finite warm start) was counted as a good draw. They now
+  return `(θ = ..., converged = ..., loglik = ...)`, as Poisson's does since
+  #516; such replicates are excluded and `n_converged` counts only the ones
+  kept. When every replicate converges, bootstrap endpoints are identical to
+  before. The ordered-beta adapter's simulator still errors (bootstrap is not
+  offered for that family), so only direct callers of its refit see the change.
+  No boundary flag is added for the Beta precision φ.
+- **Row-random, multinomial and covariate-GLLVM `confint(..., method =
+  :bootstrap)` now report the refit's own convergence verdict (part of
+  #504).** The refit closures for `RowRandomFit`, `MultinomialFit` and
+  `GllvmCovFit` (`src/confint_family.jl`) returned a bare parameter vector, so
+  a replicate whose refit ended on the fitter's failure verdict (its θ is the
+  finite warm start) was counted as a good draw. They now return `(θ = ...,
+  converged = ..., loglik = ...)`, as Poisson's does since #516, for families
+  with and without a dispersion parameter; such replicates are excluded and
+  `n_converged` counts only the ones kept. When every replicate converges,
+  bootstrap endpoints are identical to before. These are the last three
+  bare-vector refit closures of #504; the other families are migrated on
+  their own branches.
+- **BetaBinomial `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (#542, part of #504).** The refit closures in
+  `_family_ci` for `BetaBinomialFit`, `BetaBinomialGroupedFit` and
+  `BetaBinomialGroupedCovFit` (`src/confint_family.jl`) returned a bare
+  parameter vector, so a replicate whose refit reported `converged = false`
+  was still counted as a good draw. Since #522 that includes a Beta
+  precision at the 1e6 boundary, where the loglik and every parameter
+  (`log φ` about 18 to 29) are finite: on two literal Binomial datasets the
+  ungrouped refit lands there and the old contract accepted it. The closures
+  now return `(θ, converged, loglik)` as Poisson's does since #516, so such
+  replicates are excluded and `n_converged` counts only the ones kept. They
+  also flag each `φ` at the boundary (`upper_boundary`), and when the flagged
+  share of usable replicates for a given `φ` exceeds the upper tail
+  `(1 - level)/2`, that `φ`'s bootstrap upper bound is `Inf` rather than a
+  quantile of the interior draws (option 3 on #542). Its lower bound still
+  comes from the interior draws. On per-species grouped fits of the #522
+  fixture, about a quarter of replicates (35 of 150) had some species at the
+  boundary. `_family_bootstrap` reads the new field only when an adapter sets
+  it, so other families are unchanged, and when every replicate converges the
+  bootstrap endpoints are identical to before.
+- **NB2 `confint(..., method = :bootstrap)` now reports the refit's own
+  convergence verdict (part of #504).** The refit closures for `NBFit`,
+  `NBGroupedFit` and `NBGroupedCovFit` return `(θ, converged, loglik,
+  upper_boundary)` on the #542 contract. `upper_boundary` flags each `r`
+  above 1e6 (the Poisson limit), with the same test `_dispersion_group_boundary`
+  applies to the grouped point fit, so a refit there is left out of every
+  quantile and, when more than the upper tail of usable replicates are
+  flagged for a given `r`, that `r`'s upper bound is `Inf`. This also covers
+  the shared-`r` fitter `fit_nb_gllvm`, which has no boundary verdict of its
+  own: on literal Poisson data it reports `converged = true` at `r = 7.7e6`,
+  and main counted every such replicate with a finite `log r`. When every
+  replicate converges, bootstrap endpoints are identical to before.
+
+### Added
+- **Temporal covariance source, temporal source alone (gllvmTMB P1 port).**
+  `temporal_indep`, `temporal_dep` and `temporal_latent` (rank one, optional
+  correlated `psi`) with AR1 or OU time structure fit through the separate door
+  `fit_temporal_gllvm(long_data; formula, temporal)`, unreplicated or
+  replicated. The likelihood is the exact Gaussian marginal
+  `Z (K ⊗ Sigma_T) Z' + sigma_eps^2 I`; parameters follow gllvmTMB's `opt$par`
+  order and names. `extract_temporal` returns the fitted time parameter, state
+  table, loadings and temporal variances; `TemporalGaussianFit` has its own
+  `loglikelihood`, `dof`, `nobs`, `aic` and `bic`, and refusals throw
+  `TemporalContractError` with gllvmTMB's message and condition class. Checked
+  against gllvmTMB P1 receipts: the objective at R's coordinates agrees to
+  1.7e-11 and R's objective at Julia's optimum to 7.5e-11 over 21 fits. Not yet
+  available: `unit` / `unit_obs` composition, cross-source cells, the wide
+  `traits()` form and the R bridge.
+- **Temporal source beside ordinary unit / unit_obs terms (gllvmTMB P1 port,
+  slice 2).** `fit_temporal_gllvm` gains `unit` and `unit_obs` keywords, and its
+  `structure` argument admits `indep`, `dep` and `latent` terms at either level
+  plus the `(1 | g)` random intercept, with gllvmTMB's unit_obs nesting and
+  series/unit partition refusals. The marginal covariance gains the unit and
+  unit_obs trait blocks; the parameter vector follows gllvmTMB's measured
+  `opt$par` order (`theta_rr_B` sits before `theta_temporal_time`). gllvmTMB's
+  sigma_eps suppression rule is ported: a per-row diagonal term in a replicated
+  workflow fixes `sigma_eps` at `max(1e-3 sd(y), 1e-6)` and drops it from the
+  parameter vector. `forecast_temporal`, `profile_temporal`,
+  `bootstrap_temporal` and `compare_temporal` refuse composed fits with R's
+  classes and tier names; `simulate` redraws every ordinary tier;
+  `extract_ordination(fit; level = :unit)` and `update(fit; ...)` are added for
+  temporal fits. The temporal optimiser now runs LBFGS with both line searches
+  and polishes with Newton steps, which reaches gllvmTMB's optimum on a composed
+  panel where one line search stopped at a `sigma_eps -> 0` limit. Checked
+  against 25 gllvmTMB P1 fits: objective and gradient at fixed coordinates
+  within 3.0e-9 and 3.4e-9, an independent dense oracle within 9.1e-13, and
+  R's report `eta` within 1.8e-15. The `gllvm()` formula hook is not included.
+
+### Changed
+- **Breaking (default change):** `fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`
+  (and `fit_gllvm(...; family = DeltaLogNormal()/DeltaGamma())`) now default to
+  `disp_group = :species` — **one dispersion per trait**, matching R gllvmTMB's
+  per-trait dispersion, instead of one scalar shared across all traits.
+  **Existing delta fits that omitted `disp_group` will see `fit.σ` / `fit.α`
+  change from a scalar to a length-`p` vector.** Pass `disp_group = :shared`
+  explicitly to keep the previous one-scalar-per-model behaviour. The per-trait
+  default can also move an existing fit to a different optimum or change whether
+  it converges: one existing offset test did, and now passes `disp_group = :shared`.
+  Decision:
+  `docs/dev-log/decisions/2026-09-15-delta-dispersion-alignment-pending.md`
+  (accepted 2026-09-24).
+- **Development (D3 Stage 1):** `fit_gaussian_gllvm(y; K, lambda_constraint = M)`
+  fits a confirmatory ordinary J1 Gaussian model with the numeric entries of a
+  `p × K` pin matrix `M` (`NaN` = free) held fixed, mirroring R gllvmTMB's
+  `lambda_constraint`. `loading_profile(fit; y, ...)` now profiles the free
+  entries of such a confirmatory fit on a grid — the confirmatory mirror of
+  R's `loading_profile()`, distinct from the existing exploratory
+  `loading_profile_exploratory`. Stage 1 scope only (`X = nothing`, no W/diag/
+  phylo blocks, no `aghq`); this is a Stage 1 receipt, not full R grid parity.
+  The deprecated generic `loading_profile` shim is unchanged and still serves
+  the old three-positional-argument calling convention.
 - **Development:** fixed Gaussian source fits accept a complete mean design `X`.
   Explicit-source wide/long formulas expose trait intercepts, shared slopes,
   categorical contrasts and interactions. Fits retain the copied design, response
@@ -184,8 +2207,10 @@ All notable changes to GLLVModels.jl are documented here.
     hardcoded to `LogitLink()` in its mode solve, so a probit fit was already
     routed to finite differences regardless of `hessian`, before and after
     this change.
-  - Binomial/**cloglog** is explicitly excluded (the diagnosed Laplace
-    saturation pathology) and stays `:fisher`.
+  - Binomial/**cloglog** now defaults to **observed** as well (2026-09-01),
+    matching TMB / `gllvmTMB`; `:fisher` had been a Julia-side defect.
+    Extreme-η Laplace saturation remains a separate post-fit health
+    diagnostic, not a reason to keep Fisher as the default.
   - **Recorded, not fixed:** the Tweedie **grouped** route
     (`fit_tweedie_gllvm_grouped`) has no `hessian` selector at all
     (unconditional Fisher) — with `G = 1` it no longer matches the shared
@@ -247,6 +2272,55 @@ All notable changes to GLLVModels.jl are documented here.
   unaffected. Pinned by `test/test_fd_hessian.jl`.
 
 ### Added
+- **`fit_phylo_latent_gllvm`: the Julia twin of gllvmTMB's bare Gaussian
+  `phylo_latent(species, d = K)` at P1 (gllvmTMB 0.7.1, gate rows A14/A15).**
+  Built on the R-shaped `PrecisionPhy` / `fit_precision_multivariate` path
+  with one shared residual. Species are matched by label; `tree` (Newick or
+  `AugmentedPhy`, polytomies admitted via R's own precision rule) or a
+  labelled dense `vcv` / `A` with R's `1e-8` ridge; R's refusal sentences
+  (rank, source, labels, coverage with the `droplevels()` hint,
+  non-ultrametric tree). `Ainv` follows R's keyword (`vcv = solve(Ainv)`, then
+  the dense ridged route); `rho != 1` is refused by a labelled Julia scope
+  fence (`GJL-GATE-PHYLO-LATENT-RHO`). `extract_phylo_signal`
+  on a `PrecisionMultivariateFit` now returns R's bare-fit answer
+  (`H2 = 1`, `V_eta = diag(Sigma_phy)`) and refuses `ci = true`;
+  `extract_Sigma` accepts R's `level = :phy`. `PrecisionMultivariateFit`
+  gains `species_labels` and `tip_labels` (filled by the existing
+  constructors, so earlier callers are unchanged). Paired P1 receipts:
+  `docs/dev-log/core070/phylo-latent-p1/`.
+- **Integrated species distribution models (iSDM), the twin of gllvmTMB's public
+  door `gllvmTMB(..., family = isdm_sources(...))` at the P1 pin.** New
+  `isdm_sources()` / `isdm_source()` declarations (Poisson-log count sources and
+  Bernoulli-cloglog detection sources only, with R's constructor refusals),
+  `isdm_table()` (long-table assembly with R's contract checks in R's order:
+  selector alignment, the every-trait-every-source predicate, the within-trait
+  scale rule, source-masked observation formulas with QR rank retention, the
+  count-family offset gate with the cloglog exception, and the weights,
+  multi-trial and observed-arm refusals), `fit_isdm_gllvm()` returning
+  `IsdmFit`, and `predict` / `fitted` (link or response scale per row's law,
+  `re_form` zero forms, `newdata` rebuilt from the fitted basis by name, unseen
+  units falling back to fixed-only; `se_fit` refused). The per-cell long-row Laplace kernel uses a copy of R's
+  `gll_dbinom_cloglog` and its observed curvature; the fitter uses the one-step
+  implicit gradient. Zero or one `latent(0 + trait | unit, d = K)` term; `K = 0`
+  fits a GLM through the same kernel. R's `latent()` default (`unique = TRUE`) is
+  supported (next entry); `unique = FALSE` fits the loadings-only model. Missing
+  responses and `weights` are refused in P1. Paired twins against R at P1:
+  `test/parity/isdm_cases.jl`. Design: `docs/design/isdm-port-spec.md`.
+- **iSDM: the unit-level unique variance of R's default `latent(..., unique = TRUE)`.**
+  `fit_isdm_gllvm` now fits gllvmTMB's `theta_diag_B`: each (unit, trait) carries
+  `s_B(t, s) ~ N(0, exp(theta_diag_B[t])^2)`, shared by that trait's rows in that
+  unit across sources, integrated by Laplace jointly with the latent scores (the
+  kernel takes it as the augmented loadings `[Λ Diagonal(exp.(theta_diag_B))]`).
+  The packed parameter follows R's `opt$par` order, `[b_fix; theta_rr_B;
+  theta_diag_B]`. `IsdmFit` gains `unique`, `theta_diag_B` and `s_B` (the
+  conditional modes); `IsdmTable` gains `unique`; `isdm_marginal_loglik_laplace`
+  takes `theta_diag_B` for a unique table; `predict` re-adds `s_B` on units seen
+  at fit time and not on unseen ones, as R does. `unique = FALSE` fits are
+  bit-identical to before. `K = 0` on a `unique = TRUE` table is refused, as R
+  refuses `latent(d = 0)`. The unique variances are identified only with
+  `p >= 2K + 1` traits; with two traits they run toward zero in R and Julia alike.
+  Paired twins on a new four-trait fixture and on R's default-formula fits of the
+  two-trait fixtures: `test/parity/isdm_unique_cases.jl`.
 - **`predictor::Symbol = :separate | :shared` on `fit_delta_lognormal_gllvm` /
   `fit_delta_gamma_gllvm`** (2026-08-28, maintainer decision "Twin identity
   MODE" — `docs/dev-log/decisions/2026-08-28-arc-decision-batch.md` gate 4):
@@ -284,6 +2358,23 @@ All notable changes to GLLVModels.jl are documented here.
   `lv_effects_lower` / `lv_effects_upper` / `lv_effects_se`. K = 1 interval
   coverage 0.915–0.955 across all eight routes; K = 2 recovery + coverage validated
   for Poisson. R-side reading of these CI fields is not yet wired.
+- **`confint(fit, Y; method = :wald)` for `TruncatedNegBin2PerTraitFit`**
+  (`fit_truncated_nbinom2_gllvm_pertrait`, gllvmTMB's only `truncated_nbinom2()`
+  mode), which previously threw `MethodError`. The per-trait `r` block is reported on
+  the log scale (`kinds = :log`, matching every other dispersion family): the
+  `se` column for `r[t]` is the SE of `log r_t`, and the bounds are
+  `exp(log r_t ± z·se)`. A trait's `r` at the Poisson-limit boundary is
+  conditioned out of the joint Wald Hessian, the same T14 F1 handling the
+  grouped NB2/NB1/Beta/Gamma adapters already use; without it, a boundary
+  trait could report `pd_hessian = true` with a meaningless finite-looking SE
+  and an infinite upper bound, flipping with wherever the optimizer stopped.
+  The shared-`r` adapter this one was copied from has the same untreated
+  boundary gap; tracked separately (#499). This is a new working method on an
+  already-exported `confint`/fit type, merged on the maintainer's sign-off.
+  Because the type joins the generic `confint(fit::_CIFit, Y; method)` path,
+  `method = :profile` and `method = :bootstrap` are also reachable for it; only
+  `:wald` is tested. The bootstrap route accepts non-converged replicates (#504),
+  and the per-trait fitter can stop at an inferior interior optimum (#499).
 
 ## v0.3.0 — broad gllvmTMB-targeted capability build-out (2026-06-07)
 

@@ -1,0 +1,34 @@
+Julia 1.10.12
+fail n=80 r=1.0 seed=45 | jl_conv=false bd=1 | R code=0 grad=4.5e-05 maxr_R=1.57e+07 | rel_dll=4.2e-10 | max_rel_r=3.5e+02
+fail n=80 r=1.0 seed=46 | jl_conv=true bd=0 | R code=0 grad=3.5e-04 maxr_R=2.74 | rel_dll=2.5e-11 | max_rel_r=2.0e-05
+fail n=80 r=1.0 seed=47 | jl_conv=false bd=2 | R code=0 grad=9.0e-05 maxr_R=1.28e+09 | rel_dll=8.7e-09 | max_rel_r=6.2e+07
+fail n=80 r=1.0 seed=48 | jl_conv=false bd=2 | R code=0 grad=7.2e-04 maxr_R=1.93e+09 | rel_dll=2.7e-09 | max_rel_r=1.5e+06
+fail n=80 r=1.0 seed=49 | jl_conv=true bd=0 | R code=0 grad=1.3e-03 maxr_R=1.67 | rel_dll=4.6e-11 | max_rel_r=5.1e-05
+fail n=80 r=1.0 seed=50 | jl_conv=true bd=0 | R code=0 grad=4.7e-04 maxr_R=1.83 | rel_dll=2.0e-11 | max_rel_r=2.7e-05
+fail n=80 r=1.0 seed=51 | jl_conv=false bd=1 | R code=0 grad=3.6e-04 maxr_R=1.29 | rel_dll=3.5e-04 | max_rel_r=1.9e+09
+fail n=80 r=1.0 seed=52 | jl_conv=true bd=0 | R code=0 grad=4.9e-04 maxr_R=1.32 | rel_dll=1.8e-11 | max_rel_r=2.4e-05
+fail n=80 r=2.0 seed=45 | jl_conv=true bd=0 | R code=0 grad=5.2e-04 maxr_R=2.58 | rel_dll=2.2e-11 | max_rel_r=3.1e-05
+fail n=80 r=2.0 seed=46 | jl_conv=false bd=2 | R code=0 grad=1.1e-03 maxr_R=9.88e+06 | rel_dll=5.6e-04 | max_rel_r=9.0e+17
+fail n=80 r=2.0 seed=47 | jl_conv=false bd=3 | R code=0 grad=1.5e-04 maxr_R=2.24e+09 | rel_dll=3.5e-10 | max_rel_r=1.7e+22
+fail n=80 r=2.0 seed=48 | jl_conv=false bd=2 | R code=0 grad=1.9e-04 maxr_R=2.53e+08 | rel_dll=6.9e-11 | max_rel_r=1.6e+08
+fail n=80 r=2.0 seed=49 | jl_conv=false bd=2 | R code=0 grad=1.7e-04 maxr_R=5.31e+07 | rel_dll=1.3e-09 | max_rel_r=7.5e+12
+fail n=80 r=2.0 seed=50 | jl_conv=false bd=1 | R code=0 grad=1.0e-03 maxr_R=1.24e+07 | rel_dll=4.4e-10 | max_rel_r=2.0e+02
+fail n=80 r=2.0 seed=51 | jl_conv=false bd=2 | R code=0 grad=1.1e-05 maxr_R=1.06e+08 | rel_dll=1.6e-10 | max_rel_r=1.7e+10
+fail n=80 r=2.0 seed=52 | jl_conv=false bd=1 | R code=0 grad=4.7e-04 maxr_R=2.19 | rel_dll=5.7e-05 | max_rel_r=2.3e+09
+fail n=200 r=1.0 seed=45 | jl_conv=true bd=0 | R code=0 grad=1.6e-03 maxr_R=1.41 | rel_dll=4.2e-11 | max_rel_r=4.6e-05
+fail n=200 r=1.0 seed=46 | jl_conv=true bd=0 | R code=0 grad=4.4e-04 maxr_R=1.15 | rel_dll=2.4e-11 | max_rel_r=3.7e-05
+fail n=200 r=1.0 seed=47 | jl_conv=true bd=0 | R code=0 grad=6.0e-04 maxr_R=1.87 | rel_dll=1.8e-11 | max_rel_r=4.9e-05
+fail n=200 r=1.0 seed=48 | jl_conv=true bd=0 | R code=0 grad=5.7e-04 maxr_R=1.22 | rel_dll=1.5e-11 | max_rel_r=1.9e-05
+fail n=200 r=1.0 seed=49 | jl_conv=true bd=0 | R code=0 grad=1.4e-03 maxr_R=1.23 | rel_dll=1.8e-11 | max_rel_r=3.8e-05
+fail n=200 r=1.0 seed=50 | jl_conv=true bd=0 | R code=0 grad=7.2e-04 maxr_R=1.69 | rel_dll=3.3e-11 | max_rel_r=4.4e-05
+fail n=200 r=1.0 seed=51 | jl_conv=true bd=0 | R code=0 grad=1.0e-03 maxr_R=1.51 | rel_dll=2.6e-11 | max_rel_r=6.7e-05
+fail n=200 r=1.0 seed=52 | jl_conv=true bd=0 | R code=0 grad=1.0e-03 maxr_R=1.59 | rel_dll=2.4e-11 | max_rel_r=9.7e-05
+fail n=200 r=2.0 seed=45 | jl_conv=false bd=1 | R code=0 grad=2.6e-05 maxr_R=3.72e+09 | rel_dll=5.7e-13 | max_rel_r=6.0e-01
+fail n=200 r=2.0 seed=46 | jl_conv=true bd=0 | R code=0 grad=2.2e-03 maxr_R=3.88 | rel_dll=1.3e-11 | max_rel_r=2.8e-05
+fail n=200 r=2.0 seed=47 | jl_conv=true bd=0 | R code=0 grad=1.4e-03 maxr_R=4.53 | rel_dll=9.7e-12 | max_rel_r=2.1e-05
+fail n=200 r=2.0 seed=48 | jl_conv=false bd=1 | R code=0 grad=7.3e-04 maxr_R=4.3e+07 | rel_dll=1.6e-10 | max_rel_r=6.5e+01
+fail n=200 r=2.0 seed=49 | jl_conv=false bd=1 | R code=0 grad=6.1e-04 maxr_R=1.21e+07 | rel_dll=5.1e-10 | max_rel_r=5.7e+02
+fail n=200 r=2.0 seed=50 | jl_conv=true bd=0 | R code=0 grad=5.1e-04 maxr_R=4.19 | rel_dll=7.1e-12 | max_rel_r=7.2e-05
+fail n=200 r=2.0 seed=51 | jl_conv=true bd=0 | R code=0 grad=8.8e-04 maxr_R=3.4 | rel_dll=7.3e-12 | max_rel_r=2.6e-05
+fail n=200 r=2.0 seed=52 | jl_conv=false bd=1 | R code=0 grad=2.2e-04 maxr_R=3.41e+07 | rel_dll=1.6e-10 | max_rel_r=5.5e+01
+julia +1.10.12 --startup-file=no --project=test/parity "$S/nb2_screen2.jl" 2>  337.92s user 2.74s system 94% cpu 5:58.86 total

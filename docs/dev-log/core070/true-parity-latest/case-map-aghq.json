@@ -1,0 +1,1094 @@
+{
+  "schema": 1,
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "aghq family: the 21 required rows (19 required_core, plus 2 compatibility_adapter rows, which tools/true_parity_check.mjs counts as required) the P1 carry scan lists as DANGLING (7) or PARTIAL_STALE_AT_P1 (14). The rejected AGHQ-INVALID-* rows and the intentionally_excluded rows are out of scope.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The two batches measure no number against Julia: 7 rows are a paired control on categorical labels (no fit) and 14 are R-only policy observations (no Julia side), so a row paid by a batch alone cites its receipts under evidence.non_binding_receipts and does not bind under the numeric rule. All 14 policy rows (Poisson, NB2, ordinal-probit, Tweedie, delta-gamma, binomial and Gaussian fits, which expose aghq= in Julia) additionally carry a numeric Julia twin receipt (receipts/julia-twins/aghq/, test/test_aghq_p1_twin.jl) under evidence.receipt with evidence_tier numeric. The policy fixtures of the batch are toys (p of 5 to 20 traits, n of 30 to 40 sites, d = 1); the twins use simulated data with a real latent factor. The 7 control rows carry a behaviour block (tools/core070_behaviour_receipts.py): both engines normalise the same scalar request to the same label. Maintainer ruling 2026-10-05 (D-319), item A, extends the behavioural tier of itchyshin/GLLVModels.jl#684 item 2 to these 7 rows, so each binds behaviourally when its block matches.",
+  "generator": "tools/core070_aghq_p1_receipts.py",
+  "glvmodels_commit": "fd92b6551f7ecc99d82eee6f23a4ef42536a778c",
+  "carry_scan": {
+    "source": "origin/claude/true-parity-p1-carry:docs/dev-log/core070/true-parity-latest/carry-scan-p1.json",
+    "sha256": "85ac004473d92301c2824636f71b2595f4cef69ef4c12d703d7fe0a1ccfd34bf"
+  },
+  "numeric_rows": [
+    "aghq/AGHQ-AUTO-K-BINOMIAL",
+    "aghq/AGHQ-AUTO-K-DELTA",
+    "aghq/AGHQ-AUTO-K-GAUSSIAN",
+    "aghq/AGHQ-AUTO-K-NB2",
+    "aghq/AGHQ-AUTO-K-ORDINAL",
+    "aghq/AGHQ-AUTO-K-POISSON",
+    "aghq/AGHQ-AUTO-K-TWEEDIE",
+    "aghq/AGHQ-DEFAULT-OFF",
+    "aghq/AGHQ-POLICY-AUTO-ENFORCE-CUTOFF",
+    "aghq/AGHQ-POLICY-EXPLICIT",
+    "aghq/AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
+    "aghq/AGHQ-POLICY-OFF",
+    "aghq/AGHQ-POLICY-TRAITS19",
+    "aghq/AGHQ-POLICY-TRAITS20"
+  ],
+  "why_no_numeric_row": {
+    "paired_control_categorical": "A paired control on categorical labels: R's .gllvmTMB_normalize_aghq and GLLVModels._aghq_request each normalize the same scalar aghq request, R's frozen assertion must hold and the Julia label must equal the contract's expected label. There is no fit and no number, so there is no R-vs-Julia comparison block; under the numeric rule this row cannot bind, whatever its verdict.",
+    "r_only_policy": "R only: the case runs a public gllvmTMB() fit (or reads formals(gllvmTMBcontrol)) and checks R's own fit$aghq record against the runner's assertion. No Julia call is part of the case, so there is no R-vs-Julia comparison; a pass shows the R contract still holds at P1, not parity."
+  },
+  "batch_verifiers": {
+    "aghq-control-p1": {
+      "tool": "tools/core070_verify_aghq_batch.py --self-test --state, plus tools/core070_aghq_p1_receipts.py tracked-file checks",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/verify.txt"
+    },
+    "aghq-policy-p1": {
+      "tool": "tools/core070_aghq_p1_receipts.py (policy receipt checks)",
+      "status": "PASS",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/verify.txt"
+    }
+  },
+  "counts": {
+    "numeric_pass": 14,
+    "numeric_fail": 0,
+    "paired_control_categorical_pass": 0,
+    "paired_control_categorical_fail": 0,
+    "paired_control_categorical_held_batch_verifier_failed": 0,
+    "r_only_policy_pass": 0,
+    "r_only_policy_fail": 0,
+    "r_only_policy_held_batch_verifier_failed": 0,
+    "behavioural": 7
+  },
+  "p0_evidence_summary": {
+    "rows_with_p0_evidence_record": 21,
+    "rows_with_tracked_p0_receipt": 14,
+    "p0_policy_receipt": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json"
+  },
+  "runtimes_seconds": {
+    "aghq-control-p1": 4,
+    "aghq-policy-p1": 10
+  },
+  "batch_artifacts": {
+    "aghq-control-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/receipt.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/results.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/julia-results.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/r-oracle.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-control-p1/verify.txt"
+    ],
+    "aghq-policy-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/receipt.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/aghq/aghq-policy-p1/verify.txt"
+    ]
+  },
+  "rows": [
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-BINOMIAL",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-AUTO-K-BINOMIAL-DECISION",
+        "P1-JULIA-AGHQ-AUTO-K-BINOMIAL-LOGLIK",
+        "P1-JULIA-AGHQ-AUTO-K-BINOMIAL-BETA",
+        "P1-JULIA-AGHQ-AUTO-K-BINOMIAL-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-BINOMIAL.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-BINOMIAL-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-AUTO-K-BINOMIAL-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-AUTO-K-BINOMIAL-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-AUTO-K-BINOMIAL-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-AUTO-K-BINOMIAL-DECISION",
+          "P1-JULIA-AGHQ-AUTO-K-BINOMIAL-LOGLIK",
+          "P1-JULIA-AGHQ-AUTO-K-BINOMIAL-BETA",
+          "P1-JULIA-AGHQ-AUTO-K-BINOMIAL-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-DELTA",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-AUTO-K-DELTA-DECISION",
+        "P1-JULIA-AGHQ-AUTO-K-DELTA-LOGLIK",
+        "P1-JULIA-AGHQ-AUTO-K-DELTA-BETA",
+        "P1-JULIA-AGHQ-AUTO-K-DELTA-LAMBDA",
+        "P1-JULIA-AGHQ-AUTO-K-DELTA-LOG-PHI"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-DELTA.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-AUTO-K-DELTA-DECISION",
+          "P1-JULIA-AGHQ-AUTO-K-DELTA-LOGLIK",
+          "P1-JULIA-AGHQ-AUTO-K-DELTA-BETA",
+          "P1-JULIA-AGHQ-AUTO-K-DELTA-LAMBDA",
+          "P1-JULIA-AGHQ-AUTO-K-DELTA-LOG-PHI"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-GAUSSIAN",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-DECISION",
+        "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-LOGLIK",
+        "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-BETA",
+        "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-LAMBDA",
+        "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-SIGMA-EPS"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-GAUSSIAN.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-GAUSSIAN-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-AUTO-K-GAUSSIAN-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-AUTO-K-GAUSSIAN-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-AUTO-K-GAUSSIAN-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-DECISION",
+          "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-LOGLIK",
+          "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-BETA",
+          "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-LAMBDA",
+          "P1-JULIA-AGHQ-AUTO-K-GAUSSIAN-SIGMA-EPS"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-NB2",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-AUTO-K-NB2-DECISION",
+        "P1-JULIA-AGHQ-AUTO-K-NB2-LOGLIK",
+        "P1-JULIA-AGHQ-AUTO-K-NB2-BETA",
+        "P1-JULIA-AGHQ-AUTO-K-NB2-LAMBDA",
+        "P1-JULIA-AGHQ-AUTO-K-NB2-LOG-PHI"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-NB2.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-AUTO-K-NB2-DECISION",
+          "P1-JULIA-AGHQ-AUTO-K-NB2-LOGLIK",
+          "P1-JULIA-AGHQ-AUTO-K-NB2-BETA",
+          "P1-JULIA-AGHQ-AUTO-K-NB2-LAMBDA",
+          "P1-JULIA-AGHQ-AUTO-K-NB2-LOG-PHI"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-ORDINAL",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-AUTO-K-ORDINAL-DECISION",
+        "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LOGLIK",
+        "P1-JULIA-AGHQ-AUTO-K-ORDINAL-BETA",
+        "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LAMBDA",
+        "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LOG-INCREMENTS"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-ORDINAL.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-AUTO-K-ORDINAL-DECISION",
+          "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LOGLIK",
+          "P1-JULIA-AGHQ-AUTO-K-ORDINAL-BETA",
+          "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LAMBDA",
+          "P1-JULIA-AGHQ-AUTO-K-ORDINAL-LOG-INCREMENTS"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-POISSON",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-AUTO-K-POISSON-DECISION",
+        "P1-JULIA-AGHQ-AUTO-K-POISSON-LOGLIK",
+        "P1-JULIA-AGHQ-AUTO-K-POISSON-BETA",
+        "P1-JULIA-AGHQ-AUTO-K-POISSON-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-POISSON.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-POISSON-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-AUTO-K-POISSON-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-AUTO-K-POISSON-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-AUTO-K-POISSON-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-AUTO-K-POISSON-DECISION",
+          "P1-JULIA-AGHQ-AUTO-K-POISSON-LOGLIK",
+          "P1-JULIA-AGHQ-AUTO-K-POISSON-BETA",
+          "P1-JULIA-AGHQ-AUTO-K-POISSON-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-AUTO-K-TWEEDIE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-DECISION",
+        "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOGLIK",
+        "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-BETA",
+        "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LAMBDA",
+        "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOG-PHI",
+        "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-POWER"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-AUTO-K-TWEEDIE.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-DECISION",
+          "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOGLIK",
+          "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-BETA",
+          "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LAMBDA",
+          "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-LOG-PHI",
+          "P1-JULIA-AGHQ-AUTO-K-TWEEDIE-POWER"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-CTRL-AUTO",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "aghq wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "aghq wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-aghq",
+        "preservation_sha256": "057c3e110216239bcdd36076e65063b8acd68ddfb1a9aff88ad1544dca3c7888",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
+      "evidence_tier": "behavioural",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL.json"
+        ],
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-CTRL-FALSE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "aghq wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "aghq wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-aghq",
+        "preservation_sha256": "057c3e110216239bcdd36076e65063b8acd68ddfb1a9aff88ad1544dca3c7888",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
+      "evidence_tier": "behavioural",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL.json"
+        ],
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-CTRL-NINE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "aghq wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "aghq wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-aghq",
+        "preservation_sha256": "057c3e110216239bcdd36076e65063b8acd68ddfb1a9aff88ad1544dca3c7888",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
+      "evidence_tier": "behavioural",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL.json"
+        ],
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-CTRL-NULL",
+      "classification": "compatibility_adapter",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "aghq wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "aghq wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-aghq",
+        "preservation_sha256": "057c3e110216239bcdd36076e65063b8acd68ddfb1a9aff88ad1544dca3c7888",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
+      "evidence_tier": "behavioural",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL.json"
+        ],
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-CTRL-ONE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "aghq wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "aghq wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-aghq",
+        "preservation_sha256": "057c3e110216239bcdd36076e65063b8acd68ddfb1a9aff88ad1544dca3c7888",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
+      "evidence_tier": "behavioural",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL.json"
+        ],
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-CTRL-TRUE",
+      "classification": "compatibility_adapter",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "aghq wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "aghq wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-aghq",
+        "preservation_sha256": "057c3e110216239bcdd36076e65063b8acd68ddfb1a9aff88ad1544dca3c7888",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
+      "evidence_tier": "behavioural",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL.json"
+        ],
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-CTRL-TWO",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL"
+      ],
+      "disposition": null,
+      "p0_batch": "aghq wave4",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "aghq wave4",
+        "receipts": ".unlazy/core070-aghq/wave4-batches/wave4-aghq",
+        "preservation_sha256": "057c3e110216239bcdd36076e65063b8acd68ddfb1a9aff88ad1544dca3c7888",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
+      },
+      "p0_case_map_reading_561": "NOT_TWINNED_NOT_SIGNED: the P0 row cites no evidence.receipt (its receipts sit under .unlazy/)",
+      "evidence_tier": "behavioural",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL.json"
+        ],
+        "tier": "behavioural, counted under itchyshin/GLLVModels.jl#684 item 2: for every executable case id both engines' raw output gives the same route, refusal or error class, compared through behaviour-equivalence.json. It is a behavioural row, not a numeric one"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL": "PASS"
+        },
+        "row_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-DEFAULT-OFF",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-DEFAULT-OFF-DECISION",
+        "P1-JULIA-AGHQ-DEFAULT-OFF-LOGLIK",
+        "P1-JULIA-AGHQ-DEFAULT-OFF-BETA",
+        "P1-JULIA-AGHQ-DEFAULT-OFF-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-DEFAULT-OFF.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-DEFAULT-OFF-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-DEFAULT-OFF-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-DEFAULT-OFF-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-DEFAULT-OFF-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-DEFAULT-OFF-DECISION",
+          "P1-JULIA-AGHQ-DEFAULT-OFF-LOGLIK",
+          "P1-JULIA-AGHQ-DEFAULT-OFF-BETA",
+          "P1-JULIA-AGHQ-DEFAULT-OFF-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-AUTO-ENFORCE-CUTOFF",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-DECISION",
+        "P1-JULIA-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-LOGLIK",
+        "P1-JULIA-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-BETA",
+        "P1-JULIA-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-POLICY-AUTO-ENFORCE-CUTOFF.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-DECISION",
+          "P1-JULIA-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-LOGLIK",
+          "P1-JULIA-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-BETA",
+          "P1-JULIA-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-EXPLICIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-POLICY-EXPLICIT-DECISION",
+        "P1-JULIA-AGHQ-POLICY-EXPLICIT-LOGLIK",
+        "P1-JULIA-AGHQ-POLICY-EXPLICIT-BETA",
+        "P1-JULIA-AGHQ-POLICY-EXPLICIT-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-POLICY-EXPLICIT.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-POLICY-EXPLICIT-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-POLICY-EXPLICIT-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-POLICY-EXPLICIT-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-POLICY-EXPLICIT-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-POLICY-EXPLICIT-DECISION",
+          "P1-JULIA-AGHQ-POLICY-EXPLICIT-LOGLIK",
+          "P1-JULIA-AGHQ-POLICY-EXPLICIT-BETA",
+          "P1-JULIA-AGHQ-POLICY-EXPLICIT-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-DECISION",
+        "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-LOGLIK",
+        "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-BETA",
+        "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-DECISION",
+          "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-LOGLIK",
+          "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-BETA",
+          "P1-JULIA-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-OFF",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-POLICY-OFF-DECISION",
+        "P1-JULIA-AGHQ-POLICY-OFF-LOGLIK",
+        "P1-JULIA-AGHQ-POLICY-OFF-BETA",
+        "P1-JULIA-AGHQ-POLICY-OFF-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-POLICY-OFF.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-POLICY-OFF-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-POLICY-OFF-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-POLICY-OFF-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-POLICY-OFF-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-POLICY-OFF-DECISION",
+          "P1-JULIA-AGHQ-POLICY-OFF-LOGLIK",
+          "P1-JULIA-AGHQ-POLICY-OFF-BETA",
+          "P1-JULIA-AGHQ-POLICY-OFF-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-TRAITS19",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-POLICY-TRAITS19-DECISION",
+        "P1-JULIA-AGHQ-POLICY-TRAITS19-LOGLIK",
+        "P1-JULIA-AGHQ-POLICY-TRAITS19-BETA",
+        "P1-JULIA-AGHQ-POLICY-TRAITS19-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-POLICY-TRAITS19.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-POLICY-TRAITS19-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-POLICY-TRAITS19-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-POLICY-TRAITS19-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-POLICY-TRAITS19-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-POLICY-TRAITS19-DECISION",
+          "P1-JULIA-AGHQ-POLICY-TRAITS19-LOGLIK",
+          "P1-JULIA-AGHQ-POLICY-TRAITS19-BETA",
+          "P1-JULIA-AGHQ-POLICY-TRAITS19-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "aghq/AGHQ-POLICY-TRAITS20",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "PARTIAL_STALE_AT_P1",
+      "executable_case_ids": [
+        "P1-JULIA-AGHQ-POLICY-TRAITS20-DECISION",
+        "P1-JULIA-AGHQ-POLICY-TRAITS20-LOGLIK",
+        "P1-JULIA-AGHQ-POLICY-TRAITS20-BETA",
+        "P1-JULIA-AGHQ-POLICY-TRAITS20-LAMBDA"
+      ],
+      "disposition": null,
+      "p0_batch": "t8-aghq-public-policy-bind",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "t8-aghq-public-policy-bind",
+        "receipts": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+        "preservation_sha256": "8daef1c724396e5791c72343b0ca219938af3a0abb92edce836ba2ffae3c7241",
+        "raw_available_in_repo_or_on_this_host": true,
+        "note": "P0 receipt is tracked. It records an R-only observation made on a gllvmTMB twin branch (1005cf12e189dae0bb870556b15b908f0f755459) that is neither pin; no Julia call is part of the case."
+      },
+      "p0_case_map_reading_561": "REGISTRATION_ONLY_NOT_TWINNED: the P0 row cites evidence.receipt but carries no evidence_tier, and a missing tier reads as registration-only",
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/aghq/AGHQ-POLICY-TRAITS20.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/aghq/cases/CORE070-AGHQ-POLICY-TRAITS20-CONTROL-CONTRACT.json"
+        ],
+        "r_only_case_ids": [
+          "CORE070-AGHQ-POLICY-TRAITS20-CONTROL-CONTRACT"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_aghq_p1_twin.jl, against R-at-P1 values copied from test/fixtures/aghq_p1/aghq_p1.toml (integration used and node count, logLik, intercepts, loadings and, for Gaussian, the residual SD, at each side's own optimum); both engines converged; each case within the tolerance asserted in the test"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-AGHQ-POLICY-TRAITS20-CONTROL-CONTRACT": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-AGHQ-POLICY-TRAITS20-CONTROL-CONTRACT": "PASS"
+        },
+        "row_verdict": "PASS",
+        "twin_case_ids": [
+          "P1-JULIA-AGHQ-POLICY-TRAITS20-DECISION",
+          "P1-JULIA-AGHQ-POLICY-TRAITS20-LOGLIK",
+          "P1-JULIA-AGHQ-POLICY-TRAITS20-BETA",
+          "P1-JULIA-AGHQ-POLICY-TRAITS20-LAMBDA"
+        ],
+        "twin_verdict": "PASS"
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# ---- derived checks ----
+# bridge results checks (tools/core070_family_p1_receipts.py), bridge-p1
+PASS  schema core070-family-bridge-p1/v1
+PASS  pinned at P1 (reference commit, gllvmTMB 0.7.1)
+PASS  R source-pin record matches tools/core070_oracle_pins.toml [P1]
+PASS  bridge contract is the tracked frozen sub-contract
+PASS  exactly the three bridge cases and the alias case
+PASS  each bridge case fitted its expected data bytes (NB2: the smoke draw)
+PASS  each bridge case read the same-run R fit tracked beside it (sha256 of the health file)
+PASS  the alias case fitted the Beta case's data
+# status PASS

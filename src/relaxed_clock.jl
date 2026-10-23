@@ -371,9 +371,20 @@ Result of `fit_relaxed_clock`. Fields:
   * `μ`, `τ²`    – fitted hyperparameters of `log σ²_e ~ N(μ, τ²)`.
   * `σ²_eps`     – fitted observation-noise variance.
   * `n_iter`     – EB iterations run.
-  * `converged`  – whether the objective increment fell below `tol`.
+  * `converged`  – whether the objective increment fell below `tol` AND the fit
+                   did not exit on a boundary (see `tau2_boundary`,
+                   `sigma_eps_boundary`).
   * `obj_trace`  – penalised objective per iteration.
   * `μ_nodes`    – posterior mean node states from the final E-step.
+  * `tau2_boundary` – `true` when the free-τ² update ended clamped at
+                   `τ²_floor` (rate dispersion within sampling noise of a single
+                   rate). A pinned `fix_τ²` is never a boundary.
+  * `sigma_eps_boundary` – `true` when the free-σ²_eps update ended clamped at
+                   its data-relative floor (`1e-8 * mean(y.^2)`). A pinned
+                   `fix_σ²_eps` is never a boundary.
+
+A fit with either boundary flag set leaves `converged = false`: a clamp is not an
+interior optimum.
 """
 struct RelaxedClockFit
     σ²_e::Vector{Float64}
@@ -385,6 +396,30 @@ struct RelaxedClockFit
     converged::Bool
     obj_trace::Vector{Float64}
     μ_nodes::Matrix{Float64}
+    tau2_boundary::Bool
+    sigma_eps_boundary::Bool
+end
+
+# Pre-#876 positional constructor: boundary flags default to `false`.
+RelaxedClockFit(σ²_e, logrates, μ, τ², σ²_eps, n_iter, converged, obj_trace,
+                μ_nodes) =
+    RelaxedClockFit(σ²_e, logrates, μ, τ², σ²_eps, n_iter, converged, obj_trace,
+                    μ_nodes, false, false)
+
+function Base.show(io::IO, f::RelaxedClockFit)
+    print(io, "RelaxedClockFit(n_edges=", length(f.σ²_e), ", μ=", round(f.μ; digits = 4),
+          ", τ²=", round(f.τ²; sigdigits = 4), ", σ²_eps=", round(f.σ²_eps; sigdigits = 4),
+          ", n_iter=", f.n_iter, ", converged=", f.converged,
+          ", tau2_boundary=", f.tau2_boundary,
+          ", sigma_eps_boundary=", f.sigma_eps_boundary, ")")
+end
+
+# Data-relative σ²_eps floor: a fixed fraction of the response scale, so that
+# rescaling `y` cannot change whether the residual sits on the floor. Zero or
+# non-finite scale (constant-zero y) falls back to the absolute 1e-8.
+function _relaxed_sigma_eps_floor(y::AbstractMatrix)
+    sc = mean(abs2, y)
+    return (isfinite(sc) && sc > 0) ? 1e-8 * sc : 1e-8
 end
 
 # Penalised EB objective (E-step lower bound surrogate): the per-edge data
@@ -418,7 +453,10 @@ as the prior tightens, τ² → 0, vs. relaxes, τ² → ∞). `fix_σ²_eps` pi
 observation-noise variance (useful when measurement error is known/estimated
 separately — at small `n_rep` the per-branch BM variance and σ²_eps are weakly
 separable, so pinning σ²_eps isolates the rate-recovery question). `τ²_floor`
-guards the free-τ² path. The coordinate ascent alternates E-step (node-state
+guards the free-τ² path; the free-σ²_eps path is floored at `1e-8 * mean(y.^2)`.
+If either free parameter exits clamped at its floor, the corresponding
+`tau2_boundary` / `sigma_eps_boundary` field of the result is `true` and
+`converged` is `false` (pinned parameters are never boundaries). The coordinate ascent alternates E-step (node-state
 posterior via Q = B W Bᵀ), per-edge rate shrinkage, and hyperparameter updates.
 
 The free-τ² update is **moment-matching / REML-style**: the dispersion of the
@@ -462,8 +500,11 @@ function fit_relaxed_clock(phy::EdgePhy, y::AbstractMatrix;
     τ² = fix_τ² === nothing ? 0.5 : float(fix_τ²)
     σ²_e = fill(exp(μ), phy.n_edges)
 
+    σ²_eps_floor = _relaxed_sigma_eps_floor(y)
     obj_trace = Float64[]
-    converged = false
+    inc_converged = false
+    tau2_boundary = false
+    sigma_eps_boundary = false
     iters = 0
     local μ_nodes = zeros(Float64, phy.n_nodes, n_rep)
 
@@ -496,10 +537,17 @@ function fit_relaxed_clock(phy::EdgePhy, y::AbstractMatrix;
             ρ_mle = log.(max.(s_e ./ (df .* ℓ), 1e-300))
             data_curv = max.(curv .- 1.0 / τ², 1e-8)
             samp_var = mean(1.0 ./ data_curv)
-            τ² = max(var(ρ_mle) - samp_var, τ²_floor)
+            τ²_raw = var(ρ_mle) - samp_var
+            τ² = max(τ²_raw, τ²_floor)
+            tau2_boundary = τ²_raw <= τ²_floor
         end
-        σ²_eps = fix_σ²_eps === nothing ? max(recon / (n_rep * p), 1e-8) :
-                 float(fix_σ²_eps)
+        if fix_σ²_eps === nothing
+            σ²_eps_raw = recon / (n_rep * p)
+            σ²_eps = max(σ²_eps_raw, σ²_eps_floor)
+            sigma_eps_boundary = σ²_eps_raw <= σ²_eps_floor
+        else
+            σ²_eps = float(fix_σ²_eps)
+        end
 
         obj = _relaxed_obj(phy, σ²_e, σ²_eps, s_e, recon, μ, τ², n_rep, df)
         push!(obj_trace, obj)
@@ -508,13 +556,16 @@ function fit_relaxed_clock(phy::EdgePhy, y::AbstractMatrix;
                            "σ²_eps=$(round(σ²_eps, digits=4))")
 
         if iter > 1 && abs(obj_trace[end] - obj_trace[end-1]) < tol * (abs(obj_trace[end-1]) + tol)
-            converged = true
+            inc_converged = true
             break
         end
     end
 
+    # A clamp at either floor is not an interior optimum: never report it as
+    # converged, whatever the objective increment says.
+    converged = inc_converged && !tau2_boundary && !sigma_eps_boundary
     return RelaxedClockFit(σ²_e, log.(σ²_e), μ, τ², σ²_eps, iters, converged,
-                           obj_trace, μ_nodes)
+                           obj_trace, μ_nodes, tau2_boundary, sigma_eps_boundary)
 end
 
 # ---------------------------------------------------------------------------

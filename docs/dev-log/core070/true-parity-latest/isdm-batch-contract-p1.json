@@ -1,0 +1,461 @@
+{
+  "status": "FROZEN_ISDM_ADMISSION_BATCH_CONTRACT",
+  "area": "isdm",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "manifest_source": "docs/dev-log/core070/manifest-freeze-work/drafts/isdm.json",
+  "case_plan_annex": "docs/dev-log/core070/isdm-required-case-plan.json",
+  "admission_subset_source": "docs/dev-log/core070/isdm-admission-subset.json",
+  "expected_case_count": 20,
+  "source_pins": {
+    "R/isdm-sources.R": "e06bbe7bc3c88697080173f0e1b68f3e5a1947729124e72d34587730cd1b6f73",
+    "R/fit-multi.R": "129d35549c728e96874252c3242f545ff959805c103e29f2803b740bd6da4ddd",
+    "R/offset.R": "df43a6a507da0e593d29bacca030cc4a4dc9d4cbfdac20166f66dee9b8ff1f47"
+  },
+  "loaded_functions": {
+    "R/isdm-sources.R": [
+      ".isdm_admitted_law_id",
+      "isdm_source",
+      "isdm_sources",
+      ".gll_isdm_observation_design",
+      ".gllvmTMB_isdm_declared_core"
+    ],
+    "R/fit-multi.R": [
+      ".align_mixed_family_list",
+      ".gllvmTMB_validate_family_scale_by_trait",
+      ".gllvmTMB_integrated_sources_contract"
+    ],
+    "R/offset.R": [
+      "gll_prepare_offset"
+    ]
+  },
+  "fixture": "test/parity/fixtures/core070_isdm_admission.R",
+  "fixture_sha256": "e47b66580262c88a69e97e2cb73f1178d92d77d2e1afba3b89c062e92c16a68d",
+  "julia_surface_status": "GLLVM.jl has no public isdm_sources()/isdm_source() surface yet (Design 120 / #941 is unported). Every case in this batch is bound only to the frozen R admission-predicate replay -- none is a public native/formula/bridge Julia fit. The Julia surface is tracked as a separate unpaid obligation, not a defect in these 20 specs (all 20 are evidence_kind=control by design).",
+  "tolerances": {
+    "comparison": "exact_boolean_or_pinned_error_substring",
+    "numeric_tolerance": null
+  },
+  "health_checks": {
+    "r_runtime": "Rscript available, exit 0",
+    "source_freshness": "all three source_pins sha256 match the source root at run time",
+    "fixture_freshness": "fixture sha256 matches at run time",
+    "isolation": "each case expression is evaluated in a fresh environment chained only to the loaded function/constant environment, so no case can leak state into a later case",
+    "contract_freshness": "contract sha256 recorded in the receipt for tamper detection",
+    "reference_commit_pin": "receipt.reference_commit must equal this contract's reference_commit"
+  },
+  "cases": [
+    {
+      "manifest_case_id": "CORE070-ISDM-ALIASED-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-ALIASED",
+      "admission_case_id": "ISDM-ALIASED",
+      "parent_obligation": "DATA-ISDM-16",
+      "stage": "design",
+      "expression": "{x<-design_fixture(); M<-design(x); ncol(M)==5L && qr(M)$rank==5L && all(M[,1:2,drop=FALSE]==x$X) && identical(dimnames(M[,1:2,drop=FALSE]),dimnames(x$X))}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "QR-rank retention: an aliased source-observation column is dropped and the retained ecological columns are byte-identical (values + dimnames) to the pre-augmentation design. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-ALIGN-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-ALIGN",
+      "admission_case_id": "ISDM-ALIGN",
+      "parent_obligation": "DATA-ISDM-07",
+      "stage": "alignment",
+      "expression": "{x<-design_fixture(); a<-.align_mixed_family_list(x$f,c(\"detect\",\"count\"),\"isdm_source\"); identical(names(a),c(\"detect\",\"count\")) && identical(attr(a,\"isdm_observation\")$detect,attr(x$f,\"isdm_observation\")$detect) && identical(a$detect$link,\"cloglog\") && admitted(a,x$d)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "Reordering the declared-source list to match data factor levels preserves the per-source observation formula attribute and keeps the reordered list admitted. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-COUNT-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-COUNT",
+      "admission_case_id": "ISDM-COUNT",
+      "parent_obligation": "DATA-ISDM-01",
+      "stage": "constructor/structural",
+      "expression": "{f<-isdm_sources(count=poisson(),detect=poisson()); identical(names(f),c(\"count\",\"detect\")) && !admitted(f)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": true,
+      "rationale": "An all-Poisson two-source declaration constructs (both laws admitted individually) but is NOT admitted into the mixed iSDM contract, because admission requires a mixed count+detection declaration; an all-count fit takes the ordinary ISDM-ZERO-ORDINARY route instead. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-EXTRA-SOURCE-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-EXTRA-SOURCE",
+      "admission_case_id": "ISDM-EXTRA-SOURCE",
+      "parent_obligation": "DATA-ISDM-08",
+      "stage": "structural",
+      "expression": "{d<-fixture(); ids<-row_ids(laws(),d); d$isdm_source[1]<-\"unknown\"; !admitted(d=d,ids=ids)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": true,
+      "rationale": "A data row labelled with a source name not present in the declaration refuses admission. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-LEGACY-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-LEGACY",
+      "admission_case_id": "ISDM-LEGACY",
+      "parent_obligation": "DATA-ISDM-21",
+      "stage": "structural",
+      "expression": "{d<-fixture(); d$source<-ifelse(d$isdm_source==\"count\",\"gbif\",\"survey\"); d$isdm_family<-ifelse(d$source==\"gbif\",\"gbif\",\"survey_pa\"); f<-list(gbif=poisson(),survey_pa=binomial(\"cloglog\")); attr(f,\"family_var\")<-\"isdm_family\"; ids<-row_ids(laws(),d); .gllvmTMB_integrated_sources_contract(f,d,ids[,\"fid\"],ids[,\"lid\"],d$trait)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "The pre-Design-120 gbif/survey_pa two-source family-list shape (family_var=isdm_family) is admitted through the same .gllvmTMB_isdm_declared_core() as the general isdm_sources() declaration, confirming Route 2 is the n=2 legacy instance of Route 1, not a separate contract. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-MASKED-ARM-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-MASKED-ARM",
+      "admission_case_id": "ISDM-MASKED-ARM",
+      "parent_obligation": "DATA-ISDM-12",
+      "stage": "structural-only",
+      "expression": "{d<-fixture(); d$value[d$isdm_source==\"detect\"]<-NA_real_; admitted(d=d)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "Admission depends only on source/trait/id structure, not response values: masking an entire arm's response to NA (as under response='include') does not change the admission verdict. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-MASKED-COLUMNS-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-MASKED-COLUMNS",
+      "admission_case_id": "ISDM-MASKED-COLUMNS",
+      "parent_obligation": "DATA-ISDM-13",
+      "stage": "design",
+      "expression": "{x<-design_fixture(); M<-design(x); cc<-grep(\"isdm_source:count:\",colnames(M)); dc<-grep(\"isdm_source:detect:\",colnames(M)); length(cc)>0 && length(dc)>0 && all(M[x$d$isdm_source!=\"count\",cc,drop=FALSE]==0) && all(M[x$d$isdm_source!=\"detect\",dc,drop=FALSE]==0) && all(M[,seq_len(ncol(x$X)),drop=FALSE]==x$X) && identical(dimnames(M[,seq_len(ncol(x$X)),drop=FALSE]),dimnames(x$X))}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "Each generated isdm_source:<name>:<term> observation column is identically zero on every row outside that declared source, and the ecological design block is passed through unchanged. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-MISSING-IN-TRAIT-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-MISSING-IN-TRAIT",
+      "admission_case_id": "ISDM-MISSING-IN-TRAIT",
+      "parent_obligation": "DATA-ISDM-09",
+      "stage": "structural",
+      "expression": "{d<-fixture(); d<-d[!(d$trait==\"a\" & d$isdm_source==\"detect\"),]; !admitted(d=d)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": true,
+      "rationale": "Removing one declared source's rows from just one trait (leaving that source present overall) refuses admission: every trait must carry every declared source. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-MISSING-SOURCE-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-MISSING-SOURCE",
+      "admission_case_id": "ISDM-MISSING-SOURCE",
+      "parent_obligation": "DATA-ISDM-08",
+      "stage": "structural",
+      "expression": "{d<-fixture(); d<-d[d$isdm_source==\"count\",]; !admitted(d=d)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": true,
+      "rationale": "Dropping an entire declared source's rows from the data refuses admission. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-MIXED-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-MIXED",
+      "admission_case_id": "ISDM-MIXED",
+      "parent_obligation": "DATA-ISDM-02",
+      "stage": "structural",
+      "expression": "admitted()",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "The baseline well-formed mixed two-arm declaration against its matching fixture data is admitted; the positive control every other ISDM-* negative case is a one-field mutation of. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-NO-OFFSET-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-NO-OFFSET",
+      "admission_case_id": "ISDM-NO-OFFSET",
+      "parent_obligation": "DATA-ISDM-19",
+      "stage": "offset",
+      "expression": "identical(offset_fixture(NULL),rep(0,nrow(fixture())))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "An iSDM fit with no offset() term in the formula is not refused: the offset is optional and defaults to a zero vector, independent of the cloglog change-of-support exemption. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-NO-TRAITS-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-NO-TRAITS",
+      "admission_case_id": "ISDM-NO-TRAITS",
+      "parent_obligation": "DATA-ISDM-10",
+      "stage": "structural",
+      "expression": "!admitted(traits=NULL)",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": true,
+      "rationale": "A NULL trait_labels argument (e.g. a caller that never resolved the trait vector) refuses admission rather than erroring or vacuously passing. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-SUPPORT-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-SUPPORT",
+      "admission_case_id": "ISDM-SUPPORT",
+      "parent_obligation": "DATA-ISDM-18",
+      "stage": "offset-only",
+      "expression": "identical(offset_fixture(),fixture()$log_support)",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "The change-of-support offset for an iSDM fit is the ordinary offset() evaluation path: offset(log_support) round-trips to the log_support column, no special-cased arithmetic. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-THREE-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-THREE",
+      "admission_case_id": "ISDM-THREE",
+      "parent_obligation": "DATA-ISDM-03",
+      "stage": "structural",
+      "expression": "{f<-isdm_sources(count=poisson(),detect=binomial(\"cloglog\"),literature=poisson()); admitted(f,fixture(names(f)))}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "The declared-core admission predicate generalises past the historical n=2 gbif/survey shape: a 3-source declaration (two Poisson arms, one cloglog arm) with matching fixture data is admitted. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-UNBALANCED-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-UNBALANCED",
+      "admission_case_id": "ISDM-UNBALANCED",
+      "parent_obligation": "DATA-ISDM-11",
+      "stage": "structural",
+      "expression": "{d<-fixture(); d<-d[-1,]; admitted(d=d)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "Removing a single row (leaving unequal row counts per source/trait, but every source still present in every trait) still admits: the predicate checks presence, not balance, by design (documented limit in isdm-sources.R). Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-WITHIN-TRAIT-ADMIT-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-WITHIN-TRAIT-ADMIT",
+      "admission_case_id": "ISDM-WITHIN-TRAIT-ADMIT",
+      "parent_obligation": "DATA-ISDM-02",
+      "stage": "family-scale",
+      "expression": "isTRUE(.gllvmTMB_validate_family_scale_by_trait(c(2L,1L),c(0L,2L),c(\"a\",\"a\"),TRUE))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "With allow_isdm_mixed=TRUE, a within-trait family/link mixture (Poisson-log + Bernoulli-cloglog on the same trait) that would otherwise be refused by the one-family-per-trait rule passes -- the single sanctioned exception to that rule. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-WRAPPER-LAW",
+      "admission_case_id": "ISDM-WRAPPER-LAW",
+      "parent_obligation": "DATA-ISDM-05",
+      "stage": "wrapper",
+      "expression": "inherits(isdm_source(binomial(\"logit\"),~x),\"gllvmTMB_isdm_source\")",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "isdm_source() itself performs no admitted-law check (binomial(\"logit\") is accepted by the wrapper); the law gate is enforced only when isdm_sources() collects the declarations. Confirms the two-stage validation split (wrapper vs collector). Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-WRONG-ID-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-WRONG-ID",
+      "admission_case_id": "ISDM-WRONG-ID",
+      "parent_obligation": "DATA-ISDM-10",
+      "stage": "structural",
+      "expression": "{ids<-row_ids(laws(),fixture()); ids[1,\"fid\"]<-1L; !admitted(ids=ids)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": true,
+      "rationale": "A row whose realised family id disagrees with the declared source's family id refuses admission, even though the source-label structure is otherwise consistent. Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-WRONG-LINK",
+      "admission_case_id": "ISDM-WRONG-LINK",
+      "parent_obligation": "DATA-ISDM-10",
+      "stage": "structural",
+      "expression": "{ids<-row_ids(laws(),fixture()); ids[1,\"lid\"]<-2L; !admitted(ids=ids)}",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": true,
+      "rationale": "A row whose realised link id disagrees with the declared source's link id refuses admission (the link-id counterpart of ISDM-WRONG-ID). Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    },
+    {
+      "manifest_case_id": "CORE070-ISDM-ZERO-ORDINARY-PAIRED-CONTROL",
+      "source_id": "isdm/ISDM-ZERO-ORDINARY",
+      "admission_case_id": "ISDM-ZERO-ORDINARY",
+      "parent_obligation": "DATA-ISDM-19",
+      "stage": "offset",
+      "expression": "identical(offset_fixture(quote(0),FALSE),rep(0,nrow(fixture())))",
+      "expected": "TRUE",
+      "error_contains": "",
+      "evidence_kind": "control",
+      "classification": "required_core",
+      "julia_status": "UNVERIFIED native/formula/bridge; source checks only",
+      "negative_control": false,
+      "rationale": "An explicit offset(0) on a non-admitted (ordinary, non-mixed) fit evaluates through the same zero-offset path with no cloglog exemption needed -- the all-count declaration case that fits through the ordinary route (isdm-sources.R lines ~143-158). Admission-predicate behaviour is already pinned and control-verified against frozen R source; the remaining obligation is a public native/formula/bridge Julia surface once isdm_sources()/isdm_source() is ported, tracked separately (see docs/dev-log/core070/isdm-admission-evidence.json unpaid list)."
+    }
+  ],
+  "negative_control_case_ids": [
+    "ISDM-COUNT",
+    "ISDM-EXTRA-SOURCE",
+    "ISDM-MISSING-IN-TRAIT",
+    "ISDM-MISSING-SOURCE",
+    "ISDM-NO-TRAITS",
+    "ISDM-WRONG-ID",
+    "ISDM-WRONG-LINK"
+  ],
+  "failure_action": "Retain the complete attempt (results JSON, raw.tsv, diagnostics.log, receipt.json). Do not widen the exact-match comparison to substring or fuzzy matching, and do not drop a failing case from expected_case_count.",
+  "claim_boundary": "Passing this batch establishes that the frozen R admission-predicate behaviour for these 20 manifest-planned isdm cases replays correctly, in isolation, against the pinned R source at the reference commit. It does not establish any Julia native/formula/bridge fit, any recovery evidence, or admission behaviour for the 17 non-manifest cases in the wider 37-case docs/dev-log/core070/isdm-admission-subset.json.",
+  "p0_contract": "docs/dev-log/core070/isdm-batch-contract.json",
+  "p0_contract_sha256": "1288c8b599b25a3978a77c6fa0a306164a44e8f97a7d8a9c4eba65560762d766",
+  "p0_to_p1_r_function_diff": [
+    {
+      "function": ".isdm_admitted_law_id",
+      "file": "R/isdm-sources.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "ebcbec0173ef368eef1388f6743e3c65e24039aedd1a839010ec8dc9d219ab62",
+      "body_sha256_p1": "ebcbec0173ef368eef1388f6743e3c65e24039aedd1a839010ec8dc9d219ab62"
+    },
+    {
+      "function": "isdm_source",
+      "file": "R/isdm-sources.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "88545bcac3f697f6f0c5c587168b3454f12ceca8362e584eedf4b2dc0d6cd2fb",
+      "body_sha256_p1": "0307e330806c2348a6ef631aae5b989d41573f64665ea7013d003b933097eb2c"
+    },
+    {
+      "function": "isdm_sources",
+      "file": "R/isdm-sources.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "430860bba0724cf144bccabc588c368826a5ebc38023c463f9f8cb6362eb231a",
+      "body_sha256_p1": "dfd79959bd442a9e2c7623c9d44b062c76c749858c8ffdeebc0e5e2739101ca5"
+    },
+    {
+      "function": ".gll_isdm_observation_design",
+      "file": "R/isdm-sources.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "fdcac1f1cbd249dc2bfdf5a2d527edccda90b12de52fc004c11edc0dafa205b9",
+      "body_sha256_p1": "53eaa2545b19d7b48a6e1ab576f0f00d910b62d2fdc6dd825d9c8d9e138f2674"
+    },
+    {
+      "function": ".gllvmTMB_isdm_declared_core",
+      "file": "R/isdm-sources.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "9ad64f2f937b2433da4681806cfb4c8a16c7d44d20034b27502ff11272f2d854",
+      "body_sha256_p1": "f66120b8166779a0d495cd506d5a91f295ca94a483b4b01e16ae09f74d1bfcf0"
+    },
+    {
+      "function": ".align_mixed_family_list",
+      "file": "R/fit-multi.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "6f6206277da2d82c1988207fac6efd61b8337d8249d73814d91028a42d5d8fc1",
+      "body_sha256_p1": "2505a0eca4b41edbfeebd0a1fa67d3ef270f58145b8584ef71632eaf50c85c27"
+    },
+    {
+      "function": ".gllvmTMB_validate_family_scale_by_trait",
+      "file": "R/fit-multi.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "342dfa6fcc2ff8a407cd0cb2c154c7117d0951febff7e7f70d04f732d7a98245",
+      "body_sha256_p1": "342dfa6fcc2ff8a407cd0cb2c154c7117d0951febff7e7f70d04f732d7a98245"
+    },
+    {
+      "function": ".gllvmTMB_integrated_sources_contract",
+      "file": "R/fit-multi.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "0c2f1c8a857d30b8dd0e2141a2bfb4ac4692e2be341b859b83a1d50d8bfc9a7d",
+      "body_sha256_p1": "0c2f1c8a857d30b8dd0e2141a2bfb4ac4692e2be341b859b83a1d50d8bfc9a7d"
+    },
+    {
+      "function": "gll_prepare_offset",
+      "file": "R/offset.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "68392cfa280e3a7307c39d09ecfefef8b2fb0ead79878c0e34d47b110aa8c5ed",
+      "body_sha256_p1": "68392cfa280e3a7307c39d09ecfefef8b2fb0ead79878c0e34d47b110aa8c5ed"
+    }
+  ],
+  "julia_surface_status_p1_note": "julia_surface_status is carried verbatim from P0. At the commit this twin was generated on, GLLVModels' src/ has no iSDM code (no isdm_sources, isdm_source or integrated-source fitter; the receipt tool records a git grep of src/ at the run commit). Draft PRs #546 (isdm_sources/isdm_source, isdm_table, fit_isdm_gllvm, predict) and #558 (unique = TRUE) build that surface on another branch, and #546's test/parity/isdm_cases.jl runs 19 of these 20 predicates natively in Julia against an R replay at P1 (ISDM-LEGACY is R-only by decision D-296). Whether those twins should pay these rows is a maintainer decision; this batch re-measures the R side only, as at P0.",
+  "regeneration_log": {
+    "generator": "tools/core070_isdm_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "source_pins[R/isdm-sources.R]",
+        "p0": "e447383ffc54b62c04463764ade5454222f32d909a5a5b45330f821f93390b6d",
+        "p1": "e06bbe7bc3c88697080173f0e1b68f3e5a1947729124e72d34587730cd1b6f73",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/fit-multi.R]",
+        "p0": "768db11bd09e6de872d4a27b60fd0a096f617434ac84c95db721fac8f8d77c02",
+        "p1": "129d35549c728e96874252c3242f545ff959805c103e29f2803b740bd6da4ddd",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/offset.R]",
+        "p0": "df43a6a507da0e593d29bacca030cc4a4dc9d4cbfdac20166f66dee9b8ff1f47",
+        "p1": "df43a6a507da0e593d29bacca030cc4a4dc9d4cbfdac20166f66dee9b8ff1f47",
+        "changed": false
+      },
+      {
+        "field": "julia_surface_status_p1_note",
+        "added": true,
+        "why": "the carried P0 status predates the draft iSDM port (#546, #558)"
+      }
+    ],
+    "carried_verbatim": "status, area, cases (expression, expected, error_contains, negative_control, classification, rationale), expected_case_count, loaded_functions, fixture and fixture_sha256, tolerances, health_checks, negative_control_case_ids, failure_action, claim_boundary. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

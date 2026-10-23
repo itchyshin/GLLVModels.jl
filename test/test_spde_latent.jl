@@ -1,4 +1,4 @@
-using GLLVModels, Test, LinearAlgebra, SparseArrays, Random
+using GLLVModels, Test, LinearAlgebra, SparseArrays, Random, Distributions
 
 # Build a regular triangulated grid over [0, L]² (same construction as test_spde.jl).
 function _grid_mesh(m, L)

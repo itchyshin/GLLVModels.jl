@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-pois-lv-t4-p20n500	G-nb-binom-lv; T4 Poisson (p,n,K)=(20,500,2)	fit_poisson_gllvm	1.645914	-13736.86047	julia_abs_only	ok	4e976e2	totoro	4

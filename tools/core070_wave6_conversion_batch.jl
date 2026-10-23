@@ -143,7 +143,12 @@ isfile(oracle_path) || error("oracle file not found: $oracle_path")
 oracle = json_read(oracle_path)
 
 root = normpath(joinpath(@__DIR__, ".."))
-contract = json_read(joinpath(root, "docs/dev-log/core070/wave6-conversion-batch-contract.json"))
+# GLLVM_PARITY_PIN=P1 reads the P1-regenerated contract (cases verbatim); unset/P0 is unchanged.
+_wave6_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P1")))
+_wave6_pin in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1")
+contract = json_read(joinpath(root, _wave6_pin == "P1" ?
+    "docs/dev-log/core070/true-parity-latest/wave6-conversion-batch-contract-p1.json" :
+    "docs/dev-log/core070/wave6-conversion-batch-contract.json"))
 cases = contract["cases"]
 length(cases) == contract["expected_case_count"] || error("case count mismatch vs contract")
 Int(contract["expected_case_count"]) == 10 || error("expected_case_count drifted from 10; update this script")
@@ -328,6 +333,34 @@ for cs in cases
                                               "julia_nobs" => jl_nobs, "julia_expected_n" => Float64(n),
                                               "error" => jl_err,
                                               "known_defect_pending_decision" => true)
+        global all_ok &= ok
+        continue
+    end
+
+    if kind == "integer_equality"
+        # P1 nobs case (maintainer ruling 2026-10-05, D-319, item N2): R nobs == Julia nobs exactly
+        # (integer_equality, itchyshin/GLLVModels.jl#684 item 1: tolerance 0.5 on integers means equal).
+        r_ok, r_vec = oracle_numeric_or_missing(oracle, case_id)
+        if !r_ok || length(r_vec) != 1
+            results[case_id] = Dict{String, Any}("pass" => false, "kind" => kind,
+                                                  "error" => "null_oracle_value: R oracle_values[$case_id] was null/missing or not a scalar")
+            global all_ok = false
+            continue
+        end
+        r_int = r_vec[1]
+        jl_int, jl_err = try
+            (Float64(GLLVModels.nobs(fit_g, Y_g)), "")
+        catch e
+            (NaN, sprint(showerror, e))
+        end
+        tol = Float64(cs["tolerance"])
+        ints_ok = isfinite(r_int) && r_int == round(r_int) && isfinite(jl_int) && jl_int == round(jl_int)
+        ok = tol == 0.5 && ints_ok && abs(r_int - jl_int) <= tol
+        results[case_id] = Dict{String, Any}("pass" => ok, "kind" => kind, "quantity" => cs["quantity"],
+                                              "tolerance" => tol, "r_value" => r_int, "julia_value" => jl_int,
+                                              "max_abs_diff" => (isfinite(jl_int) ? abs(r_int - jl_int) : NaN),
+                                              "r_len" => 1, "julia_len" => 1, "julia_values" => [jl_int],
+                                              "error" => jl_err)
         global all_ok &= ok
         continue
     end

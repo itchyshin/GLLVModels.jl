@@ -1,0 +1,59 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v2",
+  "case_id": "CORE070-POSTFIT-COEF-MULTI-READBACK",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-coef.gllvmTMB_multi"
+  ],
+  "batch": "tools/core070_postfit_1_batch.R then .jl, GLLVM_PARITY_PIN=P1",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_postfit_1_batch.py",
+    "argv": "tools/core070_verify_postfit_1_batch.py --r-state {r_state} --julia-state {julia_state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_POSTFIT_1_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/verify.txt"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/postfit-1-r-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-1-p1/postfit-1-julia-results.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-POSTFIT-COEF-MULTI-READBACK",
+        "quantity": "coef",
+        "max_abs_diff": 7.192450925397331e-07,
+        "tolerance": 0.001,
+        "tolerance_rule": "postfit-1-batch-contract-p1.json executable_batch.tolerance.max_abs_diff (carried verbatim from P0)",
+        "n_values": 4,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          -1.0058016663529463,
+          -0.2481022342092903,
+          0.3536599275784259,
+          0.9301416066012732
+        ],
+        "julia_value": [
+          -1.00580175,
+          -0.2481022083333333,
+          0.35365920833333336,
+          0.9301414166666667
+        ],
+        "discriminating": true
+      }
+    ]
+  }
+}

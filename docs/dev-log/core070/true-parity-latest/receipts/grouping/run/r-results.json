@@ -1,0 +1,124 @@
+{
+  "engine": "R gllvmTMB",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmTMB_version": "0.7.1",
+  "loaded_path": "/Users/z3437171/local-scratch/a3cov-oracle/build/library/gllvmTMB",
+  "oracle_build_json_sha256": "0a648dc0ee299416b3796fefaa23419c1736f9c7b257aa77a5d8d108e3ba01af",
+  "oracle_installed_tree_sha256": "5d4877193c3727965412546ca49c77588ba3083eab87629080e610cb889516d4",
+  "R_version": "R version 4.6.0 (2026-04-24)",
+  "levels": {
+    "unit": {
+      "keyword": "unit",
+      "keyword_accepted": true,
+      "call": "value ~ 0 + trait + indep(0 + trait | unit); unit = unit",
+      "negative_control": {
+        "keyword": "unit_zz_not_a_keyword",
+        "rejected": true,
+        "message": "unused argument (unit_zz_not_a_keyword = \"unit\")"
+      },
+      "membership_control": {
+        "moved_obs_row": 1,
+        "to_group": "u2",
+        "logLik": -84.2431341602032
+      },
+      "fixture": "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/unit.csv",
+      "fixture_sha256": "553c89bcf06b7d864dd1bba5ed72288170c93caa6a5374091b0e305288fb9f7b",
+      "n_rows": 96,
+      "n_groups": 12,
+      "fit_seconds": 0.550935029983521,
+      "convergence": 0,
+      "optimizer_message": "relative convergence (4)",
+      "max_abs_gradient": 0.000158229527023952,
+      "logLik": -73.3919463199951,
+      "beta": [0.472135951150887, -0.620013469351752],
+      "Sigma_diag": [0.578727081134656, 0.235623745757397],
+      "Sigma_offdiag": 0,
+      "sigma_eps": 0.384839409678983
+    },
+    "unit_obs": {
+      "keyword": "unit_obs",
+      "keyword_accepted": true,
+      "call": "value ~ 0 + trait + indep(0 + trait | unit_obs); unit = unit, unit_obs = unit_obs",
+      "negative_control": {
+        "keyword": "unit_obs_zz_not_a_keyword",
+        "rejected": true,
+        "message": "unused argument (unit_obs_zz_not_a_keyword = \"unit_obs\")"
+      },
+      "membership_control": {
+        "moved_obs_row": 1,
+        "to_group": "u1_o2",
+        "logLik": -85.1600489144198
+      },
+      "fixture": "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/unit_obs.csv",
+      "fixture_sha256": "590ee4b9f67b2736daa3510d52819b42ca34b93bfac5a8317ecf237853537bcf",
+      "n_rows": 96,
+      "n_groups": 24,
+      "fit_seconds": 0.0312690734863281,
+      "convergence": 0,
+      "optimizer_message": "relative convergence (4)",
+      "max_abs_gradient": 8.60736523405388e-06,
+      "logLik": -85.6062135055781,
+      "beta": [0.333090488283513, -0.396435673986312],
+      "Sigma_diag": [0.511005980989924, 0.15050793205183],
+      "Sigma_offdiag": 0,
+      "sigma_eps": 0.40441735257805
+    },
+    "cluster": {
+      "keyword": "cluster",
+      "keyword_accepted": true,
+      "call": "value ~ 0 + trait + indep(0 + trait | cluster_id); unit = unit, cluster = cluster_id",
+      "negative_control": {
+        "keyword": "cluster_zz_not_a_keyword",
+        "rejected": true,
+        "message": "unused argument (cluster_zz_not_a_keyword = \"cluster_id\")"
+      },
+      "membership_control": {
+        "moved_obs_row": 1,
+        "to_group": "c2",
+        "logLik": -56.6394988688177
+      },
+      "fixture": "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/cluster.csv",
+      "fixture_sha256": "eed99dade526648ce54fdbe794003c2667ca20a59775e3b77151f571ffe58338",
+      "n_rows": 96,
+      "n_groups": 6,
+      "fit_seconds": 0.0242650508880615,
+      "convergence": 0,
+      "optimizer_message": "relative convergence (4)",
+      "max_abs_gradient": 2.97952713954208e-06,
+      "logLik": -54.7892245188646,
+      "beta": [0.882775496130516, -0.790212988132321],
+      "Sigma_diag": [0.146887505608245, 0.112817687266005],
+      "Sigma_offdiag": 0,
+      "sigma_eps": 0.375047556570463
+    },
+    "cluster2": {
+      "keyword": "cluster2",
+      "keyword_accepted": true,
+      "call": "value ~ 0 + trait + indep(0 + trait | cluster2_id); unit = unit, cluster2 = cluster2_id",
+      "negative_control": {
+        "keyword": "cluster2_zz_not_a_keyword",
+        "rejected": true,
+        "message": "unused argument (cluster2_zz_not_a_keyword = \"cluster2_id\")"
+      },
+      "membership_control": {
+        "moved_obs_row": 1,
+        "to_group": "k2",
+        "logLik": -64.4888288337483
+      },
+      "fixture": "docs/dev-log/core070/true-parity-latest/receipts/grouping/fixtures/cluster2.csv",
+      "fixture_sha256": "f66c68823cfde7850eae6f239b3c07b7a93694d0a6623a6be258e832a53ef1b8",
+      "n_rows": 96,
+      "n_groups": 6,
+      "fit_seconds": 0.0254650115966797,
+      "convergence": 0,
+      "optimizer_message": "relative convergence (4)",
+      "max_abs_gradient": 2.19172312040477e-05,
+      "logLik": -59.9317788136872,
+      "beta": [-0.200408329711038, -0.353344317548667],
+      "Sigma_diag": [0.14011838468374, 0.102424916811146],
+      "Sigma_offdiag": 0,
+      "sigma_eps": 0.400008155001563
+    }
+  }
+}

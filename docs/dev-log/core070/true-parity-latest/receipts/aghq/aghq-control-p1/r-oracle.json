@@ -1,0 +1,101 @@
+{
+  "schema": "core070-aghq-r-oracle/v1",
+  "cases": {
+    "CORE070-AGHQ-CTRL-FALSE-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": "FALSE",
+      "r_call_errored": false,
+      "r_call_error": null
+    },
+    "CORE070-AGHQ-CTRL-NULL-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": "FALSE",
+      "r_call_errored": false,
+      "r_call_error": null
+    },
+    "CORE070-AGHQ-CTRL-TRUE-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": "\"auto\"",
+      "r_call_errored": false,
+      "r_call_error": null
+    },
+    "CORE070-AGHQ-CTRL-AUTO-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": "\"auto\"",
+      "r_call_errored": false,
+      "r_call_error": null
+    },
+    "CORE070-AGHQ-CTRL-ONE-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": "1L",
+      "r_call_errored": false,
+      "r_call_error": null
+    },
+    "CORE070-AGHQ-CTRL-TWO-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": "2L",
+      "r_call_errored": false,
+      "r_call_error": null
+    },
+    "CORE070-AGHQ-CTRL-NINE-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": "9L",
+      "r_call_errored": false,
+      "r_call_error": null
+    },
+    "CORE070-AGHQ-INVALID-ZERO-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    },
+    "CORE070-AGHQ-INVALID-NEGATIVE-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    },
+    "CORE070-AGHQ-INVALID-FRACTION-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    },
+    "CORE070-AGHQ-INVALID-INF-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    },
+    "CORE070-AGHQ-INVALID-NAN-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    },
+    "CORE070-AGHQ-INVALID-NA-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    },
+    "CORE070-AGHQ-INVALID-VECTOR-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    },
+    "CORE070-AGHQ-INVALID-EMPTY-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    },
+    "CORE070-AGHQ-INVALID-STRING-PAIRED-CONTROL": {
+      "r_assertion_pass": true,
+      "r_value": null,
+      "r_call_errored": true,
+      "r_call_error": "`aghq` must be `FALSE`, \"auto\", or a single positive integer.\nℹ `aghq = FALSE` uses the Laplace approximation (the current default).\nℹ `aghq = \"auto\"` lets the package choose the node count.\n→ Pass `aghq = 9` for a fixed 9-node rule per latent dimension, or omit `aghq`\n  for the default."
+    }
+  }
+}

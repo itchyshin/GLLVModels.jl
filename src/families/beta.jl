@@ -11,8 +11,14 @@
 # with ψ = digamma, ψ′ = trigamma.
 _clamp_mu(::Beta, μ) = clamp(μ, 1e-6, 1 - 1e-6)
 
+# Boundary guard: clamp y into [1e-12, 1-1e-12], matching gllvmTMB's y_safe
+# (gllvmTMB.cpp, Beta branch) so exact 0/1 proportions do not give log(0) (#147).
+# A no-op for interior y.
+_clamp_y(::Beta, y) = clamp(y, 1e-12, 1 - 1e-12)
+
 function _glm_score(f::Beta, μ, n, me, y)
     φ = f.α
+    y = _clamp_y(f, y)
     ystar = log(y) - log1p(-y)                      # logit(y)
     μstar = digamma(μ * φ) - digamma((1 - μ) * φ)
     return φ * (ystar - μstar) * me
@@ -24,7 +30,7 @@ function _glm_weight(f::Beta, μ, n, me)
     return φ^2 * ν * me^2
 end
 
-_glm_logpdf(f::Beta, μ, n, y) = logpdf(Beta(μ * f.α, (1 - μ) * f.α), y)
+_glm_logpdf(f::Beta, μ, n, y) = logpdf(Beta(μ * f.α, (1 - μ) * f.α), _clamp_y(f, y))
 
 """
     beta_marginal_loglik_laplace(Y, Λ, β, φ; link=LogitLink(), kwargs...) -> Float64
@@ -48,6 +54,8 @@ beta_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::Abstract
 Result of [`fit_beta_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated precision `φ` (Var = μ(1−μ)/(1+φ)), the `link`, the maximised Laplace
 `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct BetaFit
     β::Vector{Float64}
@@ -60,7 +68,12 @@ struct BetaFit
     alpha_lv::Union{Nothing, Matrix{Float64}}
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+BetaFit(β, Λ, φ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
+    BetaFit(β, Λ, φ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -123,7 +136,7 @@ function beta_lv_nll_packed(params::AbstractVector, Y::AbstractMatrix,
 
     lv_offset = _lv_mean_eta(Λ, X_lv, alpha_lv)
     off = offset === nothing ? lv_offset : offset .+ lv_offset
-    return -beta_marginal_loglik_laplace(Y, Λ, β, φ; mask = mask, offset = off,
+    return -beta_marginal_loglik_laplace(Y, Λ, β, φ; link = link, mask = mask, offset = off,
                                          maxiter = maxiter, tol = tol)
 end
 
@@ -145,8 +158,9 @@ Fit a Beta GLLVM by L-BFGS over `[β; vec(Λ); log φ]` on the Laplace marginal
 (`beta_marginal_loglik_laplace`), jointly estimating the precision `φ`
 (`Var = μ(1−μ)/(1+φ)`). `Y` is a p×n matrix of proportions in (0,1); `K` the latent
 dimension. The default analytic Laplace gradient is used on the plain
-no-mask/no-offset path, with an internal finite-difference fallback; masked or
-offset fits use finite differences. Warm start = empirical logit-mean intercepts +
+no-mask/no-offset path with the logit link, with an internal finite-difference
+fallback; masked or offset fits, and any other `link`, use finite differences of
+the objective for that link. Warm start = empirical logit-mean intercepts +
 an SVD loadings init + a moderate `φ₀`.
 
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
@@ -164,6 +178,8 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_beta_gllvm")
     rr = rr_theta_len(p, K)
     # `hessian` selects the log-det curvature ONLY (the mode search is always
     # Fisher-scored — see families/laplace.jl). Default = the family's registered
@@ -200,7 +216,8 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = _sanitize_missing(Y, 0.5)                   # in-(0,1) placeholder
+    _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm")
+    Yc  = _sanitize_unobserved(Y, msk, 0.5)           # in-(0,1) placeholder
 
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
@@ -241,8 +258,8 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φ = exp(θ[p + rr + 1])
         v = try
-            -beta_marginal_loglik_laplace(Yc, Λ, β, φ; mask = msk, offset = offset,
-                                          hessian = hessian,
+            -beta_marginal_loglik_laplace(Yc, Λ, β, φ; link = link, mask = msk,
+                                          offset = offset, hessian = hessian,
                                           maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -265,12 +282,15 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
             return isfinite(v) ? v : 1e12
         end
         Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing &&
+    elseif gradient === :analytic && offset === nothing && link isa LogitLink &&
            hessian === _default_hessian(Beta(1.0, 1.0), link)
         # The analytic gradient implements the DEFAULT curvature's objective (the two
         # moved together in the 2026-08-25 role-separation work). A non-default
         # `hessian` therefore falls through to :finite below, which differentiates the
-        # actual objective and cannot desynchronise from it.
+        # actual objective and cannot desynchronise from it. The same holds for the
+        # link: `beta_laplace_grad` is derived for the logit link only (its score,
+        # weight and log-det are hand-written in `μ(1−μ)`), so any other link also
+        # takes the :finite path.
         ag = θ -> begin
             β = θ[1:p]; Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K); fv = exp(θ[p + rr + 1])
             try -beta_laplace_grad(Yc, Λ, β, fv; mask = msk) catch; nothing end
@@ -290,11 +310,12 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         cursor += rr
         φ̂ = exp(θ̂[cursor + 1])
         return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)...,
-                       alpha_hat, collect(Float64, θ̂), hessian)
+                       alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         φ̂ = exp(θ̂[p + rr + 1])
-        return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian,
+                       _stored_offset(offset))
     end
 end

@@ -1,0 +1,19 @@
+$ GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_aghq_batch.py --state <raw run> --self-test
+# exit code 0
+CORE070_AGHQ_CONTRACT_VERIFIED executable= 16 needs_surface= 22 in_scope_total= 29 out_of_scope_executed= 9
+CORE070_AGHQ_BATCH_NEGATIVES_PASS 10
+CORE070_AGHQ_CONTRACT_NEGATIVES_PASS 5
+CORE070_AGHQ_BATCH_SOURCE_PIN_NEGATIVES_PASS 5
+CORE070_AGHQ_CONTRACT_VERIFIED executable= 16 needs_surface= 22 in_scope_total= 29 out_of_scope_executed= 9
+CORE070_AGHQ_CONTROL_BATCH_VERIFIED 16 negative_controls 3
+# ---- derived checks ----
+# aghq control tracked-file checks (tools/core070_aghq_p1_receipts.py)
+PASS  receipt status PASS, julia exit code 0
+PASS  pinned at P1
+PASS  contract is the tracked P1 twin
+PASS  source pins are the twin's P1 pins
+PASS  R source-pin record matches tools/core070_oracle_pins.toml [P1]
+PASS  julia-results.json is the file the receipt hashed
+PASS  results.tsv is the file the receipt hashed
+PASS  r-oracle.json records every case with its R value
+# status PASS

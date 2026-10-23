@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-gauss-lv-t4-p20n500	G-gauss-lv-large; T4 Gaussian (p,n,K)=(20,500,2)	fit_gaussian_gllvm	0.008802	-11924.3686	julia_abs_only	ok	4e976e2	totoro	4

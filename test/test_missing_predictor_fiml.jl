@@ -1,4 +1,5 @@
 using GLLVModels, Test, LinearAlgebra, Random, Statistics, ForwardDiff
+using StableRNGs: StableRNG
 
 # Missing-predictor FIML (the mi() axis), Gaussian Phase-2a slice: a site-level
 # continuous predictor x (one value per site, may be `missing`) modelled as
@@ -115,5 +116,120 @@ using GLLVModels, Test, LinearAlgebra, Random, Statistics, ForwardDiff
             @test abs(mean(bf) - b_x_true) < 0.04                          # FIML ~unbiased
             @test mean(abs.(bc .- b_x_true)) > 1.8 * mean(abs.(bf .- b_x_true))  # cc more biased
         end
+    end
+end
+
+# Response mask (gllvmTMB miss_control(response = "include", predictor = "model")): missing or NaN
+# cells of y contribute nothing; the rest of each site enters the observed-data likelihood. The
+# reference below is written independently of the fitter's conditional factorisation: the joint
+# Gaussian of (y_s, x_s), subset to the observed components, evaluated with Distributions.MvNormal.
+@testset "fit_gaussian_mi_fiml: response mask (observed-data likelihood)" begin
+    using Distributions: MvNormal, logpdf
+
+    # params packed as the fitter's layout: [a; b_x; μ_x; γ; log σ_x; log σ_eps; vec(Λ)]
+    function dense_ll(θ, y, x, Z, p, n, K)
+        q = Z === nothing ? 0 : size(Z, 2)
+        a = θ[1:p]; b = θ[p + 1]; μ = θ[p + 2]
+        γ = θ[(p + 3):(p + 2 + q)]
+        σx = exp(θ[p + 3 + q]); σe = exp(θ[p + 4 + q])
+        Λ = reshape(θ[(p + 5 + q):end], p, K)
+        ll = zero(eltype(θ))
+        for s in 1:n
+            m = q == 0 ? μ : μ + dot(Z[s, :], γ)
+            mean_j = vcat(a .+ b * m, m)
+            S = zeros(eltype(θ), p + 1, p + 1)
+            S[1:p, 1:p] = Λ * Λ' + σe^2 * I + b^2 * σx^2 * ones(p, p)
+            S[1:p, p + 1] .= b * σx^2
+            S[p + 1, 1:p] .= b * σx^2
+            S[p + 1, p + 1] = σx^2
+            o = vcat([!(ismissing(y[t, s]) || isnan(y[t, s])) for t in 1:p], !ismissing(x[s]))
+            any(o) || continue
+            v = vcat([ismissing(y[t, s]) ? 0.0 : y[t, s] for t in 1:p], ismissing(x[s]) ? 0.0 : x[s])
+            ll += logpdf(MvNormal(mean_j[o], Symmetric(S[o, o])), v[o])
+        end
+        return ll
+    end
+    # E[x_s | observed y_s] from the same joint
+    function dense_eblup(r, y, x, Z, s, p)
+        m = Z === nothing ? r.μ_x : r.μ_x + dot(Z[s, :], r.γ)
+        o = [!(ismissing(y[t, s]) || isnan(y[t, s])) for t in 1:p]
+        any(o) || return m
+        Syy = r.Λ * r.Λ' + r.σ_eps^2 * I + r.b_x^2 * r.σ_x^2 * ones(p, p)
+        ry = Float64[y[t, s] for t in 1:p if o[t]] .- (r.a[o] .+ r.b_x * m)
+        return m + r.b_x * r.σ_x^2 * sum(Symmetric(Syy[o, o]) \ ry)
+    end
+    packed(r) = vcat(r.a, r.b_x, r.μ_x, r.γ, log(r.σ_x), log(r.σ_eps), vec(r.Λ))
+
+    p, n, K = 4, 150, 1
+    rng = Random.MersenneTwister(11)
+    z = randn(rng, n)
+    x = 0.3 .+ 0.7 .* z .+ 0.6 .* randn(rng, n)
+    Λt = [0.9, 0.6, -0.5, 0.4]
+    y = [0.5, -0.2, 0.1, 0.3] .+ 0.8 .* x' .+ Λt * randn(rng, n)' .+ 0.5 .* randn(rng, p, n)
+    xm = Vector{Union{Missing,Float64}}(x)
+    xmiss = [3, 8, 21, 40, 41, 77, 100, 133]
+    xm[xmiss] .= missing
+    ym = Matrix{Union{Missing,Float64}}(y)
+    for s in 1:n, t in 1:p
+        rand(rng) < 0.12 && (ym[t, s] = missing)
+    end
+    ym[1, 3] = missing          # site 3 misses x and one response
+    ym[:, 60] .= missing        # a site with no response, x observed: only the x density
+    ym[:, 41] .= missing        # a site with no response and no x: contributes nothing
+    Zm = reshape(z, n, 1)
+
+    r = fit_gaussian_mi_fiml(ym, xm; K = K, Z = Zm)
+    @test r.converged
+    @test r.n_missing == length(xmiss)
+    @test r.n_missing_y == count(ismissing, ym)
+    θ = packed(r)
+    @test isapprox(r.logLik, dense_ll(θ, ym, xm, Zm, p, n, K); rtol = 1e-10)
+    # a stationary point of the independent reference
+    @test maximum(abs, ForwardDiff.gradient(t -> dense_ll(t, ym, xm, Zm, p, n, K), θ)) < 1e-3
+    # conditional modes at the missing-x sites use only the observed responses
+    @test all(isapprox(r.eblup_x[s], dense_eblup(r, ym, xm, Zm, s, p); atol = 1e-10) for s in xmiss)
+    @test r.eblup_x[41] ≈ r.μ_x + r.γ[1] * z[41]
+
+    # NaN marks a missing response exactly as `missing` does
+    yn = Float64[ismissing(v) ? NaN : v for v in ym]
+    rn = fit_gaussian_mi_fiml(yn, xm; K = K, Z = Zm)
+    @test rn.logLik == r.logLik
+    @test rn.eblup_x == r.eblup_x
+
+    # complete responses: the same reference
+    rc = fit_gaussian_mi_fiml(y, xm; K = K, Z = Zm)
+    @test rc.n_missing_y == 0
+    @test isapprox(rc.logLik, dense_ll(packed(rc), y, xm, Zm, p, n, K); rtol = 1e-10)
+
+    # a trait with no observed response is refused
+    yb = copy(ym); yb[2, :] .= missing
+    @test_throws ArgumentError fit_gaussian_mi_fiml(yb, xm; K = K, Z = Zm)
+
+    # Regression: with many masked responses the default line search's first step reached an
+    # extreme point (log σ_eps near -100) where the Woodbury Cholesky threw PosDefException
+    # (25% of cells masked: most draws failed at K = 2). Every draw must now fit, at a stationary
+    # point of the independent reference. Structural assertions only (no drawn magnitudes).
+    @testset "25% masked responses, K = $Kr, draw $seed" for Kr in (1, 2), seed in 1:6
+        srng = StableRNG(1000 * Kr + seed)
+        pr, nr = 5, 80
+        zr = randn(srng, nr)
+        xr = 0.2 .+ 0.8 .* zr .+ 0.5 .* randn(srng, nr)
+        yr = randn(srng, pr) .+ 0.7 .* xr' .+ randn(srng, pr, Kr) * randn(srng, Kr, nr) .+ 0.4 .* randn(srng, pr, nr)
+        yrm = Matrix{Union{Missing,Float64}}(yr)
+        for s in 1:nr, t in 1:pr
+            rand(srng) < 0.25 && (yrm[t, s] = missing)
+        end
+        for t in 1:pr                       # keep every trait observed somewhere
+            all(ismissing, yrm[t, :]) && (yrm[t, 1] = yr[t, 1])
+        end
+        xrm = Vector{Union{Missing,Float64}}(xr)
+        xrm[randperm(srng, nr)[1:15]] .= missing
+        Zr = reshape(zr, nr, 1)
+        fr = fit_gaussian_mi_fiml(yrm, xrm; K = Kr, Z = Zr)
+        @test fr.converged
+        @test isfinite(fr.logLik)
+        θr = packed(fr)
+        @test isapprox(fr.logLik, dense_ll(θr, yrm, xrm, Zr, pr, nr, Kr); rtol = 1e-10)
+        @test maximum(abs, ForwardDiff.gradient(t -> dense_ll(t, yrm, xrm, Zr, pr, nr, Kr), θr)) < 1e-3
     end
 end

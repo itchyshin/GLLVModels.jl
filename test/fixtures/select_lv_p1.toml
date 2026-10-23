@@ -1,0 +1,28 @@
+# Twin fixture for select_lv() (R/select-lv.R at gllvmTMB P1). Generated once by
+# gen_select_lv_p1.R from select_lv_p1_data.csv (sha256 guarded below). Do not
+# hand-edit the [r_reference] block; regenerate it from the script.
+data_file = "select_lv_p1_data.csv"
+data_sha256 = "cdba824f343e4c60282d071d4340440bafdc51e739062233d7a61a1090686027"
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+seed = 20260930
+p = 6
+n_unit = 150
+trait_names = ["t1", "t2", "t3", "t4", "t5", "t6"]
+true_rank = 2
+
+[r_reference]
+# select_lv(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE),
+#           data, unit = "unit", trait = "trait", d_max = 3, criterion = "bic")
+d = [1, 2, 3]
+npar = [13, 18, 22]
+nobs = 900
+loglik = [-1183.6445883535566, -1032.9490290544809, -1030.9576313768791]
+aic = [2393.2891767071133, 2101.8980581089618, 2105.9152627537583]
+bic = [2455.7203086303293, 2188.3411638487992, 2211.5679475468933]
+aicc = [2393.7000119215604, 2102.674448574342, 2107.0691966192085]
+converged = [true, true, true]
+pd_hessian = [true, true, true]
+selected_d = 2
+criterion = "bic"

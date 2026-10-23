@@ -40,6 +40,16 @@ raw latent-axis coefficients for the predictor-informed score mean; use
 counts, controls, final caches and retained start diagnostics. It is `nothing`
 for default Laplace and legacy constructors. AGHQ convergence is with respect
 to the frozen-node surrogate, not derivatives through changing adaptation.
+`offset` is the p×n training offset a Laplace fit was made with (`nothing` when the
+fit had none); [`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ fit
+leaves `offset === nothing`: its offset is kept in `integration.data.offset`, which
+the AGHQ post-fit route uses.
+`weights` is the p×n observation-weight matrix a weighted Laplace fit was made with
+(`nothing` for an unweighted fit; unobserved cells hold 0). The `loglik` field then
+holds the maximised weighted objective (gllvmTMB's `-fit\$opt\$objective`); as gllvmTMB's
+`logLik()` does for non-unit weights, `loglikelihood`, `aic`, `bic`, `confint` and
+`latent_score_sd` refuse a weighted fit, since a weighted objective is not an ordinary
+likelihood. [`getLV`](@ref) and [`predict`](@ref) use the weighted modes on the training data.
 """
 struct PoissonFit
     β::Vector{Float64}
@@ -52,7 +62,24 @@ struct PoissonFit
     theta_packed::Vector{Float64}
     hessian::Symbol   # Laplace log-det curvature; AGHQ is recorded separately
     integration::Union{Nothing,AGHQFitInfo}
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    weights::Union{Nothing,Matrix{Float64}}  # observation weights (p×n); `nothing` = unweighted
+    optimizer_info::Union{Nothing,OptimizerRecord}
 end
+
+# Preserve the most recent full positional constructor (12 arguments).
+PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian,
+           integration, offset, weights) =
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed,
+               hessian, integration, offset, weights, nothing)
+
+# Pre-weights compat tier (11 positional args): an unweighted fit.
+PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset) =
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset, nothing, nothing)
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration) =
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, nothing)
 
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
     PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
@@ -138,6 +165,11 @@ Laplace gradient is used on the plain no-mask/no-offset path, with an internal
 finite-difference fallback; masked or offset fits use finite differences. Warm
 start = empirical log-mean intercepts + an SVD (PPCA-style) loadings init.
 
+`optimizer` may be `:lbfgs`, `:bfgs`, or a configured `Optim.LBFGS()` /
+`Optim.BFGS()` object. Its default, `nothing`, preserves L-BFGS and its
+conditional BFGS continuation. An explicit choice runs directly without that
+continuation. [`optimizer_info`](@ref) reports the attempts and actual method.
+
 Missing data: pass a `mask` (p×n Bool, `false` = unobserved) or simply include
 `missing` entries in `Y` — either way the masked cells are dropped from the
 marginal *and* from the warm start, so the fit depends only on the observed cells
@@ -147,21 +179,31 @@ Offset: pass a p×n `offset` (known additive term in `η = β + offset + Λz`, e
 log-exposure/effort/area). It is subtracted from the link-scale warm start so `β`
 estimates the offset-free intercept.
 
+Weights: pass `weights` (observation weights, gllvmTMB's `weights`): each observed cell's
+conditional log-density is multiplied by its weight, so the fit maximises a weighted
+objective (`loglik` reports it). Shapes follow [`fit_gllvm`](@ref): a scalar, a length-`n`
+vector (one weight per unit), or a `p×n` matrix (`1×n` / `p×1` stretch). Values must be
+finite and non-negative at observed cells; unobserved cells are ignored. Weighted fits
+use the finite-difference gradient and are refused together with `X_lv` or AGHQ.
+
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
 `:observed` joint — TMB's choice); the inner mode search is always
 Fisher-scored. Default: canonical log link — the two coincide. Omitting it is exactly the pre-kwarg
 behaviour.
 """
 function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
-        link::Link = LogLink(), mask = nothing, offset = nothing,
+        link::Link = LogLink(), mask = nothing, offset = nothing, weights = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Poisson(), link),
         β_init = nothing, Λ_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
+        optimizer = nothing)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "_fit_poisson_gllvm_laplace")
     rr = rr_theta_len(p, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_poisson_gllvm: hessian must be :fisher or :observed; got :$hessian"))
@@ -197,7 +239,18 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized count matrix with a safe placeholder in the masked cells.
     msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    # Observation weights (p×n, 0 at unobserved cells) multiply each cell's conditional
+    # log-density, as gllvmTMB's `weights` do. Not threaded through the X_lv objective.
+    if weights !== nothing
+        X_lv === nothing || throw(ArgumentError(
+            "fit_poisson_gllvm: weights are not supported together with X_lv; remove one of them"))
+        weights = _normalize_weights(weights, p, n; Y = Y, mask = msk,
+                                     caller = "fit_poisson_gllvm")
+    end
+    # A zero weight drops the cell exactly like `mask`, so the support check skips it too.
+    _check_response_support(:count, Y, weights === nothing ? msk : weights .> 0;
+                            caller = "fit_poisson_gllvm")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical log-scale intercepts + SVD (PPCA-like) loadings.
     # With an offset (η = β + offset + Λz), subtract it from the link-scale data so
@@ -215,7 +268,9 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_poisson_gllvm")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
@@ -254,12 +309,17 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     # differentiates through this closure), so this workspace's element type never
     # needs to be a dual.
     ws_negll = LaplaceModeWorkspace(Float64, p, K)
-    function negll(θ)
+    # R8 (shared mode solve, S6 item 1): `zs`, when given, is threaded straight
+    # into `marginal_loglik_laplace`'s per-site `z_precomputed`, so an `fg!` call
+    # that already solved the same modes for the gradient path does not make
+    # `negll` solve them again — see `fg!` below.
+    function negll(θ; zs = nothing)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -marginal_loglik_laplace(Poisson(), Yc, N1, Λ, β, link; mask = msk, offset = offset,
-                                     hessian = hessian,
+                                     weights = weights, hessian = hessian, zs = zs,
                                      maxiter = newton_maxiter, tol = newton_tol, ws = ws_negll)
         catch
             return 1e12
@@ -267,19 +327,33 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+    outer_optimizer = _optimizer_method(optimizer, ls; route = "fit_poisson_gllvm")
+    controls = (g_tol = g_tol, iterations = iterations, show_trace = false)
+    stages = OptimizerStage[]
+    derivative_route = :finite
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    controls = merge(controls, (optim_options = opts,))
     # Exact gradient (issue #65): the implicit-step ForwardDiff gradient. Valid
     # for the plain Poisson marginal and the masked marginal — the mask is passed
     # through (masked-cell score/weight are zeroed, matching the masked objective;
-    # FD-verified in test/test_missing_response.jl). The offset path still uses the
-    # finite-difference gradient (the analytic gradient does not carry an offset).
+    # FD-verified in test/test_missing_response.jl). The offset and weights paths still use
+    # the finite-difference gradient (the analytic gradient carries neither).
     # A finite-difference fallback also covers any θ where the analytic gradient is
     # non-finite (e.g. a pathological line-search probe).
-    res = if X_lv_fit !== nothing
+    # Each branch yields `run_fit(alg, θstart)` and its start, so a non-converged L-BFGS run can
+    # be continued with dense BFGS on the same objective (`_bfgs_continuation`, #554).
+    run_fit, θstart = if X_lv_fit !== nothing
+        derivative_route = :finite
         # Predictor-informed latent-score route: joint (β, alpha_lv, Λ) by finite
         # differences — the offset depends jointly on Λ and alpha_lv.
         θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0))
         negll_lv = θ -> begin
+            if _eta_cap_guarded(link)   # #869: the additive η term is offset + the X_lv mean
+                Λ_g = unpack_lambda(view(θ, (p + q_lv * K + 1):(p + q_lv * K + rr)), p, K)
+                lv_g = _lv_mean_eta(Λ_g, X_lv_fit, reshape(view(θ, (p + 1):(p + q_lv * K)), q_lv, K))
+                _eta_above_clamp(view(θ, 1:p), offset === nothing ? lv_g : offset .+ lv_g;
+                                 mask = msk) && return 1e12   # #869: η-clamp plateau
+            end
             v = try
                 poisson_lv_nll_packed(θ, Yc, p, K, link;
                                       X_lv = X_lv_fit, q_lv = q_lv,
@@ -290,20 +364,68 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             end
             return isfinite(v) ? v : 1e12
         end
-        Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing &&
+        ((alg, θs) -> Optim.optimize(negll_lv, θs, alg, opts; autodiff = :finite)), θ0_lv
+    elseif gradient === :analytic && offset === nothing && weights === nothing && link isa LogLink &&
            (hessian === _default_hessian(Poisson(), link) ||
             _glm_weight_matches_observed(Poisson(), link))
+        derivative_route = :analytic
+        # `link isa LogLink` is load-bearing: `poisson_laplace_grad` is derived for the log
+        # link only, so any other link takes the :finite path below, which differentiates
+        # the actual objective (the same guard `fit_binomial_gllvm` has for logit).
         # R4 (only_fg!, core070): a single combined closure so an accepted iterate
         # that needs BOTH the value and the gradient pays for value+gradient in one
         # `Optim.optimize` bookkeeping pass rather than two separate closures the
         # optimizer must call at the same θ. See
         # docs/dev-log/core070/poisson-perf-repair-notes.md for the measured effect.
+        #
+        # R7 (one GradientConfig per fit, S6 item 2): built ONCE here (not inside
+        # `poisson_laplace_grad`, which would otherwise let `ForwardDiff.gradient`
+        # allocate a fresh config — seed/partial buffers sized to nθ — on EVERY
+        # Optim iteration) and reused across the whole fit. Valid because
+        # `PoissonMargClosure`'s TYPE (not the field VALUES) is what the config's
+        # tag is keyed on, and that type only depends on `Yc`'s type, `p`/`rr`/`K`,
+        # and whether `msk` is `nothing` — all fixed for this fit. Chunk 32
+        # measured best of {12, 24, 32} at p=20/50 (bench, see commit body);
+        # `poisson_laplace_grad` falls back to an uncached config on any mismatch,
+        # so a wrong/stale `_grad_gcfg` here is never unsafe, only non-optimal.
+        _grad_chunk = min(32, p + rr)
+        _grad_gcfg = try
+            _proto_ẑs = [zeros(K) for _ in 1:n]
+            _proto_marg = PoissonMargClosure(Yc, p, rr, K, _proto_ẑs, msk, Ref{Any}(nothing))
+            ForwardDiff.GradientConfig(_proto_marg, θ0, ForwardDiff.Chunk{_grad_chunk}())
+        catch
+            nothing
+        end
         function fg!(F, G, θ)
+            # R8 (shared mode solve, S6 item 1): when this call needs BOTH the
+            # value and the gradient at θ, solve the per-site Newton mode ONCE
+            # here and hand it to both `negll` and `poisson_laplace_grad` — before
+            # this change each solved its own copy of the identical fixed point
+            # (2 solves/site/iteration whenever Optim asked for F+G together).
+            shared_ẑs = nothing
             if G !== nothing
                 β = θ[1:p]; Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+                # `poisson_laplace_grad`'s hoist always solves the mode under
+                # `LogLink()` (pre-existing; not introduced here — see its
+                # docstring); sharing that mode into `negll` is only valid when
+                # this fit's own `link` is ALSO `LogLink()`, so a non-default
+                # link keeps solving its own (correctly link-aware) mode in
+                # `negll`, unaffected by this change.
+                if F !== nothing && link isa LogLink
+                    Λv = unpack_lambda(pack_lambda(Λ), p, K)  # round-tripped, matches poisson_laplace_grad's convention
+                    # The shared mode must stop where `negll`'s own solve would have
+                    # stopped: the fit's `newton_maxiter` / `newton_tol`, not
+                    # `_laplace_mode`'s defaults, or a caller asking for a tighter
+                    # mode would silently get the default one in the value path.
+                    shared_ẑs = try
+                        _poisson_hoist_zhats(Yc, Λv, float.(β); mask = msk,
+                                             maxiter = newton_maxiter, tol = newton_tol)
+                    catch
+                        nothing
+                    end
+                end
                 gg = try
-                    poisson_laplace_grad(Yc, Λ, β; mask = msk)
+                    poisson_laplace_grad(Yc, Λ, β; mask = msk, gcfg = _grad_gcfg, ẑs = shared_ẑs)
                 catch
                     nothing
                 end
@@ -318,15 +440,27 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                 end
             end
             if F !== nothing
-                return negll(θ)
+                return negll(θ; zs = shared_ẑs)
             end
             return nothing
         end
-        Optim.optimize(Optim.only_fg!(fg!), θ0, ls, opts)
+        ((alg, θs) -> Optim.optimize(Optim.only_fg!(fg!), θs, alg, opts)), θ0
     else
-        Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+        derivative_route = :finite
+        ((alg, θs) -> Optim.optimize(negll, θs, alg, opts; autodiff = :finite)), θ0
     end
-    θ̂ = Optim.minimizer(res)
+    initial = run_fit(outer_optimizer, θstart)
+    _optimizer_stage!(stages, :primary, outer_optimizer, derivative_route, controls, initial)
+    stage_callback = (name, method, result; accepted = true) ->
+        _optimizer_stage!(stages, name, method, derivative_route, controls, result; accepted = accepted)
+    θ̂, nll, conv, iters = if optimizer === nothing
+        _bfgs_continuation(run_fit, initial; stage_callback = stage_callback)
+    else
+        (Optim.minimizer(initial), Optim.minimum(initial), Optim.converged(initial),
+         Optim.iterations(initial))
+    end
+    actual_optimizer = _last_accepted_optimizer(stages)
+    verdict = _fit_verdict(nll, conv, iters)
     if X_lv_fit !== nothing
         cursor = 0
         β̂ = collect(θ̂[(cursor + 1):(cursor + p)])
@@ -334,11 +468,24 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         alpha_hat = reshape(collect(θ̂[(cursor + 1):(cursor + q_lv * K)]), q_lv, K)
         cursor += q_lv * K
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
-        return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)...,
-                          alpha_hat, collect(Float64, θ̂), hessian)
+        lv_hat = _lv_mean_eta(Λ̂, X_lv_fit, alpha_hat)
+        verdict = (verdict[1],
+                   _eta_cap_verdict(verdict[2], link, β̂, offset === nothing ? lv_hat : offset .+ lv_hat;
+                                    mask = msk, caller = "fit_poisson_gllvm"),
+                   verdict[3])
+        return PoissonFit(β̂, Λ̂, link, verdict...,
+                          alpha_hat, collect(Float64, θ̂), hessian, nothing, _stored_offset(offset), nothing,
+                          _optimizer_record(optimizer, stages; controls = controls,
+                              derivative = derivative_route, actual = actual_optimizer))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
-        return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        verdict = (verdict[1],
+                   _eta_cap_verdict(verdict[2], link, β̂, offset; mask = msk, caller = "fit_poisson_gllvm"),
+                   verdict[3])
+        return PoissonFit(β̂, Λ̂, link, verdict..., nothing, Float64[], hessian,
+                          nothing, _stored_offset(offset), weights,
+                          _optimizer_record(optimizer, stages; controls = controls,
+                              derivative = derivative_route, actual = actual_optimizer))
     end
 end

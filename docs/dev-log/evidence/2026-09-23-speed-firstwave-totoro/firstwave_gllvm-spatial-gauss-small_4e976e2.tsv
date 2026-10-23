@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-spatial-gauss-small	G-spatial; SPDE Matérn Gaussian 8×8 mesh M=16	fit_spde_gaussian	0.013046	-5.216073909	julia_abs_only	ok	4e976e2	totoro	4

@@ -1,0 +1,17 @@
+interior fit loglik -2104.596668 converged=true boundary=Bool[0, 0, 0, 0, 0]
+push [1]    -> -2105.993580  (gain -1.3969)
+push [2]    -> -2106.804568  (gain -2.2079)
+push [3]    -> -2105.866465  (gain -1.2698)
+push [4]    -> -2108.119753  (gain -3.5231)
+push [5]    -> -2106.891461  (gain -2.2948)
+push [1, 2] -> -2108.328532  (gain -3.7319)
+push [1, 3] -> -2108.397966  (gain -3.8013)
+push [1, 4] -> -2109.539288  (gain -4.9426)
+push [1, 5] -> -2109.593217  (gain -4.9965)
+push [2, 3] -> -2108.330426  (gain -3.7338)
+push [2, 4] -> -2111.072982  (gain -6.4763)
+push [2, 5] -> -2108.750837  (gain -4.1542)
+push [3, 4] -> -2109.162911  (gain -4.5662)
+push [3, 5] -> -2108.433275  (gain -3.8366)
+push [4, 5] -> -2111.110297  (gain -6.5136)
+julia +1.10.12 --startup-file=no --project=test/parity "$S/nb2_pairs_check.jl  61.58s user 1.00s system 93% cpu 1:06.77 total

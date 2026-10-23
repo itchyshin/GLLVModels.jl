@@ -1,3 +1,5 @@
+using Test, GLLVModels
+
 # Exercise public admission without allowing a response read or a model fit.
 struct StudentInputRead <: Exception end
 struct StudentInputMatrix <: AbstractMatrix{Float64} end

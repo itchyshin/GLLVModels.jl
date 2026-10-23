@@ -1,0 +1,5 @@
+gllvmTMB is experimental. Use a documented tutorial, inspect fit diagnostics, and read Current limitations and boundaries before treating an estimate or interval as a scientific result. Convergence alone is not enough.
+Cluster (third-slot) tier extracts the per-trait diagonal at the cluster level.
+cluster2 (second diagonal grouping) tier extracts the per-trait diagonal at the
+cluster2 level.
+wrote docs/dev-log/core070/true-parity-latest/receipts/grouping/run/r-results.json 

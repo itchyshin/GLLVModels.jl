@@ -1,0 +1,36 @@
+┌ Warning: NB2 grouped-cov fit reached the per-group boundary (r_group outside [1e-6, 1e6]) for group(s) [1, 3]; those groups' overdispersion is not distinguishable from the Poisson/extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them.
+└ @ GLLVModels ~/local-scratch/gllvm-nb2-finite-20260924/src/families/grouped_dispersion.jl:565
+SKEPTIC d6 re-check  Julia 1.10.12 threads=1
+Y column sums per trait: [86, 128, 227, 383, 596]   mean x = 0.110284
+(0) public fit loglik = -848.018612027  (claimed -848.018612027; |diff| = 2.40e-10)  conv=false iters=158  7.6s
+    r_group = [2.834e+09, 1.449, 5.499e+22, 4.539, 2.05]  boundary = [1, 3]  γ = 0.3265
+(1) replicated -negll(θ̂_fit) = -848.018612027   |diff vs fit.loglik| = 0.000e+00  -> HARNESS VALID
+    replicated optimizer from θ0: loglik = -848.018612027 (|diff| 0.00e+00)  converged=true iters=158  4.6s
+alt a (θ0, all log r = 0): loglik = -847.475408744  gain = +0.543203  conv=true iters=177  5.6s
+    r = [1.029e+44, 4.231e+09, 1.353, 4.621, 2.136]  boundary = [1, 2]  γ = 0.3234
+alt b (θ̂, boundary log r = 0): loglik = -847.475408747  gain = +0.543203  conv=true iters=143  4.5s
+    r = [3.707e+42, 1.512e+09, 1.353, 4.621, 2.136]  boundary = [1, 2]  γ = 0.3234
+
+(2) validity of alternative point
+    all θ finite: true; all r finite: true; negll = 847.475409 (penalty 1e12? false)
+    β = [-0.1462, 0.03234, 0.9066, 1.437, 1.922]  Λ = 0.4897, 0.01689, 0.2506, 0.1007, -0.1612, 0, -0.8214, 0.2964, 0.05443, 0.122  max|Λ| = 0.821
+    tight inner Newton (maxiter 2000, tol 1e-13): alt -847.475408744 (Δ 1.05e-11); fit -848.018612027 (Δ 2.07e-11)
+    clamp log r ≤ 10.0 (r ≤ 2.2e+04):  alt -847.475712  fit -848.018892  gain +0.543180   alt r=[2.203e+04, 2.203e+04, 1.353, 4.621, 2.136]
+    clamp log r ≤ 15.0 (r ≤ 3.27e+06):  alt -847.475411  fit -848.018614  gain +0.543203   alt r=[3.269e+06, 3.269e+06, 1.353, 4.621, 2.136]
+    clamp log r ≤ 20.0 (r ≤ 4.85e+08):  alt -847.475409  fit -848.018612  gain +0.543203   alt r=[4.852e+08, 4.852e+08, 1.353, 4.621, 2.136]
+    clamp log r ≤ 25.0 (r ≤ 7.2e+10):  alt -847.475409  fit -848.018612  gain +0.543203   alt r=[7.2e+10, 4.231e+09, 1.353, 4.621, 2.136]
+
+(3) independent Laplace implementation (own mode search, O(y) exact NB2 log-pmf)
+    lpmf check y=0 μ=2.30 r=1e+44: own -2.300000000000  big -2.300000000000  pkg -2.300000000000
+    lpmf check y=7 μ=4.10 r=1e+44: own -2.748252545094  big -2.748252545094  pkg -2.748252545094
+    lpmf check y=13 μ=6.00 r=4.2e+09: own -5.259290748873  big -5.259290748873  pkg -5.259290748873
+    lpmf check y=3 μ=1.20 r=1.35: own -2.547811586819  big -2.547811586819  pkg -2.547811586819
+    lpmf check y=25 μ=9.00 r=5.5e+22: own -12.072990789575  big -12.072990789575  pkg -12.072990789575
+    fit point: indep Laplace -848.018612027 (pkg -848.018612027, Δ 2.06e-11), max|η| 2.90
+    alt point: indep Laplace -847.475408744 (pkg -847.475408744, Δ 1.02e-11), max|η| 2.98
+    indep gain = +0.543203   pkg gain = +0.543203
+    [extra, NOT the objective] 20x20 adaptive GH marginal: fit -848.246066  alt -847.973119  gain +0.272946  (0.3s)
+    fit: max|∇negll| over non-boundary coords = 9.55e-06; over boundary log r = -5.684e-09, 0
+    alt: max|∇negll| over non-boundary coords = 8.22e-06; over boundary log r = 0, -5.684e-09
+
+VERDICT INPUTS: harness_valid=true  alt_valid=true  gain=0.543203  gain>1e-3=true

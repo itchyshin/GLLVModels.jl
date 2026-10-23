@@ -73,10 +73,11 @@ Primary oracle path (see
 - **`unique = FALSE`** so Ψ is off (Gaussian: `Σ = ΛΛᵀ + σ²I`).
 - **Gaussian only:** centre Y per trait (Julia zero-mean J1 vs R `0+trait`).
 - **Binomial / Poisson:** do **not** centre — Julia already estimates per-trait `β`.
-- **NB2:** per-trait dispersion — Julia public default
-  `fit_gllvm(...; family=NegativeBinomial())` coerces `disp_group=:species`
+- **NB2:** per-trait dispersion: the parity tests call
+  `fit_gllvm(...; family=NegativeBinomial(), disp_group=:species)`
   → `NBGroupedFit` (observed Laplace Hessian) to match R's
-  `log_phi_nbinom2[p]` (#132). Shared-`r` remains via named `fit_nb_gllvm`.
+  `log_phi_nbinom2[p]` (#132). Bare `NegativeBinomial()` fits one shared `r`
+  (`fit_nb_gllvm`) since #615 (maintainer decision 2026-10-01).
 - **Beta:** per-trait precision `φ` — Julia public default
   `fit_gllvm(...; family=Beta())` → `BetaGroupedFit` to match R's
   `log_phi_beta[p]` (#148). Shared-φ remains via named `fit_beta_gllvm`.

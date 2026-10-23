@@ -1,0 +1,374 @@
+{
+  "schema": "core070-aghq-public-policy-contract/v1",
+  "status": "P1_AGHQ_PUBLIC_POLICY_CONTRACT",
+  "area": "aghq-public-policy",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "evidence_kind": "r_only_policy_observation",
+  "twin_note": "Each case runs a public gllvmTMB() fit (or reads formals(gllvmTMBcontrol)) and checks R's own fit$aghq record against the runner's assertion. No Julia call is part of any case, so no row here compares R with Julia; a P1 pass shows the R contract still holds at P1, not parity.",
+  "runner": "tools/core070_aghq_public_policy_bind.R",
+  "runner_sha256": "748f37aec4bfa1aeb04e8c4ebefe952f2d50515b3508584579bb596c08d5dc30",
+  "runner_argv_p1": "GLLVM_PARITY_PIN=P1 Rscript --vanilla tools/core070_aghq_public_policy_bind.R <frozen-library> <destination>",
+  "assertions": "as coded in the runner (unchanged from P0): AUTO-K rows used && k == expected_k && finite objective; DEFAULT-OFF formals(gllvmTMBcontrol)$aghq identical to FALSE; POLICY-OFF !used; POLICY-EXPLICIT used && k == 3; EXPLICIT-BYPASS-CUTOFF used && k == 9 at 20 traits; AUTO-ENFORCE-CUTOFF and TRAITS20 !used && reason mentions the cutoff at 20 traits; TRAITS19 used && finite objective at 19 traits",
+  "same_observation": {
+    "AGHQ-POLICY-TRAITS20": "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF"
+  },
+  "p0_receipt": "docs/dev-log/core070/aghq-public-policy-bind-receipt-2026-09-04.json",
+  "p0_receipt_sha256": "6a228df53b58c4d3c81bbf9f8ff01c48fd309b58a105f42198366e61724cca0b",
+  "p0_r_engine": {
+    "git_head": "1005cf12e189dae0bb870556b15b908f0f755459",
+    "gllvmTMB_version": "0.7.1",
+    "load_method": "devtools::load_all(source_tree)"
+  },
+  "p0_r_engine_note": "The P0 bind ran devtools::load_all on a gllvmTMB twin branch at the git_head above, which is neither pin: it is not an ancestor of P1, and the P0 oracle is b4d5fee64.",
+  "cases": [
+    {
+      "row_id": "AGHQ-AUTO-K-BINOMIAL",
+      "source_id": "aghq/AGHQ-AUTO-K-BINOMIAL",
+      "case_id": "CORE070-AGHQ-AUTO-K-BINOMIAL-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., family=binomial(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "binomial"
+      },
+      "expected_k": 5,
+      "p0_detail": "public auto fit",
+      "p0_observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 8 adaptation passes, stalled (no honest descent at cap 1 after backtracking); max |grad| = 2.73 (relative 0.0281) against tolerances of 0.0001 / 1e-06; final max |mode shift| = 0.0136",
+        "convergence": 0,
+        "objective": 97.14041690177123
+      }
+    },
+    {
+      "row_id": "AGHQ-AUTO-K-POISSON",
+      "source_id": "aghq/AGHQ-AUTO-K-POISSON",
+      "case_id": "CORE070-AGHQ-AUTO-K-POISSON-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., family=poisson(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "poisson"
+      },
+      "expected_k": 5,
+      "p0_detail": "public auto fit",
+      "p0_observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 9 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 0.0001, relative 5.02e-07); final max |mode shift| = 1.96e-05",
+        "convergence": 0,
+        "objective": 200.06497044229368
+      }
+    },
+    {
+      "row_id": "AGHQ-AUTO-K-GAUSSIAN",
+      "source_id": "aghq/AGHQ-AUTO-K-GAUSSIAN",
+      "case_id": "CORE070-AGHQ-AUTO-K-GAUSSIAN-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., family=gaussian(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "gaussian"
+      },
+      "expected_k": 5,
+      "p0_detail": "public auto fit",
+      "p0_observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 2.37e-05, relative 2.89e-07); final max |mode shift| = 0",
+        "convergence": 0,
+        "objective": 81.96914432402147
+      }
+    },
+    {
+      "row_id": "AGHQ-AUTO-K-NB2",
+      "source_id": "aghq/AGHQ-AUTO-K-NB2",
+      "case_id": "CORE070-AGHQ-AUTO-K-NB2-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., family=nb2(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "nb2"
+      },
+      "expected_k": 5,
+      "p0_detail": "public auto fit",
+      "p0_observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 6.21e-05, relative 2.99e-07); final max |mode shift| = 2.67e-05",
+        "convergence": 0,
+        "objective": 207.82819066818323
+      }
+    },
+    {
+      "row_id": "AGHQ-AUTO-K-ORDINAL",
+      "source_id": "aghq/AGHQ-AUTO-K-ORDINAL",
+      "case_id": "CORE070-AGHQ-AUTO-K-ORDINAL-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., family=ordinal(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "ordinal"
+      },
+      "expected_k": 9,
+      "p0_detail": "public auto fit",
+      "p0_observed": {
+        "used": true,
+        "k": 9,
+        "reason": "quadrature on z_B (d = 1, k = 9, 9 nodes); 107 adaptation passes, stalled (no honest descent at cap 1 after backtracking); max |grad| = 0.000434 (relative 2.81e-06) against tolerances of 0.0001 / 1e-06; final max |mode shift| = 1.12e-07",
+        "convergence": 1,
+        "objective": 154.339772495499
+      }
+    },
+    {
+      "row_id": "AGHQ-AUTO-K-DELTA",
+      "source_id": "aghq/AGHQ-AUTO-K-DELTA",
+      "case_id": "CORE070-AGHQ-AUTO-K-DELTA-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., family=delta(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "delta"
+      },
+      "expected_k": 5,
+      "p0_detail": "public auto fit",
+      "p0_observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 12 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 9.21e-05, relative 5.38e-07); final max |mode shift| = 5.43e-06",
+        "convergence": 0,
+        "objective": 171.25659493637312
+      }
+    },
+    {
+      "row_id": "AGHQ-AUTO-K-TWEEDIE",
+      "source_id": "aghq/AGHQ-AUTO-K-TWEEDIE",
+      "case_id": "CORE070-AGHQ-AUTO-K-TWEEDIE-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., family=tweedie(), latent(..., unique=FALSE), control=gllvmTMBcontrol(aghq='auto', aghq_ridge=Inf))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42,
+        "fam": "tweedie"
+      },
+      "expected_k": 9,
+      "p0_detail": "public auto fit",
+      "p0_observed": {
+        "used": true,
+        "k": 9,
+        "reason": "quadrature on z_B (d = 1, k = 9, 9 nodes); 9 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 7.42e-05, relative 3.73e-07); final max |mode shift| = 0",
+        "convergence": 0,
+        "objective": 198.93968140574813
+      }
+    },
+    {
+      "row_id": "AGHQ-DEFAULT-OFF",
+      "source_id": "aghq/AGHQ-DEFAULT-OFF",
+      "case_id": "CORE070-AGHQ-DEFAULT-OFF-CONTROL-CONTRACT",
+      "public_call": "formals(gllvmTMBcontrol)$aghq",
+      "fixture": null,
+      "expected_k": null,
+      "p0_detail": "formals(gllvmTMBcontrol)$aghq",
+      "p0_observed": {
+        "default_aghq": false
+      }
+    },
+    {
+      "row_id": "AGHQ-POLICY-OFF",
+      "source_id": "aghq/AGHQ-POLICY-OFF",
+      "case_id": "CORE070-AGHQ-POLICY-OFF-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., control=gllvmTMBcontrol(aghq=FALSE))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42
+      },
+      "expected_k": null,
+      "p0_detail": "aghq=FALSE -> Laplace",
+      "p0_observed": {
+        "used": false,
+        "k": null,
+        "reason": "aghq not requested",
+        "convergence": 0,
+        "objective": 93.48637950855633
+      }
+    },
+    {
+      "row_id": "AGHQ-POLICY-EXPLICIT",
+      "source_id": "aghq/AGHQ-POLICY-EXPLICIT",
+      "case_id": "CORE070-AGHQ-POLICY-EXPLICIT-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., control=gllvmTMBcontrol(aghq=3L))",
+      "fixture": {
+        "p_traits": 5,
+        "n_sites": 30,
+        "seed": 42
+      },
+      "expected_k": null,
+      "p0_detail": "aghq=3L explicit",
+      "p0_observed": {
+        "used": true,
+        "k": 3,
+        "reason": "quadrature on z_B (d = 1, k = 3, 3 nodes); 8 adaptation passes, stalled (no honest descent at cap 1 after backtracking); max |grad| = 2.23 (relative 0.0232) against tolerances of 0.0001 / 1e-06; final max |mode shift| = 0.0139",
+        "convergence": 0,
+        "objective": 96.07927326697838
+      }
+    },
+    {
+      "row_id": "AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
+      "source_id": "aghq/AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF",
+      "case_id": "CORE070-AGHQ-POLICY-EXPLICIT-BYPASS-CUTOFF-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., n_traits=20, control=gllvmTMBcontrol(aghq=9L))",
+      "fixture": {
+        "p_traits": 20,
+        "n_sites": 40,
+        "seed": 120
+      },
+      "expected_k": null,
+      "p0_detail": "explicit aghq=9L at n_traits=20 bypasses auto cutoff",
+      "p0_observed": {
+        "used": true,
+        "k": 9,
+        "reason": "quadrature on z_B (d = 1, k = 9, 9 nodes); 11 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 3.15e-05, relative 5.97e-08); final max |mode shift| = 5.35e-06",
+        "convergence": 0,
+        "objective": 528.6710306093236
+      }
+    },
+    {
+      "row_id": "AGHQ-POLICY-AUTO-ENFORCE-CUTOFF",
+      "source_id": "aghq/AGHQ-POLICY-AUTO-ENFORCE-CUTOFF",
+      "case_id": "CORE070-AGHQ-POLICY-AUTO-ENFORCE-CUTOFF-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., n_traits=20, control=gllvmTMBcontrol(aghq='auto'))",
+      "fixture": {
+        "p_traits": 20,
+        "n_sites": 40,
+        "seed": 120
+      },
+      "expected_k": null,
+      "p0_detail": "aghq='auto' declines at n_traits=20",
+      "p0_observed": {
+        "used": false,
+        "k": null,
+        "reason": "laplace: auto: n_traits = 20 >= cutoff 20 -- Pinheiro & Chao (2006) measure the AGHQ-over-Laplace gain falling to three-decimal agreement by cluster size ~30 at d=3 (and already small at d=2, n=20); declining to Laplace rather than paying k^(q+1) cost for a near-vanished gain",
+        "convergence": 0,
+        "objective": 529.1723571268384
+      }
+    },
+    {
+      "row_id": "AGHQ-POLICY-TRAITS19",
+      "source_id": "aghq/AGHQ-POLICY-TRAITS19",
+      "case_id": "CORE070-AGHQ-POLICY-TRAITS19-CONTROL-CONTRACT",
+      "public_call": "gllvmTMB(..., n_traits=19, control=gllvmTMBcontrol(aghq='auto'))",
+      "fixture": {
+        "p_traits": 19,
+        "n_sites": 35,
+        "seed": 1
+      },
+      "expected_k": null,
+      "p0_detail": "aghq='auto' stays on at n_traits=19",
+      "p0_observed": {
+        "used": true,
+        "k": 5,
+        "reason": "quadrature on z_B (d = 1, k = 5, 5 nodes); 12 adaptation passes, converged (adaptation mode fixed; gradient below tolerance; max |grad| = 9.59e-05, relative 2.19e-07); final max |mode shift| = 0",
+        "convergence": 0,
+        "objective": 437.8817015195864
+      }
+    },
+    {
+      "row_id": "AGHQ-POLICY-TRAITS20",
+      "source_id": "aghq/AGHQ-POLICY-TRAITS20",
+      "case_id": "CORE070-AGHQ-POLICY-TRAITS20-CONTROL-CONTRACT",
+      "public_call": "same fixture as AGHQ-POLICY-AUTO-ENFORCE-CUTOFF",
+      "fixture": {
+        "p_traits": 20,
+        "n_sites": 40,
+        "seed": 120
+      },
+      "expected_k": null,
+      "p0_detail": "boundary duplicate: n_traits=20 auto decline",
+      "p0_observed": {
+        "used": false,
+        "k": null,
+        "reason": "laplace: auto: n_traits = 20 >= cutoff 20 -- Pinheiro & Chao (2006) measure the AGHQ-over-Laplace gain falling to three-decimal agreement by cluster size ~30 at d=3 (and already small at d=2, n=20); declining to Laplace rather than paying k^(q+1) cost for a near-vanished gain",
+        "convergence": 0,
+        "objective": 529.1723571268384
+      }
+    }
+  ],
+  "p0_to_p1_r_function_diff": [
+    {
+      "function": "gllvmTMB",
+      "file": "R/gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "14f23cf0ef0c46e074b4263790965ca5c7dcb41da86dc90ade29ed74928cf788",
+      "body_sha256_p1": "b47f6dadf35d6df05bfb783920da77f418202bd60b65f35f1e4de642c494c35d"
+    },
+    {
+      "function": "gllvmTMBcontrol",
+      "file": "R/gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "461c3a8a185c70e4d9b3de8a817d6ed4d21f126127683c7832d6b629af1388ab",
+      "body_sha256_p1": "394c031c4340af0edd81be2e47aaac350e24c904ed6b9816071f43d1e89a0568"
+    },
+    {
+      "function": ".gllvmTMB_normalize_aghq",
+      "file": "R/gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "a9797b35c7571d26ae6f2fd610097f65325208a940da6cc8674c7937e86ff7b7",
+      "body_sha256_p1": "ca43b8286756a65ed8b99ccecd47418b9bb2971a83358761f5262bfdd8130842"
+    },
+    {
+      "function": ".gllvmTMB_aghq_k",
+      "file": "R/fit-multi.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "bc00b20d23e893e1d22918076a8bb48e81fba8fa7c033d1be46d5d13ce153669",
+      "body_sha256_p1": "bc00b20d23e893e1d22918076a8bb48e81fba8fa7c033d1be46d5d13ce153669"
+    },
+    {
+      "function": ".aghq_family_label",
+      "file": "R/aghq-control.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "c22d24fbaac5a5da0c4ca6dd1213e67e582645bed547d756c10c6e2a26b58486",
+      "body_sha256_p1": "c22d24fbaac5a5da0c4ca6dd1213e67e582645bed547d756c10c6e2a26b58486"
+    },
+    {
+      "function": ".aghq_resolve",
+      "file": "R/aghq-control.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "9e35fb41b961bed53ce1a3cf4dbe978e56446e2beba19663fed9ae06ffb7cb2f",
+      "body_sha256_p1": "9e35fb41b961bed53ce1a3cf4dbe978e56446e2beba19663fed9ae06ffb7cb2f"
+    },
+    {
+      "function": ".aghq_auto_gate",
+      "file": "R/aghq-control.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "3d730dcc24498821c4e6f56101b142fbf9ae9bd913991fbad69fe06390d2c255",
+      "body_sha256_p1": "3d730dcc24498821c4e6f56101b142fbf9ae9bd913991fbad69fe06390d2c255"
+    },
+    {
+      "function": ".aghq_auto_decide",
+      "file": "R/aghq-control.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "84b40b7525f85aebab2270c273f86941a39d5a00d959538b6d41456d7da88e1a",
+      "body_sha256_p1": "84b40b7525f85aebab2270c273f86941a39d5a00d959538b6d41456d7da88e1a"
+    },
+    {
+      "function": ".aghq_gate",
+      "file": "R/aghq-gate.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "b6df8a5f8fd1e1d9049688cdee58f780abba05f9f054eb17052ac7d95f06ad58",
+      "body_sha256_p1": "b6df8a5f8fd1e1d9049688cdee58f780abba05f9f054eb17052ac7d95f06ad58"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_aghq_p1_contract.py",
+    "source": "row ids, public calls, fixtures, expected k and P0 observations from the P0 receipt; case ids from tools/core070_aghq_public_policy_bind_apply.py ROW_TO_CASE",
+    "carried_verbatim": "public_call, fixture, expected_k, the runner's assertions. No case or expectation was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

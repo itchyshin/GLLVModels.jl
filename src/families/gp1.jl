@@ -39,6 +39,17 @@
 # Marker — carries the SIGNED scalar dispersion α (Var = μ(1+α μ)²). Unlike NB's r,
 # Beta's φ, Gamma's α (all positive, packed as log-param), GP-1's α may be negative and
 # is therefore packed RAW (no log transform) in the fit path.
+"""
+    GeneralizedPoisson1(α)
+
+Family marker for the generalized-Poisson type-1 (Famoye / Consul–Jain) count
+distribution with a signed scalar dispersion `α`, log link and mean `E[y] = μ`,
+`Var[y] = μ(1 + αμ)²`. `α = 0` is the Poisson limit, `α > 0` overdisperses and
+`α < 0` underdisperses. Pass it as `family` to [`fit_gllvm`](@ref), or fit directly
+with [`fit_gp1_gllvm`](@ref). On those routes `α` is a tag payload: it is required by
+the constructor but always estimated, so seed the search with `α_init` of
+[`fit_gp1_gllvm`](@ref) rather than the marker value.
+"""
 struct GeneralizedPoisson1{T}
     α::T
 end
@@ -50,6 +61,15 @@ default_link(::GeneralizedPoisson1) = LogLink()
 # Domain-safe μ (shared with the Poisson idiom). The α-domain guard 1+αμ>0 is handled
 # in the score/weight/log-pmf below (and the η-clamp keeps μ bounded).
 _clamp_mu(::GeneralizedPoisson1, μ) = max(μ, 1e-12)
+
+# Opt into the damped mode-search backtracking (#611). Undamped Fisher steps from
+# z = 0 overshoot on sites with large counts and a large loading: on the #611
+# fixture (healthy_seed_101, site 115, y = [0, 38, 79, 1]) the search stopped at
+# ẑ = 0.705 with d(log joint)/dz = -42.8, while the single mode is at -1.624. The
+# site's Laplace value was then 36.6 too low, and the error switched on and off
+# as β moved by 1e-6, so the outer L-BFGS stopped at the edge of that jump and
+# reported converged.
+_laplace_mode_should_backtrack(::GeneralizedPoisson1) = true
 
 # Score wrt η (me = μ): s = y − μ y α/g − μ h/g². α→0 short-circuits to the Poisson
 # score y − μ to avoid 0·(…)/g cancellation noise near the limit.
@@ -69,13 +89,57 @@ function _glm_weight(f::GeneralizedPoisson1, μ, n, me)
     return me^2 / (μ * g^2)                            # me²/Var, Var = μ g²
 end
 
+# Counts at or above this use the rearranged log-pmf below (α > 0 only). The direct
+# formula subtracts terms of size y·log(y) (≈4e19 at y = 10^18), so its Float64
+# rounding error grows like y·log(y)·eps: ≈3e-9 at y = 10^6, but thousands by
+# y = 10^18. Measured at y = 10^18, α = 0.0361, μ = 8.23e10 (the per-site mode of
+# the fit that reported loglik = +6795.99): direct Float64 = +9216.0, 256-bit
+# BigFloat = −59.8232. A positive log-pmf is impossible. Below the threshold the
+# direct formula is kept unchanged, so no fit on ordinary counts moves.
+const _GP1_Y_STABLE = 1e6
+
 # Conditional log-pmf. α→0 delegates to Poisson's logpdf (exact, avoids cancellation).
 function _glm_logpdf(f::GeneralizedPoisson1, μ, n, y)
     a = f.α
     abs(a) < 1e-10 && return logpdf(Poisson(μ), Int(y))
+    a > 0 && y >= _GP1_Y_STABLE && return _gp1_logpdf_large_y(a, μ, y)
     g = 1 + a * μ
     h = 1 + a * y
     return y * (log(μ) - log(g)) + (y - 1) * log(h) - loggamma(y + 1.0) - μ * h / g
+end
+
+# The same log-pmf for α > 0 and large y, rearranged so the y·log(y) terms cancel
+# algebraically instead of in floating point. With g = 1+αμ, h = 1+αy, u = 1/g,
+# v = 1/(αy) and Stirling's lgamma(y+1) = y·log(y) − y + ½log(2πy) + δ(y):
+#   logL = y·(log1p(−u) + u) + y·(log1p(v) − v) + 1/(α g) − log(h) − ½log(2πy) − δ(y),
+# using αμ/g = 1 − u and 1/α − μ/g = 1/(α g). Each remaining term is small or of
+# one sign, so the sum keeps full relative precision near the mode.
+# δ(y) = 1/(12y) − 1/(360y³) + 1/(1260y⁵), truncation error < 1e-33 at y ≥ 10^6.
+function _gp1_logpdf_large_y(a, μ, y)
+    yf = float(y)
+    g = 1 + a * μ
+    h = 1 + a * yf
+    u = 1 / g
+    v = 1 / (a * yf)
+    δ = 1 / (12yf) - 1 / (360yf^3) + 1 / (1260yf^5)
+    return yf * _gp1_log1pmx(-u) + yf * _gp1_log1pmx(v) + 1 / (a * g) -
+           log(h) - 0.5 * log(2π * yf) - δ
+end
+
+# log1p(x) − x without the cancellation of that literal difference at small |x|
+# (it loses relative precision like eps/|x|; measured 1e-11 relative error in the
+# GP-1 log-pmf at μ = 10^6, y = 10^18). For |x| < 0.5, with r = x/(2+x):
+#   log1p(x) − x = −2r²/(1−r) + 2(r³/3 + r⁵/5 + …),
+# 17 odd terms suffice since |r| ≤ 1/3. Generic in the number type (ForwardDiff).
+function _gp1_log1pmx(x)
+    abs(x) < 0.5 || return log1p(x) - x
+    r = x / (2 + x)
+    r2 = r * r
+    s = zero(r)
+    for k in 35:-2:3
+        s = s * r2 + 1 / k
+    end
+    return -2r2 / (1 - r) + 2 * r * r2 * s
 end
 
 # Upper support: α<0 gives finite support y < 1/|α| (h = 1+αy > 0); α≥0 is unbounded.
@@ -124,12 +188,43 @@ gp1_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractV
 # Fit driver (GP-1 family slice 2).
 # ---------------------------------------------------------------------------
 
+# The Laplace log-marginal sums, per site, a GP-1 log-pmf (≤ 0: a pmf value is
+# never above 1) plus the Laplace correction −½ẑ'ẑ − ½logdet(Λ'WΛ + I). Under the
+# default `hessian = :fisher` the weight W = μ/g² ≥ 0, so logdet ≥ 0 and the
+# correction is ≤ 0. Under `:observed` W can be negative; a positive total there
+# would mean A is near-singular and the Laplace approximation itself has broken
+# down, which is not a usable fit either. The true marginal of a pmf is ≤ 0, and the
+# margin below is floating-point headroom only.
+const _GP1_LOGLIK_MAX = 1e-6
+
+"""
+    _gp1_verdict(optim_converged, nll) -> (converged, loglik, reason)
+
+Convergence contract for [`fit_gp1_gllvm`](@ref)'s inner `(β, Λ)` solves (per the
+#502/#505 rule: a per-family verdict rather than a change to the shared
+`_fit_verdict`). A non-finite objective, one at or above the shared failure
+threshold (`_nll_failed`), or a log-likelihood above `_GP1_LOGLIK_MAX` returns
+`(false, -Inf, :objective_impossible)`. Otherwise it returns
+`(optim_converged, -nll, :ok)`, the same values `_fit_verdict` gives. The
+positive-value check exists because the direct GP-1 log-pmf read back rounding
+noise as data at a count of 10^18 (`fit_gp1_gllvm` reported `converged = true`
+at loglik = +6795.99; see `_GP1_Y_STABLE`).
+"""
+function _gp1_verdict(optim_converged::Bool, nll::Real)
+    _nll_failed(nll) && return (false, -Inf, :objective_impossible)
+    ll = -Float64(nll)
+    ll <= _GP1_LOGLIK_MAX || return (false, -Inf, :objective_impossible)
+    return (optim_converged, ll, :ok)
+end
+
 """
     GP1Fit
 
 Result of [`fit_gp1_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated SIGNED dispersion `α` (Var = μ(1+α μ)²), the `link`, the maximised
 Laplace `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct GP1Fit
     β::Vector{Float64}
@@ -140,7 +235,12 @@ struct GP1Fit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (8 positional args): no stored training offset.
+GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian) =
+    GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -194,6 +294,8 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_gp1_gllvm")
     rr = rr_theta_len(p, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_gp1_gllvm: hessian must be :fisher or :observed; got :$hessian"))
@@ -205,7 +307,9 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_gp1_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
@@ -230,6 +334,7 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         function negll(θ)
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+            _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
             v = try
                 -marginal_loglik_laplace(GeneralizedPoisson1(α), Yc, N1, Λ, β, link;
                                          hessian = hessian,
@@ -249,7 +354,11 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         # loglik back to an `nll` convention so `best.nll`/`r.nll < best.nll` below keep
         # working unchanged (a screened failure now reports `Inf`, so it can never win
         # `best`'s min-nll selection against any grid point that actually solved).
-        ll, conv, iters = _fit_verdict(res)
+        # `_gp1_verdict` adds the positive-loglik check to `_fit_verdict`'s sentinel
+        # screen (identical result on every healthy point), so an impossible value
+        # reports `nll = Inf` and never wins `best` below.
+        conv, ll, _reason = _gp1_verdict(Optim.converged(res), Optim.minimum(res))
+        iters = Optim.iterations(res)
         (β = θ̂[1:p], Λ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K),
          nll = -ll, converged = conv, iters = iters)
     end
@@ -285,6 +394,8 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
             Λ = rstar.Λ, nll = rstar.nll, converged = rstar.converged, iters = rstar.iters))
     end
 
+    conv = _eta_cap_verdict(fit_star.converged, link, fit_star.β, offset; mask = msk,
+                            caller = "fit_gp1_gllvm")   # #869
     return GP1Fit(fit_star.β, fit_star.Λ, fit_star.α, link, -fit_star.nll,
-                  fit_star.converged, fit_star.iters, hessian)
+                  conv, fit_star.iters, hessian, _stored_offset(offset))
 end

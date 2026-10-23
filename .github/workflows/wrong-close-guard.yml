@@ -1,0 +1,33 @@
+name: Wrong-close guard
+# Fails a PR whose body or commit messages could make GitHub close an issue that the author did
+# not declare. Declare intended closures with an intended-closes HTML comment (see tools/wrong_close_guard.py) in the PR
+# body. PR-only + workflow_dispatch, ubuntu-only, no checkout of dependencies: a few seconds.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 tools/test_wrong_close_guard.py
+      - name: Check PR title, body and commit messages
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          printf '%s\n\n%s\n' "$PR_TITLE" "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+          python3 tools/wrong_close_guard.py --intended-from-body --repo "$GITHUB_REPOSITORY" \
+            --body-file "$RUNNER_TEMP/pr_body.md" \
+            --git-range "$BASE_SHA..$HEAD_SHA"

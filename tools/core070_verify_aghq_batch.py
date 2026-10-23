@@ -25,9 +25,16 @@ from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/aghq-batch-contract.json"
+sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (library pin + version, shared with the other P1 batches)
+# P0 keeps the frozen contract; P1 reads the twin written by tools/core070_aghq_p1_contract.py.
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/aghq-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/aghq-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 DEFAULT_STATE = ROOT / ".unlazy/core070-aghq/aghq-batch-01"
 
 # 16 paired-control cases + 22 needs-new-surface rows = 38 accounted rows.
@@ -61,7 +68,7 @@ def verify_contract(contract=None):
     c = contract or load_contract()
     need(c["status"] == "FROZEN_AGHQ_CONTROL_BATCH_CONTRACT", "wrong contract status")
     need(c["area"] == "aghq-control", "wrong area")
-    need(c["reference_commit"] == "b4d5fee64def88bc768dda1f1f77c29b295edd86", "wrong reference commit")
+    need(c["reference_commit"] == REFERENCE_COMMIT, "wrong reference commit")
     need(c["source_row_count"] == SCOPE_ROW_COUNT, "source row count drift")
 
     case_ids = {x["case_id"] for x in c["cases"]}
@@ -180,6 +187,7 @@ def verify_state(state=DEFAULT_STATE):
          sorted(c["control_id"] for c in contract["negative_controls"]),
          "receipt negative-control id list drifted")
     need(receipt.get("julia_exit_code") == 0, "julia child exited nonzero")
+    core070_source_pin_check.check_source_pin(receipt, SELECTED_PIN, need)
     need(receipt.get("julia_results_sha256") == sha(julia_path), "julia-results.json changed since receipt")
     need(receipt.get("raw_sha256") == sha(raw_path), "results.tsv changed since receipt")
     need(receipt.get("diagnostics_sha256") == sha(diag_path), "diagnostics.log changed since receipt")
@@ -293,7 +301,9 @@ def self_test():
         raise AssertionError(f"accepted invalid aghq contract: {name}")
     print("CORE070_AGHQ_CONTRACT_NEGATIVES_PASS", len(contract_mutations))
 
-    return len(mutations) + len(contract_mutations)
+    n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
+    print("CORE070_AGHQ_BATCH_SOURCE_PIN_NEGATIVES_PASS", n_pin)
+    return len(mutations) + len(contract_mutations) + n_pin
 
 
 if __name__ == "__main__":

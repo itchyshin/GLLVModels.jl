@@ -1,0 +1,14 @@
+contract_sha256 = "401e438e850b199ac6b826a8e4a78b088126d33c02b4d7ddafebcb180af8ab8d"
+fixture = "test/parity/test_beta_required.jl"
+status = "success"
+run_id = "bf15ffbc1e289d9bcce8a37745635683e1ad2ddede39fdc50f33f2f5f7b38672"
+fixture_sha256 = "011849881ebf54b3d5be584135a92d2b259ce8910bc2c403865e2975fd86b1f4"
+id = "NATIVE-08-BETA"
+execution_manifest_sha256 = "f52df96047485fb6c07bd33c9d3911c95affe80be09a03836fd2a43c64c4b998"
+execution_case_ids = ["NATIVE-08-BETA"]
+
+[assertions]
+passed = 16
+broken = 0
+failed = 0
+errored = 0

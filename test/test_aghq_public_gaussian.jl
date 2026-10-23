@@ -58,7 +58,7 @@ using GLLVModels,Test,Random,LinearAlgebra,Distributions
             @test ok && abs(ll+ad.nll(tc))<1e-8
             @test GLLVModels._tw_sigma_from_hessian(f,Y,nothing,nothing)[1]≈vcov(f,Y)
             nb=bootstrap_ci(f;y=Y,n_boot=2,seed=13,parms="sigma_eps")
-            @test size(nb.replicates)==(2,1) && nb.estimate==f.pars.θ_packed[1:1]
+            @test size(nb.replicates)==(2,1) && nb.estimate≈[f.pars.σ_eps] # raw scale (#156); replicates stay packed
             @test_throws ArgumentError bootstrap_ci(f;y=Y,n_sites=n+1,n_boot=2)
         end
         @test f.integration.input_digest==GLLVModels._aghq_data_digest(f.integration.data)
@@ -70,8 +70,10 @@ using GLLVModels,Test,Random,LinearAlgebra,Distributions
         @test_throws ArgumentError fit_gaussian_gllvm(Y;K=K,aghq=3,aghq_control=(n_adapt=0,))
         @test_throws ArgumentError fit_gaussian_gllvm(Y;K=K,aghq=3,aghq_control=(ridge=1e-8,))
         @test_throws ArgumentError fit_gaussian_gllvm(Y;K=K,aghq=3,hessian=:fisher)
+        # The public route estimates trait intercepts (2026-09-27-gaussian-trait-intercepts.md).
         gen=fit_gllvm(Y;family=Normal(),K=K,aghq=3)
-        @test gen.integration.actual==:aghq && gen.logLik≈f.logLik
+        genX=fit_gaussian_gllvm(Y;K=K,aghq=3,X=GLLVModels._trait_intercept_design(p,n))
+        @test gen.integration.actual==:aghq && gen.logLik≈genX.logLik && length(gen.pars.β)==p
         form=gllvm(@formula(y~1),Y,(site=collect(1:n),);family=Normal(),K=K,aghq=3)
         @test form.integration.actual==:aghq
         @test occursin("AGHQ",sprint(show,MIME("text/plain"),f))

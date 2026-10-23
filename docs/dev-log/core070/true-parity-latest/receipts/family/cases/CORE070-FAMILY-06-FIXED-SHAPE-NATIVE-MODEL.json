@@ -1,0 +1,90 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-tweedie",
+  "harness_cell": "NATIVE-07-TWEEDIE",
+  "fixture": "test/parity/test_tweedie_parity.jl",
+  "measures": "Tweedie log, p=5, n=150, K=1, seed 82; three models: fixed common power 1.5, estimated shared power, estimated per-species power (all three must agree); toy fixture, likelihood-level agreement only",
+  "cell_status": "success",
+  "cell_assertions": {
+    "passed": 28,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "NATIVE-07-TWEEDIE"
+  ],
+  "run_status": "success",
+  "run_failure_reason": null,
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/run.toml": "fc92a139507fe40519022d1d60edc4ed7b6e25d2e927fbb0c62ce6b080278ce1",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/values-NATIVE-07-TWEEDIE.toml": "105125ab0ea55f6bb283e59ecb83f08c2b7394df5e7688e69e5823233d435bc9",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/verify.txt": "035a4b6b6c774ec1b1e2c8ead2e66edecee78c3896004dfe78ce9822b0c5fb3f",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/cell-NATIVE-07-TWEEDIE.toml": "f716d3ca043f3642f631c4b324025028e98d6569c339ecd2860c20a6211d6d8f"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/values-NATIVE-07-TWEEDIE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-tweedie/cell-NATIVE-07-TWEEDIE.toml"
+  ],
+  "registration": "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL is paid by harness cell NATIVE-07-TWEEDIE by the maintainer's P0 registration decision (docs/dev-log/core070/family-reconciliation-2026-09-01.json); carried unchanged",
+  "same_measurement_as": "CORE070-FAMILY-06-LOG-NATIVE-MODEL",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL",
+        "quantity": "logLik, fixed common power",
+        "max_abs_diff": 3.4689037420321256e-08,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, @test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL) (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -1065.415279778604,
+        "julia_value": -1065.4152797439149,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL",
+        "quantity": "logLik, estimated shared power",
+        "max_abs_diff": 4.326011548982933e-09,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, @test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL) (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -1064.3516394956707,
+        "julia_value": -1064.3516394913447,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL",
+        "quantity": "logLik, estimated per-species power",
+        "max_abs_diff": 3.097966327914037e-08,
+        "tolerance": 1e-06,
+        "tolerance_rule": "the cell's own test, @test isapprox(jl_fit.loglik, r_fit.logLik; atol = _TW_LOGLIK_ATOL) (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -1057.836621630017,
+        "julia_value": -1057.8366215990372,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

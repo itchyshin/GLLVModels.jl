@@ -62,7 +62,8 @@ This example is a numerical workflow, not recovery or coverage evidence.
 The profile reoptimises the mean, other eligible group variances and the
 shared observation residual variance. It evaluates zero exactly and verifies
 finite endpoints with fresh refits. `:unavailable` means the interval must not
-be used; `reason` and `receipts` retain failed attempts and diagnostic details.
+be used. Read the returned reason and diagnostic details before simplifying the
+model or choosing a different uncertainty summary.
 An endpoint at zero is labelled `at_boundary=true`, not treated as an interior
 coverage result. Aliased components, a nonstationary full fit, unsupported
 covariance structures and changed data are rejected. No profile of fixed

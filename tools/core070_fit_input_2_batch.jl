@@ -198,7 +198,9 @@ fit_gd_native = GLLVModels.fit_gaussian_pervar_gllvm(Y_g; K = K_g, fixed_residua
 d1 = abs(fit_gd_native.loglik - r_loglik_default)
 d2 = coef_delta(fit_gd_native.β, r_coef_default)
 cases["CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL"] = Dict(
-    "pass" => d1 <= tol_loglik && d2 <= tol_coef, "loglik_delta" => d1, "coef_delta" => d2)
+    "pass" => d1 <= tol_loglik && d2 <= tol_coef, "loglik_delta" => d1, "coef_delta" => d2,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_gd_native.loglik, "julia_coef" => collect(Float64, fit_gd_native.β))
 
 data_g = (dummy = zeros(n_g),)
 fit_gd_formula = GLLVModels.gllvm(@formula(y ~ 1), Y_g, data_g;
@@ -206,7 +208,9 @@ fit_gd_formula = GLLVModels.gllvm(@formula(y ~ 1), Y_g, data_g;
 d3 = abs(fit_gd_formula.loglik - r_loglik_default)
 d4 = coef_delta(fit_gd_formula.β, r_coef_default)
 cases["CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE"] = Dict(
-    "pass" => d3 <= tol_loglik && d4 <= tol_coef, "loglik_delta" => d3, "coef_delta" => d4)
+    "pass" => d3 <= tol_loglik && d4 <= tol_coef, "loglik_delta" => d3, "coef_delta" => d4,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_gd_formula.loglik, "julia_coef" => collect(Float64, fit_gd_formula.β))
 
 # ---------------------------------------------------------------------------
 # Row 2: INPUT-GAUSS-LOADINGS (native only; formula is NEEDS_NEW_JULIA_SURFACE)
@@ -221,7 +225,9 @@ fit_gl_native = GLLVModels.fit_gaussian_gllvm(Y_g; K = K_g, X = X_g)
 d5 = abs(fit_gl_native.logLik - r_loglik_loadings)
 d6 = coef_delta(fit_gl_native.pars.β, r_coef_loadings)
 cases["CORE070-FIT-INPUT-GAUSS-LOADINGS-NATIVE-MODEL"] = Dict(
-    "pass" => d5 <= tol_loglik && d6 <= tol_coef, "loglik_delta" => d5, "coef_delta" => d6)
+    "pass" => d5 <= tol_loglik && d6 <= tol_coef, "loglik_delta" => d5, "coef_delta" => d6,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_gl_native.logLik, "julia_coef" => collect(Float64, fit_gl_native.pars.β))
 
 # ---------------------------------------------------------------------------
 # Row 3: INPUT-BINOMIAL-DEFAULT (native + formula)
@@ -235,14 +241,18 @@ fit_bd_native = GLLVModels.fit_binomial_gllvm(Y_b; K = K_b)
 d7 = abs(fit_bd_native.loglik - r_loglik_binom)
 d8 = coef_delta(fit_bd_native.β, r_coef_binom)
 cases["CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL"] = Dict(
-    "pass" => d7 <= tol_loglik && d8 <= tol_coef, "loglik_delta" => d7, "coef_delta" => d8)
+    "pass" => d7 <= tol_loglik && d8 <= tol_coef, "loglik_delta" => d7, "coef_delta" => d8,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_bd_native.loglik, "julia_coef" => collect(Float64, fit_bd_native.β))
 
 data_b = (dummy = zeros(n_b),)
 fit_bd_formula = GLLVModels.gllvm(@formula(y ~ 1), Y_b, data_b; family = Binomial(), K = K_b)
 d9 = abs(fit_bd_formula.loglik - r_loglik_binom)
 d10 = coef_delta(fit_bd_formula.β, r_coef_binom)
 cases["CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE"] = Dict(
-    "pass" => d9 <= tol_loglik && d10 <= tol_coef, "loglik_delta" => d9, "coef_delta" => d10)
+    "pass" => d9 <= tol_loglik && d10 <= tol_coef, "loglik_delta" => d9, "coef_delta" => d10,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_bd_formula.loglik, "julia_coef" => collect(Float64, fit_bd_formula.β))
 
 # ---------------------------------------------------------------------------
 # Row 4: INPUT-ANIMAL-LATENT (native + formula)
@@ -258,14 +268,18 @@ fit_al_native = GLLVModels.fit_gaussian_sources(Y_a; sources = [src_animal])
 d11 = abs(fit_al_native.loglik - r_loglik_animal)
 d12 = coef_delta(fit_al_native.beta, r_coef_animal)
 cases["CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL"] = Dict(
-    "pass" => d11 <= tol_loglik && d12 <= tol_coef, "loglik_delta" => d11, "coef_delta" => d12)
+    "pass" => d11 <= tol_loglik && d12 <= tol_coef, "loglik_delta" => d11, "coef_delta" => d12,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_al_native.loglik, "julia_coef" => collect(Float64, fit_al_native.beta))
 
 data_a = (dummy = zeros(n_ids),)
 fit_al_formula = GLLVModels.gllvm(@formula(y ~ 1), Y_a, data_a; family = Normal(), sources = [src_animal])
 d13 = abs(fit_al_formula.loglik - r_loglik_animal)
 d14 = coef_delta(fit_al_formula.beta, r_coef_animal)
 cases["CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE"] = Dict(
-    "pass" => d13 <= tol_loglik && d14 <= tol_coef, "loglik_delta" => d13, "coef_delta" => d14)
+    "pass" => d13 <= tol_loglik && d14 <= tol_coef, "loglik_delta" => d13, "coef_delta" => d14,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_al_formula.loglik, "julia_coef" => collect(Float64, fit_al_formula.beta))
 
 # ---------------------------------------------------------------------------
 # Row 5: INPUT-KERNEL-ONE (native + formula)
@@ -281,14 +295,18 @@ fit_k1_native = GLLVModels.fit_gaussian_sources(Y_k1; sources = [src_a])
 d15 = abs(fit_k1_native.loglik - r_loglik_k1)
 d16 = coef_delta(fit_k1_native.beta, r_coef_k1)
 cases["CORE070-FIT-INPUT-KERNEL-ONE-NATIVE-MODEL"] = Dict(
-    "pass" => d15 <= tol_loglik && d16 <= tol_coef, "loglik_delta" => d15, "coef_delta" => d16)
+    "pass" => d15 <= tol_loglik && d16 <= tol_coef, "loglik_delta" => d15, "coef_delta" => d16,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_k1_native.loglik, "julia_coef" => collect(Float64, fit_k1_native.beta))
 
 data_k1 = (dummy = zeros(n_units),)
 fit_k1_formula = GLLVModels.gllvm(@formula(y ~ 1), Y_k1, data_k1; family = Normal(), sources = [src_a])
 d17 = abs(fit_k1_formula.loglik - r_loglik_k1)
 d18 = coef_delta(fit_k1_formula.beta, r_coef_k1)
 cases["CORE070-FIT-INPUT-KERNEL-ONE-FORMULA-INTERFACE"] = Dict(
-    "pass" => d17 <= tol_loglik && d18 <= tol_coef, "loglik_delta" => d17, "coef_delta" => d18)
+    "pass" => d17 <= tol_loglik && d18 <= tol_coef, "loglik_delta" => d17, "coef_delta" => d18,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_k1_formula.loglik, "julia_coef" => collect(Float64, fit_k1_formula.beta))
 
 # ---------------------------------------------------------------------------
 # Row 6/7: INPUT-KERNEL-TWO and INPUT-KERNEL-TWO-AUTO (native + formula each).
@@ -309,14 +327,18 @@ fit_k2_native = GLLVModels.fit_gaussian_sources(Y_k2; sources = [src_a2, src_b2]
 d19 = abs(fit_k2_native.loglik - r_loglik_k2)
 d20 = coef_delta(fit_k2_native.beta, r_coef_k2)
 cases["CORE070-FIT-INPUT-KERNEL-TWO-NATIVE-MODEL"] = Dict(
-    "pass" => d19 <= tol_loglik && d20 <= tol_coef, "loglik_delta" => d19, "coef_delta" => d20)
+    "pass" => d19 <= tol_loglik && d20 <= tol_coef, "loglik_delta" => d19, "coef_delta" => d20,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_k2_native.loglik, "julia_coef" => collect(Float64, fit_k2_native.beta))
 
 data_k2 = (dummy = zeros(n_units),)
 fit_k2_formula = GLLVModels.gllvm(@formula(y ~ 1), Y_k2, data_k2; family = Normal(), sources = [src_a2, src_b2])
 d21 = abs(fit_k2_formula.loglik - r_loglik_k2)
 d22 = coef_delta(fit_k2_formula.beta, r_coef_k2)
 cases["CORE070-FIT-INPUT-KERNEL-TWO-FORMULA-INTERFACE"] = Dict(
-    "pass" => d21 <= tol_loglik && d22 <= tol_coef, "loglik_delta" => d21, "coef_delta" => d22)
+    "pass" => d21 <= tol_loglik && d22 <= tol_coef, "loglik_delta" => d21, "coef_delta" => d22,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_k2_formula.loglik, "julia_coef" => collect(Float64, fit_k2_formula.beta))
 
 k2a = oracle["kernel_two_auto"]
 r_loglik_k2a = Float64(k2a["loglik"]); r_coef_k2a = Float64.(k2a["coef"])
@@ -329,14 +351,18 @@ d23 = abs(fit_k2a_native.loglik - r_loglik_k2a)
 d24 = coef_delta(fit_k2a_native.beta, r_coef_k2a)
 cases["CORE070-FIT-INPUT-KERNEL-TWO-AUTO-NATIVE-MODEL"] = Dict(
     "pass" => r_matches_k2 && d23 <= tol_loglik && d24 <= tol_coef,
-    "loglik_delta" => d23, "coef_delta" => d24, "r_matches_kernel_two" => r_matches_k2)
+    "loglik_delta" => d23, "coef_delta" => d24,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_k2a_native.loglik, "julia_coef" => collect(Float64, fit_k2a_native.beta), "r_matches_kernel_two" => r_matches_k2)
 
 fit_k2a_formula = GLLVModels.gllvm(@formula(y ~ 1), Y_k2, data_k2; family = Normal(), sources = [src_a3, src_b3])
 d25 = abs(fit_k2a_formula.loglik - r_loglik_k2a)
 d26 = coef_delta(fit_k2a_formula.beta, r_coef_k2a)
 cases["CORE070-FIT-INPUT-KERNEL-TWO-AUTO-FORMULA-INTERFACE"] = Dict(
     "pass" => r_matches_k2 && d25 <= tol_loglik && d26 <= tol_coef,
-    "loglik_delta" => d25, "coef_delta" => d26, "r_matches_kernel_two" => r_matches_k2)
+    "loglik_delta" => d25, "coef_delta" => d26,
+    # The Julia values themselves, so the receipt tool recomputes |R - Julia| instead of trusting it.
+    "julia_loglik" => fit_k2a_formula.loglik, "julia_coef" => collect(Float64, fit_k2a_formula.beta), "r_matches_kernel_two" => r_matches_k2)
 
 # ---------------------------------------------------------------------------
 # Negative controls: deliberately-wrong comparisons that MUST fail.

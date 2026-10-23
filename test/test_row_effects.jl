@@ -1,4 +1,4 @@
-using GLLVModels, Test, Random, Distributions, Statistics
+using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
 
 @testset "Community row effects" begin
     # ------------------------------------------------------------------

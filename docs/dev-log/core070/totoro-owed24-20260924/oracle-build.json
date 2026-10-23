@@ -1,0 +1,22 @@
+{
+  "archive_sha256": "0c2f4323eb9fb19acccf039b8d57b4dd6bda82e2aa8b4a7bb712f36a64b022bc",
+  "command": [
+    "/usr/bin/R",
+    "CMD",
+    "INSTALL",
+    "--no-multiarch",
+    "--library=/home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/.unlazy/r-build/library",
+    "/home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/.unlazy/r-build/source"
+  ],
+  "elapsed_seconds": 406.7222547214478,
+  "exit_code": 0,
+  "hostname": "totoro",
+  "installed_tree_sha256": "ec650e171accdad1f3d49c28325ca8a2260874749d338bd113bb01816bebcc17",
+  "log_sha256": "07b62b4755202bfca05b30d5b8d20d40f5d2f002fef26341f75001079f2f822c",
+  "marker_sha256": "c0c7c703b04dd9b1cdb1d1f0db0ea2da508127e30ba5f2dcbaa31b32c8a7e35b",
+  "original_source_unchanged": true,
+  "r_version": "R version 4.5.3 (2026-03-11) -- \"Reassured Reassurer\"",
+  "reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "source_tree_sha256": "f83545faa6543dbb1f64d64bbf5a9498adcdf036cc3da5851f269912698b1cc7",
+  "tool_sha256": "b7879f0e495ea5d28743a076cc9594ccb3f7cf9da0158b3681ab88858338bb63"
+}

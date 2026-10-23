@@ -1,3 +1,6 @@
+using TOML
+using SHA
+
 parity_loadings_p5k2() = [
     0.8   0.0
     0.5   0.6
@@ -5,6 +8,12 @@ parity_loadings_p5k2() = [
    -0.2   0.5
     0.1   0.3
 ]
+
+# Zero-truncated NB2 interior/boundary fixtures for the `truncated_nbinom2` second-
+# order cell and the per-trait Wald CI test. Pure Julia (TOML + SHA, no RCall) so
+# test/test_second_order_truncnb2_ci.jl can include it directly in the default suite,
+# same reason r_lib.jl above stays RCall-free.
+include(joinpath(@__DIR__, "truncnb2_fixtures.jl"))
 
 function parity_site_design(x::AbstractVector{<:Real}, p::Integer)
     n = length(x)
@@ -72,10 +81,33 @@ _rand_nb2_ms(μ::Float64, r::Float64) = _rand_poisson(_rand_gamma_ms(r, μ / r))
 # fit_gllvmtmb_parity_loglik / _x / _species_x (test/parity/parity_helpers.jl)
 # with se=TRUE and sd_report extraction (mirrors se-prerun-01's r_fit.R).
 # ===========================================================================
+include(joinpath(@__DIR__, "r_lib.jl"))
+
 function _require_gllvmtmb!()
+    lib = second_order_r_lib()
+    if lib === nothing
+        R"""
+        suppressMessages(library(gllvmTMB))
+        """
+        return nothing
+    end
+    @rput lib
     R"""
-    suppressMessages(library(gllvmTMB))
+    local({
+      expected <- normalizePath(file.path(lib, "gllvmTMB"), mustWork = TRUE)
+      loaded_from <- function() normalizePath(getNamespaceInfo("gllvmTMB", "path"), mustWork = TRUE)
+      if ("gllvmTMB" %in% loadedNamespaces() && loaded_from() != expected) {
+        stop("gllvmTMB is already loaded from ", loaded_from(),
+             ", not GLLVM_PARITY_R_LIBS (", lib, "); start a fresh process")
+      }
+      .libPaths(c(lib, .libPaths()))
+      suppressMessages(library(gllvmTMB, lib.loc = lib))
+      if (loaded_from() != expected) {
+        stop("gllvmTMB loaded from ", loaded_from(), ", not GLLVM_PARITY_R_LIBS (", lib, ")")
+      }
+    })
     """
+    return nothing
 end
 
 # no-X

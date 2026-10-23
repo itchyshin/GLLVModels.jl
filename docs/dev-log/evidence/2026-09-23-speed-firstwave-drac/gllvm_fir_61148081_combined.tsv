@@ -1,0 +1,8 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads	job
+gllvm-binom-glmm-200x5	G-binom-glmm; grouped Binomial glmm_200x5-class	fit_gllvm Binomial grouped	0.158222	-683.3149136	julia_abs_only	ok	unknown	fc20317	4	61148081
+gllvm-gauss-lv-t4-p20n500	G-gauss-lv-large; T4 Gaussian (p,n,K)=(20,500,2)	fit_gaussian_gllvm	0.006743	-11924.3686	julia_abs_only	ok	unknown	fc20355	4	61148081
+gllvm-pois-lv-t4-p20n500	G-nb-binom-lv; T4 Poisson (p,n,K)=(20,500,2)	fit_poisson_gllvm	1.208765	-13736.86047	julia_abs_only	ok	unknown	fc20355	4	61148081
+gllvm-nb2-lv-t4-p20n500	G-nb2-lv-scale; T4 NB2 (p,n,K)=(20,500,2)	fit_nb_gllvm	4.256158	-14232.63236	julia_abs_only	ok	unknown	fc20420	4	61148081
+gllvm-gauss-unstruct-p50n2k	G-gauss-lv-large; (p,n,K)=(50,2000,2)	fit_gaussian_gllvm	0.100006	-125672.012	julia_abs_only	ok	unknown	fc20317	4	61148081
+gllvm-gauss-phylo-fit-p200	G-gauss-phylo-em adjacent; non-EM sparse phylo Gaussian fit p=200	fit_phylo_gaussian	0.020452	NaN	julia_abs_only; label≠EM; univariate tip response	ok	unknown	fc20355	4	61148081
+gllvm-profile-ci-glmm	G-profile-ci; profile on small grouped Poisson	confint profile (grouped or unstruct fallback)	1.191450	-430.5985186	julia_abs_only	ok	unknown	fc20355	4	61148081

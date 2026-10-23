@@ -43,47 +43,58 @@ _default_hessian(::TweedieED, ::LogLink) = :observed
 _glm_obs_weight(f::TweedieED, μ, n, me, y, link::LogLink, η) =
     μ^(1.0 - f.p) * ((2.0 - f.p) * μ + (f.p - 1.0) * y) / f.φ
 
-# Numerically-safe log-sum-exp over a vector of log-weights.
-@inline function _tweedie_logsumexp(logw::AbstractVector)
-    m = maximum(logw)
-    (isfinite(m) || return m)
-    s = 0.0
-    @inbounds for lw in logw
-        s += exp(lw - m)
-    end
-    return m + log(s)
-end
-
 # log a(y, φ, p): the μ-free Dunn–Smyth normalising series (1 < p < 2, y > 0).
 #   α = (2-p)/(1-p)  (α < 0 here)
 #   logW_j = j·[ -α·log y + α·log(p-1) - (1-α)·log φ - log(2-p) ]
 #            - logΓ(j+1) - logΓ(-jα)
 #   log a  = -log y + logsumexp_j logW_j
-# The summand peaks near j* ≈ y^{2-p} / (φ (2-p)); we sum a window around j*,
-# expanding until the boundary terms fall ≳ 37 below the running max.
+# logW_j is concave in j (single mode near j* ≈ y^{2-p} / (φ (2-p))). Single
+# allocation-free pass: climb from the j* guess to the true mode, then sum
+# outward in both directions until a term falls ≥ 37 below the mode (the old
+# implementation rebuilt a doubling window from scratch on every pass, #575).
 function _tweedie_logA(y::Float64, φ::Float64, p::Float64)
     α = (2.0 - p) / (1.0 - p)              # < 0 for 1 < p < 2
-    # Per-j linear coefficient of the leading term.
     a = -α * log(y) + α * log(p - 1.0) - (1.0 - α) * log(φ) - log(2.0 - p)
-    logW(j) = j * a - loggamma(j + 1.0) - loggamma(-j * α)
+    nα = -α
+    @inline logW(j) = j * a - loggamma(j + 1.0) - loggamma(j * nα)
 
     jstar = max(1, round(Int, y^(2.0 - p) / (φ * (2.0 - p))))
-    drop = 37.0
-    cap = 5000
-    W = 1
-    local lo, hi, m, terms
+    # climb to the mode
+    j0 = jstar
+    w0 = logW(float(j0))
     while true
-        lo = max(1, jstar - W)
-        hi = jstar + W
-        terms = Float64[logW(float(j)) for j in lo:hi]
-        m = maximum(terms)
-        edge = max(terms[1], terms[end])
-        if (m - edge) ≥ drop || W ≥ cap
+        wu = logW(float(j0 + 1))
+        if wu > w0
+            j0 += 1; w0 = wu
+        elseif j0 > 1
+            wd = logW(float(j0 - 1))
+            if wd > w0
+                j0 -= 1; w0 = wd
+            else
+                break
+            end
+        else
             break
         end
-        W *= 2
     end
-    return -log(y) + _tweedie_logsumexp(terms)
+    drop = 37.0
+    cap = 5000
+    s = 1.0                                # sum of exp(logW_j - w0), mode term = 1
+    j = j0 + 1
+    while j <= j0 + cap
+        d = logW(float(j)) - w0
+        s += exp(d)
+        d < -drop && break
+        j += 1
+    end
+    j = j0 - 1
+    while j >= 1 && j >= j0 - cap
+        d = logW(float(j)) - w0
+        s += exp(d)
+        d < -drop && break
+        j -= 1
+    end
+    return -log(y) + w0 + log(s)
 end
 
 """
@@ -272,13 +283,22 @@ function Base.show(io::IO, f::TweedieFit)
           f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
-# TweedieED deliberately does NOT opt into the damped mode-search
-# backtracking (audit rider REVERTED same day, 2026-08-27): the backtracking
-# merit function evaluates the log-posterior, and Tweedie's log-density is the
-# infinite series — opting in ballooned the "Tweedie engine health" testset
-# from minutes to 48m20s (measured, full-suite run). The undamped exposure is
-# recorded engine debt; a cheap merit function (series value cached from the
-# objective evaluation, or a quadratic model test) is the eventual fix shape.
+# TweedieED opts into the damped mode-search backtracking (#623). The 2026-08-27
+# opt-in was reverted because the merit function evaluated the full log-density,
+# whose series normaliser made the "Tweedie engine health" testset take 48m20s.
+# The merit now uses only the μ-dependent kernel below: the series term c(y, φ)
+# is constant in μ, so it cancels in every q1 >= q0 comparison and the accepted
+# steps are the same as with the full density. Undamped, the K = 2 search
+# diverged: on the #623 fixture it returned ẑ = [-5.2e10, 8.4e8] where the mode
+# is [-1.975, 0.389], and the site's Laplace value was off by 1.35e21.
+_laplace_mode_should_backtrack(::TweedieED) = true
+function _laplace_mode_merit_term(f::TweedieED, μ, n, y)
+    μ = max(μ, 1e-12)                       # as in `tweedie_logpdf`
+    return (y * μ^(1 - f.p) / (1 - f.p) - μ^(2 - f.p) / (2 - f.p)) / f.φ
+end
+_laplace_mode_step_weight(f::TweedieED, μ, n, me, y, link::LogLink, η) =
+    ismissing(y) ? _glm_weight(f, μ, n, me) :
+    max(_glm_obs_weight(f, μ, n, me, y, link, η), _glm_weight(f, μ, n, me))
 
 """
     fit_tweedie_gllvm(Y; K, link=LogLink(), φ_init=1.0, p_init=1.5, …) -> TweedieFit
@@ -327,7 +347,9 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
 
     Zemp = log.(Yc .+ _tweedie_log_offset(Yc, msk))
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, nothing; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_tweedie_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
@@ -350,6 +372,8 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
         φ = exp(θ[p_sp + rr + 1])
         ξ = θ[p_sp + rr + 2]
         pw = 1.0 + 1.0 / (1.0 + exp(-ξ))
+        _eta_cap_guarded(link) && _eta_above_clamp(β, nothing; mask = msk) &&
+            return _TWEEDIE_FAIL_PENALTY   # #869: η-clamp plateau
         v = try
             -tweedie_marginal_loglik_laplace(Yc, Λ, β, φ, pw;
                                              hessian = hessian,
@@ -379,5 +403,6 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
         @warn "fit_tweedie_gllvm: the power ran to the boundary of (1, 2) \
                (p̂ = $(p̂), φ̂ = $(φ̂)); the fit is flagged as not converged."
     end
+    conv = _eta_cap_verdict(conv, link, β̂, nothing; mask = msk, caller = "fit_tweedie_gllvm")
     return TweedieFit(β̂, Λ̂, φ̂, p̂, link, loglik, conv, Optim.iterations(res), hessian)
 end

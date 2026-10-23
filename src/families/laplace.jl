@@ -17,7 +17,83 @@
 # (see families/binomial.jl, families/poisson.jl).
 
 # η clamp is family-agnostic; μ clamp dispatches on the family.
-_clamp_eta(η) = clamp(η, -30.0, 30.0)
+const _ETA_CLAMP = 30.0
+_clamp_eta(η) = clamp(η, -_ETA_CLAMP, _ETA_CLAMP)
+
+# log det of the K×K Laplace curvature `Λ'WΛ + I`. With K = 0 the matrix is 0×0 and its log
+# det is 0, but Julia 1.12's `logdet(::Symmetric)` throws on an empty matrix (1.10 returns
+# 0.0); the fitters' `catch` then turned every K = 0 evaluation into the failure sentinel.
+_laplace_logdet(A::AbstractMatrix) = size(A, 1) == 0 ? zero(eltype(A)) : logdet(A)
+
+# η-clamp plateau (#553, #869). Once β_t plus its additive η term is above `_ETA_CLAMP`, a
+# log-link objective is exactly flat in β_t (μ is capped at e^30), so a gradient test can
+# fire there and report `converged = true` far below the optimum. Two tools, used together:
+#   * `_eta_above_clamp` in the objective: return the failure sentinel above the cap, so the
+#     line search backtracks instead of settling on the plateau;
+#   * `_eta_cap_contact` at the verdict: a fit that ends at (or within the finite-difference
+#     step of) the cap is not converged. A backtracking line search can stall on a zero step
+#     at the sentinel wall, which Optim reports as converged (x_abstol = 0).
+# Upper end only: an all-zero species legitimately heads to the lower cap. The guard is for
+# log links (`_eta_cap_guarded`): under logit the upper cap can be a genuine limit.
+# `offset` is `nothing` or a p×n matrix of everything added to β (user offset, Xγ, X_lv
+# mean); only observed cells with a finite value count, because an unobserved cell may hold
+# NaN or ±Inf (`_check_offset_observed`).
+_eta_cap_guarded(::Link) = false
+_eta_cap_guarded(::LogLink) = true
+
+function _eta_offset_max(offset, t::Integer; mask = nothing)
+    offset === nothing && return 0.0
+    hi = -Inf
+    @inbounds for s in axes(offset, 2)
+        (mask === nothing || mask[t, s]) || continue
+        o = offset[t, s]
+        isfinite(o) && (hi = max(hi, o))
+    end
+    return hi
+end
+
+function _eta_above_clamp(β::AbstractVector, offset; mask = nothing, slack::Real = 0.0)
+    @inbounds for t in eachindex(β)
+        β[t] + _eta_offset_max(offset, t; mask = mask) > _ETA_CLAMP - slack && return true
+    end
+    return false
+end
+
+# The contact band must exceed the finite-difference step at β_t (cbrt(eps)·|β_t|).
+_eta_contact_slack(b::Real) = max(1e-2, 10 * cbrt(eps(Float64)) * max(abs(b), 1.0))
+
+function _eta_cap_contact(β::AbstractVector, offset; mask = nothing)
+    @inbounds for t in eachindex(β)
+        β[t] + _eta_offset_max(offset, t; mask = mask) >= _ETA_CLAMP - _eta_contact_slack(β[t]) &&
+            return true
+    end
+    return false
+end
+
+# `converged` after the contact check; warns once when the check overturns it.
+function _eta_cap_verdict(conv::Bool, link::Link, β::AbstractVector, offset; mask = nothing,
+                          caller::AbstractString = "fit")
+    (conv && _eta_cap_guarded(link) && _eta_cap_contact(β, offset; mask = mask)) || return conv
+    @warn "$caller: an intercept ended at the η clamp (β + offset ≈ $(_ETA_CLAMP), a mean of about 1e13), where the objective is flat; converged is false. Rescale the response or the offset if the data really sit there." maxlog = 1
+    return false
+end
+
+# #874: a user `β_init` entry with β_t + offset above the cap starts on the sentinel above,
+# where the optimiser cannot move. Replace each such entry by the default warm start (the
+# row mean of the link-scale data `Zemp`, bit-identical to `β_init = nothing`) and warn.
+# Not projected onto the cap: at 29 the count objectives already sit at failure-scale
+# values (n·e^29 > 1e12). A default that is itself past the cap (data on a 1e14 scale)
+# still ends at the sentinel, which is the right outcome there. `guarded` is the fitter's
+# objective guard (`_eta_cap_guarded(link)`); a wrong-length `β0` is left to the fitter.
+function _rescue_beta_init(β0::AbstractVector, Zemp::AbstractMatrix, offset; mask = nothing,
+                           guarded::Bool = true, caller::AbstractString = "fit")
+    (guarded && length(β0) == size(Zemp, 1)) || return β0
+    bad = [t for t in eachindex(β0) if β0[t] + _eta_offset_max(offset, t; mask = mask) > _ETA_CLAMP]
+    isempty(bad) && return β0
+    β0[bad] = (vec(sum(Zemp; dims = 2)) ./ size(Zemp, 2))[bad]
+    @warn "$caller: β_init puts the intercept of species $bad above the η clamp ($(_ETA_CLAMP)), where the objective is flat; using the default warm start for those entries."
+    return β0
+end
 
 # Robust linear solve: returns `nothing` if the factorization is singular or
 # fails, so the inner Newton can stop gracefully. A = Λ'WΛ + I is SPD by
@@ -33,21 +109,66 @@ _laplace_mode_should_backtrack(family) = false
 _laplace_mode_should_backtrack(family::Union{
     Poisson, Binomial, NegativeBinomial, Beta, Gamma, Exponential,
 }) = true
-# NB1 and TweedieED also opt in — declared in their own family files (they
-# are defined AFTER this one in the include order; 2026-08-27 audit rider:
+# NB1, TweedieED, StudentTFamily and others opt in in their own family files
+# (they are defined AFTER this one in the include order; 2026-08-27 audit rider:
 # the grouped solver's backtrack gate silently no-opped for them).
+
+# The backtracking merit is the per-site log posterior, and only DIFFERENCES of
+# it are compared (q1 >= q0), so a family may drop terms of its log-density that
+# do not depend on μ. TweedieED does (#623): its series normaliser c(y, φ) is
+# the expensive part and is constant in μ. Default: the full log-density, so
+# every other family's search is bit-identical.
+_laplace_mode_merit_term(family, μ, n, y) = _glm_logpdf(family, μ, n, y)
+
+# Robust step control, for families whose log joint in z need not be concave
+# (StudentTFamily, #623). Two changes, both only for families that opt in:
+# (1) small steps (norm(Δ) <= 1e-3 (1 + norm(z))) no longer skip the line search.
+#     Student-t's Fisher weight is (ν+3)/ν times smaller than the observed
+#     curvature near the mode, so for ν < 3 even small steps overshoot by more
+#     than a factor of 2 and the unchecked search settles into a period-2 cycle.
+# (2) an accepted full step is extrapolated (doubled while the log posterior keeps
+#     rising, at most 2^10). Residuals beyond σ√ν make the joint non-concave, and
+#     there the search crawled along a flat ridge: on the #623 fixture one site's
+#     log joint was still 1.9 below its mode after the default 100 iterations.
+_laplace_mode_robust(family) = false
+
+# A family whose log joint in z can have more than one peak may search again from
+# other starting points and keep the highest peak (#626, StudentTFamily). Default:
+# return the mode found, so every other family is unchanged.
+_laplace_mode_alt_starts(family, z, y, n, Λ, β, link; kwargs...) = z
+
+# Weight of the mode-search Newton step. Default: the Fisher weight, so the search
+# is unchanged for every family that does not override it. TweedieED/log and
+# StudentTFamily/identity use max(observed, Fisher) (#623), as the Beta grouped
+# kernel does (#503): the observed curvature makes the step a true Newton step near
+# the mode (quadratic, not linear, convergence), and taking the larger of the two
+# never lengthens a step beyond the Fisher one. Measured on the #623 fixtures with
+# the Fisher weight and backtracking only: Student-t sites still needed more than
+# 100 iterations (|grad| up to 1.03 at the cap), and one Tweedie site stalled at
+# |grad| = 1e-2 after 10,000.
+_laplace_mode_step_weight(family, μ, n, me, y, link, η) = _glm_weight(family, μ, n, me)
 
 function _laplace_mode_logpost(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link, z::AbstractVector;
-        mask = nothing, offset = nothing)
+        mask = nothing, offset = nothing, weights = nothing)
     p = size(Λ, 1)
     off = offset === nothing ? false : offset
     η = _clamp_eta.(β .+ off .+ Λ * z)
     μ = _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
     q = -0.5 * dot(z, z)
-    @inbounds for t in 1:p
-        (mask === nothing || mask[t]) || continue
-        q += _glm_logpdf(family, μ[t], n[t], y[t])
+    if weights === nothing
+        @inbounds for t in 1:p
+            (mask === nothing || mask[t]) || continue
+            q += _laplace_mode_merit_term(family, μ[t], n[t], y[t])
+        end
+    else
+        # Observation weights (see `_laplace_mode`): each cell's term scaled by its weight; a
+        # zero-weight cell contributes nothing, like a masked one.
+        @inbounds for t in 1:p
+            (mask === nothing || mask[t]) || continue
+            iszero(weights[t]) && continue
+            q += weights[t] * _laplace_mode_merit_term(family, μ[t], n[t], y[t])
+        end
     end
     return q
 end
@@ -99,16 +220,25 @@ LaplaceModeWorkspace(::Type{T}, p::Integer, K::Integer) where {T} =
 # `ws` (optional `LaplaceModeWorkspace`, R3 core070): reuse pre-allocated buffers
 # instead of allocating fresh ones; ignored (fresh allocation) on any type/size
 # mismatch, so it is always safe to pass.
+# `weights` (length-p non-negative reals, or `nothing`): observation weights, the
+# continuous form of `mask`. A cell of weight w contributes w × its score, w × its
+# Fisher weight and w × its log-density, i.e. its conditional log-density is
+# multiplied by w, which is gllvmTMB's `weights_i` (row NLL × weight, src/gllvmTMB.cpp;
+# TMB's Laplace differentiates that weighted joint, so the curvature is weighted too).
+# A zero weight drops the cell exactly like `mask`. `nothing` takes the unweighted
+# statements unchanged (no multiplication by 1.0), so unweighted results are
+# bit-identical (test/test_weights_byte_identity.jl).
 function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9,
-        ws = nothing)
+        mask = nothing, offset = nothing, weights = nothing, maxiter::Integer = 100, tol::Real = 1e-9,
+        ws = nothing, z0 = nothing, alt_starts::Bool = true)
     p = size(Λ, 1)
     K = size(Λ, 2)
     off = offset === nothing ? false : offset    # additive identity ⇒ no-offset path unchanged
     T = promote_type(Base.nonmissingtype(eltype(y)), eltype(n), eltype(Λ), eltype(β))
     offset === nothing || (T = promote_type(T, Base.nonmissingtype(eltype(offset))))
-    z = zeros(T, K)
+    z0 === nothing || (T = promote_type(T, eltype(z0)))
+    z = z0 === nothing ? zeros(T, K) : convert(Vector{T}, collect(z0))
     # Per-call buffers, reused across Newton iterations. Each is written in place
     # with the SAME broadcast / BLAS expression as the allocating version, so the
     # computed values and FP-operation order are bit-identical.
@@ -127,10 +257,14 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         μ  .= _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
         me .= mu_eta.(Ref(link), η)
         s  .= _glm_score.(Ref(family), μ, n, me, y)
-        W  .= _glm_weight.(Ref(family), μ, n, me)
+        W  .= _laplace_mode_step_weight.(Ref(family), μ, n, me, y, Ref(link), η)
         if mask !== nothing
             s .= ifelse.(mask, s, zero(T))        # masked ⇒ no contribution (NaN safe)
             W .= ifelse.(mask, W, zero(T))
+        end
+        if weights !== nothing                # weighted cell ⇒ w × score, w × weight
+            s .= ifelse.(iszero.(weights), zero(T), weights .* s)
+            W .= ifelse.(iszero.(weights), zero(T), weights .* W)
         end
         WΛ .= W .* Λ                          # = W .* Λ (p×K)
         mul!(Amat, Λ', WΛ)                     # = Λ' * (W .* Λ)
@@ -151,24 +285,46 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         end
 
         step_taken = 1.0
-        if norm(Δ) <= 1e-3 * (1 + norm(z))
+        robust = _laplace_mode_robust(family)
+        small = norm(Δ) <= 1e-3 * (1 + norm(z))
+        if !robust && small
             z = z .+ Δ
         elseif !_laplace_mode_should_backtrack(family)
             z = z .+ Δ
         else
             q0 = _laplace_mode_logpost(family, y, n, Λ, β, link, z;
-                                       mask = mask, offset = offset)
+                                       mask = mask, offset = offset, weights = weights)
             if isfinite(q0)
                 accepted = false
                 step = 1.0
+                # Robust families check small steps too, but a change at rounding
+                # level must not reject the final polishing steps (the #612
+                # lesson): rejecting them left the mode short and moved the
+                # Student-t marginal's FD-vs-AD gradient gap from 8e-9 to 5e-5.
+                slack = robust && small ? 1e-10 * (1 + abs(q0)) : zero(q0)
                 @inbounds for _half in 1:30
                     ztrial = z .+ step .* Δ
                     q1 = _laplace_mode_logpost(family, y, n, Λ, β, link, ztrial;
-                                               mask = mask, offset = offset)
-                    if isfinite(q1) && q1 >= q0
+                                               mask = mask, offset = offset, weights = weights)
+                    if isfinite(q1) && q1 >= q0 - slack
                         z = ztrial
                         step_taken = step
                         accepted = true
+                        # A doubling is kept only when it gains more than rounding
+                        # level. At convergence doubling a Newton step gains nothing,
+                        # and keeping it on rounding noise would hand ForwardDiff
+                        # z + 2Δ instead of z + Δ (the marginal's AD-vs-FD gap rose
+                        # from 8e-9 to 6.6e-7). Along a non-concave ridge the gain is
+                        # real, and small steps must extrapolate there too.
+                        if robust && step == 1.0
+                            @inbounds for _dbl in 1:10
+                                zx = z .+ step_taken .* Δ   # z + 2^k Δ from the start
+                                qx = _laplace_mode_logpost(family, y, n, Λ, β, link, zx;
+                                                           mask = mask, offset = offset, weights = weights)
+                                (isfinite(qx) && qx > q1 + 1e-10 * (1 + abs(q1))) || break
+                                z = zx; q1 = qx; step_taken *= 2
+                            end
+                        end
                         break
                     end
                     step *= 0.5
@@ -180,7 +336,15 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         end
         step_taken * maximum(abs, Δ) < tol && break
     end
-    return z
+    alt_starts || return z
+    # The weighted call passes `weights` on, so a family whose alternative-start search
+    # does not take weights fails loudly instead of searching an unweighted objective.
+    weights === nothing ||
+        return _laplace_mode_alt_starts(family, z, y, n, Λ, β, link;
+                                        mask = mask, offset = offset, weights = weights,
+                                        maxiter = maxiter, tol = tol)
+    return _laplace_mode_alt_starts(family, z, y, n, Λ, β, link;
+                                    mask = mask, offset = offset, maxiter = maxiter, tol = tol)
 end
 
 # ===========================================================================
@@ -271,20 +435,34 @@ is a `Distributions` family marker (e.g. `Binomial()`, `Poisson()`); `y`, `n` ar
 the response and trial counts (length p; `n` is ignored by families without
 trials); `Λ` p×K; `β` length-p; `link` a `Link`. `mask` (length-p Bool, or
 `nothing`) marks observed responses — masked-out (missing) entries are dropped from
-the score, the Hessian weight, and the log-density sum. Returns
+the score, the Hessian weight, and the log-density sum. `weights` (length-p
+non-negative reals, or `nothing`) multiplies each observed cell's score, Hessian
+weight and log-density by its weight (observation weights; see `_laplace_mode`). Returns
 `ℓ(ẑ) − ½ẑ'ẑ − ½logdet(Λ'WΛ + I)`.
 """
 function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, hessian::Symbol = _default_hessian(family, link),
-        maxiter::Integer = 100, tol::Real = 1e-9, ws = nothing)
+        mask = nothing, offset = nothing, weights = nothing,
+        hessian::Symbol = _default_hessian(family, link),
+        maxiter::Integer = 100, tol::Real = 1e-9, ws = nothing, z_precomputed = nothing)
     (hessian === :fisher || hessian === :observed) || throw(ArgumentError(
         "hessian must be :fisher or :observed; got :$hessian"))
     p = size(Λ, 1)
     K = size(Λ, 2)
     off = offset === nothing ? false : offset
-    z  = _laplace_mode(family, y, n, Λ, β, link;
-                       mask = mask, offset = offset, maxiter = maxiter, tol = tol, ws = ws)
+    # R8 (shared mode solve, S6 item 1): `z_precomputed` (length K), when given,
+    # skips the Newton mode-finder here — the caller (e.g. `fg!` in
+    # `_fit_poisson_gllvm_laplace`) already solved it at this θ for the
+    # gradient path and hands the SAME concrete mode to the value path,
+    # instead of each path solving its own copy of the identical fixed point.
+    # A length mismatch falls back to solving fresh (never silently wrong).
+    z  = if z_precomputed !== nothing && length(z_precomputed) == K
+        z_precomputed
+    else
+        _laplace_mode(family, y, n, Λ, β, link;
+                     mask = mask, offset = offset, weights = weights,
+                     maxiter = maxiter, tol = tol, ws = ws)
+    end
     # Per-call buffers (written in place with the SAME broadcast / BLAS expressions
     # as before ⇒ bit-identical values and FP-operation order).
     Λz = Λ * z                                # Λ*z (one-shot; result reused below)
@@ -311,6 +489,9 @@ function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
     if mask !== nothing
         W = ifelse.(mask, W, 0.0)
     end
+    if weights !== nothing                    # weighted curvature (see `_laplace_mode`)
+        W = ifelse.(iszero.(weights), 0.0, weights .* W)
+    end
     WΛ = W .* Λ                               # = W .* Λ (p×K)
     Amat = Λ' * WΛ                            # = Λ' * (W .* Λ) (K×K)
     @inbounds for d in 1:K
@@ -318,9 +499,17 @@ function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
     end
     A  = Symmetric(Amat)
     ℓ = 0.0
-    @inbounds for t in 1:p
-        (mask === nothing || mask[t]) || continue
-        ℓ += _glm_logpdf(family, μ[t], n[t], y[t])
+    if weights === nothing
+        @inbounds for t in 1:p
+            (mask === nothing || mask[t]) || continue
+            ℓ += _glm_logpdf(family, μ[t], n[t], y[t])
+        end
+    else
+        @inbounds for t in 1:p
+            (mask === nothing || mask[t]) || continue
+            iszero(weights[t]) && continue
+            ℓ += weights[t] * _glm_logpdf(family, μ[t], n[t], y[t])
+        end
     end
     # PD guard, keyed on the WEIGHT'S SIGN — not on the selector and not on the
     # trait. `A = Λ'WΛ + I` is SPD by construction whenever every `W ≥ 0`, so
@@ -343,7 +532,7 @@ function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
         F = cholesky(A; check = false)
         issuccess(F) || return oftype(ℓ, -Inf)
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -359,16 +548,33 @@ invariant to whatever placeholder sits in the masked cells of `Y`.
 `η = β + offset + Λz` (e.g. log-exposure/effort/area for counts). A constant
 per-species offset is equivalent to shifting that species' intercept (the
 offset-absorption identity), which serves as the exact verification anchor.
+
+`weights` (p×n non-negative reals, or `nothing`) are observation weights: each
+observed cell's conditional log-density is multiplied by its weight (gllvmTMB's
+`weights`); a zero weight drops the cell like `mask`. Weights at masked cells are
+set to zero before use, so any value there (including `NaN`) leaves the marginal
+unchanged. `nothing` is the unweighted marginal, bit for bit.
+
+`zs` (optional `Vector` of length-K per-site modes, R8 shared mode solve): when
+given, threads `zs[i]` into site `i` as `laplace_loglik_site`'s `z_precomputed`,
+skipping that site's own Newton mode solve — see `laplace_loglik_site`.
 """
 function marginal_loglik_laplace(family, Y::AbstractMatrix, N::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, kwargs...)
+        mask = nothing, offset = nothing, weights = nothing, zs = nothing, kwargs...)
+    # A masked cell contributes nothing, but `0 * NaN` is NaN in the weighted curvature,
+    # so the weight is zeroed there first (the unweighted path is untouched).
+    if weights !== nothing && mask !== nothing
+        weights = ifelse.(mask, weights, zero(eltype(weights)))
+    end
     acc = 0.0
     @inbounds for i in axes(Y, 2)
-        mi = mask   === nothing ? nothing : view(mask, :, i)
-        oi = offset === nothing ? nothing : view(offset, :, i)
+        mi = mask    === nothing ? nothing : view(mask, :, i)
+        oi = offset  === nothing ? nothing : view(offset, :, i)
+        wi = weights === nothing ? nothing : view(weights, :, i)
+        zi = zs      === nothing ? nothing : zs[i]
         acc += laplace_loglik_site(family, view(Y, :, i), view(N, :, i), Λ, β, link;
-                                   mask = mi, offset = oi, kwargs...)
+                                   mask = mi, offset = oi, weights = wi, z_precomputed = zi, kwargs...)
     end
     return acc
 end

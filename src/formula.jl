@@ -6,9 +6,14 @@
 #     gllvm(@formula(y ~ 1 + temp + habitat), Y, site_data; contrasts = Dict(:habitat => DummyCoding()))
 #
 # Mapping (verified against the engine contract):
-#  - The intercept `1` is the engine's BUILT-IN per-species intercept (the Gaussian
-#    path profiles out the per-trait row mean — src/likelihood.jl:39; fit_gllvm_cov
-#    carries explicit per-species β). So the `1` term is dropped here, not put into X.
+#  - The intercept `1` means one intercept per species. The non-Gaussian fitters
+#    estimate these themselves (e.g. fit_gllvm_cov's β), so `1` is dropped from X.
+#    fit_gaussian_gllvm has NO built-in intercept (with no X it is a zero-mean factor
+#    model), so the Normal() routes supply it explicitly: `y ~ 1` goes through
+#    _fit_gaussian_trait_intercepts, and a formula with covariates gets per-trait
+#    intercept columns from _pervar_formula_design. `y ~ 0` stays zero mean.
+#    Phylogenetic fits (`Σ_phy` supplied) use one common intercept instead, since
+#    per-trait intercepts would absorb the species-constant phylo effect.
 #  - Site-level covariates (continuous, categorical contrasts via StatsModels, function
 #    terms, interactions) become columns of the engine's (p, n, q) design X, broadcast
 #    across species (X[t,s,k] = covariate[s,k]) ⇒ a coefficient SHARED across species.
@@ -80,29 +85,45 @@ end
 
 # The per-variance Gaussian fitter treats X as the complete mean design. Use
 # StatsModels' intercept/rank rules before expanding a site intercept to one
-# coefficient per trait. Keep the legacy shared-variance route separate.
-function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false)
+# coefficient per trait. The shared-variance route with covariates uses it too.
+# `common_intercept=true` keeps one intercept shared by all traits instead (for
+# phylogenetic fits, where per-trait intercepts would absorb the phylo effect).
+function _default_route_no_intercept_error(formula::FormulaTerm, family)
+    StatsModels.omitsintercept(formula.rhs) && !(family isa Normal) && throw(ArgumentError(
+        "cannot fit `$formula` on the default gllvm route: a no-intercept formula (`0` or `-1`) " *
+        "removes species intercepts, but $(typeof(family)) always fits per-species intercepts " *
+        "here; use `pervar=true` with `family=Normal()` or include `1` in the formula"))
+    return nothing
+end
+
+function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false,
+                                common_intercept::Bool=false)
     intercept = !StatsModels.omitsintercept(rhs)
     site_names = String[]
     terms = rhs isa Tuple ? rhs : (rhs,)
-    if all(t -> t isa ConstantTerm, terms)
+    non_const = [t for t in terms if !(t isa ConstantTerm)]
+    if isempty(non_const)
         site = zeros(n, 0)
     else
+        # Keep the original RHS, including `0`/`-1`. Stripping those constants
+        # before schema makes DummyCoding drop the base level and re-add an
+        # intercept, so `0 + habitat` collapsed to one column.
         f = FormulaTerm(ConstantTerm(0), rhs)
         sch = StatsModels.schema(f, cols, contrasts)
         applied = StatsModels.apply_schema(f, sch, StatsModels.StatisticalModel)
         mm = Matrix{Float64}(StatsModels.modelmatrix(applied.rhs, cols))
         model_names = StatsModels.coefnames(applied.rhs)
         model_names = model_names isa AbstractVector ? string.(model_names) : [string(model_names)]
-        intercept = StatsModels.hasintercept(applied.rhs)
         site_idx = findall(!=("(Intercept)"), model_names)
         site = mm[:, site_idx]
         site_names = model_names[site_idx]
     end
     size(site, 1) == n || throw(DimensionMismatch("formula design must have one row per site"))
-    q0 = intercept ? p : 0
+    q0 = intercept ? (common_intercept ? 1 : p) : 0
     X = zeros(p, n, q0 + size(site, 2))
-    if intercept
+    if intercept && common_intercept
+        X[:, :, 1] .= 1
+    elseif intercept
         for t in 1:p
             X[t, :, t] .= 1
         end
@@ -112,7 +133,11 @@ function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false)
     end
     if names
         coefficient_names = String[]
-        append!(coefficient_names, ("trait_$(trait)" for trait in 1:p if intercept))
+        if intercept && common_intercept
+            push!(coefficient_names, "(Intercept)")
+        else
+            append!(coefficient_names, ("trait_$(trait)" for trait in 1:p if intercept))
+        end
         append!(coefficient_names, site_names)
         return X, coefficient_names
     end
@@ -135,7 +160,9 @@ gllvm(@formula(y ~ 1 + temp + habitat), Y, site_data; family = Poisson(), K = 2,
 ```
 
 The response symbol on the formula LHS (`y`) names the matrix `Y` and is otherwise
-ignored. The intercept (`1`) is the engine's built-in per-species intercept; each
+ignored. The intercept (`1`) gives one intercept per species: non-Gaussian fitters
+estimate it internally, and for `Normal()` the formula adds trait-intercept columns
+(`fit_gaussian_gllvm` itself has no built-in intercept). Each
 covariate column on the RHS (continuous, categorical via `contrasts`, interactions)
 becomes a coefficient **shared across species** (the engine's `(p,n,q)` design).
 Dispatches to [`fit_gaussian_gllvm`](@ref) for `Normal()`, to [`fit_nb_gllvm_grouped_cov`](@ref) /
@@ -155,8 +182,10 @@ For `Normal()`, `pervar=true` instead selects
 `y ~ 0 + x` or `y ~ -1 + x` removes those intercepts. `y ~ 0` is zero mean.
 `fixed_residual_sd=c` passes an explicit fixed residual scale to this route;
 it does not choose R's data-dependent scale automatically. Categorical contrasts
-follow StatsModels' rank rules. Do not also supply `X` with a formula.
-The default shared-variance route keeps its existing behavior.
+follow StatsModels' rank rules. Do not also supply `X` with a formula; every route
+throws an `ArgumentError` if you do.
+The default shared-variance route uses the same design when the formula has
+covariates.
 With no covariates it reduces to the intercept-only fit. Supplied table columns
 must still have one entry per site; an empty table is allowed for an
 intercept-only formula because `Y` supplies the site count.
@@ -178,13 +207,49 @@ phylogenetic rank, not `K`; ordinary joint terms currently require independent,
 non-common trait variances. This does not open public R bridge admission.
 `ZIB` through `@formula` is **no-X only** for now (bridge still OWED; ZIB+X formula
 is fenced).
+
+On ordinary no-covariate Gaussian and count routes, `optimizer` accepts `:lbfgs`,
+`:bfgs`, or a configured `Optim.LBFGS()` / `Optim.BFGS()` object. The default
+NB2 formula route remains per-trait dispersion when an optimizer is selected.
+Nested formula routes reject explicit selection. `optimizer_info(fit)` records
+the solver stages; profile and bootstrap refits require `optimizer = nothing`.
+
+`weights` (observation weights) follow [`fit_gllvm`](@ref) and are accepted on the
+no-covariate Poisson route only (`@formula(y ~ 1)`, `family = Poisson()`); every other formula
+route refuses them with an `ArgumentError`.
+
+`offset` follows the rules of [`fit_gllvm`](@ref) (a scalar broadcasts; a `p×n` matrix, a
+`1×n` or `p×1` matrix or a length-`p` vector is accepted; an unusable shape or a non-finite
+value at an observed cell throws an `ArgumentError`). With covariates in the formula only
+`family = Normal()` takes an offset; the other covariate routes, explicit `sources` and the
+families `fit_gllvm` lists as taking none refuse it with an `ArgumentError`.
 """
 function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                family = Normal(), K::Union{Integer, _FormulaKUnset} = _FORMULA_K_UNSET,
                sources = nothing, grouping=nothing,
                pervar::Bool = false,
-               contrasts::AbstractDict = Dict{Symbol, Any}(), kwargs...)
+               contrasts::AbstractDict = Dict{Symbol, Any}(), weights = nothing, kwargs...)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
+        requested = kwargs[:optimizer]
+        _optimizer_method(requested, Optim.LBFGS(); route = "gllvm")
+        grouping === nothing || _refuse_optimizer(requested, "gllvm", "composite grouping fits")
+        pervar && _refuse_optimizer(requested, "gllvm", "pervar fits")
+        if sources !== nothing
+            family isa Normal || _refuse_optimizer(requested, "gllvm", "non-Gaussian source fits")
+        elseif family isa Union{Normal,Poisson,NegativeBinomial}
+            nothing
+        else
+            _refuse_optimizer(requested, "gllvm", "this formula family")
+        end
+    end
     p, n = size(Y)
+    # Observation weights reach only the no-covariate Poisson route (through `fit_gllvm`,
+    # which owns the shape rules); every other formula route refuses them. `nothing` never
+    # reaches a fitter.
+    weights === nothing || grouping === nothing && get(kwargs, :phylo, nothing) === nothing ||
+        _refuse_weights("gllvm", "explicit grouping or phylo terms")
+    weights === nothing || sources === nothing || _refuse_weights("gllvm", "explicit Gaussian sources")
+    weights === nothing || !pervar || _refuse_weights("gllvm", "pervar = true")
     cols = Tables.columntable(data)
     for (name, column) in pairs(cols)
         length(column) == n || throw(DimensionMismatch(
@@ -210,6 +275,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             coefficient_names=coefficient_names, resolved...)
     end
     if sources !== nothing
+        kwargs = _no_offset_kwargs(kwargs, "gllvm", "explicit Gaussian sources")
         family isa Normal || throw(ArgumentError("formula source models require family=Normal()"))
         K === _FORMULA_K_UNSET || throw(ArgumentError("do not supply K with explicit sources; each source owns its rank"))
         pervar && throw(ArgumentError("pervar=true is incompatible with explicit sources"))
@@ -221,6 +287,10 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             coefficient_names=coefficient_names, kwargs...)
     end
     K === _FORMULA_K_UNSET && throw(UndefKeywordError(:K))
+    # The formula builds the design below and splats `kwargs...` after it, so a caller `X`
+    # would silently win over the formula covariates (#742).
+    haskey(kwargs, :X) && throw(ArgumentError(
+        "the formula defines the complete mean; do not supply X"))
     if pervar
         family isa Normal || throw(ArgumentError("pervar=true requires family=Normal()"))
         haskey(kwargs, :X) && throw(ArgumentError("do not supply X with a pervar formula; the formula defines the complete mean"))
@@ -229,25 +299,63 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     end
     mm, cnames = _build_site_modelmatrix(formula.rhs, cols; contrasts = contrasts)
     q = size(mm, 2)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing && q > 0 &&
+       !(family isa Normal)
+        _refuse_optimizer(kwargs[:optimizer], "gllvm", "non-Gaussian covariate formula fits")
+    end
+
+    _default_route_no_intercept_error(formula, family)
 
     if q == 0
-        return family isa Normal ? fit_gaussian_gllvm(Y; K = K, kwargs...) :
+        weights === nothing || family isa Poisson ||
+            _refuse_weights("gllvm", "family $(nameof(typeof(family)))")
+        # The Gaussian and zero-inflated fitters below are called directly, not through
+        # `fit_gllvm`, so they get the same offset rules here (a scalar broadcasts, a shape
+        # that cannot be broadcast or a non-finite value is refused). Every other family goes
+        # through `fit_gllvm`, which applies them itself.
+        family isa Union{Normal, ZIPoisson, ZINegBin} &&
+            (kwargs = _normalize_offset_kwargs(kwargs, Y; caller = "gllvm", maskable = family isa Normal))
+        # `y ~ 1` estimates trait intercepts; `y ~ 0` is the documented zero mean.
+        gaussian_fit = StatsModels.omitsintercept(formula.rhs) ?
+            fit_gaussian_gllvm : _fit_gaussian_trait_intercepts
+        return family isa Normal ? gaussian_fit(Y; K = K, kwargs...) :
                family isa ZIPoisson ? fit_zip_gllvm(Y; K = K, kwargs...) :
                family isa ZINegBin ? fit_zinb_gllvm(Y; K = K, kwargs...) :
                family isa ZIB ? fit_gllvm(Y; family = family, K = K, kwargs...) :
+               family isa Poisson && weights !== nothing ?
+                                fit_gllvm(Y; family = family, K = K, weights = weights, kwargs...) :
+               # NB keeps gllvmTMB's per-trait r here; bare fit_gllvm defaults to shared r (#615).
+               family isa NegativeBinomial && !haskey(kwargs, :disp_group) ?
+                                fit_gllvm(Y; family = family, K = K, disp_group = :species, kwargs...) :
                                 fit_gllvm(Y; family = family, K = K, kwargs...)
     end
 
     size(mm, 1) == n || throw(DimensionMismatch(
         "`data` has $(size(mm, 1)) rows but Y has $n sites (columns)"))
+    weights === nothing || _refuse_weights("gllvm", "covariates in the formula")
 
     X = Array{Float64, 3}(undef, p, n, q)
     @inbounds for k in 1:q, s in 1:n, t in 1:p
         X[t, s, k] = mm[s, k]
     end
 
+    # With covariates the Gaussian fitter takes an offset (same rules as `fit_gllvm`); the
+    # covariate fitters of the other families have no offset keyword, so an offset is
+    # refused here rather than reaching them as a MethodError.
     if family isa Normal
-        return fit_gaussian_gllvm(Y; X = X, K = K, kwargs...)
+        kwargs = _normalize_offset_kwargs(kwargs, Y; caller = "gllvm")
+    else
+        kwargs = _no_offset_kwargs(kwargs, "gllvm",
+            "family $(nameof(typeof(family))) with covariates in the formula")
+    end
+
+    if family isa Normal
+        # fit_gaussian_gllvm treats X as the complete mean, so build the same
+        # trait-intercept + shared-slope design as the other Gaussian routes.
+        # A phylogenetic fit keeps one common intercept (see _fit_gaussian_trait_intercepts).
+        Xg = _pervar_formula_design(formula.rhs, cols, p, n; contrasts = contrasts,
+            common_intercept = get(kwargs, :Σ_phy, nothing) !== nothing)
+        return fit_gaussian_gllvm(Y; X = Xg, K = K, kwargs...)
     elseif family isa NegativeBinomial
         return fit_nb_gllvm_grouped_cov(Y; X = X, K = K, kwargs...)
     elseif family isa Beta
@@ -259,6 +367,11 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     elseif family isa BetaBinom
         return fit_beta_binomial_gllvm_grouped_cov(Y; X = X, K = K, kwargs...)
     elseif family isa Ordinal
+        return fit_ordinal_gllvm_pertrait_cov(Y; X = X, K = K, kwargs...)
+    elseif family isa OrdinalLogit
+        # Same fitter as Ordinal(), but the marker pins the link (see
+        # ordinal_logit()'s docstring): refuse an explicit non-logit `link`.
+        _check_ordinal_logit_link(kwargs)
         return fit_ordinal_gllvm_pertrait_cov(Y; X = X, K = K, kwargs...)
     elseif family isa ZIPoisson
         return fit_zip_gllvm_cov(Y; X = X, K = K, kwargs...)
@@ -751,10 +864,8 @@ true
 See also [`_fit_gaussian_structured_sources`](@ref) (the internal function this
 wraps), [`SourceCovariance`](@ref), [`fit_gaussian_sources`](@ref).
 
-Not wired into `gllvm(formula, ...)`; the convention-change cascade
-(README/tutorials/docs pages) for this new public symbol is deferred to the
-docs arc — this docstring and the test-file additions are the complete slice
-for this task.
+This is a direct matrix-and-data interface. It is not currently called by
+`gllvm(formula, ...)`; use the documented `structure=` form shown above.
 """
 function fit_gaussian_structured(Y::AbstractMatrix{<:Real}, data;
         structure::Vector{Expr}, family::Distribution=Normal(),

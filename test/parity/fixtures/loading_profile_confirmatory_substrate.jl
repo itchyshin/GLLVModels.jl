@@ -7,6 +7,12 @@
 const LOADING_PROFILE_CONFIRMATORY_P = 3
 const LOADING_PROFILE_CONFIRMATORY_K = 2
 
+# The L11 sign differs from R on purpose. R's MASK-B-PINS case pins L11 = +0.8
+# (`core070_masks_known.R`, and `pins` in
+# docs/dev-log/core070/masks-known-points-01/attempt1/out/maps.tsv). This Stage 0
+# fixture was written separately and every test that uses it checks against
+# -0.8. Tests that target the frozen R number use +0.8 themselves.
+# Kept as is by decision: docs/dev-log/decisions/2026-09-24-parity-reference-julia-and-fixture-pins.md.
 """`MASK-B-PINS`: two user pins (L11 = -0.8, L32 = 0); three free packed θ coordinates."""
 function loading_profile_fixture_mask_b_pins()
     M = fill(NaN, LOADING_PROFILE_CONFIRMATORY_P, LOADING_PROFILE_CONFIRMATORY_K)

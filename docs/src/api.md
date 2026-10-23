@@ -6,6 +6,26 @@ This page documents the public API of `GLLVModels.jl`, categorized by functional
 
 ## Model Fitting
 
+### Outer optimizer selection
+
+The ordinary Gaussian, Poisson Laplace, shared-dispersion NB2 Laplace, and
+per-trait NB2 Laplace fitters accept `optimizer = nothing` (the unchanged
+historical default), `optimizer = :lbfgs` / `:bfgs`, or a configured
+`Optim.LBFGS()` / `Optim.BFGS()` object. An explicit choice runs that method
+directly; it does not invoke the Poisson/NB2 legacy BFGS continuation. For the
+default per-trait NB2 formula route, explicit LBFGS also skips the historical
+BFGS Poisson-ridge polish, while explicit BFGS uses BFGS for each executed
+stage. Use `optimizer_info(fit)` to inspect the immutable per-fit receipt,
+including the requested and actual method, derivative path, controls, and each
+outer attempt. `select_lv` carries the request to each candidate fit.
+
+This option does not select inner latent-mode or AGHQ solvers. Explicit choices
+are refused on AGHQ/adaptive, variational, composite/grouped-covariance,
+phylogenetic, row-effect, pervar, and other family routes. Profile and bootstrap
+interval refits are also refused for fits made with an explicit optimizer,
+because those internal refits do not yet forward the selected method; use the
+historical default fit for those interval methods.
+
 ### Unified & General Fitters
 
 The explicit Gaussian `phylo=PrecisionPhy` route supports precision-only
@@ -14,12 +34,19 @@ trait-specific residuals. See the [developer guide](precision-bridge-development
 for the Julia-side interface, interval diagnostics, and the fact that this model
 is not currently available through the public R bridge.
 
+`fit_phylo_latent_gllvm` is the named twin of gllvmTMB's bare Gaussian
+`phylo_latent(species, d = K)`: species matched by label, a `tree` (Newick or
+`AugmentedPhy`, polytomies admitted) or a labelled dense `vcv` / `A` with R's
+`1e-8` ridge (`Ainv` is inverted first, as R's keyword does), one shared
+residual, and R's refusals. `rho != 1` is refused by a labelled Julia scope fence.
+
 ```@docs
 fit_gllvm
 gllvm
 fit_gllvm_cov
 fit_dep_gllvm
 fit_phylo_dep_gllvm
+fit_phylo_latent_gllvm
 fit_animal_dep_gllvm
 fit_animal_latent_gllvm
 fit_spatial_dep_gllvm
@@ -30,6 +57,9 @@ fit_mixed_gllvm
 fit_gaussian_gllvm
 fit_gaussian_pervar_gllvm
 fit_gaussian_sources
+optimizer_info
+OptimizerRecord
+OptimizerStage
 GroupingTerm
 GroupedGaussianFit
 grouped_gaussian_intervals
@@ -67,8 +97,10 @@ fit_truncated_nbinom2_gllvm_pertrait
 ### Continuous, Proportion & Ordinal Fitters
 
 Ordinal fitters accept only `LogitLink()` and `ProbitLink()`. Unsupported links
-raise `ArgumentError` before response access; the frozen R 0.7.0 ordinal model
-uses `ProbitLink()`. Julia's default logit model is a separate model choice.
+raise `ArgumentError` before response access; the R 0.7.0 `ordinal_probit()`
+family uses `ProbitLink()`. As of gllvmTMB 0.7.1, R also has `ordinal_logit()`
+(family_id 20), the direct twin of Julia's default logit model; see
+[`ordinal_logit`](@ref).
 
 ```@docs
 fit_beta_gllvm
@@ -98,6 +130,7 @@ fit_zinb_gllvm
 fit_zinb_gllvm_cov
 fit_zib_gllvm
 fit_zib_gllvm_cov
+fit_zi_gllvm
 ```
 
 ### Grouped Dispersion & Covariate-Extended Fitters
@@ -162,6 +195,7 @@ rotation
 ordination
 ordiplot
 ordination_uncertainty
+extract_latent_scores
 select_lv
 cv_gllvm
 simulate
@@ -172,6 +206,7 @@ coef_table
 loglikelihood
 aic
 bic
+gllvm_anova
 dof
 nobs
 stderror
@@ -189,6 +224,7 @@ observed_mask
 ```@docs
 confint
 profile_ci
+loading_profile
 bootstrap_ci
 transformed_wald_ci_derived
 correlation_wald_ci
@@ -225,6 +261,7 @@ correlation_B
 correlation_W
 row_effects
 extract_lv_effects
+lv_effects
 extract_Gamma
 coevolution_gamma
 ```
@@ -268,12 +305,14 @@ sigma_phy_dense
 node_grad
 node_dσ_phy_only
 node_blups
+NodePerSpecies
 build_node_perspecies
 grad_node_perspecies
 FelsensteinContrasts
 felsenstein_contrast_matrix
 felsenstein_contrasts
 contrast_transform
+EdgePhy
 edge_phy
 sigma_phy_dense_edge
 log_det_Q
@@ -281,6 +320,7 @@ solve_Q
 Q_times_x
 path_membership
 simulate_branch_re
+branch_re_cache
 branch_blups
 branch_re_profile_negll
 fit_branch_re
@@ -292,8 +332,10 @@ build_AnB_sparse
 solve_AnB
 blup_phylo_sparse
 em_fit_phylo
+fit_em_phylo
 em_observed_information
 em_fit_phylo_squarem
+fit_phylo_squarem
 edge_W_diag
 Q_perbranch
 simulate_relaxed_bm
@@ -376,6 +418,7 @@ hurdle_nb_marginal_loglik_laplace
 delta_gamma_marginal_loglik_laplace
 beta_hurdle_marginal_loglik_laplace
 zip_marginal_loglik_laplace
+zi_marginal_loglik_laplace
 zinb_marginal_loglik_laplace
 zib_marginal_loglik_laplace
 row_random_marginal_loglik_laplace
@@ -388,6 +431,7 @@ betabinomial_marginal_loglik_laplace
 betabinomial_grouped_marginal_loglik_laplace
 GLLVModels.betabinomial_logp
 GLLVModels.twopart_marginal_loglik_laplace
+GLLVModels.twopart_loglik_site
 GLLVModels.multinomial_loglik
 GLLVModels.multinomial_eta
 GLLVModels.unpack_multinomial
@@ -418,6 +462,30 @@ GLLVModels.bootstrap_ci_derived
 ```
 
 ---
+
+## Temporal Covariance Source
+
+One AR1 or OU temporal source on long data, the twin of gllvmTMB's
+`temporal_indep()`, `temporal_dep()` and `temporal_latent()`, alone or beside
+ordinary `unit` / `unit_obs` terms. The cross-source cells and the wide
+`traits()` form are not available yet; see the
+[temporal reference page](temporal.md).
+
+```@docs
+temporal_indep
+temporal_dep
+temporal_latent
+TemporalTerm
+fit_temporal_gllvm
+TemporalGaussianFit
+TemporalContractError
+extract_temporal
+forecast_temporal
+profile_temporal
+bootstrap_temporal
+compare_temporal
+update
+```
 
 ## Types & Link Functions
 
@@ -452,6 +520,7 @@ NBGroupedFit
 NBGroupedCovFit
 NB1GroupedFit
 NB1GroupedCovFit
+BinomialFit
 BetaFit
 BetaGroupedFit
 BetaGroupedCovFit
@@ -478,6 +547,8 @@ HurdleNBFit
 BetaHurdleFit
 OrderedBetaFit
 ZIPFit
+ZiFit
+ZI_LAPLACE_EIGMIN_FLOOR
 ZIPCovFit
 ZINBFit
 ZINBCovFit
@@ -511,13 +582,40 @@ AnBSparseSolver
 AugmentedPhy
 GllvmCoefTable
 LVSelection
+GllvmAnovaTable
 CVResult
+```
+
+### Integrated species distribution models
+
+Several named data sources (presence-only count streams, detection/non-detection
+surveys) observe one ecological linear predictor per unit and trait. This is the
+Julia twin of gllvmTMB's `gllvmTMB(..., family = isdm_sources(...))` at the P1 pin:
+non-spatial, Laplace, point fit. Everything it reports is relative intensity.
+`latent(0 + trait | unit, d = K)` carries R's default per-trait unit-level unique
+variance (`unique = TRUE`, gllvmTMB's `theta_diag_B`), so the between-unit trait
+covariance is `Λ Λ' + diag(exp(2 theta_diag_B))`; it is identified with at least
+`2K + 1` traits. `unique = FALSE` fits the loadings-only model.
+
+```@docs
+isdm_sources
+isdm_source
+IsdmSources
+IsdmSource
+isdm_table
+IsdmTable
+fit_isdm_gllvm
+IsdmFit
+isdm_marginal_loglik_laplace
+predict(::IsdmFit)
+fitted(::IsdmFit)
 ```
 
 ### Family & Distribution Markers
 
 ```@docs
 StudentTFamily
+StudentT
 Lognormal
 Multinomial
 DeltaLogNormal
@@ -527,12 +625,21 @@ HurdleNB
 BetaHurdle
 OrderedBeta
 Ordinal
+ordinal_logit
+OrdinalLogit
 ZIPoisson
 ZINegBin
 GLLVModels.ZINB
 ZIB
+zi_poisson
+zi_nbinom2
+zi_binomial
+ZiPoisson
+ZiNbinom2
+ZiBinomial
 BetaBinom
 COMPoisson
+GeneralizedPoisson1
 TruncatedPoisson
 CensoredPoisson
 TruncatedNegBin2
@@ -615,6 +722,9 @@ the ordinary loadings-only route. See the executed Gaussian quickstart.
 `bootstrap_ci` use recorded data and estimator identity. Gaussian `vcov` for a
 recorded fit returns the full working-parameter covariance, not only its diagonal;
 `confint` transforms residual-SD estimates/bounds to the natural scale while
-standard errors remain on the working scale. Legacy `bootstrap_ci` outputs
-working-scale bounds. Failed bootstrap attempts remain visible. This is an
+standard errors remain on the working scale. `bootstrap_ci` returns the same
+residual-SD terms on the natural scale (estimate and percentile bounds), with its
+`replicates` kept on the working scale. Failed and non-converged bootstrap attempts
+are excluded from the bounds and remain visible (`converged`, `n_used`, `n_dropped`).
+This is an
 experimental option, not a complete R-parity or calibrated-inference claim.

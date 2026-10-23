@@ -1,0 +1,87 @@
+{
+  "schema": "core070-postfit-p1-case-receipt/v2",
+  "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA-TABLE",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "postfit/POSTFIT-SURFACE-extract_Sigma_table"
+  ],
+  "batch": "tools/core070_surface_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "harness_kind": "point",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_surface_conversion_batch.py",
+    "argv": "tools/core070_verify_surface_conversion_batch.py {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_SURFACE_CONVERSION_STATE_OK",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/verify.txt"
+  },
+  "batch_status_note": "",
+  "r_call": "extract_Sigma_table(fit_r, level='unit', part='total')$value  # sorted (trait_i,trait_j)",
+  "julia_call": "GLLVM.extract_Sigma_table(fit; level=:unit, part=:total)  # sorted (trait_i,trait_j)",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/postfit/surface-conversion-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA-TABLE",
+        "quantity": "sigma_table",
+        "max_abs_diff": 2.423232071391279e-06,
+        "tolerance": 0.0001,
+        "tolerance_rule": "surface-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |R - Julia| elementwise",
+        "n_values": 15,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          0.5716301452636791,
+          0.33830930956542593,
+          0.20217836650556814,
+          -0.13554871486844225,
+          0.03989501702613727,
+          0.45700054065856066,
+          -0.04433376113675154,
+          0.20589634733776185,
+          0.15401463731635578,
+          0.1762386550981782,
+          -0.2306693968443799,
+          -0.06917088037370278,
+          0.3509536268059315,
+          0.13584367214178109,
+          0.0690090891509891
+        ],
+        "julia_value": [
+          0.5716312010085258,
+          0.33831160454749587,
+          0.2021781150519441,
+          -0.13554656660768025,
+          0.03989606417640672,
+          0.45699970749184404,
+          -0.04433203362786997,
+          0.20589702226442871,
+          0.15401522041689983,
+          0.17623800001968398,
+          -0.2306691911902857,
+          -0.06917083422208221,
+          0.3509560500380029,
+          0.13584511815679984,
+          0.06900989468592977
+        ],
+        "discriminating": true
+      }
+    ]
+  }
+}

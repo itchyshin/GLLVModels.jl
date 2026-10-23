@@ -1,0 +1,40 @@
+# Twin fixture for postfit row POSTFIT-SURFACE-extract_proportions and namespace rows
+# extract_proportions / extract_residual_split (gllvmTMB P1). Generated once by
+# gen_variance_decomp_p1.R from two tracked CSVs (sha256 guarded). Do not hand-edit;
+# regenerate from the script.
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+
+[unique]
+# value ~ 0 + trait + latent(0 + trait | unit, d = 2) + unique(0 + trait | unit); data of ns_numeric_p1.toml [main]
+data_file = "ns_gauss_p1_data.csv"
+data_sha256 = "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+p = 6
+n_unit = 200
+trait_names = ["t1", "t2", "t3", "t4", "t5", "t6"]
+converged = true
+pd_hessian = true
+loglik = -1365.6520384884027
+# extract_proportions(fit): proportion column of the rows with component = "shared_unit"
+shared_unit_proportion = [0.81563859881585077, 0.72131291496670791, 0.76730718874663151, 0.72769719632847507, 0.76335408716401387, 0.66043535046155344]
+
+[two]
+# two-level model above; data of ns_numeric_p1.toml [two] (seed 20261003)
+data_file = "ns_twolevel_p1_data.csv"
+data_sha256 = "a7431c767661f619b5b1d104f8cd9fe1d65a9e69ec715d53e2afe5b9374cb8ee"
+p = 5
+n_unit = 120
+n_obs = 480
+trait_names = ["t1", "t2", "t3", "t4", "t5"]
+converged = true
+pd_hessian = true
+loglik = -3185.4267097138218
+# extract_proportions(fit), long format: components in R's order, 5 traits each (component-major)
+components = ["shared_unit", "unique_unit", "shared_unit_obs", "unique_unit_obs"]
+variance = [0.57309234512624718, 0.27622690635716862, 0.15620667093260787, 0.24094734054225589, 0.027365308675437124, 0.37012667442088965, 0.41675342215291583, 0.28075757752506508, 0.28069875503214897, 0.33421253043023824, 0.62967268323350944, 0.34391928487486567, 0.18706178152969896, 0.22924358164170361, 0.55992697267893854, 0.39596764002917806, 0.31963348993625346, 0.50550091994596857, 0.36424195132913478, 0.41852560979573777]
+proportion = [0.29107835824796308, 0.20362710329801875, 0.13829388572076698, 0.21607076184951035, 0.020421408525311029, 0.1879904096616011, 0.30721950030749517, 0.24856208835179552, 0.25171804641424933, 0.24940667394407959, 0.31981598153928187, 0.25352811813648135, 0.16561072893456724, 0.20557535610461139, 0.4178464635292341, 0.2011152505511539, 0.23562527825800492, 0.44753329699287026, 0.32663583563162896, 0.3123254540013754]
+# extract_residual_split(fit), one value per trait
+sigma2_d = [0, 0, 0, 0, 0]
+sigma2_e = [0.39596764002917806, 0.31963348993625346, 0.50550091994596857, 0.36424195132913478, 0.41852560979573777]
+sigma2_total = [0.39596764002917806, 0.31963348993625346, 0.50550091994596857, 0.36424195132913478, 0.41852560979573777]

@@ -4,6 +4,14 @@
 Preparation is local/read-only against Git. Building runs only when explicitly
 requested, never installs dependencies, and refuses to reuse a build directory.
 A source or build receipt is provenance, not evidence of statistical parity.
+
+Pin selection (D-294/D-295): the git commit this tool builds is named by
+tools/parity_oracle.py's GLLVM_PARITY_PIN switch (default "P0"; set to "P1"
+to target the re-pin target instead) -- that module is the single place that
+reads the environment variable and validates it. The three companion byte
+hashes for whichever pin is selected (NAMESPACE / source tree / archive) live
+in tools/core070_oracle_pins.toml, keyed by the same pin name, so this file
+no longer hardcodes its own copy.
 """
 import argparse
 import hashlib
@@ -12,15 +20,72 @@ import os
 from pathlib import Path
 import subprocess
 import signal
+import sys
 import tarfile
 import tempfile
 import time
+import tomllib
 
-REFERENCE = 'b4d5fee64def88bc768dda1f1f77c29b295edd86'
-NAMESPACE = '9094613610789faab69c43195d3cfdafb2c7dfef284e6646b10dababa4fa132c'
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402
+
 MARKER = 'CORE070_SOURCE_PIN.toml'
-SOURCE_TREE = 'f83545faa6543dbb1f64d64bbf5a9498adcdf036cc3da5851f269912698b1cc7'
-ARCHIVE = '0c2f4323eb9fb19acccf039b8d57b4dd6bda82e2aa8b4a7bb712f36a64b022bc'
+
+_PINS_FILE = Path(__file__).resolve().parent / 'core070_oracle_pins.toml'
+
+
+def _installed_gllvmtmb_version(r_binary, library):
+    """Read the installed gllvmTMB version from the selected R library."""
+    expression = (
+        "args <- commandArgs(trailingOnly=TRUE); "
+        "if (length(args) != 1L) stop('expected one library path'); "
+        "cat(as.character(utils::packageVersion('gllvmTMB', lib.loc=args[[1]])))"
+    )
+    return subprocess.check_output(
+        [str(r_binary), '--slave', '-e', expression, '--args', str(library)],
+        text=True,
+        timeout=20,
+    ).strip()
+
+
+def _build_validation_error(result, expected_version):
+    """Return the first failed build invariant, with execution failures first."""
+    if result.get('exit_code') != 0:
+        return 'build command failed; retained attempt, no qualified marker'
+    if not result.get('original_source_unchanged'):
+        return 'build source drifted; retained attempt, no qualified marker'
+    if 'gllvmTMB_version' not in result:
+        return 'build succeeded but installed gllvmTMB version metadata is unavailable'
+    if result['gllvmTMB_version'] != str(expected_version):
+        return (
+            f"installed gllvmTMB version {result['gllvmTMB_version']!r} does not match "
+            f"pinned {expected_version!r}; no qualified source marker was written"
+        )
+    if 'marker_sha256' not in result:
+        return 'build did not write a qualified source marker'
+    return None
+
+
+def _load_pin(pin_name, pins_file=_PINS_FILE):
+    if pin_name not in R_REF_PINS:
+        raise ValueError(f'unknown pin {pin_name!r}; parity_oracle.R_REF_PINS has {sorted(R_REF_PINS)}')
+    table = tomllib.loads(pins_file.read_text())
+    if pin_name not in table:
+        raise ValueError(f'pin {pin_name!r} has no hash entry in {pins_file}')
+    entry = table[pin_name]
+    if entry['reference_commit'] != R_REF_PINS[pin_name]:
+        raise ValueError(
+            f'{pins_file} pin {pin_name!r} reference_commit {entry["reference_commit"]!r} '
+            f'disagrees with tools/parity_oracle.py R_REF_PINS[{pin_name!r}] = {R_REF_PINS[pin_name]!r}'
+        )
+    return entry
+
+
+_PIN = _load_pin(SELECTED_PIN)
+REFERENCE = _PIN['reference_commit']
+NAMESPACE = _PIN['namespace_sha256']
+SOURCE_TREE = _PIN['source_tree_sha256']
+ARCHIVE = _PIN['archive_sha256']
 
 
 def sha(path):
@@ -136,18 +201,24 @@ def build(archive, source_receipt, destination, r_binary, timeout):
               'r_version': subprocess.check_output([str(r_binary), '--version'], text=True).splitlines()[0]}
     installed = library / 'gllvmTMB'
     if status == 0 and original_unchanged and installed.is_dir():
+        installed_version = _installed_gllvmtmb_version(r_binary, library)
+        result['gllvmTMB_version'] = installed_version
+        version_matches_pin = installed_version == str(_PIN['version'])
         if sha(installed / 'NAMESPACE') != NAMESPACE:
             raise ValueError('installed NAMESPACE mismatch')
-        result['installed_tree_sha256'] = tree_hash(files(installed, excluded=(MARKER,)))
-        marker = {key: result[key] for key in ('reference_commit', 'source_tree_sha256', 'installed_tree_sha256', 'archive_sha256')}
-        marker['namespace_sha256'] = NAMESPACE
-        marker['install_log_sha256'] = result['log_sha256']
-        (installed / MARKER).write_text(''.join(key + ' = ' + json.dumps(value) + '\n' for key, value in marker.items()))
-        result['marker_sha256'] = sha(installed / MARKER)
+        if version_matches_pin:
+            result['installed_tree_sha256'] = tree_hash(files(installed, excluded=(MARKER,)))
+            marker = {key: result[key] for key in ('reference_commit', 'source_tree_sha256', 'installed_tree_sha256', 'archive_sha256')}
+            marker['namespace_sha256'] = NAMESPACE
+            marker['gllvmTMB_version'] = installed_version
+            marker['install_log_sha256'] = result['log_sha256']
+            (installed / MARKER).write_text(''.join(key + ' = ' + json.dumps(value) + '\n' for key, value in marker.items()))
+            result['marker_sha256'] = sha(installed / MARKER)
     (destination / 'build.json').write_text(json.dumps(result, indent=2, sort_keys=True) + '\n')
     print(json.dumps(result, sort_keys=True))
-    if status != 0 or not original_unchanged or 'marker_sha256' not in result:
-        raise ValueError('build failed or source drifted; retained attempt, no qualified marker')
+    validation_error = _build_validation_error(result, _PIN['version'])
+    if validation_error:
+        raise ValueError(validation_error)
     print('CORE070_ORACLE_BUILD_PASS')
 
 
@@ -157,9 +228,14 @@ def verify(destination):
         raise ValueError('unsuccessful build receipt')
     if result.get('reference_commit') != REFERENCE or result.get('source_tree_sha256') != SOURCE_TREE or result.get('archive_sha256') != ARCHIVE:
         raise ValueError('stale source provenance')
+    if result.get('gllvmTMB_version') != str(_PIN['version']):
+        raise ValueError('build receipt gllvmTMB_version does not match the selected pin')
     installed = destination / 'library' / 'gllvmTMB'
     if sha(installed / MARKER) != result.get('marker_sha256'):
         raise ValueError('missing or changed installed marker')
+    marker = tomllib.loads((installed / MARKER).read_text())
+    if marker.get('gllvmTMB_version') != result['gllvmTMB_version']:
+        raise ValueError('installed marker gllvmTMB_version does not match build receipt')
     if tree_hash(files(installed, excluded=(MARKER,))) != result.get('installed_tree_sha256'):
         raise ValueError('installed tree changed since build')
     if sha(destination / 'install.log') != result.get('log_sha256'):

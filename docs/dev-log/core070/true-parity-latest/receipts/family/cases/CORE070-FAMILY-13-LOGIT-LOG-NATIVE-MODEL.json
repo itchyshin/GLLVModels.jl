@@ -1,0 +1,65 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-13-LOGIT-LOG-NATIVE-MODEL",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-delta-gamma",
+  "harness_cell": "NATIVE-14-DELTA-GAMMA",
+  "fixture": "test/parity/test_delta_gamma_required.jl",
+  "measures": "delta-Gamma, per-trait dispersion, p=5, n=130, K=1, seed 62; toy fixture, likelihood-level agreement only",
+  "cell_status": "success",
+  "cell_assertions": {
+    "passed": 24,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "NATIVE-14-DELTA-GAMMA"
+  ],
+  "run_status": "success",
+  "run_failure_reason": null,
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/run.toml": "ded4228e233d67f9cbed91b0e174ebe0194b1373e672f8e308b3411da088f27b",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/values-NATIVE-14-DELTA-GAMMA.toml": "e3b4fac594933946b9b59e2837c490b2e58d8cc99b359ac24a6912450258c986",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/verify.txt": "e97e43e5c301e97b0c925a3c9f42dace1679cd5710cf0c7d58806b8a136c4509",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/cell-NATIVE-14-DELTA-GAMMA.toml": "e423d46890e7ce56853c0349a6c3224ad198b9ca7f07df5ee7c4a2f8f81d4657"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/values-NATIVE-14-DELTA-GAMMA.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-delta-gamma/cell-NATIVE-14-DELTA-GAMMA.toml"
+  ],
+  "registration": "CORE070-FAMILY-13-LOGIT-LOG-NATIVE-MODEL is paid by harness cell NATIVE-14-DELTA-GAMMA by the maintainer's P0 registration decision (docs/dev-log/core070/family-reconciliation-2026-09-01.json); carried unchanged",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-13-LOGIT-LOG-NATIVE-MODEL",
+        "quantity": "logLik",
+        "max_abs_diff": 2.000888343900442e-10,
+        "tolerance": 0.0007259597543996768,
+        "tolerance_rule": "the cell's own test, @test native.loglik\u2248r.logLik rtol=1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -725.9597543996769,
+        "julia_value": -725.9597543994768,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

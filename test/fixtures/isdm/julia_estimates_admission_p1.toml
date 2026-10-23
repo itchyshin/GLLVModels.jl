@@ -1,0 +1,50 @@
+# Julia estimates for the iSDM admission twins. Written by
+# test/fixtures/isdm/export_julia_admission_estimates.jl. Do not edit.
+julia_version = "1.10.0"
+commit = "3fcf206986f934686204a3f70b7fe50edc27771d"
+
+[julia.adm_aliased]
+loglik = -227.54367368752727
+converged = true
+cells_converged = true
+iterations = 13
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "isdm_source:gbif:(Intercept)", "isdm_source:gbif:access"]
+b_fix = [-0.054001817737564392, 0.306086538600782, 0.35960394872197199, -0.29998124214740485, 0.12035143290241844, 0.53160924570913592]
+K = 0
+
+[julia.adm_align]
+loglik = -162.27818835071776
+converged = true
+cells_converged = true
+iterations = 18
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "traitsp1:src_gbif", "traitsp2:src_gbif"]
+b_fix = [0.015115632775518565, 0.36699436252167011, 0.33115302959436466, -0.4163326961440984, -0.13606437074460145, -0.28410074986457068]
+K = 0
+
+[julia.adm_nooffset]
+loglik = -160.65061033337287
+converged = true
+cells_converged = true
+iterations = 16
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "traitsp1:src_gbif", "traitsp2:src_gbif"]
+b_fix = [0.066381621834994659, 0.26338828833575512, 0.21895066040069969, -0.096658825504856508, 0.13313697679498862, 0.12075135291342151]
+K = 0
+
+[julia.adm_zeroord]
+loglik = -218.39999761565082
+converged = true
+cells_converged = true
+iterations = 9
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env"]
+b_fix = [-0.043919373108962032, 0.25926716669699601, 0.43770381586489399, -0.4033017742112775]
+K = 0
+
+[julia.adm_unbalanced]
+loglik = -170.46266757053417
+converged = true
+cells_converged = true
+iterations = 17
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "traitsp1:src_gbif", "traitsp2:src_gbif"]
+b_fix = [-0.32624847919413424, -0.23008291580735116, 0.38638871930741303, -0.2166396543930815, 0.15847626897137468, 0.48769952336326267]
+K = 1
+theta_rr_B = [-0.48562574817841075, -0.64016423596510608]

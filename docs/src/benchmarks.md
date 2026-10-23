@@ -17,7 +17,8 @@ Six cells × three replicates × two engines = 36 fits. All 36 converged.
     factors come from.
 
     Non-Gaussian families use a dense Laplace approximation on both sides, and
-    the measured speedups are far smaller. From the twin-parity fixtures:
+    the measured speedups are far smaller. In small matched fits comparing the
+    two packages:
 
     | family | measured per-fit speedup vs `gllvmTMB` |
     |---|---|

@@ -6,6 +6,20 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **Development:** ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
+  and the default per-trait NB2 formula route accept direct outer-optimizer
+  selection with `:lbfgs`, `:bfgs`, or configured Optim methods. The default
+  preserves historical behavior; `optimizer_info(fit)` reports executed
+  stages. Explicit selection is refused for unsupported nested routes and
+  profile/bootstrap refits that do not yet forward the solver.
+- **CHANGED (default, breaking):** `DeltaLogNormal()` / `DeltaGamma()`
+  (`fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`, and `fit_gllvm`)
+  default to `disp_group = :species` — one dispersion per trait, matching R
+  gllvmTMB's per-trait `log_sigma_lognormal_delta` / `log_phi_gamma_delta` —
+  instead of one scalar shared across all traits. Existing delta fits that
+  omitted `disp_group` will see `fit.σ` / `fit.α` change from a scalar to a
+  length-`p` vector; pass `disp_group = :shared` to keep the previous
+  behaviour.
 - **CHANGED:** the package and module are now named `GLLVModels`; the public
   fitting API remains unchanged. After the rename, `using GLLVM` cannot resolve
   a package. Once `GLLVModels` is loaded, `GLLVModels.GLLVM` is only a temporary
@@ -65,13 +79,26 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   is deliberately excluded from the `disp_group = :species` auto-coercion that
   shields the other dispersion families.
 
-  **Per-family, not a global switch.** Other families keep the Fisher default:
-  measured evidence says observed is *not* closer for Beta (2/12) and is
-  measurably worse for GP-1's dispersion recovery. See
-  `docs/design/capability-status.md` § *Laplace curvature* for the family-by-family
-  table and which rows will not match `gllvmTMB` to machine precision.
+  **Per-family, not a global switch.** `_default_hessian` still falls back to
+  `:fisher` for families without a family-specific override; several routes
+  override that default to `:observed` (including Binomial/cloglog since
+  2026-09-01). See `docs/design/capability-status.md` § *Laplace curvature*
+  for the family-by-family table and which rows still differ from `gllvmTMB`
+  by decision (e.g. GP-1).
 
 ### Fixed
+- **FIX:** three fitters no longer report `converged = true` off an optimum
+  (refs #754, #753, #781). `fit_branch_re` requires a small Nelder–Mead
+  simplex in parameter space and records `sigma2_boundary` when `σ²` or
+  `σ²_eps` is at or below `1e-8 * var(y)`; constant or non-finite `y` raise
+  `ArgumentError` naming the data.   `em_fit_phylo` and
+  `em_fit_phylo_squarem` record `sigma_eps_boundary` when the M-step
+  clamps `σ_eps²` to `1e-8 * mean(y.^2)` and then leave `converged` false.
+  Both floors are fractions of the data scale; SQUAREM's main path
+  carries the clamp flag. `fit_zinb_gllvm_cov(iterations = 0)` evaluates
+  the start only, returns `converged = false`, and rejects a non-finite
+  `θ_init`. None of these checks use an absolute gradient or objective
+  tolerance. #752 (xlv constrained refit) is a sibling, not this change.
 - **FIX:** every non-Gaussian **Wald** standard error was wrong. The
   observed-information finite-difference Hessian (`_fd_hessian`, backing
   `confint(fit, Y; method=:wald)` and `_family_wald` for Poisson / Binomial / NB /
@@ -108,6 +135,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   hygiene) and JET (type-stability of the O(p) kernels) run in CI.
 - **IN:** isolated RCall.jl parity scaffold (`test/parity/`, opt-in) for
   checking agreement against R `gllvmTMB`.
+
+## GLLVModels.jl v0.3.0
+
+Broad gllvmTMB-targeted capability build-out (2026-06-07). The full entry is in the
+[root `CHANGELOG.md`](https://github.com/itchyshin/GLLVModels.jl/blob/main/CHANGELOG.md).
 
 ## GLLVModels.jl v0.2.0
 

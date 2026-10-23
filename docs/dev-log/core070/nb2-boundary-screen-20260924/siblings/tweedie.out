@@ -1,0 +1,5 @@
+[3s] package loaded
+[6s] negll cost at θ0, dataset 6 (φ = 5): 63.8 ms/eval; one FD gradient ≈ 40 evals
+[7s] negll cost at θ0, dataset 1 (φ = 0.05): 218.1 ms/eval; one FD gradient ≈ 40 evals
+
+[harness note] Process killed by the hard 175 s alarm (exit 142) during the public fitter call on dataset 6 (first dataset in budget order). No public fit completed, so the harness validity check never ran and no dataset was screened. Total compute for this screen ~10 min (earlier probe ~7 min, stopped while still inside the dataset-1 fit; this run ~3 min).

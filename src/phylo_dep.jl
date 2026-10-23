@@ -1,23 +1,34 @@
 # phylo × dep — Gaussian matrix fitter (K_phy = p full-rank Λ_phy on Σ_phy).
 #
-# Twin estimand (Identity 2026-09-14; pin gllvmTMB phylo_dep roxygen b4d5fee6):
-# full unstructured cross-trait phylogenetic covariance, documented equivalent
-# to standalone phylo_latent(d = T). Reuses fit_gaussian_gllvm J3 phylo_latent
-# block. No @formula phylo_dep() sugar (formula v1 rejects FunctionTerm).
+# Row-phylogeny model: the rows of Y are the tree's tips and the phylogenetic
+# block is (Λ_phy Λ_phy') .* Σ_phy. This is NOT gllvmTMB's phylo_dep, which is
+# Σ_trait ⊗ A; the twin of that is fit_phylo_latent_gllvm(...; d = n_traits).
+# Reuses the fit_gaussian_gllvm J3 phylo_latent block. No @formula phylo_dep()
+# sugar (formula v1 rejects FunctionTerm).
 
 """
     fit_phylo_dep_gllvm(Y, phy; family = Normal(), Σ_phy = nothing, σ²_phy = 1.0, kwargs...)
 
-Standalone **phylo × dep** Gaussian fit: full-rank phylogenetic trait loadings
-(`K_phy = p`, packed lower-triangular Λ_phy with `p(p + 1)/2` parameters) on a
-fixed species covariance `Σ_phy`, with a minimal unit-tier factor (`K = 1`).
-Same estimand class as twin `phylo_dep(0 + trait | species)` /
-`phylo_latent(..., d = T)` (documentary keyword only on the R side).
+Standalone **row-phylogeny** Gaussian fit: the `p` rows of `Y` are the tips of
+the tree, and the phylogenetic block of the row covariance is the Hadamard
+product `(Λ_phy Λ_phy') .* Σ_phy`, with full-rank loadings (`K_phy = p`, packed
+lower-triangular Λ_phy with `p(p + 1)/2` parameters), a fixed `p × p` tip
+covariance `Σ_phy`, and a minimal unit-tier factor (`K = 1`). The marginal
+covariance of `vec(Y)` is `I_n ⊗ A_unit + J_n ⊗ B`, with `A_unit` the
+unit-tier covariance and `B` that Hadamard block (see
+`GLLVModels.gaussian_marginal_loglik`).
+
+This is **not** the estimand of gllvmTMB's `phylo_dep(0 + trait | species)`.
+R's `phylo_dep` puts traits and species on separate axes, with covariance
+`Σ_trait ⊗ A` (an unstructured trait covariance Kronecker the phylogenetic
+correlation `A`). The Julia twin of R's `phylo_dep` is
+[`fit_phylo_latent_gllvm`](@ref)`(Y, species; d = n_traits, ...)`, with `Y`
+traits × observations.
 
 This is a **Gaussian matrix** fitter. `@formula` `phylo_dep()` syntax is not
 currently available.
 
-`phy` must be an [`AugmentedPhy`](@ref). `Y` is traits × sites with
+`phy` must be an [`AugmentedPhy`](@ref). `Y` is tips × sites with
 `size(Y, 1) == phy.n_leaves`. When `Σ_phy` is omitted, a dense leaf covariance
 is built via [`sigma_phy_dense`](@ref) (small trees / tests only).
 

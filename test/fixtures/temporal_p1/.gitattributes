@@ -1,0 +1,4 @@
+# Receipt hashes are checked byte for byte; keep these files free of
+# line-ending conversion on every platform.
+*.toml -text
+*.csv -text

@@ -1,5 +1,12 @@
 # Tweedie power contracts for Core 0.7.0
 
+**Status 2026-09-25:** landed. The numerical outcomes this contract proposed
+were carried out and merged: PR #378 (shared-power second-order cell, option
+A) and PR #391 (shared + species estimated-power second-order cells,
+PARTIAL). The "numerical outcomes pending" line just below is stale; see
+those PRs and `docs/dev-log/core070/second-order-holdouts-2026-09-04.md` for
+the current disposition.
+
 ## Status
 
 **Proposed implementation contract — numerical outcomes pending.**  Frozen R

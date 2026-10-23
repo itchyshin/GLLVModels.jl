@@ -43,7 +43,6 @@ open(io->TOML.print(io,Dict("winner"=>winner,"runs"=>serialize_run.(runs))),out*
 println("APP_JULIA_SHA256 ",bytes2hex(sha256(read(out*".julia.toml"))))
 @rput Y K p n out
 R"""
-library(gllvmTMB)
 app_df <- data.frame(site=factor(rep(seq_len(n),each=p)),
  trait=factor(rep(paste0('t',seq_len(p)),times=n),levels=paste0('t',seq_len(p))),value=as.vector(Y))
 app_warnings <- character()

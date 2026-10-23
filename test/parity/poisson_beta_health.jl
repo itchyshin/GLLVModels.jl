@@ -132,6 +132,10 @@ function core070_poisson_beta_required(family::Symbol)
         "curvature"=>family===:poisson ? GLLVModels._glm_weight_matches_observed(GLLVModels.Poisson(),native.link) : native.hessian===:observed,
         "dispersion"=>family===:poisson ? isempty(rdisp) : native.group==collect(1:p)&&length(native.φ)==length(rdisp)==p&&all(>(0),native.φ)&&all(>(0),rdisp))
     checks["model_preserved"] = report["model_preserved"]
+    core070_record_values!("logLik"; julia=native.loglik, r=r.logLik, rtol=1e-6,
+        test="checks[\"likelihood\"]=isapprox(native.loglik,r.logLik;rtol=1e-6,atol=0)")
+    core070_record_values!("objective at the R optimum"; julia=report["samepoint_native_nll"], r=r_objective, atol=1e-6,
+        test="checks[\"samepoint\"]=abs(report[\"samepoint_delta\"])<=1e-6")
     report["checks"]=checks
     metric=joinpath(dir,fam*"-health.toml")
     open(io->TOML.print(io,report),metric,"w")

@@ -128,6 +128,18 @@ function _phylo_verdict(optim_converged::Bool, nll::Real)
     return (optim_converged, float(nll))
 end
 
+# #505 (the #485 class): Optim's `converged` also fires on a zero-length line-search step
+# (x/f criteria), so a start the finite-difference gradient cannot descend from (e.g. a
+# variance start near the exp-scale cliff) reports `converged = true` at a gradient of
+# 1e8-1e15 or NaN. This check only has to catch that stall. It must NOT re-impose the
+# optimiser's own g_tol: healthy fits that Optim stops on its f/x criteria end with a
+# finite-difference residual of 1e-5 to 3e-4, right at `g_tol * |nll|`, and which side they
+# land on differs between macOS and Linux (#679 CI). A relative bound of 1e-2 leaves about
+# three orders of magnitude on each side. A non-finite residual never passes.
+const _PHYLO_STALL_RTOL = 1e-2
+_phylo_g_met(res, g_tol) = (gres = Optim.g_residual(res);
+    isfinite(gres) && gres <= max(g_tol, _PHYLO_STALL_RTOL * max(1.0, abs(Optim.minimum(res)))))
+
 """
     fit_phylo_gaussian(phy, y; profile_mu=true, μ0, logσ²phy0, logσ²eps0,
                        g_tol=1e-5, iterations=500) -> PhyloGaussianFit
@@ -200,7 +212,7 @@ function _fit_phylo_gaussian_lbfgs(p::Integer, yf::Vector{Float64}, build_state;
         σ²_phy = exp(θ̂[1]); σ²_eps = exp(θ̂[2])
         st = build_state(fill(sqrt(σ²_phy), p), σ²_eps)
         μ̂ = _phylo_profile_mu(st, yf)
-        conv, nll = _phylo_verdict(Optim.converged(res), Optim.minimum(res))
+        conv, nll = _phylo_verdict(Optim.converged(res) && _phylo_g_met(res, g_tol), Optim.minimum(res))
         return PhyloGaussianFit(μ̂, σ²_phy, σ²_eps, nll, conv, Optim.iterations(res))
     else
         # θ = (μ, log σ²_phy, log σ²_eps); all three jointly.
@@ -214,7 +226,7 @@ function _fit_phylo_gaussian_lbfgs(p::Integer, yf::Vector{Float64}, build_state;
         res = Optim.optimize(negll3, [float(μ0), float(logσ²phy0), float(logσ²eps0)],
                              ls, opts; autodiff = :finite)
         θ̂ = Optim.minimizer(res)
-        conv, nll = _phylo_verdict(Optim.converged(res), Optim.minimum(res))
+        conv, nll = _phylo_verdict(Optim.converged(res) && _phylo_g_met(res, g_tol), Optim.minimum(res))
         return PhyloGaussianFit(θ̂[1], exp(θ̂[2]), exp(θ̂[3]), nll, conv,
                                 Optim.iterations(res))
     end

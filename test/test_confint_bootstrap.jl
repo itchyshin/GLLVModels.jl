@@ -53,12 +53,10 @@ end
         ci = bootstrap_ci(fit; y = y, n_boot = 200, seed = 2)
         idx_se = findfirst(==("sigma_eps"), ci.term)
         @test !isnothing(idx_se)
-        # The percentile CI for log σ_eps brackets log(σ_true) — but
-        # since θ_packed stores log σ_eps the bracket is on the working
-        # (log) scale. Translate truth onto the same scale.
-        truth_log = log(σ_true)
-        @test ci.lower[idx_se] < truth_log < ci.upper[idx_se]
-        @info "σ_eps bootstrap CI (log scale)" lower=ci.lower[idx_se] estimate=ci.estimate[idx_se] upper=ci.upper[idx_se] truth=truth_log raw_lower=exp(ci.lower[idx_se]) raw_upper=exp(ci.upper[idx_se]) raw_truth=σ_true
+        # The percentile CI for σ_eps brackets σ_true. `bootstrap_ci` returns SD terms
+        # on the raw scale (#156), the same scale as `confint` and `profile_ci`.
+        @test ci.lower[idx_se] < σ_true < ci.upper[idx_se]
+        @info "σ_eps bootstrap CI (raw scale)" lower=ci.lower[idx_se] estimate=ci.estimate[idx_se] upper=ci.upper[idx_se] truth=σ_true
     end
 
     @testset "seed reproducibility" begin

@@ -67,18 +67,24 @@ GLLVModels._fit_phylo_gamma_xlv
 GLLVModels._fit_verdict
 GLLVModels._aghq_gh_normal
 GLLVModels._tweedie_verdict
+GLLVModels._multinomial_verdict
+GLLVModels._multinomial_max_obs_nll
+GLLVModels._beta_binomial_verdict
+GLLVModels._gp1_verdict
+GLLVModels._beta_binomial_grouped_verdict
 GLLVModels._mixed_unpack
 GLLVModels._phylo_ordinal_xlv_marginal_loglik
 GLLVModels._gauss_hermite
 GLLVModels._fit_phylo_beta_xlv
 GLLVModels._gaussian_source_loglik
 GLLVModels._source_fixed_sigma
+GLLVModels._lower_triangular_loadings
 ```
 
 ## Internal AGHQ adaptation and optimization
 
 These helpers expose the frozen-node surrogate used by the opt-in public
-Poisson, binomial and Gaussian candidates. They are internal implementation interfaces. Passing their
+Poisson, binomial, Gaussian, NB2, ordinal, Tweedie and Delta-Gamma candidates. They are internal implementation interfaces. Passing their
 checks alone does not establish public parity for other response families.
 
 ```@docs
@@ -88,6 +94,18 @@ GLLVModels.aghq_frozen_logintegral
 GLLVModels.aghq_poisson_problem
 GLLVModels.aghq_binomial_problem
 GLLVModels.aghq_gaussian_problem
+GLLVModels.aghq_nb2_problem
+GLLVModels.fit_nb_gllvm_grouped_aghq
+GLLVModels.NBGroupedAGHQFit
+GLLVModels.aghq_ordinal_problem
+GLLVModels.fit_ordinal_gllvm_pertrait_aghq
+GLLVModels.OrdinalPerTraitAGHQFit
+GLLVModels.aghq_tweedie_problem
+GLLVModels.fit_tweedie_gllvm_grouped_aghq
+GLLVModels.TweedieGroupedAGHQFit
+GLLVModels.aghq_delta_gamma_problem
+GLLVModels.fit_delta_gamma_gllvm_aghq
+GLLVModels.DeltaGammaAGHQFit
 GLLVModels.aghq_outer_optimize
 GLLVModels.aghq_multistart_optimize
 GLLVModels._fit_poisson_gllvm_laplace
@@ -115,11 +133,52 @@ GLLVModels._resolve_kernel
 GLLVModels._fit_gaussian_structured_sources
 ```
 
+## Temporal source internals
+
+The state index, the ordinary unit / unit_obs composition, the coordinate
+layout and exact marginal likelihood behind [`fit_temporal_gllvm`](@ref), and
+the port of `TMB::tmbprofile` used by
+[`profile_temporal`](@ref). Not exported; can change without notice.
+
+```@docs
+GLLVModels.TemporalSpec
+GLLVModels.TemporalOrdinaryTier
+GLLVModels.TemporalComposition
+GLLVModels._temporal_composition
+GLLVModels.TemporalLayout
+GLLVModels._temporal_parameter_names
+GLLVModels._temporal_trait_block
+GLLVModels.temporal_marginal_nll
+GLLVModels.temporal_marginal_loglik
+GLLVModels._temporal_covariance
+GLLVModels._temporal_tmbprofile
+```
+
 ## Other internal helpers
 
 ```@docs
 GLLVModels._psd_sqrt_factor
 GLLVModels.LaplaceModeWorkspace
+GLLVModels._grouped_nongaussian_objective
+```
+
+## S8 analytic outer gradient internals
+
+The grouped non-Gaussian route's analytic outer gradient, derived in
+`docs/design/grouped-analytic-gradient.md`. These are internal: they are listed here because
+Documenter's `checkdocs` requires every docstring in the module to appear in some `@docs`
+block, and because the derivation's alignment table refers to them by name.
+
+```@docs
+GLLVModels._grouped_analytic_gradient
+GLLVModels._grouped_analytic_loglik_gradient
+GLLVModels._grouped_laplace_design_jacobian
+GLLVModels._grouped_term_lstar_jacobian
+GLLVModels._grouped_selinv_row_quadform
+GLLVModels._grouped_selinv_row_crossform
+GLLVModels._glm_obs_weight_deta
+GLLVModels._grouped_fd_hessian_from_gradient
+GLLVModels._grouped_moment_log_sd
 ```
 
 ## Cross-referenced internal helpers without a docstring
@@ -138,13 +197,15 @@ holds its reusable buffers.
 
 ### `_profile_ci_bounded`
 
-Boundary-aware wrapper around the generic derived-quantity profiler
-(`src/confint_derived.jl`) used by [`profile_ci_total_variance`](@ref) and
-[`profile_ci_phylo_signal`](@ref) (see
+Boundary-aware post-processing of an existing derived-quantity profile result
+(`src/confint_derived.jl`). It applies the same rules as the `bounds` keyword
+of [`GLLVModels.profile_ci_derived`](@ref), which [`profile_ci_total_variance`](@ref)
+and [`profile_ci_phylo_signal`](@ref) now use (see
 [Derived confidence intervals](derived-confidence-intervals.md)): clamps a
-bound that overshoots the quantity's natural feasible range, and reports a
+bound that overshoots the quantity's natural feasible range, reports a
 deviance plateau at the range edge as `boundary = true` rather than a bare
-`NaN`/`:partial`.
+`NaN`/`:partial`, and leaves a `NaN` bound `NaN` when the deviance at the edge
+is above the cutoff.
 
 ### `_principal_angles`
 
@@ -184,4 +245,28 @@ GLLVModels._grouped_gaussian_objective
 GLLVModels.JointGroupedLaplaceResult
 GLLVModels._joint_grouped_state
 GLLVModels._bridge_fit_precision_multivariate
+GLLVModels._phylo_latent_tree_precision
+GLLVModels._phylo_latent_dense_precision
+```
+
+## iSDM internals
+
+Implementation helpers behind the integrated species distribution model route
+([`fit_isdm_gllvm`](@ref)). They are internal and listed here because
+Documenter's `checkdocs` requires every docstring in the module to appear in some
+`@docs` block. Their presence here is not an admission of a wider public interface.
+
+```@docs
+GLLVModels.isdm_laplace_grad
+GLLVModels._isdm_parse_formula
+GLLVModels._isdm_admitted_law_id
+GLLVModels._isdm_declared_core
+GLLVModels._isdm_prepare_offset
+GLLVModels._isdm_assert_observed_arms
+GLLVModels._isdm_observation_design
+GLLVModels._isdm_dbinom_cloglog
+GLLVModels._isdm_cloglog_score
+GLLVModels._isdm_cloglog_obs_weight
+GLLVModels._isdm_cell_mode
+GLLVModels._isdm_cell_loglik
 ```

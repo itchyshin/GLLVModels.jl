@@ -1,4 +1,4 @@
-using GLLVModels, Test, Random, LinearAlgebra, ForwardDiff, Statistics
+using GLLVModels, Test, Random, LinearAlgebra, ForwardDiff, Statistics, StableRNGs
 
 # Two-level Gaussian simulator: y_:,obs = Λ_B z_B,i + s_B,i + Λ_W z_W,obs + s_W,obs
 # (μ = 0). The between draw (z_B,i, s_B,i) is shared across an individual'\''s obs;
@@ -46,6 +46,85 @@ end
             ll_dense += -0.5 * (ni * p * log(2π) + logdet(cΣ) + dot(yi, cΣ \ yi))
         end
         @test isapprox(ll, ll_dense; rtol = 1e-9)
+    end
+
+    # ------------------------------------------------------------------
+    # GATE 1b: the marginal must match an exact (BigFloat, dense) evaluation
+    # when a within-individual variance σ²_W[t] is tiny relative to Λ_W[t,:]².
+    # A subtractive Woodbury solve for Σ_W⁻¹ loses precision there: at the
+    # CORE070 CI-ROUTE-011 fixture's point fit with σ²_W[4] = 1e-17 it
+    # OVERSTATED the log-likelihood by ~135 nats (finite, so no guard fired),
+    # and at more extreme ratios its quadratic form came out negative
+    # (parametric-bootstrap replicates reported loglik ~ +1e22 with
+    # repeatability ~ 0, collapsing the ICC bootstrap lower bound).
+    # Three checks: (i) one such bootstrap replicate's fit, verbatim;
+    # (ii) a sweep σ²_W[t] = 10^-k, k = 12..30, at the fixture's point fit;
+    # (iii) random extreme points (StableRNG, stable across Julia versions).
+    # Every value must be finite and within 1e-8 relative of the exact value.
+    # ------------------------------------------------------------------
+    @testset "marginal matches exact value at extreme variance ratios" begin
+        function ll_exact(y, indiv, Λ_B, σ²_B, Λ_W, σ²_W)
+            setprecision(BigFloat, 256) do
+                pp = size(y, 1)
+                SB = big.(Λ_B) * big.(Λ_B)' + Diagonal(big.(σ²_B))
+                SW = big.(Λ_W) * big.(Λ_W)' + Diagonal(big.(σ²_W))
+                ll = big(0)
+                for g in unique(indiv)
+                    Yi = big.(y[:, indiv .== g]); ni = size(Yi, 2)
+                    mi = vec(sum(Yi, dims = 2)) ./ ni; Yic = Yi .- mi
+                    M = SW + ni * SB
+                    ll += -(ni * pp * log(2 * big(pi)) + logdet(M) +
+                            (ni - 1) * logdet(SW) + ni * dot(mi, M \ mi) +
+                            sum(Yic .* (SW \ Yic))) / 2
+                end
+                Float64(ll)
+            end
+        end
+        close_to_exact(ll, llx) = isfinite(ll) && abs(ll - llx) <= 1e-8 * abs(llx)
+
+        # (i) One bootstrap replicate's fit, verbatim.
+        Λ_B = reshape([-0.9133173413239226, -0.0009085060802649791,
+                       0.08140689784664193, 7.110538275801313], 4, 1)
+        σ²_B = [2.7880521598580705e-15, 6.153275246278945e-22,
+                1.0177929500613746e-19, 4.056049533090739e-21]
+        Λ_W = reshape([-0.6832983940881012, -2.493929718953794,
+                       4.425680962343325, 3.546306331228814], 4, 1)
+        σ²_W = [2.2310698803382298e15, 1.736860948771967e-37,
+                1.5458132733345844e14, 2.89155236951954e11]
+        y = randn(MersenneTwister(1), 4, 12)
+        indiv = repeat(1:4, inner = 3)
+        ll = twolevel_marginal_loglik(y, indiv, Λ_B, σ²_B, Λ_W, σ²_W)
+        @test close_to_exact(ll, ll_exact(y, indiv, Λ_B, σ²_B, Λ_W, σ²_W))
+
+        # (ii) Sweep at the fixture's point fit (fit_twolevel_gaussian,
+        # K_B = K_W = 1, loglik -271.95), one σ²_W[t] pushed to 10^-k.
+        Λ_B = reshape([0.6720095040052132, 0.33215236990968344,
+                       -0.27936873147567487, 0.48433685709845403], 4, 1)
+        σ²_B = [1.3819537419188877e-14, 0.01135408059619887,
+                1.230546866119061e-15, 8.832686131050138e-19]
+        Λ_W = reshape([0.275730895401531, 0.44449979034158993,
+                       0.33142773884011245, -0.17898278299841794], 4, 1)
+        σ²_W0 = [0.08838228320299306, 0.08075990945317967,
+                 0.08088298278010131, 0.12238067334220358]
+        y = randn(StableRNG(576), 4, 30)
+        indiv = repeat(1:10, inner = 3)
+        for t in (2, 4), k in 12:30
+            σ²_W = copy(σ²_W0); σ²_W[t] = 10.0^(-k)
+            ll = twolevel_marginal_loglik(y, indiv, Λ_B, σ²_B, Λ_W, σ²_W)
+            @test close_to_exact(ll, ll_exact(y, indiv, Λ_B, σ²_B, Λ_W, σ²_W))
+        end
+
+        # (iii) Random extreme points: large within loadings, one tiny σ²_W.
+        rng = StableRNG(5761)
+        indiv = repeat(1:4, inner = 3)
+        for _ in 1:20
+            Λ_W = 5 .* randn(rng, 4, 1); Λ_B = randn(rng, 4, 1)
+            σ²_B = exp.(randn(rng, 4)); σ²_W = exp.(randn(rng, 4))
+            σ²_W[rand(rng, 1:4)] = 10.0^(-rand(rng, 10:40))
+            y = randn(rng, 4, 12)
+            ll = twolevel_marginal_loglik(y, indiv, Λ_B, σ²_B, Λ_W, σ²_W)
+            @test close_to_exact(ll, ll_exact(y, indiv, Λ_B, σ²_B, Λ_W, σ²_W))
+        end
     end
 
     # ------------------------------------------------------------------

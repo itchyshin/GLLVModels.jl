@@ -1,0 +1,128 @@
+"n","p","K_true","rep","ridge","selected","statuses","secs"
+60,10,2,1,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 107 on the link scale for trait 2 (> 10)); d = 2:
+  All 1 restarts failed.; d = 3: runaway (latent SD 945 on the link scale for
+  trait 9 (> 10)); d = 4: runaway (latent SD 915 on the link scale for trait 1
+  (> 10))",39.757239818573
+60,10,2,1,2,1,"ok/ok/ok/ok",3.82041096687317
+60,10,2,2,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 27 on the link scale for trait 6 (> 10)); d = 2:
+  runaway (latent SD 55.8 on the link scale for trait 1 (> 10)); d = 3: runaway
+  (latent SD 307 on the link scale for trait 8 (> 10)); d = 4: runaway (latent
+  SD 259 on the link scale for trait 8 (> 10))",18.7036690711975
+60,10,2,2,2,1,"ok/ok/ok/ok",3.50563597679138
+60,10,2,3,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 62.3 on the link scale for trait 6 (> 10)); d = 2:
+  runaway (latent SD 110 on the link scale for trait 7 (> 10)); d = 3: All 1
+  restarts failed.; d = 4: All 1 restarts failed.",28.7453639507294
+60,10,2,3,2,2,"ok/ok/ok/ok",4.08755111694336
+60,10,2,4,Inf,1,"ok/runaway/runaway/runaway",52.7972228527069
+60,10,2,4,2,1,"ok/ok/ok/ok",3.39355611801147
+60,10,2,5,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 45.7 on the link scale for trait 10 (> 10)); d = 2:
+  runaway (latent SD 167 on the link scale for trait 10 (> 10)); d = 3: runaway
+  (latent SD 823 on the link scale for trait 9 (> 10)); d = 4: All 1 restarts
+  failed.",31.2152199745178
+60,10,2,5,2,1,"ok/ok/ok/ok",4.67055201530457
+60,10,2,6,Inf,1,"ok/runaway/runaway/runaway",35.2644898891449
+60,10,2,6,2,1,"ok/ok/ok/ok",3.74251198768616
+60,10,2,7,Inf,1,"ok/runaway/runaway/runaway",36.2782669067383
+60,10,2,7,2,1,"ok/ok/ok/ok",3.61728096008301
+60,10,2,8,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 43 on the link scale for trait 10 (> 10)); d = 2:
+  runaway (latent SD 154 on the link scale for trait 10 (> 10)); d = 3: runaway
+  (latent SD 462 on the link scale for trait 2 (> 10)); d = 4: runaway (latent
+  SD 294 on the link scale for trait 2 (> 10))",16.3151440620422
+60,10,2,8,2,1,"ok/ok/ok/ok",3.67246222496033
+60,10,2,9,Inf,1,"ok/runaway/runaway/runaway",42.6464810371399
+60,10,2,9,2,1,"ok/ok/ok/ok",3.73418307304382
+60,10,2,10,Inf,1,"ok/runaway/runaway/runaway",83.3665487766266
+60,10,2,10,2,1,"ok/ok/ok/ok",4.19894480705261
+120,10,2,1,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 42 on the link scale for trait 2 (> 10)); d = 2:
+  runaway (latent SD 63 on the link scale for trait 2 (> 10)); d = 3: runaway
+  (latent SD 247 on the link scale for trait 2 (> 10)); d = 4: runaway (latent
+  SD 234 on the link scale for trait 2 (> 10))",22.2002739906311
+120,10,2,1,2,1,"ok/ok/ok/ok",9.2015688419342
+120,10,2,2,Inf,1,"ok/runaway/runaway/runaway",52.1129670143127
+120,10,2,2,2,1,"ok/ok/ok/ok",7.74558520317078
+120,10,2,3,Inf,1,"ok/ok/runaway/runaway",26.6368429660797
+120,10,2,3,2,1,"ok/ok/ok/ok",7.23391199111938
+120,10,2,4,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 39.6 on the link scale for trait 3 (> 10)); d = 2:
+  runaway (latent SD 80.3 on the link scale for trait 6 (> 10)); d = 3: runaway
+  (latent SD 585 on the link scale for trait 6 (> 10)); d = 4: runaway (latent
+  SD 496 on the link scale for trait 6 (> 10))",49.316890001297
+120,10,2,4,2,1,"ok/ok/ok/ok",8.15208697319031
+120,10,2,5,Inf,1,"ok/runaway/runaway/runaway",56.07009100914
+120,10,2,5,2,2,"ok/ok/ok/ok",9.70781397819519
+120,10,2,6,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 16.1 on the link scale for trait 9 (> 10)); d = 2:
+  runaway (latent SD 108 on the link scale for trait 7 (> 10)); d = 3: runaway
+  (latent SD 670 on the link scale for trait 7 (> 10)); d = 4: runaway (latent
+  SD 740 on the link scale for trait 7 (> 10))",56.0157980918884
+120,10,2,6,2,1,"ok/ok/ok/ok",9.95014691352844
+120,10,2,7,Inf,1,"ok/ok/runaway/runaway",40.1232750415802
+120,10,2,7,2,1,"ok/ok/ok/ok",6.79965591430664
+120,10,2,8,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 59.6 on the link scale for trait 9 (> 10)); d = 2:
+  runaway (latent SD 62 on the link scale for trait 9 (> 10)); d = 3: runaway
+  (latent SD 127 on the link scale for trait 9 (> 10)); d = 4: runaway (latent
+  SD 141 on the link scale for trait 9 (> 10))",35.0664739608765
+120,10,2,8,2,1,"ok/ok/ok/ok",9.82867217063904
+120,10,2,9,Inf,1,"ok/runaway/runaway/runaway",56.8012320995331
+120,10,2,9,2,1,"ok/ok/ok/ok",8.5522940158844
+120,10,2,10,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 31.7 on the link scale for trait 3 (> 10)); d = 2:
+  runaway (latent SD 48.3 on the link scale for trait 3 (> 10)); d = 3: runaway
+  (latent SD 349 on the link scale for trait 3 (> 10)); d = 4: runaway (latent
+  SD 336 on the link scale for trait 3 (> 10))",53.7133300304413
+120,10,2,10,2,1,"ok/ok/ok/ok",7.79848408699036
+120,20,2,1,Inf,2,"ok/ok/runaway/runaway",166.679756879807
+120,20,2,1,2,2,"ok/ok/ok/ok",23.0122339725494
+120,20,2,2,Inf,1,"ok/runaway/runaway/runaway",239.364443063736
+120,20,2,2,2,2,"ok/ok/ok/ok",23.5449368953705
+120,20,2,3,Inf,2,"ok/ok/runaway/failed",135.885162115097
+120,20,2,3,2,2,"ok/ok/ok/ok",33.4347670078278
+120,20,2,4,Inf,1,"ok/runaway/runaway/runaway",155.198038816452
+120,20,2,4,2,2,"ok/ok/ok/ok",22.1006391048431
+120,20,2,5,Inf,1,"ok/runaway/runaway/runaway",192.958523988724
+120,20,2,5,2,1,"ok/ok/ok/ok",23.3596827983856
+120,20,2,6,Inf,2,"ok/ok/runaway/runaway",175.148030042648
+120,20,2,6,2,2,"ok/ok/ok/ok",25.4689540863037
+120,20,2,7,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 27 on the link scale for trait 13 (> 10)); d = 2:
+  runaway (latent SD 25.5 on the link scale for trait 13 (> 10)); d = 3:
+  runaway (latent SD 624 on the link scale for trait 13 (> 10)); d = 4: All 1
+  restarts failed.",75.2877089977264
+120,20,2,7,2,1,"ok/ok/ok/ok",19.8828189373016
+120,20,2,8,Inf,1,"ok/runaway/runaway/failed",88.5306079387665
+120,20,2,8,2,2,"ok/ok/ok/ok",22.1049740314484
+120,20,2,9,Inf,1,"ok/runaway/ok/runaway",143.114583015442
+120,20,2,9,2,2,"ok/ok/ok/ok",19.5292439460754
+120,20,2,10,Inf,2,"ok/ok/runaway/runaway",223.689024925232
+120,20,2,10,2,2,"ok/ok/ok/ok",22.1859660148621
+120,20,3,1,Inf,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 57.7 on the link scale for trait 5 (> 10)); d = 2:
+  runaway (latent SD 41.5 on the link scale for trait 5 (> 10)); d = 3: runaway
+  (latent SD 75.8 on the link scale for trait 12 (> 10)); d = 4: runaway
+  (latent SD 183 on the link scale for trait 12 (> 10))",81.4713399410248
+120,20,3,1,2,2,"ok/ok/ok/ok",25.6363780498505
+120,20,3,2,Inf,1,"ok/runaway/runaway/runaway",162.694453001022
+120,20,3,2,2,3,"ok/ok/ok/ok",18.3767650127411
+120,20,3,3,Inf,3,"ok/ok/ok/runaway",136.797382831573
+120,20,3,3,2,2,"ok/ok/ok/ok",20.5837028026581
+120,20,3,4,Inf,1,"ok/runaway/runaway/failed",92.9523520469666
+120,20,3,4,2,2,"ok/ok/ok/ok",17.0870671272278
+120,20,3,5,Inf,1,"ok/runaway/runaway/failed",153.264889001846
+120,20,3,5,2,3,"ok/ok/ok/ok",29.9214332103729
+120,20,3,6,Inf,1,"ok/runaway/runaway/runaway",106.841020107269
+120,20,3,6,2,3,"ok/ok/ok/ok",32.7751200199127
+120,20,3,7,Inf,1,"ok/runaway/runaway/runaway",301.257773160934
+120,20,3,7,2,1,"ok/ok/ok/ok",27.4378478527069
+120,20,3,8,Inf,2,"ok/ok/runaway/runaway",141.805626153946
+120,20,3,8,2,2,"ok/ok/ok/ok",22.6690590381622
+120,20,3,9,Inf,1,"ok/runaway/runaway/runaway",150.515777111053
+120,20,3,9,2,3,"ok/ok/ok/ok",21.166396856308
+120,20,3,10,Inf,2,"runaway/ok/runaway/runaway",128.904877901077
+120,20,3,10,2,2,"ok/ok/ok/ok",18.7286930084229

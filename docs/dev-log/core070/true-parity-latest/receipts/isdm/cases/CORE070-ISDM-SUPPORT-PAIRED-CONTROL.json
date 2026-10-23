@@ -1,0 +1,53 @@
+{
+  "schema": "core070-isdm-p1-case-receipt/v1",
+  "case_id": "CORE070-ISDM-SUPPORT-PAIRED-CONTROL",
+  "verdict": "PASS",
+  "evidence_kind": "r_replay_julia_surface_absent",
+  "source_ids": [
+    "isdm/ISDM-SUPPORT"
+  ],
+  "batch": "tools/core070_isdm_batch.R (P1 source tree), GLLVM_PARITY_PIN=P1",
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_isdm_batch.py",
+    "argv": "tools/core070_verify_isdm_batch.py --state {state} --self-test",
+    "status": "PASS",
+    "accept_marker": "CORE070_ISDM_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/verify.txt"
+  },
+  "gllvmtmb_version": "0.7.1",
+  "admission_case_id": "ISDM-SUPPORT",
+  "stage": "offset-only",
+  "r_expression": "identical(offset_fixture(),fixture()$log_support)",
+  "r_expected": "TRUE",
+  "r_actual": true,
+  "r_ok": true,
+  "rejection_case": false,
+  "julia_side": {
+    "executed": false,
+    "src_files_mentioning_isdm_at_run_commit": [],
+    "contract_status": "UNVERIFIED native/formula/bridge; source checks only"
+  },
+  "why_not_numeric": "The R side evaluates a pinned P1 admission predicate to an exact TRUE expectation on the frozen fixture. It produces a boolean, not a fit number, and this batch runs no Julia side: GLLVModels' src/ at the run commit has no iSDM code. A Julia-native twin of this predicate exists only on draft PR #546's branch (test/parity/isdm_cases.jl, P1-ISDM-ADMISSION-20).",
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/receipt.json": "2deb214b52722035ba080e60eca906990d65819dfa099d53d3065444dd957a82",
+    "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/isdm-batch-results.json": "e26cbd9f13c3898f2a196b5c02ccc09f9e63be764b142b57c065d99b0090050e",
+    "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/raw.tsv": "65a6759e4810d0778f2bfcb2a5222cb05a0dc69e8b2fd76c3fda998a2a401084",
+    "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/run-commit.json": "262a4610a4787412abe0af56bf4d5e6fff5ea15e71b04c6bfd1c1ce9962a12c3",
+    "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/verify.txt": "e37ca658e9e6f1d1e315cc4e2c9ca8713a8f82c47d1aa6fd8c8d0f24df3d1ae4",
+    "docs/dev-log/core070/true-parity-latest/isdm-batch-contract-p1.json": "94d9a773f6dc51ac68cd341704313c4a51f300f4271fcf82c3c339135e94b8a0"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/isdm-batch-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/isdm/isdm-p1/raw.tsv"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "361516c7d03bea1d49b7b5639c04b153c0e77f94",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+}

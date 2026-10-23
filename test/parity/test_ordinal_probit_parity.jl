@@ -26,9 +26,10 @@ using GLLVModels, RCall, Test, Random
     @test jl_fit.converged
     @test isfinite(jl_fit.loglik)
 
+    # parity_helpers.jl is included once by runparity.jl
+    _parity_require_gllvmtmb!()
     @rput Y K p n
     R"""
-    suppressPackageStartupMessages(library(gllvmTMB))
     trait_names <- paste0("t", seq_len(p))
     df_long <- data.frame(
         site  = factor(rep(seq_len(n), each = p)),
@@ -57,5 +58,7 @@ using GLLVModels, RCall, Test, Random
     println("Ordinal-probit diagnostic: Julia = $(jl_fit.loglik), ",
             "R = $r_logL, Δ = $(jl_fit.loglik - r_logL)")
     @test r_logL ≈ -r_obj rtol = 0 atol = 1e-10
+    core070_record_values!("logLik"; julia = jl_fit.loglik, r = r_logL, rtol = 1e-6,
+                           test = "@test jl_fit.loglik ≈ r_logL rtol = 1e-6")
     @test jl_fit.loglik ≈ r_logL rtol = 1e-6
 end

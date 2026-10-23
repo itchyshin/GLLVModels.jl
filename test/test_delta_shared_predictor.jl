@@ -73,7 +73,10 @@ using GLLVModels, Test, Random, Distributions, Statistics
             rand() < π[t, s] && (Y[t, s] = exp(η[t, s] + σ_true * randn()))
         end
 
-        f = fit_delta_lognormal_gllvm(Y; K = K, predictor = :shared, iterations = 300)
+        # disp_group=:shared pinned: σ_true is a single shared scalar, and f.σ is
+        # compared below as a scalar (chained inequality).
+        f = fit_delta_lognormal_gllvm(Y; K = K, predictor = :shared, disp_group = :shared,
+                                       iterations = 300)
         @test f isa DeltaLogNormalFit
         @test f.predictor == :shared
         @test f.converged
@@ -100,7 +103,10 @@ using GLLVModels, Test, Random, Distributions, Statistics
             end
         end
 
-        f = fit_delta_gamma_gllvm(Y; K = K, predictor = :shared, iterations = 300)
+        # disp_group=:shared pinned: α_true is a single shared scalar (the "tied
+        # DGP" this testset is named for).
+        f = fit_delta_gamma_gllvm(Y; K = K, predictor = :shared, disp_group = :shared,
+                                   iterations = 300)
         @test f isa DeltaGammaFit
         @test f.predictor == :shared
         @test f.converged

@@ -54,6 +54,9 @@ function low_rank_chol(Λ::AbstractMatrix, d::AbstractVector)
     p, K = size(Λ)
     length(d) == p ||
         throw(DimensionMismatch("length(d) = $(length(d)) must equal size(Λ, 1) = $p"))
+    all(>(0), d) ||
+        throw(ArgumentError("low_rank_chol requires strictly positive diagonal d; " *
+                            "got min = $(minimum(d))"))
     T = promote_type(eltype(Λ), eltype(d))
     dT = collect(T, d)                      # Vector{T}, owns its storage
     ΛT = Matrix{T}(Λ)                       # p × K, owns its storage
@@ -73,8 +76,8 @@ end
 Base.eltype(::Type{<:LowRankPlusDiagChol{T}}) where {T} = T
 Base.eltype(F::LowRankPlusDiagChol) = eltype(typeof(F))
 Base.size(F::LowRankPlusDiagChol)            = (length(F.d), length(F.d))
-Base.size(F::LowRankPlusDiagChol, i::Integer) = i == 1 || i == 2 ? length(F.d) :
-    throw(BoundsError(size(F), i))
+Base.size(F::LowRankPlusDiagChol, i::Integer) =
+    i < 1 ? throw(BoundsError(size(F), i)) : (i <= 2 ? length(F.d) : 1)
 
 # ---------------------------------------------------------------------------
 # Solve M x = b via Woodbury.

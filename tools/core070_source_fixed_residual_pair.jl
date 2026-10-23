@@ -4,8 +4,9 @@ include(joinpath(pwd(),"test/parity/parity_helpers.jl"))
 length(ARGS)==1 || error("expected fresh output path")
 output=ARGS[1];ispath(output) && error("fresh output required");mkpath(output)
 get(ENV,"CORE070_PARITY_REQUIRED","")=="1" || error("required pinned oracle missing")
+_parity_require_gllvmtmb!()
 source=_core070_source_pin!()
-R"suppressPackageStartupMessages(library(gllvmTMB)); source('test/parity/fixtures/core070_covariance_modes.R')"
+R"source('test/parity/fixtures/core070_covariance_modes.R')"
 Y=permutedims(rcopy(Matrix{Float64},R"matrix(df$value,nrow=18L,ncol=3L)"))
 rows=Dict[]
 for (index,common) in enumerate((false,true))

@@ -99,6 +99,8 @@ function _correlation_packed(θ::AbstractVector, spec::NamedTuple,
                              i::Integer, j::Integer)
     u = _derived_unpack(θ, spec)
     Σ = _sigma_y_site_from_unpacked(u, spec)
+    # Degenerate (non-positive) variance: NaN, consistent with `correlation`.
+    (Σ[i, i] > 0 && Σ[j, j] > 0) || return oftype(Σ[i, j], NaN)
     return Σ[i, j] / sqrt(Σ[i, i] * Σ[j, j])
 end
 
@@ -140,6 +142,62 @@ function _make_phylo_signal_closure(spec::NamedTuple, t::Integer;
     return θ -> _phylo_signal_packed(θ, spec, t; diag_Σphy = diag_Σphy)
 end
 
+# ICC[t] from the packed θ: `extract_ICC_site(fit)[t]`, the unit-level
+# intraclass correlation `v_B,t / (v_B,t + v_W,t)` with
+# `v_B,t = (Λ_B Λ_B')[t,t] + σ²_B[t]` and
+# `v_W,t = (Λ_W Λ_W')[t,t] + σ²_W[t] + σ²_eps`. `v_B,t + v_W,t` is the diagonal of
+# `Σ_y_site`, so the packed form divides by it. This is the quantity that
+# `confint(fit, y; parm = "icc[t]")` reports. AD-friendly.
+function _icc_packed(θ::AbstractVector, spec::NamedTuple, t::Integer)
+    u = _derived_unpack(θ, spec)
+    vB = zero(eltype(u.Λ_B))
+    @inbounds for k in 1:size(u.Λ_B, 2)
+        vB += u.Λ_B[t, k]^2
+    end
+    if spec.has_diag && u.σ²_B !== nothing
+        vB += u.σ²_B[t]
+    end
+    Σ = _sigma_y_site_from_unpacked(u, spec)
+    return vB / Σ[t, t]
+end
+
+function _make_icc_closure(spec::NamedTuple, t::Integer)
+    return θ -> _icc_packed(θ, spec, t)
+end
+
+# `proportions(fit; component)[t]` from the packed θ. The `:shared` share is the
+# communality, so it reuses `_communality_packed` (identical value, bit for bit).
+# AD-friendly. Callers check that the component is defined for the fit (a block
+# the fit does not have makes the share identically zero).
+function _proportion_packed(θ::AbstractVector, spec::NamedTuple, t::Integer,
+                            component::Symbol)
+    component === :shared && return _communality_packed(θ, spec, t)
+    u = _derived_unpack(θ, spec)
+    Σ = _sigma_y_site_from_unpacked(u, spec)
+    num = if component === :unique_W
+        s = zero(eltype(u.Λ_W))
+        @inbounds for k in 1:size(u.Λ_W, 2)
+            s += u.Λ_W[t, k]^2
+        end
+        s
+    elseif component === :unique_B
+        u.σ²_B[t]
+    elseif component === :unique_Wd
+        u.σ²_W[t]
+    elseif component === :residual
+        u.σ_eps^2
+    else
+        throw(ArgumentError(
+            "component must be one of :shared, :unique_W, :unique_B, " *
+            ":unique_Wd, :residual; got $(component)"))
+    end
+    return num / Σ[t, t]
+end
+
+function _make_proportion_closure(spec::NamedTuple, t::Integer, component::Symbol)
+    return θ -> _proportion_packed(θ, spec, t, component)
+end
+
 # ---------------------------------------------------------------------------
 # Observed-information Σ = inv(H), reusing confint.jl's NLL reconstruction
 # and Hessian convention. Returns (Σ, pd::Bool); Σ is `nothing` when the
@@ -159,13 +217,31 @@ function _tw_sigma_from_hessian(fit::GllvmFit, y::AbstractMatrix,
     catch
         return (nothing, false)
     end
-    (H === nothing || !all(isfinite, H)) && return (nothing, false)
+    # `lambda_constraint` pins are not parameters (#794): invert the free block and
+    # give the pinned loadings zero rows and columns, R's `sd_report$cov.fixed`.
+    pins = _lambda_constraint_pinned_theta_indices(fit)
+    isempty(pins) && return _tw_sigma_from_hessian_matrix(H)
+    free = setdiff(1:length(θ̂), pins)
+    Σ_free, pd = _tw_sigma_from_hessian_matrix(H[free, free])
+    Σ_free === nothing && return (nothing, pd)
+    Σ = zeros(Float64, length(θ̂), length(θ̂))
+    Σ[free, free] = Σ_free
+    return (Σ, pd)
+end
+
+# Σ = inv(H) only when the (symmetrised) observed information is positive
+# definite; an indefinite-but-invertible H (saddle / non-converged fit) is
+# reported as non-PD rather than yielding a finite CI flagged valid (#143).
+function _tw_sigma_from_hessian_matrix(H::AbstractMatrix)
+    (isempty(H) || !all(isfinite, H)) && return (nothing, false)
+    Hs = Symmetric((H .+ H') ./ 2)
+    isposdef(Hs) || return (nothing, false)
     Σ = try
-        inv((H .+ H') ./ 2)
+        inv(Hs)
     catch
         return (nothing, false)
     end
-    return (Σ, true)
+    return (Matrix(Σ), true)
 end
 
 # ---------------------------------------------------------------------------
@@ -192,7 +268,10 @@ The interval is built on the transformed scale and mapped back:
 where `Σ = inv(H)` is the asymptotic covariance from the observed
 information `H = ForwardDiff.hessian(nll, θ̂)` (the same Hessian
 `confint` uses), and `∇θ(h∘g)` is obtained by ForwardDiff on the dense
-packed-θ marginal. Because `back` maps ℝ into the open natural range, the
+packed-θ marginal. On a fit made with `lambda_constraint`, `Σ` is the inverse of
+the free-parameter block of `H`, padded with zero rows and columns for the pinned
+loadings (R's `sd_report\$cov.fixed`), and `pd_hessian` is the positive-definiteness
+test of that block. Because `back` maps ℝ into the open natural range, the
 returned bounds are *guaranteed* to lie inside `(−1, 1)` (resp. `(0, 1)`).
 
 The point `estimate` is `g(θ̂)` — the raw derived quantity, identical to
@@ -354,6 +433,10 @@ end
 Fisher-z transformed-Wald CI for the cross-trait correlation `ρ[i, j]`.
 Bounds are guaranteed to lie in `[−1, 1]`. See
 [`transformed_wald_ci_derived`](@ref).
+
+Also reached as `confint(fit, y; parm = "rho[i,j]", method = :wald)`, which also
+offers `method = :profile` and `method = :bootstrap` for the same quantity; see
+[`confint`](@ref).
 """
 function correlation_wald_ci(fit::GllvmFit, i::Integer, j::Integer;
                              level::Real = 0.95,
@@ -371,6 +454,10 @@ end
 
 Logit transformed-Wald CI for the per-trait communality `c²[t]`. Bounds
 are guaranteed to lie in `[0, 1]`. See [`transformed_wald_ci_derived`](@ref).
+
+Also reached as `confint(fit, y; parm = "communality[t]", method = :wald)`, which
+also offers `method = :profile` and `method = :bootstrap` for the same quantity;
+see [`confint`](@ref).
 """
 function communality_wald_ci(fit::GllvmFit, t::Integer;
                              level::Real = 0.95,
@@ -391,6 +478,11 @@ in `[0, 1]` supplied as a packed-θ closure (e.g. one of the
 `proportions(...)` components written in packed form). Identical to
 calling [`transformed_wald_ci_derived`](@ref) with `transform = :logit`;
 provided for naming symmetry.
+
+`confint(fit, y; parm = "icc[t]")` and `parm = "proportion:<component>[t]"` call
+this function on the packed form of [`extract_ICC_site`](@ref) and of
+`proportions(fit; component)`, and also offer `method = :profile` and
+`method = :bootstrap`; see [`confint`](@ref).
 """
 function icc_wald_ci(fit::GllvmFit, derived_fn_packed::Function;
                      level::Real = 0.95,
@@ -408,6 +500,10 @@ Logit transformed-Wald CI for the per-trait phylogenetic signal `H²[t]`.
 Bounds are guaranteed to lie in `[0, 1]`. `Σ_phy` enters only through its
 diagonal (standardised convention → unit diagonal when omitted). See
 [`transformed_wald_ci_derived`](@ref).
+
+Also reached as `confint(fit, y; parm = "phylo_signal[t]", method = :wald)`, which
+also offers `method = :profile` (through `profile_ci_phylo_signal`) and
+`method = :bootstrap`; see [`confint`](@ref).
 """
 function phylo_signal_wald_ci(fit::GllvmFit, t::Integer;
                               level::Real = 0.95,
@@ -474,7 +570,9 @@ requires `fit.pars.Λ_W !== nothing`).
 
 Delta-method SE and Hessian convention are identical to
 [`transformed_wald_ci_derived`](@ref) — one ForwardDiff Hessian of the
-packed NLL, reused for every entry in a `loading_ci` table.
+packed NLL, reused for every entry in a `loading_ci` table. On a fit made with
+`lambda_constraint`, a pinned `Λ[t, k]` still has a delta-method SE here, because
+`Σ_y_site[t, t]` depends on the free parameters.
 """
 function standardized_loading_wald_ci(fit::GllvmFit, t::Integer, k::Integer;
                                       level::Real = 0.95,
@@ -488,6 +586,39 @@ function standardized_loading_wald_ci(fit::GllvmFit, t::Integer, k::Integer;
                                        level = level, y = y, X = X, Σ_phy = Σ_phy)
 end
 
+function _make_raw_loading_closure(spec::NamedTuple, t::Integer, k::Integer;
+                                   component::Symbol = :B)
+    return θ -> begin
+        u = _derived_unpack(θ, spec)
+        Λ = component === :B ? u.Λ_B :
+            component === :W ? u.Λ_W :
+            throw(ArgumentError("component must be :B or :W; got $(component)"))
+        Λ === nothing && throw(ArgumentError(
+            "fit has no Λ_$(component) block; raw loading is undefined"))
+        Λ[t, k]
+    end
+end
+
+# True when raw `Λ_component[t, k]` is fixed rather than estimated: a structural zero of the
+# lower-triangular packing (`k > t`) or a `lambda_constraint` pin.
+function _raw_loading_fixed(fit::GllvmFit, t::Integer, k::Integer, component::Symbol)
+    return k > t || (component === :B && _lambda_constraint_entry_pinned(fit, t, k))
+end
+
+# Wald row of a fixed raw loading `v`. It is known exactly, so its SE is 0 and its bounds
+# are `v`, but only when the observed information of the free parameters is positive
+# definite (`pd`). gllvmTMB's `loading_ci()` returns `NA` se and bounds for every row of a
+# fit whose `pdHess` is FALSE, pinned rows included, so a fixed entry then fails as the free
+# entries of that fit do (#794).
+function _fixed_loading_wald_ci(v::Real, pd::Bool)
+    pd || return (; estimate = Float64(v), lower = NaN, upper = NaN,
+                  se_transformed = NaN, transform = :identity,
+                  pd_hessian = false, method = :failed)
+    return (; estimate = Float64(v), lower = Float64(v), upper = Float64(v),
+            se_transformed = 0.0, transform = :identity,
+            pd_hessian = true, method = :pinned)
+end
+
 """
     raw_loading_wald_ci(fit, t, k; level=0.95, y, X=nothing, Σ_phy=nothing,
                         component=:B) -> NamedTuple
@@ -497,9 +628,18 @@ Symmetric (identity-link) transformed-Wald CI for the RAW loading entry
 machinery as [`standardized_loading_wald_ci`](@ref). This is the `method =
 "wald"` route of R's `loading_ci()` on GLLVModels.jl's dense reduced-rank fit.
 For `k > t` on the lower-triangular reduced-rank packing convention
-(`src/packing.jl`), the entry is structurally pinned at `0` — `estimate ==
-0`, `se == 0`, `lower == upper == 0`, mirroring `pinned = TRUE` rows in R's
-output.
+(`src/packing.jl`), the entry is structurally pinned at `0`, and on a fit made
+with `lambda_constraint` an entry the constraint pins is fixed at its value.
+A fixed entry is not a parameter. It is returned with `se_transformed == 0` and
+`lower == upper == estimate` (`method = :pinned`), mirroring `pinned = TRUE`
+rows in R's output, when the observed information of the free parameters is
+positive definite. When it is not, the fixed entry fails as every free entry of
+the fit does: `NaN` bounds and SE, `pd_hessian = false`, `method = :failed`, as
+gllvmTMB's `loading_ci()` returns `NA` for every row, pinned rows included, when
+`pdHess` is `FALSE`. `y` is therefore required for a fixed entry too. On a
+`lambda_constraint` fit the standard error of a free entry comes from the
+covariance of the free parameters only, with the pinned loadings removed from
+the observed information before it is inverted, as R's `sd_report\$cov.fixed`.
 """
 function raw_loading_wald_ci(fit::GllvmFit, t::Integer, k::Integer;
                              level::Real = 0.95,
@@ -507,21 +647,16 @@ function raw_loading_wald_ci(fit::GllvmFit, t::Integer, k::Integer;
                              X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                              Σ_phy::Union{Nothing, AbstractMatrix} = nothing,
                              component::Symbol = :B)
-    if k > t
-        return (; estimate = 0.0, lower = 0.0, upper = 0.0,
-                se_transformed = 0.0, transform = :identity,
-                pd_hessian = true, method = :pinned)
+    if _raw_loading_fixed(fit, t, k, component)
+        0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
+        y === nothing && throw(ArgumentError(
+            "raw_loading_wald_ci requires the data matrix `y` (the same matrix passed " *
+            "to fit_gaussian_gllvm), also for a pinned entry: its se is 0 only when the " *
+            "observed information of the free parameters is positive definite"))
+        _, pd = _tw_sigma_from_hessian(fit, y, X, Σ_phy)
+        return _fixed_loading_wald_ci(k > t ? 0.0 : fit.pars.Λ[t, k], pd)
     end
-    spec = _derived_spec(fit)
-    f = θ -> begin
-        u = _derived_unpack(θ, spec)
-        Λ = component === :B ? u.Λ_B :
-            component === :W ? u.Λ_W :
-            throw(ArgumentError("component must be :B or :W; got $(component)"))
-        Λ === nothing && throw(ArgumentError(
-            "fit has no Λ_$(component) block; raw loading is undefined"))
-        Λ[t, k]
-    end
+    f = _make_raw_loading_closure(_derived_spec(fit), t, k; component = component)
     return transformed_wald_ci_derived(fit, f; transform = :identity,
                                        level = level, y = y, X = X, Σ_phy = Σ_phy)
 end
@@ -536,20 +671,38 @@ per `(trait, axis)` — the Julia analogue of R's `loading_ci()`.
 
   - `level`: `:unit` (default, R's shared/between tier) or `:unit_obs` (the
     within tier; requires the fit to carry a `Λ_W` block).
-  - `method`: `:wald` (default) — symmetric Wald on `loading_scale`;
+  - `method`: `:wald` (default) — symmetric Wald on the raw scale; on the
+    standardised scale it returns the Fisher-z interval of `:wald_asym`, with
+    `se` on the atanh scale (R's standardised `"wald"` is symmetric on the rho
+    scale);
     `:wald_asym` — Fisher-z asymmetric Wald, only defined for
     `loading_scale = :standardized`; `:profile` — profile-likelihood via
     [`loading_profile_exploratory`](@ref), only defined for `loading_scale = :raw`
-    (mirrors R's refusals for the same scale/method combinations).
+    (mirrors R's refusals for the same scale/method combinations) and refused
+    on a fit with `lambda_constraint` pins, whose refits it would not hold.
   - `loading_scale`: `nothing` (default) resolves to `:standardized` for
     `:wald_asym` and `:raw` otherwise, matching R.
 
 Every row carries `trait`, `axis`, `estimate`, `se`, `lower`, `upper`,
-`method`, `loading_scale`, and `pinned` (`true` for the structurally-zero
-upper-triangular entries of the lower-triangular reduced-rank packing
-convention — GLLVModels.jl's built-in identifiability device; there is no
-separate `lambda_constraint`/confirmatory-fit concept to gate on here, so
-unlike R this function does not refuse exploratory fits).
+`method`, `loading_scale`, and `pinned`. `pinned` is `true` for the
+structurally-zero upper-triangular entries of the lower-triangular
+reduced-rank packing convention (GLLVModels.jl's built-in identifiability
+device) and, on a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint =
+M)`, for the entries `M` pins at `level = :unit`. Unlike R, this function does
+not refuse an exploratory fit without pins.
+
+On a `lambda_constraint` fit the Wald intervals use the covariance of the free
+parameters: the pinned loadings are not parameters, so their rows and columns
+are removed from the observed information before it is inverted, as in R's
+`sd_report\$cov.fixed`. A pinned raw entry has `se = 0` and `lower = upper =
+estimate`, as in R. On the standardised scale a pinned entry keeps `pinned =
+true` but has a delta-method `se`, because `Λ[t, k] / sqrt(Σ_y_site[t, t])`
+still depends on the free parameters; R likewise keeps the flag as provenance
+without forcing that SE to 0. The Wald rows share one observed information. If
+that information (of the free parameters, on a `lambda_constraint` fit) is not
+positive definite, every row has `NaN` `se`, `lower` and `upper`, the pinned and
+structural rows included, as R's `loading_ci()` returns `NA` for every row when
+`pdHess` is `FALSE`.
 
 **Interval calibration**: as in R, treat these as exploratory intervals —
 their empirical coverage on this repo's dense reduced-rank path is not
@@ -580,34 +733,50 @@ function loading_ci(fit::GllvmFit, y::AbstractMatrix;
         "loading_scale = :raw with method = :profile, or a standardised " *
         "Wald method"))
 
+    method === :profile && !isempty(_lambda_constraint_pinned_theta_indices(fit)) &&
+        throw(ArgumentError(
+            "loading_ci: method = :profile refits without the lambda_constraint pins " *
+            "and would profile a different model; use method = :wald, or " *
+            "loading_profile(fit; y) for the confirmatory profile"))
     component = level === :unit ? :B : :W
     Λ = component === :B ? fit.pars.Λ : fit.pars.Λ_W
     Λ === nothing && throw(ArgumentError(
         "fit has no Λ_$(component) block at level = $(level)"))
     p, d = size(Λ)
 
+    # The Wald rows share one observed information, as R's rows share one `sdreport`; the
+    # per-entry functions form the same matrix, so the rows equal theirs. Its positive
+    # definiteness gates every row, pinned and structural rows included (#794).
+    wald = method !== :profile
+    wald && !(0 < conf_level < 1) &&
+        throw(ArgumentError("level must be in (0, 1); got $conf_level"))
+    spec = _derived_spec(fit)
+    θ̂ = fit.pars.θ_packed
+    Σ, pd = wald ? _tw_sigma_from_hessian(fit, y, X, Σ_phy) : (nothing, false)
     out = Vector{NamedTuple}(undef, p * d)
     row = 0
     for k in 1:d, t in 1:p
         row += 1
-        if method === :wald
-            r = scale === :standardized ?
-                standardized_loading_wald_ci(fit, t, k; level = conf_level, y = y,
-                                             X = X, Σ_phy = Σ_phy, component = component) :
-                raw_loading_wald_ci(fit, t, k; level = conf_level, y = y,
-                                    X = X, Σ_phy = Σ_phy, component = component)
-        elseif method === :wald_asym
-            r = standardized_loading_wald_ci(fit, t, k; level = conf_level, y = y,
-                                             X = X, Σ_phy = Σ_phy, component = component)
-        else # :profile
-            r = loading_profile_exploratory(fit, t, k; level = conf_level, y = y, X = X,
-                                            Σ_phy = Σ_phy, component = component)
+        fixed = _raw_loading_fixed(fit, t, k, component)
+        r = if method === :profile
+            loading_profile_exploratory(fit, t, k; level = conf_level, y = y, X = X,
+                                        Σ_phy = Σ_phy, component = component)
+        elseif scale === :standardized   # :wald on the standardised scale, or :wald_asym
+            _transformed_wald_ci_with_sigma(
+                θ̂, _make_standardized_loading_closure(spec, t, k; component = component),
+                Σ, pd; transform = :fisher_z, level = conf_level)
+        elseif fixed
+            _fixed_loading_wald_ci(k > t ? 0.0 : Λ[t, k], pd)
+        else
+            _transformed_wald_ci_with_sigma(
+                θ̂, _make_raw_loading_closure(spec, t, k; component = component),
+                Σ, pd; transform = :identity, level = conf_level)
         end
         out[row] = (; trait = t, axis = k, estimate = r.estimate,
                     se = get(r, :se_transformed, NaN),
                     lower = r.lower, upper = r.upper,
                     method = method, loading_scale = scale,
-                    pinned = (k > t))
+                    pinned = fixed)
     end
     return out
 end
@@ -780,10 +949,9 @@ of `Σ_y`:
 as documented there (pass the same values used for `fit_gaussian_gllvm`).
 
 Cost: `p(p+1)/2 × n_boot` refits (one full `bootstrap_ci_derived` bootstrap
-run per matrix entry) — quadratic in `p`. Fine for the small fixtures this
-is validated on; a large-`p` production call should lower `n_boot` or
-restrict to a subset of entries computed with direct `bootstrap_ci_derived`
-calls instead of the full table.
+run per matrix entry) — quadratic in `p`. Use the full table for small trait
+matrices. For larger `p`, lower `n_boot` or call `bootstrap_ci_derived`
+directly for only the entries you need.
 
 R's `bootstrap_Sigma()` also bootstraps `R` (correlation), `communality`, `ICC`,
 and `cross_corr` in the SAME call, over multiple covariance tiers. This

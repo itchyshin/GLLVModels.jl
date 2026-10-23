@@ -1,0 +1,74 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/export/sanity_multi"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#684",
+  "generator": "tools/true_parity_diagnostics_receipt.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "956a25a49a8d872ad406d5edd1f022a40c766029",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/diagnostics_p1.toml",
+      "sha256": "4ad7e2cc7314f534a1c505579072afe1a5d33e9c932eccf0fd16f77bf6e3f7f3"
+    },
+    {
+      "path": "test/fixtures/ns_gauss_p1_data.csv",
+      "sha256": "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_diagnostics_p1.jl",
+      "sha256": "55e06cae186e64f808cfa991293a88011203d2d1c13bf1f65734462e74aa8bc6"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_diagnostics_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-SANITY-MULTI-MAX-SE",
+        "quantity": "sanity_multi(fit)$max_se, the largest fixed-effect (trait intercept) standard error, d = 1 and d = 2 fits (2 values)",
+        "r_source": "test/fixtures/diagnostics_p1.toml [sanity.d1.max_se, sanity.d2.max_se]",
+        "julia_source": "GLLVModels.sanity_multi(fit; y = Y).max_se, as called at test/test_diagnostics_p1.jl:72; fit as at test/test_diagnostics_p1.jl:68",
+        "r_value": [
+          0.08008310115265224,
+          0.07704303271849129
+        ],
+        "julia_value": [
+          0.0800828762351826,
+          0.07704318626438397
+        ],
+        "abs_diff": 2.2491746963504422e-07,
+        "tolerance": 2e-06,
+        "tolerance_source": "test/test_diagnostics_p1.jl:97",
+        "tolerance_source_line": "@test isapprox(j_se, r_se; atol = 2e-6, rtol = 0)   # max_se, d = 1 and 2 (observed 2.2e-7)",
+        "note": "Gaussian fits value ~ 0 + trait + latent(0 + trait | unit, d = D, unique = FALSE), D = 1 and 2, on ns_gauss_p1_data.csv (p = 6, 200 units, one observation per cell; sha256 checked); both R fits converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test); R's flags converged, sdreport_ok and pd_hessian equal Julia's (TRUE on both fits) and the flag names and order are R's (asserted in the test and in this generator, not receipt cases: booleans). Values in the order d = 1, d = 2. Not compared: max_gradient, the largest gradient component at each optimiser's stopping point (R nlminb about 1e-3, Julia about 1e-12), which measures how far the optimiser went rather than the model; both are below R's 1e-2 threshold (asserted in the test). Limits: Gaussian one-tier fits only, so rr_W_min_loading (two-level fits) is not twinned, and R's MSPL and ridge branches have no Julia estimator. The R values (0.0801 and 0.0770) are SEs of six distinct intercepts, not ~0."
+      },
+      {
+        "case_id": "P1-JULIA-SANITY-MULTI-RR-B-MIN-LOADING",
+        "quantity": "sanity_multi(fit)$rr_B_min_loading, min |diag Lambda_B[1:d, 1:d]|, d = 1 and d = 2 fits (2 values)",
+        "r_source": "test/fixtures/diagnostics_p1.toml [sanity.d1.rr_B_min_loading, sanity.d2.rr_B_min_loading]",
+        "julia_source": "GLLVModels.sanity_multi(fit; y = Y).rr_B_min_loading, as called at test/test_diagnostics_p1.jl:72; fit as at test/test_diagnostics_p1.jl:68",
+        "r_value": [
+          0.7401482803886104,
+          0.871755351436925
+        ],
+        "julia_value": [
+          0.7401454674045341,
+          0.8717534995621862
+        ],
+        "abs_diff": 2.8129840762280978e-06,
+        "tolerance": 2e-05,
+        "tolerance_source": "test/test_diagnostics_p1.jl:98",
+        "tolerance_source_line": "@test isapprox(j_ld, r_ld; atol = 2e-5, rtol = 0)   # rr_B_min_loading, d = 1 and 2 (observed 2.8e-6)",
+        "note": "Gaussian fits value ~ 0 + trait + latent(0 + trait | unit, d = D, unique = FALSE), D = 1 and 2, on ns_gauss_p1_data.csv (p = 6, 200 units, one observation per cell; sha256 checked); both R fits converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test); R's flags converged, sdreport_ok and pd_hessian equal Julia's (TRUE on both fits) and the flag names and order are R's (asserted in the test and in this generator, not receipt cases: booleans). Values in the order d = 1, d = 2. Not compared: max_gradient, the largest gradient component at each optimiser's stopping point (R nlminb about 1e-3, Julia about 1e-12), which measures how far the optimiser went rather than the model; both are below R's 1e-2 threshold (asserted in the test). Limits: Gaussian one-tier fits only, so rr_W_min_loading (two-level fits) is not twinned, and R's MSPL and ridge branches have no Julia estimator. Both engines identify Lambda_B lower-triangular, so the diagonal is comparable up to sign and the absolute value removes the sign; the R values are 0.740 and 0.872."
+      }
+    ]
+  }
+}

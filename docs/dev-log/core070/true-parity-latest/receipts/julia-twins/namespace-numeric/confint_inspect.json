@@ -1,0 +1,240 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/export/confint_inspect"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#684",
+  "generator": "tools/true_parity_confint_inspect_receipt.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "5743ce0b48536f6a5ddf6946102a700bd32a0f61",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/confint_inspect_p1.toml",
+      "sha256": "702ebe8bb57d0f488f11996afa6a23a85589f405e9c2a35c0876701ddcf0a0d6"
+    },
+    {
+      "path": "test/fixtures/ns_gauss_p1_data.csv",
+      "sha256": "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_confint_inspect_p1.jl",
+      "sha256": "f4ba8aecd61cca0e756d8d52773b82668b4bfc21caa6e9e66be48607869d5481"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_confint_inspect_receipt.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-ESTIMATE",
+        "quantity": "confint_inspect $bounds estimate_natural: residual SD sigma_eps (R exp of log_sigma_eps; Julia log-SD Wald, exp back-transformed)",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.sigma_eps.estimate]",
+        "julia_source": "confint(fit, Y; parm = \"sigma_eps\").estimate, as compared at test/test_confint_inspect_p1.jl:95; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": 0.5191660411702995,
+        "julia_value": 0.5191663419343278,
+        "abs_diff": 3.007640282381985e-07,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:95",
+        "tolerance_source_line": "@test isapprox(J[\"sigma_eps\"].estimate, Float64(s[\"estimate\"]); atol = 1e-6, rtol = 0)           # sigma_eps estimate (observed 3.0e-7)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-WALD",
+        "quantity": "confint_inspect $bounds [wald_lower_natural, wald_upper_natural], 95%: residual SD sigma_eps (R exp of log_sigma_eps; Julia log-SD Wald, exp back-transformed)",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.sigma_eps.wald]",
+        "julia_source": "confint_inspect(fit, Y; parm = \"sigma_eps\") [wald_lower, wald_upper], as compared at test/test_confint_inspect_p1.jl:96; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": [
+          0.49434057407599663,
+          0.5452382273258535
+        ],
+        "julia_value": [
+          0.4943408390620853,
+          0.545238566793022
+        ],
+        "abs_diff": 3.394671684864292e-07,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:96",
+        "tolerance_source_line": "@test isapprox(J[\"sigma_eps\"].wald, Float64.(s[\"wald\"]); atol = 1e-6, rtol = 0)                  # sigma_eps Wald (observed 3.4e-7)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-SIGMA-EPS-PROFILE",
+        "quantity": "confint_inspect $bounds [lower_natural, upper_natural] (profile likelihood), 95%: residual SD sigma_eps (R exp of log_sigma_eps; Julia log-SD Wald, exp back-transformed)",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.sigma_eps.profile]",
+        "julia_source": "confint_inspect(fit, Y; parm = \"sigma_eps\") [profile_lower, profile_upper], as compared at test/test_confint_inspect_p1.jl:97; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": [
+          0.4947302390450527,
+          0.5456823263680589
+        ],
+        "julia_value": [
+          0.4947302425713203,
+          0.5456823273864418
+        ],
+        "abs_diff": 3.5262676112424174e-09,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:97",
+        "tolerance_source_line": "@test isapprox(J[\"sigma_eps\"].profile, Float64.(s[\"profile\"]); atol = 1e-6, rtol = 0)            # sigma_eps profile (observed 3.5e-9)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-B-FIX-1-ESTIMATE",
+        "quantity": "confint_inspect $bounds estimate_natural: trait-1 mean b_fix[1] (Julia beta[1])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.b_fix_1.estimate]",
+        "julia_source": "confint(fit, Y; parm = \"beta[1]\").estimate, as compared at test/test_confint_inspect_p1.jl:98; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": 0.5582060338056996,
+        "julia_value": 0.5582060338057427,
+        "abs_diff": 4.318767565791859e-14,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:98",
+        "tolerance_source_line": "@test isapprox(J[\"b_fix_1\"].estimate, Float64(b[\"estimate\"]); atol = 1e-6, rtol = 0)             # b_fix[1] estimate (observed 4.3e-14)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-B-FIX-1-WALD",
+        "quantity": "confint_inspect $bounds [wald_lower_natural, wald_upper_natural], 95%: trait-1 mean b_fix[1] (Julia beta[1])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.b_fix_1.wald]",
+        "julia_source": "confint_inspect(fit, Y; parm = \"beta[1]\") [wald_lower, wald_upper], as compared at test/test_confint_inspect_p1.jl:99; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": [
+          0.40877931064309847,
+          0.7076327569683006
+        ],
+        "julia_value": [
+          0.40877939996706397,
+          0.7076326676444216
+        ],
+        "abs_diff": 8.932396550198618e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:99",
+        "tolerance_source_line": "@test isapprox(J[\"b_fix_1\"].wald, Float64.(b[\"wald\"]); atol = 1e-6, rtol = 0)                    # b_fix[1] Wald (observed 8.9e-8)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-B-FIX-1-PROFILE",
+        "quantity": "confint_inspect $bounds [lower_natural, upper_natural] (profile likelihood), 95%: trait-1 mean b_fix[1] (Julia beta[1])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.b_fix_1.profile]",
+        "julia_source": "confint_inspect(fit, Y; parm = \"beta[1]\") [profile_lower, profile_upper], as compared at test/test_confint_inspect_p1.jl:100; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": [
+          0.40807215931439267,
+          0.7083399082975002
+        ],
+        "julia_value": [
+          0.4080721779674141,
+          0.7083398896440807
+        ],
+        "abs_diff": 1.865341947571153e-08,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:100",
+        "tolerance_source_line": "@test isapprox(J[\"b_fix_1\"].profile, Float64.(b[\"profile\"]); atol = 1e-6, rtol = 0)              # b_fix[1] profile (observed 1.9e-8)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-ESTIMATE",
+        "quantity": "confint_inspect $bounds estimate_natural: loading Lambda_B_packed[2] = Lambda[2,2] (Julia Lambda_B[2,2])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.lambda_packed_2.estimate]",
+        "julia_source": "confint(fit, Y; parm = \"Lambda_B[2,2]\").estimate, as compared at test/test_confint_inspect_p1.jl:101; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": 0.871755351436925,
+        "julia_value": 0.8717534995621862,
+        "abs_diff": 1.8518747387785695e-06,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:101",
+        "tolerance_source_line": "@test isapprox(J[\"lambda_packed_2\"].estimate, Float64(l2[\"estimate\"]); atol = 5e-5, rtol = 0)    # Lambda[2,2] estimate (observed 1.9e-6)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-WALD",
+        "quantity": "confint_inspect $bounds [wald_lower_natural, wald_upper_natural], 95%: loading Lambda_B_packed[2] = Lambda[2,2] (Julia Lambda_B[2,2])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.lambda_packed_2.wald]",
+        "julia_source": "confint_inspect(fit, Y; parm = \"Lambda_B[2,2]\") [wald_lower, wald_upper], as compared at test/test_confint_inspect_p1.jl:102; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": [
+          0.757318610305292,
+          0.9861920925685579
+        ],
+        "julia_value": [
+          0.7573170195761649,
+          0.9861899795482074
+        ],
+        "abs_diff": 2.1130203504693412e-06,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:102",
+        "tolerance_source_line": "@test isapprox(J[\"lambda_packed_2\"].wald, Float64.(l2[\"wald\"]); atol = 5e-5, rtol = 0)           # Lambda[2,2] Wald (observed 2.1e-6)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-2-PROFILE",
+        "quantity": "confint_inspect $bounds [lower_natural, upper_natural] (profile likelihood), 95%: loading Lambda_B_packed[2] = Lambda[2,2] (Julia Lambda_B[2,2])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.lambda_packed_2.profile]",
+        "julia_source": "confint_inspect(fit, Y; parm = \"Lambda_B[2,2]\") [profile_lower, profile_upper], as compared at test/test_confint_inspect_p1.jl:103; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": [
+          0.7641262894244181,
+          0.994273999228671
+        ],
+        "julia_value": [
+          0.7641278455174361,
+          0.9942784400042401
+        ],
+        "abs_diff": 4.440775569158895e-06,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:103",
+        "tolerance_source_line": "@test isapprox(J[\"lambda_packed_2\"].profile, Float64.(l2[\"profile\"]); atol = 5e-5, rtol = 0)     # Lambda[2,2] profile (observed 4.4e-6)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-ESTIMATE",
+        "quantity": "confint_inspect $bounds estimate_natural: loading Lambda_B_packed[3] = Lambda[2,1] (Julia Lambda_B[2,1])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.lambda_packed_3.estimate]",
+        "julia_source": "confint(fit, Y; parm = \"Lambda_B[2,1]\").estimate, as compared at test/test_confint_inspect_p1.jl:104; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": 0.0018658198671687792,
+        "julia_value": 0.0018755843731833558,
+        "abs_diff": 9.764506014576591e-06,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:104",
+        "tolerance_source_line": "@test isapprox(J[\"lambda_packed_3\"].estimate, Float64(l3[\"estimate\"]); atol = 5e-5, rtol = 0)    # Lambda[2,1] estimate (observed 9.8e-6)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-WALD",
+        "quantity": "confint_inspect $bounds [wald_lower_natural, wald_upper_natural], 95%: loading Lambda_B_packed[3] = Lambda[2,1] (Julia Lambda_B[2,1])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.lambda_packed_3.wald]",
+        "julia_source": "confint_inspect(fit, Y; parm = \"Lambda_B[2,1]\") [wald_lower, wald_upper], as compared at test/test_confint_inspect_p1.jl:105; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": [
+          -0.1566136947683944,
+          0.16034533450273195
+        ],
+        "julia_value": [
+          -0.15660361529039596,
+          0.16035478403676268
+        ],
+        "abs_diff": 1.0079477998442554e-05,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:105",
+        "tolerance_source_line": "@test isapprox(J[\"lambda_packed_3\"].wald, Float64.(l3[\"wald\"]); atol = 5e-5, rtol = 0)           # Lambda[2,1] Wald (observed 1.0e-5)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      },
+      {
+        "case_id": "P1-JULIA-CONFINT-INSPECT-LAMBDA-PACKED-3-PROFILE",
+        "quantity": "confint_inspect $bounds [lower_natural, upper_natural] (profile likelihood), 95%: loading Lambda_B_packed[3] = Lambda[2,1] (Julia Lambda_B[2,1])",
+        "r_source": "test/fixtures/confint_inspect_p1.toml [inspect.lambda_packed_3.profile]",
+        "julia_source": "confint_inspect(fit, Y; parm = \"Lambda_B[2,1]\") [profile_lower, profile_upper], as compared at test/test_confint_inspect_p1.jl:106; fit as at test/test_confint_inspect_p1.jl:74",
+        "r_value": [
+          -0.15775065982466308,
+          0.16158148964163813
+        ],
+        "julia_value": [
+          -0.15775064964730862,
+          0.16158148757214708
+        ],
+        "abs_diff": 1.0177354459184329e-08,
+        "tolerance": 5e-05,
+        "tolerance_source": "test/test_confint_inspect_p1.jl:106",
+        "tolerance_source_line": "@test isapprox(J[\"lambda_packed_3\"].profile, Float64.(l3[\"profile\"]); atol = 5e-5, rtol = 0)     # Lambda[2,1] profile (observed 1.0e-8)",
+        "note": "Gaussian fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE), p = 6 traits, n = 200 units (the [main] data of the namespace numeric twins, ns_gauss_p1_data.csv, sha256 checked); R converged (nlminb code 0) with a positive-definite Hessian. R: confint_inspect(fit, parm, level = 0.95, ystep = 0.02)$bounds on the natural scale (ystep 0.02 rather than the default 0.5 because the bound is read off the tmbprofile grid by linear interpolation; the default grid adds up to 2.2e-5 on these targets, recorded in the fixture and not compared). Julia: fit_gllvm(Y; family = Normal(), K = 2) (fit at test/test_confint_inspect_p1.jl:74); confint_inspect(fit, Y; level = 0.95, parm) for the Wald and profile bounds (at test/test_confint_inspect_p1.jl:86) and confint(fit, Y; parm).estimate for the estimate (at test/test_confint_inspect_p1.jl:88). Parameter map: R sigma_eps <-> Julia sigma_eps; R b_fix[1] <-> Julia beta[1]; R Lambda_B_packed[k] <-> Julia's k-th Lambda_B term (both engines pack the d diagonal entries first, then the strict lower triangle column by column; asserted on both sides). Not compared: R's $curve, $plot and $diagnostics, and the Wald/profile disagreement flags (Julia's single flag uses the upper half-width, R's the full Wald half-width)."
+      }
+    ]
+  }
+}
