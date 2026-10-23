@@ -4,6 +4,8 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+- **Gaussian `profile_ci`: a constrained refit that did not converge is no longer used (#762).** An iteration-capped refit gave a shifted interval still labelled `:profile`; it now returns `NaN` for that bound, so `method` is `:partial` or `:failed`, as in the family profile since #504. The derived-quantity, confirmatory-loading and `B_lv` profiles are not changed.
+
 - **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
   After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
   whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose
