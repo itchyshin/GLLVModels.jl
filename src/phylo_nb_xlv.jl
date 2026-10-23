@@ -270,7 +270,8 @@ function _phylo_nb_xlv_nll_guarded(theta::AbstractVector, Y::AbstractMatrix,
     v = try
         _phylo_nb_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
                                  q_lv = q_lv, maxiter = maxiter, tol = tol)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return 1e12
     end
     return isfinite(v) ? v : 1e12
