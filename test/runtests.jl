@@ -547,6 +547,7 @@ println(_SHARD === nothing ?
     _shard_include("test_relaxed_clock_boundary_876.jl")
     _shard_include("test_spatial_cov.jl")
     _shard_include("test_cv.jl")
+    _shard_include("test_cv_unsupported_773.jl")
     _shard_include("test_gaussian_intercept.jl")
     _shard_include("test_gaussian_formula_covariates.jl")
     _RUN_QUALITY && include("test_quality.jl")
