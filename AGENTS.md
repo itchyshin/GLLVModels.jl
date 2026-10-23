@@ -93,6 +93,41 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **P1 first-seven local checkpoint (2026-10-19, not landed).** Candidate
+  `7670e106b` passes the exact frozen-baseline checkpoint: X2 304/317,
+  C2 290/297 and unchanged other baseline row contracts. Four deliberate evidence
+  corruptions are rejected. C6 standalone `295f22ec9` has all eight local gates
+  met after retained timeout recovery; inventory of 381 records includes the exact signed
+  17 extras/11 scoped/nine held names and three existing-rule optimizer exports.
+  Focused Julia classifier assertions: 2,133 passed. Residual candidate
+  `a444181ae` measures 299/317; five iSDM rows bring the combined candidate to 304.
+  Full Julia validation is running on 7670e106b with bounded sequential core/docs
+  follow-ups; no full-suite pass is claimed. Fresh main `8ca3eb76e` measures
+  298/317. Its oracle-version and phylogenetic convergence changes need landing
+  validation. Thirteen scoreboard rows and five F gaps remain open. Preserve
+  diagnostic/extractor owner holds; final panel, per-merge consent and main
+  handover remain pending. Contract and remaining-row packet are under
+  `docs/dev-log/plans/2026-10-19-p1-*.md`; reports under
+  `docs/dev-log/after-task/2026-10-19-p1-*.md`.
+
+- **PR #905 reviewer unblock (2026-10-18).** Branch `claude/sharp-gates-3ud4k2`, rebased onto current `main`. Never report `converged = true` when `gradient_norm > g_tol`; 1e-3 eligibility unchanged; DEP `d = 4`, 120-tip repro passed locally (`gradient_norm=6.2e-6`). Body keeps `Closes #822`. After-task: `docs/dev-log/after-task/2026-10-18-pr905-rounding-floor-ci.md`. `Project.toml` stays **`0.3.0`**.
+- **False `converged` on three fitters (2026-10-11 review).** Draft PR #868
+  (`cursor/false-converged-754-753-781-78dc`): floors are now fractions of
+  the data scale (`1e-8 * var(y)` for branch-RE, `1e-8 * mean(y.^2)` for
+  phylo EM, including the clamp); SQUAREM's main path latches `hit_floor`
+  and vetoes `converged`. `fit_relaxed_clock` increment+τ²-floor is a
+  follow-up (issue create 403; body in
+  `docs/dev-log/owed/2026-10-11-relaxed-clock-false-converged-issue.md`).
+  `Project.toml` stays **`0.3.0`**. After-task:
+  `docs/dev-log/after-task/2026-10-11-false-converged-review-floors.md`.
+- **False `converged` on three fitters (2026-10-10).** Draft PR #868
+  (`cursor/false-converged-754-753-781-78dc`) from `origin/main` `e6cfcd4ee`:
+  `fit_branch_re` x-spread + `sigma2_boundary` + named `y` errors (#754);
+  `em_fit_phylo` records the `σ_eps²` clamp and leaves `converged`
+  false (#753); `fit_zinb_gllvm_cov(iterations <= 0)` is a start-only check
+  with `converged = false` and a finite `θ_init` guard (#781). #752 left as
+  the next PR. `Project.toml` stays **`0.3.0`**. After-task:
+  `docs/dev-log/after-task/2026-10-10-false-converged-754-753-781.md`.
 - **True-parity rulings wired, lane handed to Codex (2026-10-06).** `origin/main` @ `9269f4622`: maintainer rulings of 2026-10-05 (#838) and observation weights on the Poisson route (#839) merged; X2 297 of 317; C0, C1, C5, C7, C8 MET; C2, C3 (6/8), C4 (4/8), C6 (37 held) open. Other lanes: see the coordination board's Active-Lane-Split. `Project.toml` stays **`0.3.0`**. **START HERE:** `docs/dev-log/handover/2026-10-06-codex-handover.md`.
 - **Beta grouped convergence gate (#480), 2026-09-24.** `converged` now requires a scale-aware gradient test, with a restart when Optim stops without it; inner-search follow-up is #482.
 - **Gamma grouped mode search fixed (#479), 2026-09-24.** A diverged per-site search now returns `-Inf` instead of a finite value, so the fit cannot report convergence far below the optimum.
