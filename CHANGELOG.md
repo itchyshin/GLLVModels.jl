@@ -29,6 +29,8 @@ All notable changes to GLLVModels.jl are documented here.
 
 - **Test coverage: temporal likelihood internals.** `test/test_temporal_likelihood_internals.jl` checks the low-rank block nll, tier and trait blocks, parameter names, cov pieces and series rows against dense linear algebra (no `src/` change).
 
+- **Phylo xlv Gamma and NB2 mode searches flag a `maxiter` exit (remainder of #747).** `_phylo_gamma_xlv_mode` and `_phylo_nb_xlv_mode` returned the last Newton iterate when the iteration cap ran out, so the Laplace marginal depended on `maxiter`. They now return `nothing` (marginal `-Inf`), as the Poisson search already does. Binomial, beta and ordinal xlv are not changed here.
+
 - **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 
 - **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
