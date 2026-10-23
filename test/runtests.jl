@@ -526,6 +526,7 @@ println(_SHARD === nothing ?
     _shard_include("test_known_sentinel_defects.jl")
     _shard_include("test_curvature_census.jl")
     _shard_include("test_phylo_contrasts.jl")
+    _shard_include("test_phylo_contrasts_struct.jl")
     _shard_include("test_edge_incidence.jl")
     _shard_include("test_phylo_branch_re.jl")
     _shard_include("test_branch_re_convergence.jl")
