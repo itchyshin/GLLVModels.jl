@@ -280,6 +280,16 @@ function _r_tier_total(fit::GllvmFit, lvl::Symbol)
     end
 end
 
+# Unit-level tier total for the R-style extractors. On a `has_diag` fit with
+# one observation per unit, σ²_B, σ²_W and σ²_eps enter the likelihood only
+# through their sum, so σ²_B alone is not an identified denominator (#701).
+# The identified one is the per-site total, the same denominator `communality`
+# uses (and the one gllvmTMB reports for such a fit).
+function _unit_total_identified(fit::GllvmFit)
+    fit.model.has_diag && return Matrix(sigma_y_site(fit))
+    return _r_tier_total(fit, :unit)
+end
+
 # Tier shared (ΛΛᵀ) block alone — no diagonal, no σ_eps².
 function _r_tier_shared(fit::GllvmFit, lvl::Symbol)
     p = fit.model.p
@@ -314,6 +324,12 @@ tier-scoped denominator exactly: `σ_eps²` (the Gaussian observation
 residual) never enters, because it is not one of R's `B`/`W`/`phy` tier
 components. `level = :unit_obs` is the within-unit (W) twin.
 
+On a `has_diag = true` fit, `level = :unit` uses the identified per-site total
+(`sigma_y_site(fit)`, i.e. `ΛΛᵀ + diag(σ²_B + σ²_W + σ²_eps)`) as the
+denominator, the same one as [`communality`](@ref). With one observation per
+unit, `σ²_B` cannot be separated from `σ²_W` and `σ²_eps`, so `σ²_B` alone is
+not an identified unique part (#701).
+
 On a fit with no diagonal Ψ_tier component (e.g. `has_diag = false`), the
 shared and total tiers coincide exactly and `c²_t` degenerates to `1.0` for
 every trait, matching `gllvmTMB` for the same model structure.
@@ -327,7 +343,7 @@ function extract_communality(fit::GllvmFit; level::Symbol = :unit)
     lvl = _validate_communality_level(level)
     lvl === :total && return communality(fit)
     shared = diag(_r_tier_shared(fit, lvl))
-    total = diag(_r_tier_total(fit, lvl))
+    total = diag(lvl === :unit ? _unit_total_identified(fit) : _r_tier_total(fit, lvl))
     return [(isfinite(t) && t > 0) ? s / t : NaN for (s, t) in zip(shared, total)]
 end
 
@@ -361,7 +377,9 @@ Cross-trait correlation at ONE tier, `cov2cor(Σ_tier,total)`, mirroring
 (`extract_Sigma(fit, level = tier, part = "total")\$R`). This is now the
 DEFAULT (`level = :unit`): `σ_eps²` never enters the
 tier total, matching R exactly (same tier-scoping as
-[`extract_communality`](@ref)). `level = :unit_obs` is the within-unit (W)
+[`extract_communality`](@ref)). On a `has_diag = true` fit, `level = :unit`
+standardises by the identified per-site total (as [`extract_communality`](@ref)
+does), not by `σ²_B` alone (#701). `level = :unit_obs` is the within-unit (W)
 twin.
 
 `level = :total` recovers GLLVModels.jl's original TOTAL-variance estimand
@@ -372,7 +390,7 @@ estimands agree only when `σ_eps == 0` and there is no W-tier.
 function extract_correlations(fit::GllvmFit; level::Symbol = :unit)
     lvl = _validate_communality_level(level)
     lvl === :total && return correlation(fit)
-    return _cov2cor(_r_tier_total(fit, lvl))
+    return _cov2cor(lvl === :unit ? _unit_total_identified(fit) : _r_tier_total(fit, lvl))
 end
 
 """
