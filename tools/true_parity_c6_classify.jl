@@ -3,10 +3,10 @@
 # docs/dev-log/core070/true-parity-latest/reverse-gap-decisions.json.
 #
 # This script applies the maintainer's signed ruling itchyshin/GLLVModels.jl#684 item 3
-# mechanically. It decides nothing by hand: an export is decided only when the criterion below
-# gives a clear answer, otherwise it stays out of the file (undecided) and is listed on stdout.
-# The one exception is SIGNED_OVERRIDES: names the maintainer decided one by one (maintainer ruling
-# 2026-10-05, vault D-319), each written with its signed decision and basis.
+# mechanically, then applies the exact signed overrides, the 28 name-bounded approvals from
+# 2026-10-17, and the nine explicit evidence holds. An evidence hold makes no twin claim.
+
+using TOML
 #
 # CRITERION (written verbatim into the output file's "criterion" field; the test in
 # tools/test_true_parity_c6_classify.jl fails if this header and the constant drift apart):
@@ -35,11 +35,17 @@
 # only basis for the exclusion; (7) it would be KEPT but its own ledger class says R has it ("R has
 # it under another name", "R has it after 0.7.0"), so it is not Julia-only; (8) it is on the named
 # review list of this script (NAMED_HOLDS): two low-level names (random_balanced_tree,
-# shrinkage_factor) whose docstrings address developers, not users. Signed overrides: the 23 names
-# in SIGNED_OVERRIDES (the high-confidence group of c6-proposed-decisions-2026-10-05.md, signed by
-# the maintainer ruling of 2026-10-05, vault D-319) take their signed decision before the rule and
-# every guard, and their basis begins "maintainer ruling 2026-10-05 (D-319)". The medium- and
-# low-confidence names of that proposal are not signed and stay under the rule and guards above.
+# shrinkage_factor) whose docstrings address developers, not users.
+# Signed overrides: the 23 names in SIGNED_OVERRIDES (the high-confidence group of
+# c6-proposed-decisions-2026-10-05.md, signed by the maintainer ruling of 2026-10-05, vault D-319)
+# take their signed decision before the rule and every guard, and their basis begins "maintainer
+# ruling 2026-10-05 (D-319)". The medium- and low-confidence names of that proposal are not signed
+# and stay under the rule and guards above. The 28 exact names in
+# c6-approved-decisions-2026-10-17.toml apply the maintainer's signed extra or scoped-twin decisions
+# without broadening their scope.
+# The nine names in HOLD_PENDING_NAMES instead receive the explicit 2026-10-17 maintainer disposition
+# HOLD_PENDING_EVIDENCE; this is decision accounting only, makes no twin or parity claim, and admits
+# no scoreboard row.
 #
 # Inputs : docs/dev-log/core070/true-parity-latest/reverse-gap.json (the assembler's item list;
 #          only its "name" fields are read), reverse-gap-inputs.json (checked against
@@ -111,10 +117,35 @@ const CRITERION = "Applied mechanically to each reverse-gap item (a julia export
     "c6-proposed-decisions-2026-10-05.md, signed by the maintainer ruling of 2026-10-05, vault D-319) " *
     "take their signed decision before the rule and every guard, and their basis begins \"maintainer " *
     "ruling 2026-10-05 (D-319)\". The medium- and low-confidence names of that proposal are not signed " *
-    "and stay under the rule and guards above."
+    "and stay under the rule and guards above. The 28 exact names in " *
+    "c6-approved-decisions-2026-10-17.toml apply the maintainer's signed extra or scoped-twin " *
+    "decisions without broadening their scope. The nine names in HOLD_PENDING_NAMES instead receive " *
+    "the explicit 2026-10-17 maintainer disposition HOLD_PENDING_EVIDENCE; this is decision accounting " *
+    "only, makes no twin or parity claim, and admits no scoreboard row."
 
 const GENERATOR = "tools/true_parity_c6_classify.jl"
 const RULING_REF = "itchyshin/GLLVModels.jl#684 item 3"
+const HOLD_RULING_REF = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+const HOLD_RULING_SIGNED_ON = "2026-10-17"
+const HOLD_PENDING_NAMES = Set([
+    "NBFit", "Ordinal", "TweedieFit", "ZIB", "ZINegBin",
+    "fit_animal_latent_gllvm", "fit_kernel_latent_gllvm", "gllvm", "link_residual",
+])
+const HOLD_PENDING_BASIS = "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted"
+const APPROVED_C6_EXTRAS = Set([
+    "@formula", "bridge_capabilities", "excess_kurtosis", "gaussian_marginal_loglik_sparse_phy",
+    "lognormal_marginal_loglik", "observed_mask", "ppca_init", "qq_max_dev", "rank_sum_z",
+    "spearman", "truncated_nbinom2_marginal_loglik_laplace",
+    "truncated_nbinom2_pertrait_marginal_loglik_laplace", "welch_t", "GllvmModel", "StatsAPI",
+    "random_balanced_tree", "shrinkage_factor",
+])
+const APPROVED_C6_SCOPED = Set([
+    "bridge_fit", "fit_animal_dep_gllvm", "fit_dep_gllvm", "fit_gllvm", "fit_kernel_dep_gllvm",
+    "fit_kernel_indep_gllvm", "StudentT", "StudentTFamily", "TruncatedNegBin2", "BetaBinom", "NB1",
+])
+const APPROVED_C6_NAMES = union(APPROVED_C6_EXTRAS, APPROVED_C6_SCOPED)
+const APPROVED_C6_PATH = joinpath(LEDGER, "c6-approved-decisions-2026-10-17.toml")
+const APPROVED_C6_DECISIONS = TOML.parsefile(APPROVED_C6_PATH)["decisions"]
 
 jstr(s) = "\"" * replace(s, "\\" => "\\\\", "\"" => "\\\"", "\n" => "\\n") * "\""
 
@@ -202,7 +233,9 @@ const SIGNED_OVERRIDES = Dict{String,Tuple{String,String}}(
 # nothing (undecided); text is the basis (decided) or the reason (undecided); kind is "" when decided and
 # the reason group when undecided.
 function decide(f::Facts)
-    if haskey(SIGNED_OVERRIDES, f.name)
+    if f.name in HOLD_PENDING_NAMES
+        return ("HOLD_PENDING_EVIDENCE", HOLD_PENDING_BASIS, "")
+    elseif haskey(SIGNED_OVERRIDES, f.name)
         d, basis = SIGNED_OVERRIDES[f.name]
         return (d, SIGNED_RULING * basis, "")
     elseif haskey(NAMED_HOLDS, f.name)
@@ -471,7 +504,9 @@ function classify(names::Vector{String})
     all(in(Set(exported)), gapnames) || error("reverse-gap.json names a non-export: $(setdiff(gapnames, Set(exported)))")
     all(in(gapnames), keys(NAMED_HOLDS)) || error("NAMED_HOLDS names a non-item: $(setdiff(Set(keys(NAMED_HOLDS)), gapnames))")
     all(in(gapnames), keys(SIGNED_OVERRIDES)) || error("SIGNED_OVERRIDES names a non-item: $(setdiff(Set(keys(SIGNED_OVERRIDES)), gapnames))")
+    all(in(gapnames), HOLD_PENDING_NAMES) || error("HOLD_PENDING_NAMES names a non-item: $(setdiff(HOLD_PENDING_NAMES, gapnames))")
     isdisjoint(keys(SIGNED_OVERRIDES), keys(NAMED_HOLDS)) || error("a name is both signed and held")
+    isdisjoint(keys(SIGNED_OVERRIDES), HOLD_PENDING_NAMES) || error("a name is both a signed override and an evidence hold")
 
     pages = Dict{String,Set{String}}()
     texts = Dict{String,String}()
@@ -502,6 +537,19 @@ function classify(names::Vector{String})
         d, text, kind = results[n]
         d === nothing ? push!(undecided, (n, kind, text)) : push!(decisions, (n, d, text))
     end
+    Set(keys(APPROVED_C6_DECISIONS)) == APPROVED_C6_NAMES ||
+        error("the exact-name C6 approval file must contain only the 17 approved extras and 11 approved scopes")
+    undecided_names = Set(first.(undecided))
+    all(in(undecided_names), APPROVED_C6_NAMES) ||
+        error("an approved C6 name is no longer undecided under the mechanical rule; inspect before applying: " *
+              join(sort!(collect(setdiff(APPROVED_C6_NAMES, undecided_names))), ", "))
+    for n in sort!(collect(APPROVED_C6_NAMES))
+        item = APPROVED_C6_DECISIONS[n]
+        expected = n in APPROVED_C6_EXTRAS ? "KEPT_AS_JULIA_EXTRA" : "SCOPED_R_TWIN"
+        item["decision"] == expected || error("wrong approved C6 decision for $n")
+        push!(decisions, (n, item["decision"], item["basis"]))
+        filter!(u -> first(u) != n, undecided)
+    end
     decisions, undecided
 end
 
@@ -523,11 +571,36 @@ function render(decisions)
     println(io, " \"decisions\": {")
     ds = sort(decisions; by = first)
     for (i, (n, d, b)) in enumerate(ds)
-        println(io, "  ", jstr(n), ": {\"decision\": ", jstr(d), ", \"basis\": ", jstr(b), "}", i < length(ds) ? "," : "")
+        print(io, "  ", jstr(n), ": {\"decision\": ", jstr(d), ", \"basis\": ", jstr(b))
+        approval = get(APPROVED_C6_DECISIONS, n, nothing)
+        if approval !== nothing
+            for key in ("ruling", "counterpart", "scope", "receipt_ids")
+                haskey(approval, key) && print(io, ", ", jstr(key), ": ", json_compact(approval[key]))
+            end
+        elseif d == "HOLD_PENDING_EVIDENCE"
+            print(io, ", \"ruling\": {\"ref\": ", jstr(HOLD_RULING_REF),
+                  ", \"signed_by\": ", jstr("Shinichi Nakagawa"),
+                  ", \"signed_on\": ", jstr(HOLD_RULING_SIGNED_ON), "}")
+        end
+        println(io, "}", i < length(ds) ? "," : "")
     end
     println(io, " }")
     println(io, "}")
     String(take!(io))
+end
+
+function json_compact(value)
+    if value isa AbstractString
+        return jstr(value)
+    elseif value isa AbstractVector
+        return "[" * join(json_compact.(value), ", ") * "]"
+    elseif value isa AbstractDict
+        keys_sorted = sort!(String.(collect(keys(value))))
+        return "{" * join([jstr(k) * ": " * json_compact(value[k]) for k in keys_sorted], ", ") * "}"
+    elseif value isa Bool || value === nothing || value isa Number
+        return string(value)
+    end
+    error("unsupported JSON value in signed C6 approvals: $(typeof(value))")
 end
 
 # The order undecided kinds are printed in (the reason groups of the maintainer list).
@@ -554,7 +627,9 @@ function main(args)
         println("C6_DECISIONS_WROTE $(length(decisions)) decided to $(relpath(OUT, ROOT))")
     end
     kept = count(d -> d[2] == "KEPT_AS_JULIA_EXTRA", decisions)
-    println("KEPT_AS_JULIA_EXTRA=$kept EXCLUDED_INTERNAL_HELPER=$(length(decisions) - kept) UNDECIDED=$(length(undecided))")
+    excluded = count(d -> d[2] == "EXCLUDED_INTERNAL_HELPER", decisions)
+    held = count(d -> d[2] == "HOLD_PENDING_EVIDENCE", decisions)
+    println("KEPT_AS_JULIA_EXTRA=$kept EXCLUDED_INTERNAL_HELPER=$excluded HOLD_PENDING_EVIDENCE=$held UNDECIDED=$(length(undecided))")
     for kind in KIND_ORDER
         k = count(u -> u[2] == kind, undecided)
         k > 0 && println("UNDECIDED_KIND\t$kind\t$k")

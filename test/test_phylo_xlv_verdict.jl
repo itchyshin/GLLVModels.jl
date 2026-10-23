@@ -169,3 +169,15 @@ Base.getindex(::_XlvInterruptY, ::Int, ::Int) = throw(InterruptException())
     th = zeros(p + q * K + rr + 2); th[end] = 1000.0
     @test GLLVModels._phylo_gamma_xlv_nll_guarded(th, Yg, p, K, phy, X; q_lv = q) == 1e12
 end
+
+@testset "phylo binomial xlv: default start works without beta_init (#943)" begin
+    # The default beta start called an undefined `logit`, so a call without `beta_init`
+    # threw UndefVarError before the optimiser ran. Only finiteness is asserted: the
+    # optimiser path differs across platforms.
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    d = _xlv_v_data(:binomial, MersenneTwister(1000), 30)
+    fit = GLLVModels._fit_phylo_binomial_xlv(d.Y, d.N, phy; K = 1, X_lv = d.X,
+                                             iterations = 20)
+    @test isfinite(fit.loglik)
+    @test length(fit.beta) == phy.n_leaves
+end

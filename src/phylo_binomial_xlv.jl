@@ -125,6 +125,7 @@ function _phylo_binomial_xlv_mode(Y, N, beta, Lambda, mean_eta, Q, leaf_pos;
     eps = zeros(Float64, n, K)
     u = zeros(Float64, size(Q, 1))
     local H
+    mode_found = false
 
     for _ in 1:maxiter
         grad, H = _phylo_binomial_xlv_grad_hessian(Y, N, beta, Lambda, mean_eta,
@@ -163,8 +164,14 @@ function _phylo_binomial_xlv_mode(Y, N, beta, Lambda, mean_eta, Q, leaf_pos;
             step *= 0.5
         end
         accepted || return nothing, nothing, nothing
-        step * max_delta < tol && break
+        if step * max_delta < tol
+            mode_found = true
+            break
+        end
     end
+    # `maxiter` exhausted: (eps, u) is not the mode, so a Laplace value built from it
+    # would depend on `maxiter`. Report it as a failed search, like a non-SPD Hessian.
+    mode_found || return nothing, nothing, nothing
 
     _, H = _phylo_binomial_xlv_grad_hessian(Y, N, beta, Lambda, mean_eta, Q,
                                             leaf_pos, eps, u;
@@ -287,8 +294,9 @@ function _phylo_binomial_xlv_theta0(Y::AbstractMatrix, N::AbstractMatrix,
         throw(ArgumentError("sigma2_phy_init must be positive"))
 
     beta0 = beta_init === nothing ?
-        [logit(clamp((sum(Y[t, s] for s in 1:n) + 0.5) /
-                     (sum(N[t, s] for s in 1:n) + 1), 1e-4, 1 - 1e-4))
+        [(m = clamp((sum(Y[t, s] for s in 1:n) + 0.5) /
+                    (sum(N[t, s] for s in 1:n) + 1), 1e-4, 1 - 1e-4);
+          log(m / (1 - m)))
          for t in 1:p] :
         collect(Float64, beta_init)
     length(beta0) == p ||

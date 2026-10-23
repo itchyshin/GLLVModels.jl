@@ -85,6 +85,26 @@ function pack_lambda(Λ::AbstractMatrix)
 end
 
 """
+    _lower_triangular_loadings(Λ::AbstractMatrix) -> Matrix
+
+Rotate a p × K loading matrix (e.g. SVD loadings used as a start) to the
+lower-triangular form that [`pack_lambda`](@ref) stores, leaving `ΛΛ'`
+unchanged. `pack_lambda` drops the strict upper triangle, so packing raw SVD
+loadings for K ≥ 2 silently changes `ΛΛ'`. Uses `Λ' = QR`, so `Λ Λ' = R'R`
+and `R'` is lower-trapezoidal; columns are sign-flipped so the diagonal is
+non-negative (#865). K < 2 is returned unchanged.
+"""
+function _lower_triangular_loadings(Λ::AbstractMatrix)
+    p, K = size(Λ)
+    K < 2 && return Matrix(Λ)               # K = 0, 1: already lower-triangular
+    L = Matrix(qr(Matrix(Λ')).R')          # p × K, strict upper = 0
+    @inbounds for k in 1:min(p, K)
+        L[k, k] < 0 && (L[:, k] .*= -1)
+    end
+    return L
+end
+
+"""
     init_theta_rr(p::Integer, K::Integer) -> Vector{Float64}
 
 Default initial values matching gllvmTMB::init_rr_theta (R/fit-multi.R:1291-1295):

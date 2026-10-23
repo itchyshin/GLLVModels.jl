@@ -536,7 +536,8 @@ def count_key(row):
 def recount(cm):
     counts = {k: 0 for k in cm["counts"]}
     for r in cm["rows"]:
-        counts[count_key(r)] += 1
+        k = count_key(r)
+        counts[k] = counts.get(k, 0) + 1
     return counts
 
 
@@ -649,9 +650,18 @@ def twin_overlay(row):
     return row
 
 
+def behaviour_overlay(row):
+    """Bind the approved residual-check row through the canonical behavioural predicate."""
+    if row["source_id"] == "postfit/POSTFIT-SURFACE-check_auto_residual":
+        import core070_behaviour_receipts as B
+        counts = {row["evidence_tier"]: 1}
+        B.overlay_row(row, counts)
+    return row
+
+
 def apply_twins():
     cm = load(OUT / "case-map-postfit.json")
-    cm["rows"] = [ruling_overlay(twin_overlay(r)) for r in cm["rows"]]
+    cm["rows"] = [behaviour_overlay(ruling_overlay(twin_overlay(r))) for r in cm["rows"]]
     cm["counts"] = counts = recount(cm)
     write_json(OUT / "case-map-postfit.json", cm)
     print(json.dumps(counts))
@@ -661,7 +671,7 @@ def check_twins():
     cur = load(OUT / "case-map-postfit.json")
     import copy
     exp = copy.deepcopy(cur)
-    exp["rows"] = [ruling_overlay(twin_overlay(r)) for r in exp["rows"]]
+    exp["rows"] = [behaviour_overlay(ruling_overlay(twin_overlay(r))) for r in exp["rows"]]
     exp["counts"] = counts = recount(exp)
     bad = [a["source_id"] for a, b in zip(cur["rows"], exp["rows"]) if a != b]
     if bad or cur["counts"] != counts:
@@ -924,6 +934,8 @@ def derive_row(sid, carry, p0, receipts):
     twin_overlay(row)
     after = key if row["evidence_tier"] == before else tier_count_key(row["evidence_tier"])
     ruling_overlay(row)
+    behaviour_overlay(row)
+    after = tier_count_key(row["evidence_tier"]) if row["evidence_tier"] != before else key
     return row, key, after
 
 
@@ -936,6 +948,8 @@ def main():
                     help="re-apply the Julia twin overlay to the tracked case-map-postfit.json")
     ap.add_argument("--check-twins", action="store_true",
                     help="verify case-map-postfit.json equals its twin-overlay re-derivation; write nothing")
+    ap.add_argument("--check", action="store_true",
+                    help="alias for --check-twins, used by the first-seven leaf gate")
     ap.add_argument("--apply-integer-equality", action="store_true",
                     help="write the integer_equality comparison blocks and bind the four integer rows (idempotent)")
     ap.add_argument("--apply-wave6", type=Path, metavar="RUN_DIR",
@@ -945,7 +959,7 @@ def main():
     ap.add_argument("--allow-dirty", action="store_true",
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
-    if args.check_twins:
+    if args.check_twins or args.check:
         check_twins()
         return
     if args.apply_twins:
