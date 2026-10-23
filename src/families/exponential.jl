@@ -171,7 +171,9 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     Zemp = log.(max.(Yc, 1e-6))
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_exponential_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
