@@ -239,6 +239,7 @@ println(_SHARD === nothing ?
     _shard_include("test_fit_verdict_gradient.jl")
     _shard_include("test_grouped_dispersion_tweedie_nb1.jl")
     _shard_include("test_nb1_poisson_ridge.jl")
+    _shard_include("test_nb1_scalar_gradient_gate.jl")
     _shard_include("test_nb1_grouped_mode_search.jl")
     _shard_include("test_nb2_grouped_mode_search.jl")
     _shard_include("test_grouped_init_kwargs.jl")
