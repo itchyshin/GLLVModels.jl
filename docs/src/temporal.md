@@ -34,8 +34,19 @@ are required, as in gllvmTMB.
 
 ## Fitting
 
+`data` is a long table with one row per series, occasion and trait. This builds
+a small one (four series, five occasions, three traits; illustrative noise, so
+expect a boundary fit):
+
 ```julia
-using GLLVModels
+using GLLVModels, Random
+Random.seed!(1)
+rows = [(s, o, t) for t in ["t1", "t2", "t3"] for o in 1:5 for s in ["s1", "s2", "s3", "s4"]]
+data = (series = [r[1] for r in rows], occasion = Float64[r[2] for r in rows],
+        trait = [r[3] for r in rows], value = randn(length(rows)))
+```
+
+```julia
 term = temporal_indep(:(0 + trait | series), :occasion)          # AR1
 fit = fit_temporal_gllvm(data; formula = @formula(value ~ 0 + trait),
                          temporal = term)
@@ -70,6 +81,7 @@ Ordinary covariance terms go in the `structure` argument as quoted
 expressions, as in gllvmTMB:
 
 ```julia
+# `data` is a long table as above that also has a `unit_obs` column.
 fit = fit_temporal_gllvm(data; formula = @formula(value ~ 0 + trait),
     temporal = temporal_indep(:(0 + trait | series), :occasion),
     unit = :series, unit_obs = :unit_obs,

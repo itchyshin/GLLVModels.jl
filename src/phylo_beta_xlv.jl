@@ -380,8 +380,11 @@ function _phylo_beta_xlv_constrained_refit(nll::Function,
     end
     return (nll = val_c, theta = collect(theta_c), effect = b_c,
             constraint_error = abs(b_c - target),
-            converged = last_res !== nothing &&
-                        (Optim.converged(last_res) || abs(b_c - target) <= 1e-3))
+            # `converged` is the refit's own verdict (#752). Meeting the
+            # constraint says nothing about the other parameters, so
+            # feasibility is `constraint_error`, a separate field. Same rule
+            # as the Poisson/binomial/NB/gamma xlv refits.
+            converged = last_res !== nothing && Optim.converged(last_res))
 end
 
 function _phylo_beta_xlv_profile_eta_realized(fit, Y::AbstractMatrix,

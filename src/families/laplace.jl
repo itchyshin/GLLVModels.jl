@@ -78,6 +78,23 @@ function _eta_cap_verdict(conv::Bool, link::Link, β::AbstractVector, offset; ma
     return false
 end
 
+# #874: a user `β_init` entry with β_t + offset above the cap starts on the sentinel above,
+# where the optimiser cannot move. Replace each such entry by the default warm start (the
+# row mean of the link-scale data `Zemp`, bit-identical to `β_init = nothing`) and warn.
+# Not projected onto the cap: at 29 the count objectives already sit at failure-scale
+# values (n·e^29 > 1e12). A default that is itself past the cap (data on a 1e14 scale)
+# still ends at the sentinel, which is the right outcome there. `guarded` is the fitter's
+# objective guard (`_eta_cap_guarded(link)`); a wrong-length `β0` is left to the fitter.
+function _rescue_beta_init(β0::AbstractVector, Zemp::AbstractMatrix, offset; mask = nothing,
+                           guarded::Bool = true, caller::AbstractString = "fit")
+    (guarded && length(β0) == size(Zemp, 1)) || return β0
+    bad = [t for t in eachindex(β0) if β0[t] + _eta_offset_max(offset, t; mask = mask) > _ETA_CLAMP]
+    isempty(bad) && return β0
+    β0[bad] = (vec(sum(Zemp; dims = 2)) ./ size(Zemp, 2))[bad]
+    @warn "$caller: β_init puts the intercept of species $bad above the η clamp ($(_ETA_CLAMP)), where the objective is flat; using the default warm start for those entries."
+    return β0
+end
+
 # Robust linear solve: returns `nothing` if the factorization is singular or
 # fails, so the inner Newton can stop gracefully. A = Λ'WΛ + I is SPD by
 # construction but can be numerically singular when the Fisher weights blow up

@@ -437,7 +437,8 @@ _nb_eta_above_clamp(β::AbstractVector, offset; mask = nothing) =
 # is a better local search, not a guarantee of the global maximum.
 # `grad` (optional, −∇negll closure or `nothing`): when given, the restarts use the same
 # exact-gradient optimiser as the main fit (`_optimize_with_analytic`).
-function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad = nothing)
+function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad = nothing,
+                              stage_callback = nothing)
     θ = Optim.minimizer(res)
     bd = findall(_dispersion_group_boundary(exp.(θ[first_log_r:end])))
     isempty(bd) && return res
@@ -449,7 +450,9 @@ function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad =
         trial = grad === nothing ?
             Optim.optimize(negll, θs, ls, opts; autodiff = :finite) :
             _optimize_with_analytic(negll, grad, θs, ls, opts)
-        Optim.minimum(trial) < Optim.minimum(best) - 1e-6 && (best = trial)
+        accepted = Optim.minimum(trial) < Optim.minimum(best) - 1e-6
+        stage_callback === nothing || stage_callback(:boundary_restart, ls, trial; accepted)
+        accepted && (best = trial)
     end
     return best
 end
@@ -480,7 +483,7 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
                                   rounds::Integer = 3, grad = nothing,
                                   alg = Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
                                   at_limit = >(1e3), limit_log = log(1e10),
-                                  conv_test = Optim.converged)
+                                  conv_test = Optim.converged, stage_callback = nothing)
     θ = Optim.minimizer(res)
     f0 = Optim.minimum(res)
     conv = conv_test(res)
@@ -506,7 +509,9 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
                     end, θs[free], alg, opts)
             f1 = Optim.minimum(trial)
             c1 = conv_test(trial)
-            if f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+            accepted = f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+            stage_callback === nothing || stage_callback(:ridge_polish, alg, trial; accepted)
+            if accepted
                 θs[free] = Optim.minimizer(trial)
                 θ, f0, conv = θs, f1, c1
                 iters += Optim.iterations(trial)
@@ -529,15 +534,19 @@ end
 # covariate fitter's `_fit_from`, with no covariates (q = 0, so θ is `[β; pack(Λ); log r]`).
 # `Yc` is the integer response, `msk` the observation mask, `θ0` the default start.
 # Returns `(θ, nll, converged, iterations)`.
+# `stage_callback` (optional) receives each outer attempt for the fit's optimizer record.
 function _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx, link, msk, hessian,
-                                 newton_maxiter, newton_tol, opts)
+                                 newton_maxiter, newton_tol, opts; stage_callback = nothing)
     X0 = zeros(p, size(Yc, 2), 0)
     grad = θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
                                            hessian, newton_maxiter, newton_tol)
     alg = _COV_BFGS()
     r = _optimize_with_analytic(negll, grad, copy(θ0), alg, opts)
-    r = _nb_boundary_restart(negll, r, alg, opts, p + rr + 1; grad = grad)
-    return _nb_poisson_ridge_polish(negll, r, alg, opts, p + rr + 1; grad = grad)
+    stage_callback === nothing || stage_callback(:initial, alg, r; accepted = true)
+    r = _nb_boundary_restart(negll, r, alg, opts, p + rr + 1; grad = grad,
+                             stage_callback = stage_callback)
+    return _nb_poisson_ridge_polish(negll, r, alg, opts, p + rr + 1; grad = grad,
+                                    stage_callback = stage_callback)
 end
 
 """
@@ -568,6 +577,7 @@ struct NBGroupedFit
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group Poisson-limit / degenerate flag (T14 F1)
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
+    optimizer_info::Union{Nothing,OptimizerRecord}
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -584,6 +594,10 @@ NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessia
 # Pre-offset compat tier (10 positional args, #788): no stored training offset.
 NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
     NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
+NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian::Symbol,
+            dispersion_boundary, offset) =
+    NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian,
+                 dispersion_boundary, offset, nothing)
 
 function Base.show(io::IO, f::NBGroupedFit)
     p, K = size(f.Λ)
@@ -631,8 +645,11 @@ end
 # Warm start shared by the grouped NB2 / Beta / NB1 fitters: `β_init` and `Λ_init` when
 # given (the `fit_nb_gllvm` convention, src/families/negbin.jl), otherwise empirical
 # link-scale means and SVD loadings of the centred link-scale data. As in `fit_nb_gllvm`,
-# a supplied `β_init` also centres the data the default loadings are taken from.
-function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init)
+# a supplied `β_init` also centres the data the default loadings are taken from. With
+# `guarded`, a `β_init` entry above the η clamp falls back to the default (#874).
+function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init;
+                             offset = nothing, mask = nothing, guarded::Bool = false,
+                             caller::AbstractString = "fit")
     p, n = size(Zemp)
     if β_init !== nothing
         length(β_init) == p || throw(ArgumentError(
@@ -642,7 +659,9 @@ function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init)
         size(Λ_init) == (p, K) || throw(ArgumentError(
             "Λ_init has size $(size(Λ_init)); expected (p, K) = ($p, $K)"))
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = mask,
+                           guarded = guarded, caller = caller)
     Λ_init === nothing || return β0, collect(float.(Λ_init))
     Zc = Zemp .- β0
     F = svd(Zc); kk = min(K, length(F.S))
@@ -655,7 +674,8 @@ end
 
 """
     fit_nb_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
-                         hessian=:observed, β_init=nothing, Λ_init=nothing, …) -> NBGroupedFit
+                         hessian=:observed, β_init=nothing, Λ_init=nothing,
+                         routes=:both, optimizer=nothing, …) -> NBGroupedFit
 
 Fit a negative-binomial GLLVM with grouped / species-specific dispersion (gllvm's
 `disp.group`): species `t` shares dispersion `r_group[group[t]]`. `group` is a
@@ -677,7 +697,9 @@ gllvmTMB's optimum). `:lbfgs` runs only the L-BFGS route (exact gradient on the 
 finite-difference otherwise) and `:exact` only the dense-BFGS exact-gradient route
 (log link, no `offset`; a different local search). `:both` costs the L-BFGS fit plus the
 exact-route fit and keeps the better; a tie keeps L-BFGS. With another link or an
-`offset`, `:both` is the L-BFGS route alone and `:exact` raises an `ArgumentError`.
+`offset`, `:both` is the L-BFGS route alone and `:exact` raises an `ArgumentError`. An explicit
+`optimizer` also makes `:both` run only the selected method (no second start), and `:exact`
+with an explicit `optimizer` raises an `ArgumentError`.
 On small data the likelihood can have several maxima, so this improves the local search
 but does not guarantee the global maximum. The per-site mode search is damped and falls back to
 an exact observed-curvature Newton search where Fisher scoring does not converge; a
@@ -687,11 +709,16 @@ default) uses the exact conditional NB2/log curvature used by TMB's Laplace
 objective; set `hessian=:fisher` to retain the expected-information approximation.
 `β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
 as in [`fit_nb_gllvm`](@ref); `r_group` still starts at `r₀ = 10`.
+`optimizer` accepts `:lbfgs`, `:bfgs`, or a configured Optim method object.
+`nothing` preserves the historical initial LBFGS, boundary restarts, and
+conditional BFGS Poisson-ridge polish. Explicit LBFGS uses LBFGS for the initial
+and boundary stages and skips the polish; explicit BFGS uses BFGS at every
+executed stage. [`optimizer_info`](@ref) retains the per-attempt results.
 """
 function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
-        routes::Symbol = :both,
+        routes::Symbol = :both, optimizer = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     routes in (:both, :lbfgs, :exact) ||
@@ -702,6 +729,8 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     exact_ok = link isa LogLink && offset === nothing   # the exact gradient needs both
     routes === :exact && !exact_ok && throw(ArgumentError(
         "routes = :exact needs the log link and no offset"))
+    routes === :exact && optimizer !== nothing && throw(ArgumentError(
+        "routes = :exact runs its own dense-BFGS route and cannot take an explicit optimizer"))
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -714,7 +743,8 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init)
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, mask = msk,
+                                 guarded = true, caller = "fit_nb_gllvm_grouped")   # #874
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
 
     function negll(θ)
@@ -733,16 +763,35 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         end
         return isfinite(v) ? v : 1e12
     end
-    ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+    default_ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+    ls = _optimizer_method(optimizer, default_ls; route = "fit_nb_gllvm_grouped")
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    stages = OptimizerStage[]
+    stage_controls = (; g_tol, iterations, newton_maxiter, newton_tol, show_trace = false,
+                      optim_options = opts)
+    derivative = link isa LogLink ? :analytic : :finite_difference
+    callback(name, method, result; accepted = false) =
+        _optimizer_stage!(stages, name, method, derivative, stage_controls, result; accepted)
+    # The exact-gradient dense-BFGS route (#784) always has the analytic gradient. Its stages
+    # carry an `exact_` prefix in the optimizer record.
+    function exact_callback(into)
+        return (name, method, result; accepted = false) ->
+            _optimizer_stage!(into, Symbol(:exact_, name), method, :analytic, stage_controls,
+                              result; accepted)
+    end
     if routes === :exact
         θ̂, nll, conv0, iters0 = _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx, link,
                                                         msk, hessian, newton_maxiter,
-                                                        newton_tol, opts)
+                                                        newton_tol, opts;
+                                                        stage_callback = exact_callback(stages))
     else
-        # Exact gradient under LogLink (#552): L-BFGS stays L-BFGS; only the gradient
-        # changes. Dense BFGS from the start (the #784 `:exact` route) is a different
-        # local search and is the second start under `:both`. Other links keep the
+        # Exact gradient under LogLink: the covariate fitter's (`_nb_grouped_cov_negll_grad`)
+        # with no covariates (q = 0) and this fit's offset; θ has the same layout. The
+        # finite-difference gradient cost 2·(p + rr + G) Laplace passes per step and made
+        # per-species fits take minutes at p = 30 (#552: 494 s against tmb's 7 s). Only the
+        # gradient changes: the optimisers stay as they were (L-BFGS, then the restart and
+        # the BFGS ridge polish). Dense BFGS from the start (the #784 `:exact` route) is a
+        # different local search and is the second start under `:both`. Other links keep the
         # finite-difference gradient.
         X0 = zeros(p, n, 0)
         grad = link isa LogLink ?
@@ -751,16 +800,36 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
                                              offset = offset)) : nothing
         res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
                                  _optimize_with_analytic(negll, grad, θ0, ls, opts)
-        res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad)
-        θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
-                                                         grad = grad)
-        if routes === :both && exact_ok
+        callback(:initial, ls, res; accepted = true)
+        res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad,
+                                   stage_callback = callback)
+        explicit = optimizer !== nothing
+        if !explicit || ls isa Optim.BFGS
+            θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
+                grad = grad, alg = explicit ? ls : Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
+                stage_callback = callback)
+        else
+            θ̂ = Optim.minimizer(res)
+            nll = Optim.minimum(res)
+            conv0 = Optim.converged(res)
+            iters0 = Optim.iterations(res)
+        end
+        if routes === :both && exact_ok && !explicit
             # #784: second start on the dense-BFGS exact-gradient route; keep it only if
-            # better by more than 1e-6 (a tie keeps the L-BFGS fit above).
+            # better by more than 1e-6 (a tie keeps the L-BFGS fit above). Skipped under an
+            # explicit `optimizer`: the caller chose the one method to run.
+            stages2 = OptimizerStage[]
             θ̂2, nll2, conv2, iters2 = _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx,
                                                               link, msk, hessian,
-                                                              newton_maxiter, newton_tol, opts)
-            if !_nll_failed(nll2) && (_nll_failed(nll) || nll2 < nll - 1e-6)
+                                                              newton_maxiter, newton_tol, opts;
+                                                              stage_callback = exact_callback(stages2))
+            second_wins = !_nll_failed(nll2) && (_nll_failed(nll) || nll2 < nll - 1e-6)
+            # Every attempt stays in the record; only a winning second start keeps accepted stages.
+            for s in stages2
+                push!(stages, OptimizerStage(s.name, s.method, s.derivative, s.controls,
+                                             s.result, second_wins && s.accepted))
+            end
+            if second_wins
                 θ̂, nll, conv0, iters0 = θ̂2, nll2, conv2, iters2
             end
         end
@@ -773,8 +842,10 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     any(lowb) && @warn "NB2 grouped-dispersion fit reached the per-group lower boundary (r_group below 1e-6) for group(s) $(findall(lowb)); those groups' overdispersion is extreme and not identified from this data; converged is false for this fit." maxlog=1
     any(>(1e6), r̂g) && @warn "NB2 grouped-dispersion fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
     loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
+    receipt = _optimizer_record(optimizer, stages; controls = stage_controls,
+                                derivative, actual = _last_accepted_optimizer(stages))
     return NBGroupedFit(β̂, Λ̂, r̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
-                        boundary, _stored_offset(offset))
+                        boundary, _stored_offset(offset), receipt)
 end
 
 """
@@ -1444,7 +1515,8 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc  = _sanitize_missing(Y, 0.5)
+    _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped")
+    Yc  = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -1585,7 +1657,8 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = _sanitize_missing(Y, 0.5)
+    _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped_cov")
+    Yc = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -1915,7 +1988,8 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc  = _sanitize_missing(Y, 1.0)
+    _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped")
+    Yc  = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -2062,7 +2136,8 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = _sanitize_missing(Y, 1.0)
+    _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped_cov")
+    Yc = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -2441,7 +2516,9 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init)
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, mask = msk,
+                                 guarded = _eta_cap_guarded(link),
+                                 caller = "fit_nb1_gllvm_grouped")   # #874
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(1.0), G))
 
     function negll(θ)
@@ -2686,27 +2763,30 @@ function _tweedie_grouped_laplace_weight(hessian::Symbol, f::TweedieED, μ, me, 
     return _glm_obs_weight(f, μ, 1, me, y, link, η)
 end
 
-# Per-site Laplace log-marginal with per-species Tweedie dispersion markers `fams`.
-function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+# Per-site mode search for the Tweedie grouped kernel (#503, the #479 / NB1 pattern).
+# Returns `(z, converged)`. The step is Fisher-scored always: expected information is
+# >= 0, so `Λ'WΛ + I` is SPD and every Newton direction ascends; the converged mode is
+# the fixed point of `Λ's − z = 0`, which does not involve W.
+#
+# Before this change the kernel ran undamped Fisher scoring (`z .+ Δ`) and returned
+# whatever `z` it held when the loop stopped, converged or not, so a site that
+# overshot still produced a finite log-likelihood (#503 audit: 4.3-7.3% of stress
+# draws on the Tweedie grouped kernel). Now a large step that lowers the per-site
+# log-posterior is halved (`_grouped_laplace_mode_logpost`; small steps and accepted
+# full steps are bit-identical to the old update), and `converged` is true only when
+# the FULL proposed step is below `tol`, the old loop's own stopping test. A heavily
+# halved step does not count.
+function _tweedie_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, hessian::Symbol = :observed,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
     z = zeros(K)
-    local A
     for _ in 1:maxiter
         η  = _clamp_eta.(β .+ off .+ Λ * z)
         μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (mirrors NB2/Beta/NB1 above). The MODE SEARCH is
-        # Fisher-scored, ALWAYS — `:fisher` here is not the caller's selector.
-        # Expected information is >= 0, so `Λ'WΛ + I` is SPD by construction
-        # and every Newton step is a descent step. The selector still governs
-        # the post-loop log-det below, which is the only role that needs the
-        # observed curvature. The converged mode is unchanged either way: it
-        # is the fixed point of `Λ's − z = 0`, which does not involve W at all.
         W  = _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
         if mask !== nothing
             s = ifelse.(mask, s, 0.0)
@@ -2714,10 +2794,56 @@ function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n
         end
         A  = Symmetric(Λ' * (W .* Λ) + I)
         Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
+    return z, false
+end
+
+# Per-site Laplace log-marginal with per-species Tweedie dispersion markers `fams`.
+function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, hessian::Symbol = :observed,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    # Role separation (mirrors NB2/Beta/NB1 above): the MODE SEARCH is Fisher-scored,
+    # always; `hessian` governs only the post-search log-det below.
+    z, ok = _tweedie_grouped_mode(fams, y, n, Λ, β, link;
+                                  mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Larger-budget retry from z = 0 (mirrors #507's NB1 retry), only where the default
+    # budget failed, so sites that converged within `maxiter` keep their path.
+    ok || ((z, ok) = _tweedie_grouped_mode(fams, y, n, Λ, β, link;
+                                           mask = mask, offset = offset,
+                                           maxiter = 20 * maxiter, tol = tol))
+    # A search that did not converge must not produce a finite value: -Inf makes the
+    # fitter's objective return its failure sentinel (`_TWEEDIE_FAIL_PENALTY`) instead
+    # of a garbage surface (#503).
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)

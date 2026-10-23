@@ -20,6 +20,7 @@ using Distributions: Distribution, Univariate, Discrete, Continuous,
 
 # Core
 include("fit_verdict.jl")            # _fit_verdict: never report a failure sentinel as a loglik
+include("optimizer_selection.jl")     # direct outer optimizer choices and immutable fit receipts
 include("packing.jl")
 include("lowrank_cholesky.jl")          # used by likelihood
 include("likelihood.jl")
@@ -71,6 +72,7 @@ include("relaxed_clock.jl")              # Relaxed-clock per-branch evolution ra
 # Response families (Phase 3): Distributions types as markers + link functions
 include("families/links.jl")
 include("families/laplace.jl")           # generic family-dispatched Laplace marginal core
+include("families/response_support.jl")  # response-domain checks shared by the Laplace fitters (#730)
 include("families/aghq_grid.jl")         # Stage-1a/1b live-pin AGHQ grid + Liu–Pierce site (not a public knob)
 include("families/aghq_outer.jl")        # Internal unpenalized outer adaptation; public fit wiring pending
 include("families/aghq_fit_info.jl")
@@ -243,7 +245,8 @@ Alias of [`ConstrainedOrdinationFit`](@ref), the result type of
 const ConcurrentOrdinationFit = ConstrainedOrdinationFit
 
 # Public API
-export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevolution_blockna,
+export OptimizerStage, OptimizerRecord, optimizer_info,
+       make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevolution_blockna,
        fit_gaussian_mi_fiml, fit_gaussian_mi_phylo, fit_gllvm_mi, fit_gllvm_mi_multi,
        spatial_cov, relatedness_cov,
        spde_fem, spde_precision, spde_projector, matern_correlation,

@@ -37,6 +37,12 @@
 using LinearAlgebra
 using SparseArrays
 
+# Exceptions that mean "this parameter value is infeasible" (a non-SPD precision or
+# Hessian, a value outside a function's domain). Anything else — a dimension mismatch,
+# a bad mesh — is a caller error and must propagate rather than become a sentinel.
+_spde_infeasible(err) = err isa PosDefException || err isa SingularException ||
+                        err isa DomainError
+
 """
     spde_gaussian_marginal_loglik(y, A, Q, σ²; μ = 0.0) -> Float64
 
@@ -74,7 +80,8 @@ function spde_gaussian_marginal_loglik(y::AbstractVector, A::AbstractMatrix,
     try
         cholQ = cholesky(Symmetric(Q))
         cholC = cholesky(C)
-    catch
+    catch err
+        _spde_infeasible(err) || rethrow()
         return -Inf
     end
 
@@ -165,10 +172,12 @@ function fit_spde_gaussian(y::AbstractVector, nodes::AbstractMatrix,
         τ = exp(θ[2])
         σ2 = exp(θ[3])
         μ = θ[4]
+        (isfinite(κ) && isfinite(τ) && κ > 0 && τ > 0) || return Inf
         v = try
             Q = spde_precision(Cdiag, G, κ, τ; α = α)
             -spde_gaussian_marginal_loglik(yv, A, Q, σ2; μ = μ)
-        catch
+        catch err
+            _spde_infeasible(err) || rethrow()
             return Inf
         end
         return isfinite(v) ? v : Inf

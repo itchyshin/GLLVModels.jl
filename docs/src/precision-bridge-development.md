@@ -120,7 +120,11 @@ With `"ci_method" => "none"`, these arrays are empty and
 The native interface also accepts an already constructed `PrecisionPhy`:
 
 ```julia
-# Y: traits × observations; species_id: one valid tip index per observation.
+# Reuses `pp` and `y` from the bridge example above.
+Y = y                                   # traits × observations
+precision = pp                          # the PrecisionPhy
+species_id = [1, 2, 3, 4, 1, 2, 3, 4]   # one valid tip index per observation
+cluster = [1, 1, 2, 2, 1, 1, 2, 2]      # ordinary grouping label per observation
 fit = fit_gllvm(Y; phylo=precision, phylo_rank=1,
     phylo_mode=:barelowrank, species_id=species_id)
 intervals = precision_multivariate_intervals(fit)

@@ -1,3 +1,195 @@
+2026-10-21: Offline checker reported C0_MET, C1_MET, C5_MET, C6_MET, and C8_MET. Those boxes are ticked. C2, C3, C4, and X2 stay open. The parity goal stays open.
+
+2026-10-21: Shinichi signed the P1 optimizer stopping rule. Receipts stay fail and the numeric bars stay unchanged.
+
+## 2026-10-19: measured seven-row checkpoint at 7670e106b
+
+The committed candidate passes the exact frozen-baseline checkpoint in 6.26s:
+X2 304/317, C2 290/297, with seven exact rows and other contracts unchanged.
+The combined Node and assembler controls pass in 19.87s and 7.60s on Totoro.
+Four corrupted-evidence controls are rejected. Label corruption leaves summary
+counts unchanged; the final exact-receipt predicate rejects the mismatch, as
+separately verified with the frozen checker. The original incorrect count
+expectation is retained. A valid-output Julia smoke passed in 24.76s.
+
+The current main8ca3eb76e measures298/317. Four intervening main commits touch
+oracle-version and phylogenetic convergence code; the candidate is based on
+d9afa090c. Full Pkg.test is running on7670; sequential core and local docs checks
+are bounded and conditional on preceding success. No pass is inferred.
+The exact13 remaining-row packet and source audit passed their independent
+filed-version recheck, including16 local links. Melissa reconciled the bounded
+checkpoint and named the open gates. Full completion review and landing remain
+pending; no push, merge, tolerance or engine change occurred here. The earlier
+entries below retain the checkpoint's prior states and failures.
+
+## 2026-10-19: five iSDM receipt candidate and C6 recovery
+
+Exactly five iSDM rows change versus a444181ae; 312 other rows and C6 remain
+unchanged. Seven runnable leaf gates passed re-verification, including 36
+behavior controls and three focused scope tests. Nested checkpoint provenance
+has retained red/green controls. Committed-source 304/317 and full checkpoint
+remain pending. No new fit, push or merge. See the
+[five-row report](after-task/2026-10-19-p1-isdm-receipts.md).
+
+C6 recovery on 295f22ec9 completed: Node and Python suites exited zero under
+one-hour caps; all eight local gates are met. Earlier timeouts remain retained.
+Residual candidate a444181ae measured X2 299/317. Main remains last verified
+at 298/317. Full regressions, final review and landing remain open.
+
+## 2026-10-19: check_auto_residual source-bound behavior candidate
+
+Fresh Julia public-door capture at `7a2b8dcbe` exited zero in 49.13 seconds under
+its two-minute cap, Julia4/BLAS1/OMP1. The P1 R output is retained, not rerun.
+Source, runner, fixture and raw-output provenance finalized successfully.
+Only the residual-check sidecar, receipt and case-map row change; five iSDM
+admissions remain separate. Focused behavior controls passed 36/36 and all five
+runnable acceptance gates passed re-verification. Assembly reports 317 rows
+current, with exactly the residual row changed and C6 output byte-unchanged.
+Local committed-source X2 measurement and landing are pending. Main remains last
+verified at 298/317. Initial missing-Optim failure is retained; the retry reused
+an exactly matching resolved Project environment, now snapshotted with hashes.
+Full package regressions, final P1 review and closure remain open. Report:
+[check-auto checkpoint](after-task/2026-10-19-p1-check-auto-receipt.md).
+
+## 2026-10-19: C6 live census repair
+
+The owning generator exposed three optimizer exports missing after main PR #939.
+A new live-export regression failed before repair and passed afterward. Refreshed
+inputs and decisions cover exactly those three documented extras under existing
+rule #684 item 3. The original seventeen approvals, eleven scoped names and nine
+holds remain intact. Focused Julia tests: 2,133 passed. Checkpoint substitution
+controls passed. Scoreboard and assembled map remain byte-unchanged at X2 298/317.
+Fresh replay passed Julia, regeneration, live census and checkpoint controls.
+Node and Python suites each timed out at 1,800 seconds; these remain unmet.
+Independent census review found no blocker. Refreshed committed-source checks
+and landing remain pending.
+
+## 2026-10-19: approved P1 C6 scope integration, local checkpoint
+
+Reused the signed C6 candidate on `codex/p1-c6-approved-20261019` from main
+`d9afa090c`. Exactly seventeen extras, eleven scoped names and nine holds change;
+the scoreboard and assembled map remain byte-unchanged. Independent review
+found and verified the repair of a general-rule authorization gap: both readers
+now bind each scoped export to its exact approved contract digest. Focused Julia
+checks passed 2,117/2,117; 122 exact-scope Python controls and assembly check
+passed. Complete Node/Python controls passed 252/525 respectively. The four
+runnable acceptance gates passed replay; review and exact committed-source
+checks complete the six-gate local ledger. Code commit `c62b877f0` measures C6
+MET and unchanged X2=298/317. Landing and full P1 closure remain open. No push,
+merge or row admission. See the
+[checkpoint report](after-task/2026-10-19-p1-c6-approved.md).
+
+## 2026-10-18: PR #905 reviewer unblock (refs #822)
+
+- Branch `claude/sharp-gates-3ud4k2`, rebased onto `origin/main` `383e9d370`.
+- `_phylo_latent_accept_rounding_floor` no longer sets `converged = true` when
+  `gradient_norm > g_tol`. The 1e-3 eligibility line is unchanged.
+- Targeted (Julia 1.10.10, `JULIA_NUM_THREADS=1`, `OPENBLAS_NUM_THREADS=1`):
+  `test_phylo_latent_rounding_floor.jl` **14 + 10 passed / 0 failed**;
+  issue #822 DEP (`d = 4`, 120 tips) `converged=true`,
+  `gradient_norm=6.2049e-6`; `test_cov_phylo_twins_p1.jl` **40 passed / 0 failed**.
+- Full `Pkg.test()` (Julia 1.10.10): **31220 passed / 0 failed / 87 broken / 31307 total**
+  (305m25s) plus README Quick start 8/8. `EXIT=0`.
+- Body keeps `Closes #822` because the DEP repro passed locally. The GitHub body now declares `intended-closes: 822`.
+
+## 2026-10-11: data-relative floors + SQUAREM hit_floor (review of #868)
+
+- Same branch `cursor/false-converged-754-753-781-78dc`, still draft #868.
+  Review of `4fa4848c9` blocked on unit-dependent floors and SQUAREM dropping
+  `hit_floor`.
+- Floors are now `1e-8 * var(y)` (branch-RE) and `1e-8 * mean(y.^2)` (phylo
+  EM, including the clamp). SQUAREM latches `hit_floor` on the main path.
+  `y` / `y*1e-5` / `y*1e5` share `(converged, boundary) = (false, true)`.
+- `fit_relaxed_clock` follow-up: `issue_write` 403. Body at
+  `docs/dev-log/owed/2026-10-11-relaxed-clock-false-converged-issue.md`
+  and `/opt/cursor/artifacts/2026-10-11-relaxed-clock-false-converged-issue.md`.
+- Julia 1.10.12 local:
+  test_branch_re_convergence 16/16, test_em_phylo_sigma_eps_floor 28/28,
+  test_em_squarem 27/27, test_zinb_cov_iterations 10/10,
+  test_em_phylo 27/27, test_nparams_em_branch_re 8/8,
+  test_phylo_branch_re 44/44.
+- After-task:
+  `docs/dev-log/after-task/2026-10-11-false-converged-review-floors.md`.
+
+## 2026-10-10: false `converged` on three fitters (refs #754, #753, #781)
+
+- Branch `cursor/false-converged-754-753-781-78dc` from `origin/main` `e6cfcd4ee`.
+  Draft PR #868. Repros in `docs/dev-log/repro/2026-10-10-false-converged/`.
+- Main (`e6cfcd4ee`, Julia 1.10.12): #754 noise-only `conv=true` `s2=6.21e-10`;
+  constant y `conv=true` `negll=-11870.67`; NaN y `ErrorException` pointing at
+  the optimiser. #753 rank-1 `σ_eps=sqrt(eps())` `conv=true` `logLik=1939.83`.
+  #781 `iterations=0` `conv=true`; NaN `θ_init` `conv=true` `loglik=-1e12`.
+- After: noise-only `sigma2_boundary=true` `conv=false`; constant/NaN y
+  `ArgumentError` naming `y`; EM `sigma_eps_boundary=true` `conv=false`;
+  ZINB `iterations=0` `conv=false`; NaN `θ_init` rejected.
+- Julia 1.10.12 local: test_branch_re_convergence 14/14, test_em_phylo_sigma_eps_floor 4/4,
+  test_zinb_cov_iterations 10/10, test_nparams_em_branch_re 8/8, test_em_squarem 27/27,
+  test_em_phylo 27/27, test_zinb_x_identity 42/42, test_em_louis 147/147,
+  test_branch_re_marginal_fallback 13/13, test_phylo_branch_re 44/44.
+- #752 (xlv feasibility-as-converged) not touched; next PR. Siblings:
+  `em_fit_phylo_squarem` increment stop, `fit_relaxed_clock` increment stop.
+- CI on #868 head `3d87d246b`: 14 successful / 0 failed / 1 skipped
+  (advisory frozen-R smoke). Julia 1.10 + Julia 1 shards 1–4, Documenter,
+  Documenter deploy, both P1 twin jobs, wrong-close guard.
+
+## 2026-10-18: direct outer optimizer selection
+
+- Branch `codex/optimizer-selection-20261018` from `origin/main` at
+  `383e9d37053fd91ac3dc2e445ecadbbf82cc55f5`. Added optimizer selection for the
+  ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace, and default
+  per-trait NB2 formula routes. Supported methods: `:lbfgs`, `:bfgs`, and
+  configured `Optim.LBFGS()` / `Optim.BFGS()` objects. Default `nothing` retains
+  prior paths. Every fit stores `optimizer_info` with requested/actual method,
+  derivative route, controls, stages, and raw optimizer results. Old positional
+  fit constructors remain available.
+- `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=. -e 'using
+  GLLVModels; include("test/test_optimizer_selection.jl")'`: **46 passed** and
+  `OPTIMIZER_SELECTION_PASS`. The suite includes a prior red run against the
+  unsupported API, selected-method stage checks, default Poisson continuation,
+  formula/select_lv forwarding, early refusals, refit refusal, and constructor
+  compatibility.
+- Neighbor regression command (all completed with exit 0):
+  `test/test_gaussian_intercept.jl`, `test/test_gaussian_source_design.jl`,
+  `test/test_source_fit_optimizer_health.jl`, `test/test_poisson_fit.jl`,
+  `test/test_negbin_laplace.jl`, `test/test_nb_grouped_poisson_ridge.jl`,
+  `test/test_model_selection.jl`, `test/test_formula.jl`, and
+  `test/test_formula_sources.jl`. Includes the existing 31/31 NB2 Poisson-limit
+  ridge test and source optimizer-health checks.
+- `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=docs
+  docs/make.jl --local`: Documenter doctests, cross-reference checks, and
+  VitePress rendering completed. Warnings: local deployment skipped, and the
+  existing VitePress chunk exceeded the 500 kB advisory threshold. The docs
+  environment needed a temporary local `Pkg.develop(path=".")`; generated
+  manifests are not part of the feature.
+- Full core suite `OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=2 julia --project=test
+  test/runtests.jl`: deliberately interrupted with SIGINT at
+  `test/test_phylo_beta_xlv.jl:158` after the estimated 5–10 minute runtime was
+  exceeded. It had reached later truncated-NB2 tests; no final aggregate test
+  denominator was emitted, so this is incomplete evidence, not a pass. The test
+  environment's temporary local develop entry and generated manifests were
+  removed. `Pkg.test()` was not run. Focused/neighbour tests and docs build are
+  the completed evidence; independent review and PR CI remain outstanding.
+- Negative space: AGHQ/adaptive, VA, other grouped/covariance, mixed, phylogenetic,
+  row-effect, pervar, and non-Normal/Poisson/NB2 routes refuse explicit selection.
+  Profile/bootstrap intervals refuse explicitly selected fits because refit
+  solvers are not yet forwarded. No likelihood or formula grammar changed.
+
+## 2026-10-17: FAMILY-11 public bridge boundary receipt
+
+- Added a retained raw P1 R-bridge refusal capture and fail-closed derivation for the exact `FAMILY-11-LOG` public bridge boundary. This is boundary evidence only; it does not establish native/formula parity or admit the family row as parity evidence.
+- Added the focused Julia boundary test to the normal sharded `test/runtests.jl` suite. The shard-selection contract still passes.
+- Re-derived family receipts and the shared assembled map/scoreboard from the clean `origin/main` worktree. Existing family receipt hashes were updated to match the changed derivation source; assembly remains at 317 rows.
+- Checks: family receipts current (30 cases, 21 rows); assembler current; checkpoint negative controls pass; Julia shard selection 43/43; focused FAMILY-11 boundary test 1/1; the seven-row verifier remains blocked at the next unclosed receipt row after FAMILY-11.
+- The R capture was retained and revalidated, not freshly rerun. No merge, push, full P1 closure, or public parity claim.
+
+## 2026-10-06: P1 first-seven checkpoint verifier
+
+- Approved baseline: `f220379d0937d0afffc6a030023c63c0f715e168`; P1 R source: `9539352f66f2db2cc26b1c393e67212a359b60c9`.
+- Added an internal exact-row verifier and controls. The verifier fixes the approved baseline checker, checks all admission/case contracts, preserves unrelated scoreboard statuses, validates P1 receipt and raw-hash provenance, and rechecks every numeric or behavioural bound receipt.
+- Controls pass for exact-row substitution, dropped rows, contract edits, signed substitutions, missing P1 source/build provenance, bad raw hashes and invalid bridge context. Existing checker and assembler controls passed; assembly is current at 317 rows.
+- The unchanged baseline is correctly rejected at FAMILY-11. No receipt gap has been closed by this tooling commit, and no full P1 or release claim is made. Candidate and main checkpoint gates remain unmet.
+- Full/core Julia suites and Documenter are pending for the receipt checkpoint; this change adds Node tooling and tests only.
+
 ## 2026-10-16: land #931 red-proof default-route mollusc test on #914 (Closes #784)
 
 - Branch `claude/magical-newton-5h3i9c` (PR #914). Fix commit `a45b2ae25` was already on this
@@ -21740,3 +21932,41 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Fix: exact test-only compat pin in `test/Project.toml`: `Aqua = "=0.8.16"`. No `Project.toml` version bump, no runtime deps, no likelihood code, no gllvmTMB edits, no Aqua subcheck skip.
 - Local validation: temp Julia env with `Aqua v0.8.16`, `SpecialFunctions v2.9.0`, and `LogExpFunctions v0.3.29`; `Aqua.test_all(GLLVM; ambiguities=false)` passed, including `Persistent tasks | 1/1`.
 - Also ran: `git diff --check` passed. Full `Pkg.test()` was not run locally; an accidental all-suite probe was stopped after it started because the focused Aqua reproducer covered the CI failure mode.
+
+
+## 2026-10-18 — outer optimizer follow-up: Gaussian mask/offset and evidence
+
+- Gaussian `mask`/`offset` observed-data refits now use the explicitly selected outer Optim method and append a receipt stage; Gaussian integration wrappers preserve the receipt. Default LBFGS BackTracking settings remain unchanged.
+- Added actual `Optim.optimize` boundary instrumentation for Gaussian, Poisson, per-trait NB2 and ridge-polish stages; the test removes its temporary methods and verifies cleanup.
+- Focused selector tests: 61/61 plus spy cleanup 1/1, `OPTIMIZER_SELECTION_PASS`; log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-optimizer-review-green.log`. Red witness from prior source: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-optimizer-review-red.log`.
+- Paired identical-start Poisson example passed; both methods converged and log-likelihoods differed by about 7e-14: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-paired-example-final.log`. Gaussian source-design neighbor: 34/34, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-gaussian-source-final.log`.
+- Final neighbor batch stopped at its 5-minute estimate after seven of nine files; `test_formula.jl` was interrupted and `formula_sources` not run. Do not report all nine as passing. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-neighbours-final.log`.
+- Docs VitePress rendering completed, but the Julia wrapper did not provide a final exit receipt; docs gate is unconfirmed. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-docs-final.log`. Broad suite remains incomplete from the earlier SIGINT; `Pkg.test()` not run.
+
+## 2026-10-18 — PR #939 integration with main `a8be9b222`
+
+- Merged `origin/main` at `a8be9b2220c29d6c2d83834057571457d60a77f0` into optimizer branch pre-merge head `8b0c4fd10b6005f8c368bf78bd06caa70dafc913`. Preserved both independent check-log additions; both `test_optimizer_selection.jl` and FAMILY-11 boundary tests remain registered in `test/runtests.jl`.
+- Main integration changed no `src/`, project files, or `docs/src/` relative to the pre-merge PR head. It adds FAMILY-11 evidence and supporting tests/tools/receipts.
+- On integrated head `bc56d3d2565ea041cf0841070c0234da81536e19`, focused selector tests passed 61/61 plus spy cleanup 1/1 in 57 seconds and printed `OPTIMIZER_SELECTION_PASS`. Log: `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-integrated-focused.log`. No full suite or docs rerun.
+
+## 2026-10-18 — Core070 oracle version-qualified Gaussian contract
+
+- Fixed the frozen Gaussian parity assertion to select `z_B,s_B` only for the exact 0.7.0 source pin and `z_B` only for the exact 0.7.1 pin. Unknown commits and source/version mismatches fail closed.
+- The oracle builder now records the installed `gllvmTMB` version in `build.json` and `CORE070_SOURCE_PIN.toml`; parity startup verifies marker and installed package versions. Legacy markers/build receipts without a version require a fresh pinned build.
+- Focused Julia pin suite: 69/69, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-contract-green.log`. Builder/version focused selection: 9/9, `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-focused-final2.log`. Gaussian fixture parsed; `git diff --check` passed.
+- The unrelated fresh-archive hash test exceeded 120 seconds and was stopped without a result; logs `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-red.log` (full Python suite incomplete) and `/tmp/cross-package-optimizers-20261018/gates/gllvmodels-version-builder-hash-diagnostic.log` (isolated diagnostic incomplete). No oracle build/install or full Julia workflow was run. See `docs/dev-log/after-task/2026-10-18-core070-oracle-version-contract.md`.
+
+## 2026-10-19 — Keep P1 public-call source receipts valid across descendant commits
+
+- CI on residual draft #950 exposed a false failure: the validator compared the captured empty `src` patch at Julia launch commit `7a2b8dcbe` with all later `src` changes through main `8ca3eb76e`. The intervening changes were confined to the phylogenetic XLV fitters; the retained receipt is still bound to its exact launch tree.
+- The validator now applies the hash-pinned raw patch to a temporary index initialized from the recorded launch commit, and rejects invalid patches or paths outside `src`. A regression test commits a later `src` change and confirms the launch receipt remains verifiable; tampered patch bytes are refused. The finalizer reuses and re-verifies existing captured patch evidence when refreshing the deriver snapshot.
+- Added setup-r to the negative-control workflow because two existing base-R fixture controls call `Rscript`, and added the postfit recount regression test to the job.
+- Checks: behavior controls 37/37; `core070_postfit_p1_receipts.py --check`; `test_core070_postfit_recount.py`; `true_parity_assemble.py --check`; behavior receipt `--check`; `git diff --check`.
+- Full/core integrated Julia suites remain running separately on Totoro. This change restores receipt provenance checking; it is not a new fit-parity result or a full-P1 claim.
+
+## 2026-10-19 — Refresh iSDM receipt hashes after the provenance correction
+
+- After integrating the residual source-provenance correction, the retained six-case first-seven run metadata had a new derivation commit while five iSDM behavior sidecars and case receipts still cited the previous metadata hash. The checkpoint verifier correctly rejected the stale run.json hash.
+- Revalidated the retained six-case R/Julia capture with first_seven_behaviour_derive.py; regenerated its derived sidecars and the five affected iSDM behavior receipt blocks from raw outputs. No R or Julia observation was rerun or edited.
+- Before/after SHA-256 comparison: all 46 files under the retained raw* evidence directories were unchanged.
+- Validation: behavior controls 37/37; postfit recount regression passed; postfit and behavior receipt checks passed; assembler check passed; the checkpoint mutation-control test passed independently. The positive checkpoint on committed HEAD remains pending until these refreshed hashes are committed.

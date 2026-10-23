@@ -330,7 +330,9 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_truncated_nbinom2_gllvm")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
@@ -620,7 +622,9 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_truncated_nbinom2_gllvm_pertrait")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
