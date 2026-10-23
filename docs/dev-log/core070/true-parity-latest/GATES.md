@@ -586,10 +586,10 @@ Julia-only exports that are documented user-facing extras are signed as document
 `status` to `decided`. A name in `decisions` that is not a reverse-gap item fails the run (stale).
 Names with no clear classification stay out of the file and remain undecided.
 
-The checker's C6 vocabulary is `KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
-`RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`. A decided item also needs a `basis` that is
-visible text (see "Visible text" in ruling 2) and a `ruling`. The ruling `ref` must be `itchyshin/GLLVModels.jl#684 item 3`, the only
-ruling the tool recognises (`C6_RULINGS` in the checker, copied into the assembler); `signed_on`
+The original C6 vocabulary was `KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
+`RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`. The dated extension below adds two states. A decided item also needs a `basis` that is
+visible text (see "Visible text" in ruling 2) and a `ruling`. The ruling `ref` must be `itchyshin/GLLVModels.jl#684 item 3`, the original
+ruling recognised by the tool (`C6_RULINGS` in the checker, copied into the assembler); `signed_on`
 must be `2026-10-02`, its date; and `signed_by` must pass the signature rule (allow-list, real past
 date). That ruling covers `KEPT_AS_JULIA_EXTRA` and `EXCLUDED_INTERNAL_HELPER` only. A decision
 `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE` or `RENAME_TO_AVOID_COLLISION` is listed under
@@ -601,6 +601,29 @@ with a `..` segment anywhere, such as `tools/../tools/gen.py`, and a directory a
 assembler reads the generator, the checker does not), a `basis` with no visible character, or a
 `KEPT_AS_JULIA_EXTRA` basis that fails the documented-extra rule below. C6 also prints
 `decision_counts=` per vocabulary word.
+
+Dated extension, signed 2026-10-17: `SCOPED_R_TWIN` accounts for ten exact
+contracts across eleven names, and `HOLD_PENDING_EVIDENCE` records the nine
+named evidence holds. The source is
+`docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md`; the
+approved scope data are in `c6-approved-decisions-2026-10-17.toml` alongside
+this ledger. The same approval signs seventeen named Julia extras. A general
+rule does not sign another name or a wider route.
+
+For each scoped twin, both readers check the exact export name and SHA-256 of
+its counterpart, scope, receipt IDs and ruling, using recursively sorted compact
+UTF-8 JSON. The eleven pinned digests match the approved TOML. The canonical
+checker also requires `source_id` to identify that exact Julia export. It resolves
+scoped receipt IDs against the assembled case map, while ordinary C1-C8/X2
+continue to use their existing case map. Every scope must still cite executable
+P1 numeric or behavioural rows with receipt paths that resolve. These C6 checks
+do not independently remeasure receipt contents or establish fit parity.
+
+A held name has status `held`, no counterpart/scope/receipt fields, and a basis
+that states there is no twin or parity claim and no scoreboard row admission.
+`fit_gllvm` is scoped only to the approved NB2 route; its remaining routes stay
+held. C6 decision accounting can be MET with nine explicit evidence holds. The
+holds and outstanding scoreboard evidence remain open.
 
 Basis rules. An `EXCLUDED_INTERNAL_HELPER` basis must be visible text. A `KEPT_AS_JULIA_EXTRA` basis must also
 cite at least one page under `docs/src`, and every page it cites must be an existing `.md` file written exactly as
@@ -1029,7 +1052,7 @@ holds on `origin/main` independent of the pin. C1 through C6 and C8 need the P1 
 `node tools/true_parity_check.mjs <mode>` reports `MEASUREMENT_FAILED` (exit 2) for those
 modes on `origin/main`, which is the honest state, not a false pass.
 
-- [ ] C0: the P1 oracle exists alongside P0 (additive) in `tools/parity_oracle.py`
+- [x] C0: the P1 oracle exists alongside P0 (additive) in `tools/parity_oracle.py`
       (`P1_GLLVMTMB_ORACLE` present and equal to the full P1 SHA, `FROZEN_GLLVMTMB_ORACLE`
       unchanged, `CAPABILITY_LEDGER_REF` present), the explicit `R_REF_PINS` +
       `GLLVM_PARITY_PIN` switch exists, **and `DEFAULT_R_REF` itself actually resolves to P1**
@@ -1053,7 +1076,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
   branch rather than only the fixtures). C0 becomes met once a later PR sets
   `_DEFAULT_PIN = "P1"` there and it merges.
 
-- [ ] C1: every required row (`required_core`, `compatibility_adapter`) at P1 is bound to a
+- [x] C1: every required row (`required_core`, `compatibility_adapter`) at P1 is bound to a
       receipt that resolves on `origin/main` (numeric evidence, counted in `bound_numeric=`; or, for
       the frozen list of rows itchyshin/GLLVModels.jl#684 item 2 names, behavioural evidence, counted
       in `bound_behavioural=`), or carries a maintainer-signed disposition; `BLOCKED_*`, `PARTIAL_*`
@@ -1085,7 +1108,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
   EXPECT: C4_MET
   EVIDENCE: pending
 
-- [ ] C5: grouping levels `unit`, `unit_obs`, `cluster`, `cluster2` exist on both engines
+- [x] C5: grouping levels `unit`, `unit_obs`, `cluster`, `cluster2` exist on both engines
       under those names and pair (same reading as the 0.7.0 ledger's B-04 disposition:
       same names plus the paired Gaussian receipts that exist today; non-Gaussian numerical
       pairing is out of scope, Packet 1 row 9)
@@ -1093,7 +1116,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
   EXPECT: C5_MET
   EVIDENCE: pending
 
-- [ ] C6: the reverse-gap list is tool-produced and every item (including the Julia-only
+- [x] C6: the reverse-gap list is tool-produced and every item (including the Julia-only
       extras: `SourceCovariance`, two-part ZI) has a written decision from a fixed vocabulary
       (`KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
       `RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`) — a placeholder like `"TBD"` or
@@ -1114,7 +1137,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
   does not mean" heading is present; `C7 parity_page_has_exact_not_mean_heading=true` /
   `C7_MET`. Pin-independent (the page is not gllvmTMB-ref-scoped).
 
-- [ ] C8: every R export at P1 is twinned (case-map row with a resolving Julia receipt AND
+- [x] C8: every R export at P1 is twinned (case-map row with a resolving Julia receipt AND
       non-empty `executable_case_ids`) or carries a real signed disposition (`signed_by` +
       `signed_on`, see the case-map schema above); name matches alone never count — a
       `semantic_divergence` row fails this clause unless it is properly signed, however many
@@ -1141,12 +1164,12 @@ modes on `origin/main`, which is the honest state, not a false pass.
 One F-gate per capability named in the D-295 boundary; each becomes a scoreboard row under
 C2 once A0c/A0d land. Listed here so the boundary is legible without re-reading the plan:
 
-- [ ] F-ISDM-1FO-PREDICT — R's public door, non-spatial, Laplace, first order plus `predict`
-- [ ] F-TEMPORAL-1FO — Gaussian rank-1 latent score, AR1/OU, first order
-- [ ] F-PHYLO-LATENT-1FO — `phylo_latent()` bare, first-order paired (carries A14/A15 from
+- [x] F-ISDM-1FO-PREDICT — R's public door, non-spatial, Laplace, first order plus `predict` (docs/dev-log/2026-10-20-p1-f-isdm-1fo-predict.md)
+- [x] F-TEMPORAL-1FO — Gaussian rank-1 latent score, AR1/OU, first order (docs/dev-log/2026-10-20-p1-f-temporal-1fo.md)
+- [x] F-PHYLO-LATENT-1FO — `phylo_latent()` bare, first-order paired (carries A14/A15 from
   the 0.7.0 scoreboard)
-- [ ] F-ORDINAL-LOGIT-1FO — `ordinal_logit`, first order
-- [ ] F-ZI-1FO — R-semantics `zi_*`, first order (Julia's own two-part ZI stays a documented
+- [x] F-ORDINAL-LOGIT-1FO — `ordinal_logit`, first order
+- [x] F-ZI-1FO — R-semantics `zi_*`, first order (Julia's own two-part ZI stays a documented
   extra; a name match alone never signs this row, see C8)
 
 CHECK: none yet (informational; folds into C2 once the P1 scoreboard carries these ids)

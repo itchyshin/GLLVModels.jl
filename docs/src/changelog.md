@@ -87,6 +87,18 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   by decision (e.g. GP-1).
 
 ### Fixed
+- **FIX:** three fitters no longer report `converged = true` off an optimum
+  (refs #754, #753, #781). `fit_branch_re` requires a small Nelder–Mead
+  simplex in parameter space and records `sigma2_boundary` when `σ²` or
+  `σ²_eps` is at or below `1e-8 * var(y)`; constant or non-finite `y` raise
+  `ArgumentError` naming the data.   `em_fit_phylo` and
+  `em_fit_phylo_squarem` record `sigma_eps_boundary` when the M-step
+  clamps `σ_eps²` to `1e-8 * mean(y.^2)` and then leave `converged` false.
+  Both floors are fractions of the data scale; SQUAREM's main path
+  carries the clamp flag. `fit_zinb_gllvm_cov(iterations = 0)` evaluates
+  the start only, returns `converged = false`, and rejects a non-finite
+  `θ_init`. None of these checks use an absolute gradient or objective
+  tolerance. #752 (xlv constrained refit) is a sibling, not this change.
 - **FIX:** every non-Gaussian **Wald** standard error was wrong. The
   observed-information finite-difference Hessian (`_fd_hessian`, backing
   `confint(fit, Y; method=:wald)` and `_family_wald` for Poisson / Binomial / NB /
@@ -123,6 +135,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   hygiene) and JET (type-stability of the O(p) kernels) run in CI.
 - **IN:** isolated RCall.jl parity scaffold (`test/parity/`, opt-in) for
   checking agreement against R `gllvmTMB`.
+
+## GLLVModels.jl v0.3.0
+
+Broad gllvmTMB-targeted capability build-out (2026-06-07). The full entry is in the
+[root `CHANGELOG.md`](https://github.com/itchyshin/GLLVModels.jl/blob/main/CHANGELOG.md).
 
 ## GLLVModels.jl v0.2.0
 
