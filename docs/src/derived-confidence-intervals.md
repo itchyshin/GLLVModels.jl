@@ -48,7 +48,11 @@ and structural ones included (`vcov` is all `NaN`), as R's `loading_ci()` return
 intervals) set it to `false`, while `loading_ci` rows carry no such field.
 `loading_ci(...; method = :profile)` is refused on a pinned fit, because its
 refits do not hold the pins; `loading_profile(fit; y)` profiles the
-confirmatory model. Unlike R, `loading_ci` and `loading_profile_exploratory`
+confirmatory model. `loading_profile_exploratory` is a different estimand from
+R's `loading_profile()`: it profiles a raw loading under the built-in
+lower-triangular constraint, whereas R (and `loading_profile`) profile a loading
+under user-specified pins. The two concern the same kind of quantity, but not
+the same estimand. Unlike R, `loading_ci` and `loading_profile_exploratory`
 also run on an exploratory fit without pins, where the lower-triangular packing
 convention (`src/packing.jl`) is the identifiability device; R's
 `loading_ci()` refuses such a fit. As in R, a constraint whose only numeric
