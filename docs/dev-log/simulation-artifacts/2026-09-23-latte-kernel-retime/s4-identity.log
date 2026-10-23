@@ -1,0 +1,14 @@
+┌ Info: latte-kernel identity
+│   label = "poisson_direct"
+└   Δll = 0.0
+┌ Info: latte-kernel identity
+│   label = "nb2_direct"
+└   Δll = 2.204197437733627e-16
+┌ Info: NB2 joint fit identity
+└   Δll = 1.2224252163534862e-16
+┌ Info: latte-kernel identity
+│   label = "phylo_correlated_W"
+└   Δll = 0.0
+Test Summary:                        | Pass  Total  Time
+Latte-kernel S4 identity (rtol 1e-8) |   26     26  9.9s
+GATE S4 latte-kernel identity complete

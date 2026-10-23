@@ -101,7 +101,7 @@ function _fit_julia(cell_id::AbstractString, Y)
     elseif cell_id == "beta_logit"
         return fit_gllvm(Y; family = GLLVModels.Beta(), K = 1, g_tol = 1e-7, iterations = 800)
     elseif cell_id == "nb2_log"
-        return fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = 2, g_tol = 1e-7, iterations = 800)
+        return fit_gllvm(Y; family = GLLVModels.NegativeBinomial(), K = 2, disp_group = :species, g_tol = 1e-7, iterations = 800)
     else
         error("unknown cell $cell_id")
     end

@@ -28,9 +28,11 @@
 #      near the MLE, since D ≈ (c−θ̂)²/SE²), with a bisection safeguard — a few
 #      refits instead of ~log2(width/tol) bisections, at the same crossing.
 #
-# The result on log-SD-style parameters (σ_eps, σ_B, σ_W, σ_phy) is
-# converted to the raw scale via exp(.) to match the convention of
-# src/confint.jl: bounds are reported on the natural (positive) scale.
+# The result on log-SD-style parameters (σ_eps, σ_B, σ_W) is converted to
+# the raw scale via exp(.) to match the convention of src/confint.jl: bounds
+# are reported on the natural (positive) scale. σ_phy is the exception: it is
+# packed on an identity (signed) scale, so its bounds stay on that raw scale
+# and can be negative (#136).
 #
 # Constrained-refit mechanics: Optim.jl has no first-class
 # "hold parameter k fixed" interface, so we instead define a closure
@@ -115,9 +117,10 @@ function _profile_all_term_names(fit::GllvmFit)
     end
 
     if has_phy_unique
+        # σ_phy uses an identity (signed) link — profile bounds stay on the raw scale.
         for t in 1:p
             push!(terms, "sigma_phy[$t]")
-            push!(kinds, :log_sd)
+            push!(kinds, :linear)
         end
     end
 
@@ -174,7 +177,10 @@ function _profile_free_X(fit::GllvmFit, X::Union{Nothing, AbstractArray{<:Real, 
 end
 
 # Wald SE at θ̂_i via the observed information matrix. Returns NaN if
-# the Hessian is non-finite or the i-th diagonal of inv(H) is ≤ 0.
+# the Hessian is non-finite or the i-th diagonal of inv(H) is ≤ 0. On a
+# `lambda_constraint` fit the pinned loadings are not parameters: only the
+# free block is inverted (as `confint(...; method = :wald)`), and a pinned
+# index gets 0 (refs #794).
 function _profile_wald_se(fit::GllvmFit, i::Integer,
                           y::AbstractMatrix,
                           X::Union{Nothing, AbstractArray{<:Real, 3}},
@@ -191,11 +197,14 @@ function _profile_wald_se(fit::GllvmFit, i::Integer,
     if !all(isfinite, H)
         return NaN
     end
+    pins = _lambda_constraint_pinned_theta_indices(fit)
     Σ_inv = try
-        inv((H .+ H') ./ 2)
+        Hsym = (H .+ H') ./ 2
+        isempty(pins) ? inv(Hsym) : _inv_free_block(Hsym, pins)
     catch
         return NaN
     end
+    insorted(i, pins) && return 0.0
     v = diag(Σ_inv)[i]
     return (isfinite(v) && v > 0) ? sqrt(v) : NaN
 end
@@ -392,6 +401,13 @@ be supplied so this function can reconstruct the NLL closure. `X` and
 Returns a NamedTuple with fields:
   - `lower::Float64` — lower CI bound on the raw scale for SD-style
     parameters (σ_eps, σ_B, σ_W, σ_phy), native scale for β / Λ.
+    `σ_phy` is a signed parameter (#136), so this interval can cross zero.
+    When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can
+    flip on its own (for a tree-derived `Σ_phy`, each daughter clade of the
+    root); when `K_phy ≥ 1`, it is not
+    identified separately from `Λ_phy` and a per-entry interval is not
+    interpretable. It is not gllvmTMB's
+    `phylo_unique` scale; see the gllvmTMB parity page.
   - `upper::Float64` — upper CI bound, same scale convention.
   - `method::Symbol` — `:profile` if both bounds were bracketed,
     `:partial` if only one side was found (the other is NaN), or
@@ -402,6 +418,10 @@ Failure modes (each side independently):
     `max_expand` geometric expansions → that bound is `NaN`.
   - A constrained refit at a candidate value fails → bracket contracts
     inward on that side, still typically yielding a finite bound.
+
+`confint(fit, y; parm, method = :profile)` calls this function for each selected
+term and returns the bounds with the term names and estimates; see
+[`confint`](@ref).
 """
 function profile_ci(fit::GllvmFit, param_index::Integer;
                     level::Real = 0.95,
@@ -426,10 +446,12 @@ function profile_ci(fit::GllvmFit, param_index::Integer;
         throw(ArgumentError("profile_max_expand/max_expand must be positive; got $max_expand_eff"))
     max_bisect_eff > 0 ||
         throw(ArgumentError("profile_max_bisect/max_bisect must be positive; got $max_bisect_eff"))
+    _check_unpinned_refit(fit, "profile_ci")
     _has_lv_predictor(fit) && throw(ArgumentError(
         "profile_ci for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
     y === nothing && throw(ArgumentError(
         "profile_ci requires the data matrix `y` (the same matrix passed to fit_gaussian_gllvm)"))
+    X = _mean_X(fit, X, size(y, 2))
 
     if _has_gaussian_record(fit)
         terms,_=_confint_all_term_names(fit)
@@ -679,6 +701,7 @@ function tmbprofile_wrapper(fit::GllvmFit, param_index::Integer;
                             y::Union{Nothing, AbstractMatrix} = nothing,
                             X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                             Σ_phy::Union{Nothing, AbstractMatrix} = nothing)
+    _check_unpinned_refit(fit, "tmbprofile_wrapper")
     _has_lv_predictor(fit) && throw(ArgumentError(
         "tmbprofile_wrapper for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path"))
     y === nothing && throw(ArgumentError(
@@ -743,9 +766,15 @@ end
 """
     profile_phylo_signal(fit::GllvmFit, t::Integer; kwargs...) -> NamedTuple
 
-Bare profile-CURVE variant scoped to the per-trait phylogenetic-unique SD
-`sigma_phy[t]` (a raw packed parameter, present iff the fit used
-`has_phy_unique = true`).
+Bare profile-CURVE variant scoped to the per-trait phylogenetic-unique scale
+`sigma_phy[t]` (a raw packed parameter on an identity, signed link — no `exp`
+back-transform; present iff the fit used `has_phy_unique = true`).
+
+`σ_phy` is a signed parameter (#136), so this curve can extend below zero.
+When `K_phy = 0`, the sign of each group of rows that `Σ_phy` links can flip
+on its own (for a tree-derived `Σ_phy`, each daughter clade of the root); when `K_phy ≥ 1`, it is not identified separately from
+`Λ_phy` and a per-entry interval is not interpretable. It is not gllvmTMB's `phylo_unique` scale; see the gllvmTMB
+parity page.
 
 Honest scope note: this is NOT the composite phylogenetic-SIGNAL summary
 `phylo_signal(fit)[t]` (an H²-like ratio of variance components) that

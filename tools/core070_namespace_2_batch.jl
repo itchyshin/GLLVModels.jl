@@ -168,7 +168,7 @@ oracle = json_read(oracle_path)
 # (lognormal/truncated_poisson) — same-point identity checks keep 1e-6..1e-8
 # elsewhere. 1e-6 here was a miscalibration of a not-yet-accepted contract,
 # observed failing at delta 4.52e-6 with all semantic checks true.
-tol = Dict("loglik_delta" => 1e-4, "coef_delta" => 1e-4)
+tol = Dict("loglik_delta" => 1e-4, "coef_delta" => 1e-4, "LLt_delta" => 1e-4)
 cases = Dict{String, Any}()
 
 # ---------------------------------------------------------------------------
@@ -190,20 +190,33 @@ j_loglik_g = fit_g.logLik
 r_coef_g = Float64.(g["coef"])
 r_loglik_g = Float64(g["loglik"])
 
+# Loadings comparand (namespace export/gllvmTMB option (a), D-319): Lambda Lambda', which is
+# rotation and sign invariant, against R's latent-only unit-level Sigma; p x p, column-major.
+# Same harness tolerance family as the point estimates (1e-4).
+L_g = Matrix{Float64}(GLLVModels.getLoadings(fit_g; rotate = true))
+j_LLt_g = vec(L_g * L_g')
+r_LLt_g = Float64.(g["LLt"])
+
 coef_delta = length(j_coef_g) == length(r_coef_g) ? maximum(abs.(j_coef_g .- r_coef_g)) : Inf
 loglik_delta_g = abs(j_loglik_g - r_loglik_g)
+LLt_delta_g = length(j_LLt_g) == length(r_LLt_g) ? maximum(abs.(j_LLt_g .- r_LLt_g)) : Inf
 cases["CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT"] = Dict(
-    "pass" => coef_delta <= tol["coef_delta"] && loglik_delta_g <= tol["loglik_delta"],
-    "coef_delta" => coef_delta, "loglik_delta" => loglik_delta_g,
+    "pass" => coef_delta <= tol["coef_delta"] && loglik_delta_g <= tol["loglik_delta"] &&
+              LLt_delta_g <= tol["LLt_delta"],
+    "coef_delta" => coef_delta, "loglik_delta" => loglik_delta_g, "LLt_delta" => LLt_delta_g,
+    # Raw values (additive, P1 re-measure): lets a receipt writer recompute every diff.
+    "julia_coef" => collect(Float64, j_coef_g), "julia_loglik" => Float64(j_loglik_g),
+    "r_coef" => r_coef_g, "r_loglik" => r_loglik_g,
+    "julia_LLt" => j_LLt_g, "r_LLt" => r_LLt_g,
 )
 
 # ---------------------------------------------------------------------------
-# Case 2: CORE070-NAMESPACE2-GLLVModels-JULIA-SETUP-BRIDGE-ADMISSION
+# Case 2: CORE070-NAMESPACE2-GLLVM-JULIA-SETUP-BRIDGE-ADMISSION
 # ---------------------------------------------------------------------------
 pkgdir_matches_pwd = realpath(Base.pkgdir(GLLVModels)) == realpath(pwd())
 julia_version_string = string(VERSION)
 setup_precondition_r = oracle["setup_precondition_r"] === true
-cases["CORE070-NAMESPACE2-GLLVModels-JULIA-SETUP-BRIDGE-ADMISSION"] = Dict(
+cases["CORE070-NAMESPACE2-GLLVM-JULIA-SETUP-BRIDGE-ADMISSION"] = Dict(
     "pass" => pkgdir_matches_pwd && setup_precondition_r && !isempty(julia_version_string),
     "pkgdir_matches_pwd" => pkgdir_matches_pwd,
     "setup_precondition_r" => setup_precondition_r,
@@ -211,7 +224,7 @@ cases["CORE070-NAMESPACE2-GLLVModels-JULIA-SETUP-BRIDGE-ADMISSION"] = Dict(
 )
 
 # ---------------------------------------------------------------------------
-# Case 3: CORE070-NAMESPACE2-GLLVModels-JULIA-FIT-BRIDGE-ADMISSION
+# Case 3: CORE070-NAMESPACE2-GLLVM-JULIA-FIT-BRIDGE-ADMISSION
 # ---------------------------------------------------------------------------
 gate = oracle["gate"]
 gate_gaussian_ok = gate["gaussian"]["ok"] === true && gate["gaussian"]["key"] == "gaussian"
@@ -219,7 +232,7 @@ bridge_key_gaussian = GLLVModels._bridge_family_key("gaussian") == "gaussian"
 
 br_g = GLLVModels.bridge_fit(; y = Y_g, family = "gaussian", d = K_g, X = X_g)
 bridge_loglik_delta = abs(br_g.loglik - r_loglik_g)
-cases["CORE070-NAMESPACE2-GLLVModels-JULIA-FIT-BRIDGE-ADMISSION"] = Dict(
+cases["CORE070-NAMESPACE2-GLLVM-JULIA-FIT-BRIDGE-ADMISSION"] = Dict(
     "pass" => gate_gaussian_ok && bridge_key_gaussian && bridge_loglik_delta <= tol["loglik_delta"],
     "gate_gaussian_ok" => gate_gaussian_ok, "bridge_key_gaussian" => bridge_key_gaussian,
     "bridge_loglik_delta" => bridge_loglik_delta,

@@ -47,35 +47,59 @@ NB1() = NB1(1.0)
 # No closed form ⇒ summed over the NB pmf via the stable recursion
 #   P₀ = p^r,  P_y = P_{y−1}·(1−p)·(y−1+r)/y,   until the tail mass is negligible.
 # Returns max(I_μ, 1e-12) so the working weight is strictly positive (SPD).
+# ψ(y + r) − ψ(r) and ψ'(y + r) − ψ'(r) for an integer count y ≥ 0, summed over
+# k = 0..y−1 (Σ 1/(r+k) and −Σ 1/(r+k)²). With r = μ/φ these must stay accurate
+# toward the Poisson limit φ → 0, where r is huge and differencing digamma or trigamma
+# cancels the result away: at φ = 1e-6 the old d logpdf / d log φ was 40 times too
+# large, and by φ = 1e-10 it had the wrong size entirely (#615 NB1 follow-up). Very
+# large y falls back to the closed forms, where the difference is no longer tiny.
+function _nb1_rise_diffs(r, y::Integer)
+    if y > 10_000
+        return (digamma(y + r) - digamma(r), trigamma(y + r) - trigamma(r))
+    end
+    d1 = zero(float(r)); d2 = zero(float(r))
+    @inbounds for k in 0:(y - 1)
+        w = inv(r + k)
+        d1 += w
+        d2 -= w * w
+    end
+    return (d1, d2)
+end
+
 function _nb1_fisher_mu(μ::Real, φ::Real)
-    # For tiny φ, NB1 is in the Poisson-limit regime. The exact expression
-    # below subtracts nearly equal trigamma terms and divides by φ^2, which is
-    # numerically unstable even though the limit is well behaved.
+    # For tiny φ, NB1 is in the Poisson-limit regime, I_μ → 1/μ.
     if φ <= 1e-6
         return max(inv(μ * (1 + φ)), 1e-12)
     end
+    # I_μ = (1/φ²) E[ψ'(r) − ψ'(y+r)] = (1/φ²) E[Σ_{k<y} 1/(r+k)²]: accumulate the sum
+    # directly so no nearly equal trigamma terms are subtracted.
     r = μ / φ
     q = φ / (1 + φ)                      # 1 − p, the NB "failure" probability
-    tr_r = trigamma(r)
-    P = (1 - q)^r                        # P(y = 0) = p^r
+    P = exp(-r * log1p(φ))               # P(y = 0) = p^r, without rounding p = 1/(1+φ)
     cum = P
-    Eψ = P * tr_r                        # y = 0 term: ψ'(0 + r)
+    S = zero(float(r))                   # Σ_{k<y} 1/(r+k)², zero at y = 0
+    E = zero(float(r))
     y = 0
     @inbounds while cum < 1 - 1e-12 && y < 10_000
         y += 1
+        S += inv(r + y - 1)^2
         P *= q * (y - 1 + r) / y
-        Eψ += P * trigamma(y + r)
+        E += P * S
         cum += P
     end
-    return max((tr_r - Eψ) / φ^2, 1e-12)
+    # Mass beyond the y cap (large μ): count it as the old formula did, ψ'(r) − 0 per
+    # unit of mass, so that case is unchanged; without it the weight collapses there.
+    y >= 10_000 && (E += (1 - cum) * trigamma(r))
+    return max(E / φ^2, 1e-12)
 end
 
 _clamp_mu(::NB1, μ) = max(μ, 1e-12)
 # Score wrt η: me·∂logf/∂μ,  ∂logf/∂μ = (1/φ)[ψ(y+r) − ψ(r) − log(1+φ)],  r = μ/φ.
-_glm_score(f::NB1, μ, n, me, y) = me * (digamma(y + μ / f.φ) - digamma(μ / f.φ) - log1p(f.φ)) / f.φ
+_glm_score(f::NB1, μ, n, me, y) = me * (first(_nb1_rise_diffs(μ / f.φ, Int(y))) - log1p(f.φ)) / f.φ
 # Expected-information working weight wrt η:  me²·I_μ.
 _glm_weight(f::NB1, μ, n, me)   = me^2 * _nb1_fisher_mu(μ, f.φ)
-_glm_logpdf(f::NB1, μ, n, y)    = logpdf(NegativeBinomial(μ / f.φ, 1 / (1 + f.φ)), Int(y))
+# NB1(μ, φ) is NB2 with size r = μ/φ; `_nb2_logpdf_mean` stays accurate as r grows (φ → 0).
+_glm_logpdf(f::NB1, μ, n, y)    = _nb2_logpdf_mean(μ, μ / f.φ, Int(y))
 
 """
     nb1_marginal_loglik_laplace(Y, Λ, β, φ; link=LogLink(), kwargs...) -> Float64
@@ -101,6 +125,8 @@ nb1_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractV
 Result of [`fit_nb1_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated dispersion `φ` (linear variance `Var = μ(1+φ)`), the `link`, the
 maximised Laplace `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct NB1Fit
     β::Vector{Float64}
@@ -111,7 +137,12 @@ struct NB1Fit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (8 positional args): no stored training offset.
+NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian) =
+    NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -167,6 +198,8 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_nb1_gllvm")
     rr = rr_theta_len(p, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_nb1_gllvm: hessian must be :fisher or :observed; got :$hessian"))
@@ -185,7 +218,9 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_nb1_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
@@ -205,6 +240,7 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φ = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -nb1_marginal_loglik_laplace(Yc, Λ, β, φ; link = link, mask = msk, offset = offset,
                                          hessian = hessian,
@@ -221,5 +257,10 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    return NB1Fit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., hessian)
+    # `Optim.converged` also fires on a zero-length step far from a stationary point; require
+    # the gradient test too (#505, as in the grouped fitters).
+    ll, conv, iters = _fit_verdict(Optim.minimum(res),
+        Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm")
+    return NB1Fit(β̂, Λ̂, φ̂, link, ll, conv, iters, hessian, _stored_offset(offset))
 end

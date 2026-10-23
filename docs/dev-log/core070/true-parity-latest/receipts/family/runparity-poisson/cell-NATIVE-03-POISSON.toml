@@ -1,0 +1,14 @@
+contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
+fixture = "test/parity/test_poisson_required.jl"
+status = "success"
+run_id = "bd92e196ded48a05d0c1c6ca5ed8739236db8be40ef16e294bbe3aabe22f018a"
+fixture_sha256 = "04ffc8f9e3d5c972993072408f4e038d4f1652e34c1f9c912bfc51e0e2047049"
+id = "NATIVE-03-POISSON"
+execution_manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12557"
+execution_case_ids = ["NATIVE-03-POISSON"]
+
+[assertions]
+passed = 16
+broken = 0
+failed = 0
+errored = 0

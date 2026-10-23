@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-gauss-phylo-fit-p200	G-gauss-phylo-em adjacent; non-EM sparse phylo Gaussian fit p=200	fit_phylo_gaussian	0.020452	NaN	julia_abs_only; label≠EM; univariate tip response	ok	unknown	fc20355	4

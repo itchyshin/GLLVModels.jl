@@ -1,0 +1,119 @@
+{
+  "kind": "destination_b_s4_public_phylo_dep_failed_attempt",
+  "schema": 1,
+  "status": "failed_test_attempt_not_a_receipt",
+  "receipt_path": "/Users/z3437171/local-scratch/gllvm-s4-probe-run-20260924/docs/dev-log/core070/s4-public-phylo-dep-probe-receipt-2026-09-24.json",
+  "source": {
+    "sealed_build": {
+      "path": "/Users/z3437171/local-scratch/gllvmtmb-s4-recorder-97214679c/docs/dev-log/artifacts/2026-09-10-destination-b-s4-phylo-dep-build-seal/destination-b-s4-phylo-dep-build-seal.json",
+      "sha256": "a16bf7ecae725c8e3fb7282c7ae6b63b7f648cf052da8f46556a1ff7b1d61d9e",
+      "source_archive_sha256": "62208640189794c6e442b98e6917f22abb9d6f78ae0d15edc85ccaeac6929080",
+      "source_commit": "8889d8a4d2d88e1cfd60f7b644eb79e71a7346f4",
+      "binary_identity": {
+        "source_dll": {
+          "path": "/Users/z3437171/local-scratch/gllvmtmb-s4-recorder-97214679c/docs/dev-log/artifacts/2026-09-10-destination-b-s4-phylo-dep-build-seal/isolated-library/gllvmTMB/libs/gllvmTMB.so",
+          "sha256": "eba1d3c5d5c26303f0e730a87ee70a627eb508c35f9419610fad08e37ccbb2f8",
+          "uuid": "793A5DB4-227D-33C4-9DCE-2BE66FD6865F",
+          "bytes": 4988376
+        },
+        "loaded_dll": {
+          "path": "docs/dev-log/artifacts/2026-09-10-destination-b-s4-phylo-dep-build-seal/isolated-library/gllvmTMB/libs/gllvmTMB.so",
+          "sha256": "eba1d3c5d5c26303f0e730a87ee70a627eb508c35f9419610fad08e37ccbb2f8",
+          "uuid": "793A5DB4-227D-33C4-9DCE-2BE66FD6865F",
+          "bytes": 4988376
+        }
+      }
+    },
+    "r_runtime": {
+      "snapshot": {
+        "root": "/Users/z3437171/local-scratch/gllvmtmb-s4-recorder-97214679c",
+        "commit": "97214679c94cc4a6b9e02d3c2b03ccce516027d8"
+      },
+      "validated_runtime_root": {
+        "root": "/Users/z3437171/local-scratch/gllvmtmb-s4-recorder-97214679c",
+        "archive_root_commit": "8889d8a4d2d88e1cfd60f7b644eb79e71a7346f4",
+        "runtime_commit": "97214679c94cc4a6b9e02d3c2b03ccce516027d8"
+      }
+    },
+    "gllvm_runtime": {
+      "root": "/Users/z3437171/local-scratch/gllvm-s4-probe-run-20260924/tools/destination_b/probe_env/GLLVM",
+      "commit": "943a3be490153005613ceed2d33fc42598cfa199"
+    },
+    "runner_identity": {
+      "path": "/Users/z3437171/local-scratch/gllvmtmb-s4-recorder-97214679c/tests/testthat/run-destination-b-s4-public-phylo-dep-isolated.R",
+      "sha256": "920e7f342af23ae9d826ae09d5adc97384b5645d98f6e14d50d83f569281b9f7"
+    },
+    "julia_probe": {
+      "executable": "/Users/z3437171/.julia/juliaup/julia-1.10.0+0.aarch64.apple.darwin14/bin/julia",
+      "executable_sha256": "fd739b38b3a1ac367a5dff676834db5ff873e75e4e8220c8793e41be1b4ead30",
+      "active_project": "/Users/z3437171/local-scratch/gllvm-s4-probe-run-20260924/tools/destination_b/probe_env/Project.toml",
+      "package_root": "/Users/z3437171/local-scratch/gllvm-s4-probe-run-20260924/tools/destination_b/probe_env/GLLVM",
+      "environment": "/Users/z3437171/local-scratch/gllvm-s4-probe-run-20260924/tools/destination_b/probe_env",
+      "output_sha256": "8d31c3891c3eaf8fb35764a433f620116b4c53c1b3f24b4cb3e0718064ae9f71"
+    },
+    "selected_test_expressions": {
+      "generic_engine_closed": "test_that(\"generic engine remains closed for the public phylo_dep formula\", \n    {\n        skip_if_not_installed(\"ape\")\n        tree <- ape::read.tree(text = \"(sp1:2,sp2:2,sp3:2);\")\n        data <- data.frame(individual = seq_len(3L), species = c(\"sp1\", \n            \"sp2\", \"sp3\"), trait_1 = c(0.2, 1.4, 0.8), trait_2 = c(0.1, \n            0.7, 0.4))\n        expect_error(gllvmTMB(traits(trait_1, trait_2) ~ 1 + \n            phylo_dep(1 | species, tree = tree), data = data, \n            unit = \"individual\", family = gaussian(), engine = \"julia\"), \n            \"GJL-GATE-STRUCTURED-TERMS\")\n    })",
+      "paired_endpoint_formula": "test_that(\"S4 public phylo_dep formula retains paired transformed-Wald endpoints\", \n    {\n        skip_if_not(identical(Sys.getenv(\"GLLVM_S4_LIVE_FORMULA_TESTS\"), \n            \"1\"))\n        skip_if_not_installed(\"JuliaCall\")\n        skip_if_not_installed(\"ape\")\n        julia_project <- Sys.getenv(\"GLLVM_DESTINATION_B_PROJECT\")\n        julia_home <- Sys.getenv(\"GLLVM_S4_JULIA_HOME\")\n        if (!nzchar(julia_project) || !nzchar(julia_home)) {\n            skip(\"set GLLVM_DESTINATION_B_PROJECT and GLLVM_S4_JULIA_HOME for the opt-in S4 paired workflow\")\n        }\n        tree <- ape::read.tree(text = \"(sp1:2,sp2:2,sp3:2);\")\n        data <- data.frame(individual = seq_len(9L), species = rep(c(\"sp1\", \n            \"sp2\", \"sp3\"), each = 3L), trait_1 = c(0.2, 0.4, \n            0.1, 1.4, 1.3, 1.5, 0.8, 0.9, 1), trait_2 = c(0.1, \n            0.3, 0.2, 0.7, 0.8, 0.6, 0.4, 0.5, 0.6))\n        native <- gllvmTMB(traits(trait_1, trait_2) ~ 1 + phylo_dep(1 | \n            species, tree = tree), data = data, unit = \"individual\", \n            family = gaussian(), control = gllvmTMBcontrol(se = TRUE))\n        julia <- gllvm_julia_phylo_rr(native, ci_level = 0.9, \n            jl_path = julia_project, julia_home = julia_home)\n        fixed <- native$opt$par\n        full <- native$tmb_obj$env$last.par.best\n        native_targets <- function(parameters) {\n            full_parameters <- full\n            full_parameters[seq_along(parameters)] <- parameters\n            report <- native$tmb_obj$report(full_parameters)\n            c(`beta[1]` = unname(parameters[1L]), `beta[2]` = unname(parameters[2L]), \n                `phylo_cov[1,1]` = report$Sigma_phy[1L, 1L], \n                `phylo_cov[2,1]` = report$Sigma_phy[2L, 1L], \n                `phylo_cov[2,2]` = report$Sigma_phy[2L, 2L], \n                `residual_var_shared[1]` = report$sigma_eps^2, \n                `residual_var_shared[2]` = report$sigma_eps^2)\n        }\n        native_estimate <- native_targets(fixed)\n        step <- 1e-05\n        jacobian <- sapply(seq_along(fixed), function(index) {\n            plus <- minus <- fixed\n            plus[index] <- plus[index] + step\n            minus[index] <- minus[index] - step\n            (native_targets(plus) - native_targets(minus))/(2 * \n                step)\n        })\n        covariance <- native$sd_report$cov.fixed\n        native_se <- sqrt(pmax(0, diag(jacobian %*% covariance %*% \n            t(jacobian))))\n        critical <- stats::qnorm(0.95)\n        native_lower <- native_estimate - critical * native_se\n        native_upper <- native_estimate + critical * native_se\n        log_targets <- names(native_estimate) %in% c(\"phylo_cov[1,1]\", \n            \"phylo_cov[2,2]\", \"residual_var_shared[1]\", \"residual_var_shared[2]\")\n        log_jacobian <- jacobian[log_targets, , drop = FALSE]/native_estimate[log_targets]\n        log_se <- sqrt(pmax(0, diag(log_jacobian %*% covariance %*% \n            t(log_jacobian))))\n        native_lower[log_targets] <- exp(log(native_estimate[log_targets]) - \n            critical * log_se)\n        native_upper[log_targets] <- exp(log(native_estimate[log_targets]) + \n            critical * log_se)\n        julia_ci <- confint(julia, level = 0.9)\n        embedded_julia_active_project <- normalizePath(as.character(JuliaCall::julia_eval(\"string(Base.active_project())\")), \n            mustWork = TRUE)\n        embedded_julia_package_root <- normalizePath(as.character(JuliaCall::julia_eval(\"string(Base.pkgdir(GLLVM))\")), \n            mustWork = TRUE)\n        expect_identical(embedded_julia_active_project, normalizePath(file.path(julia_project, \n            \"Project.toml\"), mustWork = TRUE))\n        expect_identical(embedded_julia_package_root, normalizePath(julia_project, \n            mustWork = TRUE))\n        expect_identical(rownames(julia_ci), names(native_estimate))\n        expect_equal(as.numeric(julia$phylo_covariance), as.numeric(native$report$Sigma_phy), \n            tolerance = 5e-06)\n        expect_equal(as.numeric(julia_ci[, 1L]), unname(native_lower), \n            tolerance = 1e-04)\n        expect_equal(as.numeric(julia_ci[, 2L]), unname(native_upper), \n            tolerance = 1e-04)\n        assign(\".s4_public_phylo_dep_receipt\", list(target_names = rownames(julia_ci), \n            native_lower = unname(native_lower), native_upper = unname(native_upper), \n            julia_lower = as.numeric(julia_ci[, 1L]), julia_upper = as.numeric(julia_ci[, \n                2L]), embedded_julia_active_project = embedded_julia_active_project, \n            embedded_julia_package_root = embedded_julia_package_root, \n            fixture_sha256 = digest::digest(list(data = data, \n                tree = tree, formula = \"traits(trait_1, trait_2) ~ 1 + phylo_dep(1 | species, tree = tree)\", \n                family = \"gaussian\", ci_level = 0.9, test_source = readLines(\"tests/testthat/test-julia-phylo-rr-bridge.R\", \n                  warn = FALSE)), algo = \"sha256\", serialize = TRUE)), \n            envir = globalenv())\n    })"
+    }
+  },
+  "selected_test_count": 1,
+  "test_counts": {
+    "failed": 0,
+    "skipped": 0,
+    "error": 1,
+    "warning": 0
+  },
+  "test_tab": {
+    "file": "destination-b-s4-public-phylo-dep-isolated",
+    "context": "destination-b-s4-public-phylo-dep-isolated",
+    "test": null,
+    "nb": 1,
+    "failed": 0,
+    "skipped": false,
+    "error": true,
+    "warning": 0,
+    "user": "NA",
+    "system": "NA",
+    "real": "NA",
+    "passed": 0,
+    "result": [
+      [
+        {
+          "message": "Error in `test_that(\"generic engine remains closed for the public phylo_dep formula\", {     skip_if_not_installed(\"ape\")     tree <- ape::read.tree(text = \"(sp1:2,sp2:2,sp3:2);\")     data <- data.frame(individual = seq_len(3L), species = c(\"sp1\", \"sp2\", \"sp3\"), trait_1 = c(0.2, 1.4, 0.8), trait_2 = c(0.1, 0.7, 0.4))     expect_error(gllvmTMB(traits(trait_1, trait_2) ~ 1 + phylo_dep(1 | species, tree = tree), data = data, unit = \"individual\", family = gaussian(), engine = \"julia\"), \"GJL-GATE-STRUCTURED-TERMS\") })`: could not find function \"test_that\"",
+          "class": [
+            "expectation_error",
+            "expectation",
+            "error",
+            "condition"
+          ],
+          "call": {},
+          "backtrace": "▆"
+        }
+      ]
+    ]
+  },
+  "raw_output": [],
+  "raw_output_sha256": "ec3439fb25b1807b5481e41b0a7c0b7dbb3712babf054828c718d22ae04c2c9b",
+  "raw_output_information_gap": "Raw capture.output lines are retained unchanged. ListReporter raw output can omit expectation condition details; available condition message, call, and backtrace data are retained separately in reporter_details.",
+  "reporter_details": [
+    {
+      "file": "destination-b-s4-public-phylo-dep-isolated",
+      "context": "destination-b-s4-public-phylo-dep-isolated",
+      "test": null,
+      "expectations": [
+        {
+          "class": ["expectation_error", "expectation", "error", "condition"],
+          "message": "Error in `test_that(\"generic engine remains closed for the public phylo_dep formula\", {     skip_if_not_installed(\"ape\")     tree <- ape::read.tree(text = \"(sp1:2,sp2:2,sp3:2);\")     data <- data.frame(individual = seq_len(3L), species = c(\"sp1\", \"sp2\", \"sp3\"), trait_1 = c(0.2, 1.4, 0.8), trait_2 = c(0.1, 0.7, 0.4))     expect_error(gllvmTMB(traits(trait_1, trait_2) ~ 1 + phylo_dep(1 | species, tree = tree), data = data, unit = \"individual\", family = gaussian(), engine = \"julia\"), \"GJL-GATE-STRUCTURED-TERMS\") })`: could not find function \"test_that\"",
+          "call": {},
+          "backtrace": "▆"
+        },
+        {
+          "class": ["expectation_error", "expectation", "error", "condition"],
+          "message": "Error in `test_that(\"S4 public phylo_dep formula retains paired transformed-Wald endpoints\", {     skip_if_not(identical(Sys.getenv(\"GLLVM_S4_LIVE_FORMULA_TESTS\"), \"1\"))     skip_if_not_installed(\"JuliaCall\")     skip_if_not_installed(\"ape\")     julia_project <- Sys.getenv(\"GLLVM_DESTINATION_B_PROJECT\")     julia_home <- Sys.getenv(\"GLLVM_S4_JULIA_HOME\")     if (!nzchar(julia_project) || !nzchar(julia_home)) {         skip(\"set GLLVM_DESTINATION_B_PROJECT and GLLVM_S4_JULIA_HOME for the opt-in S4 paired workflow\")     }     tree <- ape::read.tree(text = \"(sp1:2,sp2:2,sp3:2);\")     data <- data.frame(individual = seq_len(9L), species = rep(c(\"sp1\", \"sp2\", \"sp3\"), each = 3L), trait_1 = c(0.2, 0.4, 0.1, 1.4, 1.3, 1.5, 0.8, 0.9, 1), trait_2 = c(0.1, 0.3, 0.2, 0.7, 0.8, 0.6, 0.4, 0.5, 0.6))     native <- gllvmTMB(traits(trait_1, trait_2) ~ 1 + phylo_dep(1 | species, tree = tree), data = data, unit = \"individual\", family = gaussian(), control = gllvmTMBcontrol(se = TRUE))     julia <- gllvm_julia_phylo_rr(native, ci_level = 0.9, jl_path = julia_project, julia_home = julia_home)     fixed <- native$opt$par     full <- native$tmb_obj$env$last.par.best     native_targets <- function(parameters) {         full_parameters <- full         full_parameters[seq_along(parameters)] <- parameters         report <- native$tmb_obj$report(full_parameters)         c(`beta[1]` = unname(parameters[1L]), `beta[2]` = unname(parameters[2L]), `phylo_cov[1,1]` = report$Sigma_phy[1L, 1L], `phylo_cov[2,1]` = report$Sigma_phy[2L, 1L], `phylo_cov[2,2]` = report$Sigma_phy[2L, 2L], `residual_var_shared[1]` = report$sigma_eps^2, `residual_var_shared[2]` = report$sigma_eps^2)     }     native_estimate <- native_targets(fixed)     step <- 1e-05     jacobian <- sapply(seq_along(fixed), function(index) {         plus <- minus <- fixed         plus[index] <- plus[index] + step         minus[index] <- minus[index] - step         (native_targets(plus) - native_targets(minus))/(2 * step)     })     covariance <- native$sd_report$cov.fixed     native_se <- sqrt(pmax(0, diag(jacobian %*% covariance %*% t(jacobian))))     critical <- stats::qnorm(0.95)     native_lower <- native_estimate - critical * native_se     native_upper <- native_estimate + critical * native_se     log_targets <- names(native_estimate) %in% c(\"phylo_cov[1,1]\", \"phylo_cov[2,2]\", \"residual_var_shared[1]\", \"residual_var_shared[2]\")     log_jacobian <- jacobian[log_targets, , drop = FALSE]/native_estimate[log_targets]     log_se <- sqrt(pmax(0, diag(log_jacobian %*% covariance %*% t(log_jacobian))))     native_lower[log_targets] <- exp(log(native_estimate[log_targets]) - critical * log_se)     native_upper[log_targets] <- exp(log(native_estimate[log_targets]) + critical * log_se)     julia_ci <- confint(julia, level = 0.9)     embedded_julia_active_project <- normalizePath(as.character(JuliaCall::julia_eval(\"string(Base.active_project())\")), mustWork = TRUE)     embedded_julia_package_root <- normalizePath(as.character(JuliaCall::julia_eval(\"string(Base.pkgdir(GLLVM))\")), mustWork = TRUE)     expect_identical(embedded_julia_active_project, normalizePath(file.path(julia_project, \"Project.toml\"), mustWork = TRUE))     expect_identical(embedded_julia_package_root, normalizePath(julia_project, mustWork = TRUE))     expect_identical(rownames(julia_ci), names(native_estimate))     expect_equal(as.numeric(julia$phylo_covariance), as.numeric(native$report$Sigma_phy), tolerance = 5e-06)     expect_equal(as.numeric(julia_ci[, 1L]), unname(native_lower), tolerance = 1e-04)     expect_equal(as.numeric(julia_ci[, 2L]), unname(native_upper), tolerance = 1e-04)     assign(\".s4_public_phylo_dep_receipt\", list(target_names = rownames(julia_ci), native_lower = unname(native_lower), native_upper = unname(native_upper), julia_lower = as.numeric(julia_ci[, 1L]), julia_upper = as.numeric(julia_ci[, 2L]), embedded_julia_active_project = embedded_julia_active_project, embedded_julia_package_root = embedded_julia_package_root, fixture_sha256 = digest::digest(list(data = data, tree = tree, formula = \"traits(trait_1, trait_2) ~ 1 + phylo_dep(1 | species, tree = tree)\",          family = \"gaussian\", ci_level = 0.9, test_source = readLines(\"tests/testthat/test-julia-phylo-rr-bridge.R\", warn = FALSE)), algo = \"sha256\", serialize = TRUE)), envir = globalenv()) })`: could not find function \"test_that\"",
+          "call": {},
+          "backtrace": "▆"
+        }
+      ]
+    }
+  ]
+}

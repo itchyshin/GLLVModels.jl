@@ -1,0 +1,378 @@
+{
+  "schema": "core070-wave7-conversion-batch-contract/v1",
+  "status": "FROZEN_WAVE7_CONVERSION_BATCH_CONTRACT",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "CORE070_WAVE7_CONVERSION_BATCH",
+  "note": "Conversion batch #3 for the 45 BLOCKED_NEEDS_JULIA_SURFACE rows in docs/dev-log/core070/required-source-case-map.json whose function name (after stripping the POSTFIT-SURFACE- prefix and any S3 dot-suffix) matches an entry in names(GLLVM) as of this worktree's HEAD. Design discipline: EVERY R-side signature/return shape below was read directly from .unlazy/core070-aghq/oracle-source/readback/R/*.R -- never inferred from a Julia docstring -- per the wave-5/wave-6 lesson. That reading found that most of the 45 rows are SAME-NAME, DIFFERENT-SURFACE collisions (documented per-row in deferred[]): R's getREsd(fit, block=) covers auxiliary random-effect blocks Julia's getREsd(fit, y) does not touch at all (Julia's covers the latent factor scores R routes through getLV(se=TRUE) instead); R's compare_Sigma_table(x, truth, ...) compares a fit against a KNOWN GROUND-TRUTH matrix, not two fits; R's compare_dep_vs_two_psi(fit_two_psi, ...) is a phylogenetic 'two-psi' identifiability refit-and-compare specific to a named reparameterisation GLLVM.jl does not implement, not a generic two-fit bridge; R's vcov.gllvmTMB_multi returns the FULL (off-diagonal-capable) fixed-effect covariance block, Julia's vcov(fit,y) returns a Diagonal over ALL packed parameters; R's diagnostic_table(x, table=) requires x already carry gllvmTMB_diagnostic metadata attached by predictive_check()/residuals(), not a bare fit; R's profile_targets() is a READINESS REGISTRY (which parameters COULD be profiled, without running anything) while Julia's profile_targets() runs every target's curve directly. 7 source rows (6 distinct functions) survived that reading with a genuinely comparable R call shape on the reused gaussian_small fixture and are executable below; the remaining 38 are deferred with a per-row trace. Phylo-signal rows (profile_ci_phylo_signal, phylo_signal/profile_phylo_signal, profile_targets when phylo-scoped) are deferred per the task brief: no proven paired phylo fixture exists in this worktree's receipts (grep of test/parity/ and .unlazy/core070-aghq/ found no executed STRUCT-PHY paired fit), so inventing one is out of this lean batch's scope. slope_sd_ci is deferred for the same reason on the random-slope side: no healthy GaussianRandomSlopeFit fixture exists in this worktree's receipts, and R's own slope-sd-ci.R readback documents a prior hand-indexing failure mode on the phylo route.",
+  "target_source_ids": [
+    "namespace/export/getREsd",
+    "namespace/export/gllvmTMB_check_consistency",
+    "namespace/export/gllvmTMB_diagnose",
+    "namespace/export/loading_ci",
+    "namespace/export/predictive_check",
+    "namespace/export/profile_ci_phylo_signal",
+    "namespace/export/profile_ci_total_variance",
+    "namespace/export/profile_phylo_signal",
+    "namespace/export/profile_targets",
+    "namespace/export/sanity_multi",
+    "namespace/export/slope_sd_ci",
+    "namespace/export/standard_errors",
+    "namespace/export/tmbprofile_wrapper",
+    "postfit/POSTFIT-SURFACE-bootstrap_Sigma",
+    "postfit/POSTFIT-SURFACE-check_auto_residual",
+    "postfit/POSTFIT-SURFACE-check_gllvmTMB",
+    "postfit/POSTFIT-SURFACE-compare_Sigma_table",
+    "postfit/POSTFIT-SURFACE-compare_dep_vs_two_psi",
+    "postfit/POSTFIT-SURFACE-compare_indep_vs_two_psi",
+    "postfit/POSTFIT-SURFACE-compare_loadings",
+    "postfit/POSTFIT-SURFACE-confint_inspect",
+    "postfit/POSTFIT-SURFACE-diagnose_kernel_separability",
+    "postfit/POSTFIT-SURFACE-diagnostic_table",
+    "postfit/POSTFIT-SURFACE-extract_Gamma",
+    "postfit/POSTFIT-SURFACE-extract_cross_correlations",
+    "postfit/POSTFIT-SURFACE-extract_lv_effects",
+    "postfit/POSTFIT-SURFACE-extract_phylo_signal",
+    "postfit/POSTFIT-SURFACE-fitted.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-getREsd",
+    "postfit/POSTFIT-SURFACE-gllvmTMB_diagnose",
+    "postfit/POSTFIT-SURFACE-loading_ci",
+    "postfit/POSTFIT-SURFACE-loading_profile",
+    "postfit/POSTFIT-SURFACE-predict.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-predictive_check",
+    "postfit/POSTFIT-SURFACE-profile_ci_phylo_signal",
+    "postfit/POSTFIT-SURFACE-profile_ci_total_variance",
+    "postfit/POSTFIT-SURFACE-profile_phylo_signal",
+    "postfit/POSTFIT-SURFACE-profile_targets",
+    "postfit/POSTFIT-SURFACE-residuals.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-sanity_multi",
+    "postfit/POSTFIT-SURFACE-simulate.gllvmTMB_multi",
+    "postfit/POSTFIT-SURFACE-slope_sd_ci",
+    "postfit/POSTFIT-SURFACE-standard_errors",
+    "postfit/POSTFIT-SURFACE-tmbprofile_wrapper",
+    "postfit/POSTFIT-SURFACE-vcov.gllvmTMB_multi"
+  ],
+  "expected_case_count": 6,
+  "expected_source_row_count": 7,
+  "expected_deferred_count": 38,
+  "fixtures": {
+    "gaussian_small": {
+      "description": "Reused VERBATIM from tools/core070_surface_conversion_batch.R / tools/core070_wave6_conversion_batch.R (seed 42, p=5, K=2, n=80). value ~ 0 + trait + latent(0 + trait | site, d = 2, unique = FALSE), gaussian(), control = gllvmTMBcontrol(n_init = 1L, se = TRUE)."
+    }
+  },
+  "cases": [
+    {
+      "case_id": "CORE070-WAVE7-CHECK-AUTO-RESIDUAL",
+      "source_ids": [
+        "postfit/POSTFIT-SURFACE-check_auto_residual"
+      ],
+      "kind": "verdict",
+      "fixture": "gaussian_small",
+      "r_call": "check_auto_residual(fit_g)",
+      "julia_call": "GLLVM.check_auto_residual(fit_j)",
+      "r_field": "status == 'ok'",
+      "julia_field": "coherent",
+      "notes": "Verified from check-auto-residual.R:60-141: on a fit with no per-row family mixing (fids all identical) and no ordinal-probit trait (family id 14), R returns invisible(list(status='ok', messages=character())) with no side-effect warning/error. gaussian_small is plain gaussian(), single family, no ordinal trait -> both sides must report the coherent/ok state."
+    },
+    {
+      "case_id": "CORE070-WAVE7-SANITY-MULTI",
+      "source_ids": [
+        "postfit/POSTFIT-SURFACE-sanity_multi",
+        "namespace/export/sanity_multi"
+      ],
+      "kind": "verdict",
+      "fixture": "gaussian_small",
+      "r_call": "sanity_multi(fit_g)",
+      "julia_call": "GLLVM.sanity_multi(fit_j; y = Y_g)",
+      "r_field": "converged, pd_hessian",
+      "julia_field": "converged, pd_hessian",
+      "notes": "Verified from methods-gllvmTMB.R:2017-2080: sanity_multi(object) returns invisibly a list with $converged (object$opt$convergence == 0) and $pd_hessian (sdreport pdHess flag) among other fields. gaussian_small is fit with control=gllvmTMBcontrol(n_init=1L, se=TRUE) so both should converge with a PD Hessian; compares converged==converged and pd_hessian truthy-vs-truthy (R's NA / Julia's missing both mean 'not applicable' and are treated as agreeing only when both sides report the same non-committal state)."
+    },
+    {
+      "case_id": "CORE070-WAVE7-COMPARE-LOADINGS-SELF-CONSISTENCY",
+      "source_ids": [
+        "postfit/POSTFIT-SURFACE-compare_loadings"
+      ],
+      "kind": "own_consistency",
+      "fixture": "gaussian_small",
+      "r_call": "compare_loadings(getLoadings(fit_g), getLoadings(fit_g))",
+      "julia_call": "GLLVM.compare_loadings(fit_j, fit_j)",
+      "tolerance": 1e-06,
+      "notes": "Verified from rotate-loadings.R:428-447: R's compare_loadings(Lambda_a, Lambda_b) takes two RAW MATRICES and does a Procrustes rotation, returning $frobenius = ||Lambda_a_rot - Lambda_b||_F -- a genuinely different quantity/signature than Julia's compare_loadings(fit1, fit2) (which returns frobenius_norm_LLt, the rotation/sign-free ||Lambda1 Lambda1' - Lambda2 Lambda2'||_F tcrossprod invariant; ground rule: never compare signed Lambda entries). The two are not cross-comparable at any tolerance. What IS comparable without inventing a second model: each engine's own self-consistency when handed the SAME loadings matrix twice -- R's Procrustes frobenius(Lambda,Lambda) must be exactly 0 (perfect self-alignment), and Julia's frobenius_norm_LLt(fit,fit) must be exactly 0 (identical tcrossprod). This is an 'own_consistency' case (each side checked against its own zero, not against the other engine's number), mirroring the wave-6 own_receipt_defect pattern for a genuine surface-shape gap."
+    },
+    {
+      "case_id": "CORE070-WAVE7-FITTED-MULTI",
+      "source_ids": [
+        "postfit/POSTFIT-SURFACE-fitted.gllvmTMB_multi"
+      ],
+      "kind": "point",
+      "fixture": "gaussian_small",
+      "r_call": "fitted(fit_g)$est",
+      "julia_call": "vec(GLLVM.fitted(fit_j, Y_g))",
+      "tolerance": 0.0001,
+      "notes": "Verified from methods-gllvmTMB.R:2837-2839: fitted.gllvmTMB_multi(object, type='response') is a thin wrapper: predict(object, newdata=NULL, type='response'). Verified predict.gllvmTMB_multi (methods-gllvmTMB.R:2421-2483, in-sample newdata=NULL, default re_form=~. i.e. re_zero=FALSE) returns a data.frame(unit, species, trait, est=eta) in object$data's OWN row order -- eta = object$report$eta, the full conditional predictor including the latent-variable contribution. gaussian_small's df_g row order is site-major/trait-minor (site=rep(seq_len(n),each=p), trait=rep(trait_names,times=n)), which is exactly the column-major flatten of a p x n matrix -- so fit$est (a length p*n vector) lines up element-for-element with vec(eta_julia) where eta_julia is Julia's p x n predict() output (also column-major, also using the UNROTATED conditional latent score consistent with the model's own Lambda parameterisation, not an SVD-rotated basis). Gaussian identity link: type='response' == type='link', so no back-transform is needed on either side. This resolves the wave6-conversion1 blocker ('list object cannot be coerced' under as.numeric()) by reading the $est column instead of coercing the whole data.frame."
+    },
+    {
+      "case_id": "CORE070-WAVE7-PREDICT-MULTI",
+      "source_ids": [
+        "postfit/POSTFIT-SURFACE-predict.gllvmTMB_multi"
+      ],
+      "kind": "point",
+      "fixture": "gaussian_small",
+      "r_call": "predict(fit_g, newdata = NULL, type = 'response')$est",
+      "julia_call": "vec(GLLVM.predict(fit_j, Y_g; type = :response))",
+      "tolerance": 0.0001,
+      "notes": "Same underlying quantity and row-order argument as CORE070-WAVE7-FITTED-MULTI (fitted() is a thin wrapper over predict() in R); kept as a separate case because it exercises the Julia predict() call path directly (src/postfit.jl:258-270) rather than through StatsAPI.fitted's forwarding method, and pays a distinct source_id (postfit/POSTFIT-SURFACE-predict.gllvmTMB_multi is a separate ledger row from fitted.gllvmTMB_multi)."
+    },
+    {
+      "case_id": "CORE070-WAVE7-RESIDUALS-MULTI",
+      "source_ids": [
+        "postfit/POSTFIT-SURFACE-residuals.gllvmTMB_multi"
+      ],
+      "kind": "point",
+      "fixture": "gaussian_small",
+      "r_call": "residuals(fit_g, type = 'randomized_quantile', scale = 'normal')$residual",
+      "julia_call": "vec(GLLVM.residuals(fit_j, Y_g; type = :dunnsmyth))",
+      "tolerance": 0.0001,
+      "notes": "Verified from predictive-diagnostics.R:229-260, AND by a live local (non-frozen) gllvmTMB dry run in this worktree: residuals.gllvmTMB_multi(object, type='randomized_quantile', scale='normal') (both R defaults) returns a 400-ROW DATA.FRAME (.row, trait, ..., residual, status, scale, method, seed), not a bare vector -- length(rs) on a data.frame returns its COLUMN count (15), not nrow (400), a trap the first reading of this function missed. The live dry run confirmed rs$residual == (df_g$value - fitted(fit_g)$est) / sigma_eps EXACTLY (cor==1, constant ratio == 1/sigma_eps across all 400 rows) -- the EXACT (non-simulated) per-family CDF quantile-residual route reduces to the standardized residual for the continuous Gaussian family, with no added randomization, confirmed numerically rather than assumed from the docstring. Julia's residuals(fit::GllvmFit, y; type=:dunnsmyth) docstring (src/postfit.jl:308-314) states the identical mathematical reduction. Row order: same p x n column-major convention as the FITTED-MULTI/PREDICT-MULTI cases above (rs$.row runs 1..400 in object$data's row order, matching vec() of Julia's p x n output)."
+    }
+  ],
+  "deferred": [
+    {
+      "source_id": "namespace/export/getREsd",
+      "reason": "SAME-NAME, DIFFERENT-SURFACE collision, verified from re-uncertainty.R:1-99 and src/re_sd.jl:1-27 module docstrings: R's getREsd(fit, block=) covers AUXILIARY random-effect blocks (diag_unit, diag_unit_obs, diag_species, phylo, re_int, equalto) that gaussian_small's plain latent(0+trait|site) fit carries none of; Julia's getREsd(fit,y) instead computes the ordinary latent FACTOR SCORE conditional SDs, which is what R's getLV(se=TRUE) covers, not what R's getREsd covers. No numeric comparison is possible against R's getREsd on this fixture; a genuine pairing would need a fixture with an indep()/re_int()/phylo block AND would need to be compared against R's getLV(se=TRUE) for the score-SD half, which is a different source_id not in this ledger row."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-getREsd",
+      "reason": "Same surface-name collision as namespace/export/getREsd (duplicate ledger row, identical underlying gap)."
+    },
+    {
+      "source_id": "namespace/export/loading_ci",
+      "reason": "Carried forward from docs/dev-log/core070/surface-conversion-batch-contract.json's deferred[]: loading_ci refuses fits with no explicit lambda_constraint pins (the same confirmatory-fit gate as inference/CI-ROUTE-005); gaussian_small is an exploratory (unconstrained) fit and does not carry a lambda_constraint. Building a lambda-constrained fixture pair (R+Julia) is a genuine new-fixture slice, out of this lean batch's reuse-only scope."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-loading_ci",
+      "reason": "Same confirmatory-fit gate as namespace/export/loading_ci (duplicate ledger row)."
+    },
+    {
+      "source_id": "namespace/export/profile_ci_phylo_signal",
+      "reason": "Per the task brief's phylo-fixture instruction: no proven paired phylo fixture exists in this worktree's receipts (test/parity/ and .unlazy/core070-aghq/ contain no executed STRUCT-PHY paired R+Julia fit). R's profile_ci_phylo_signal() additionally needs a genuine phylo_latent()/phylo_indep() R formula fit (structured-native-mapping.md documents this is NOT the same model class as GLLVM.jl's externally-supplied-Sigma_phy route). Inventing and validating a phylo fixture pair is out of this lean batch's reuse-only scope; deferred with this trace rather than guessed at."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-profile_ci_phylo_signal",
+      "reason": "Same phylo-fixture absence as namespace/export/profile_ci_phylo_signal (duplicate ledger row)."
+    },
+    {
+      "source_id": "namespace/export/profile_ci_total_variance",
+      "reason": "Carried forward from surface-conversion-batch-contract.json's deferred[]: R's profile_ci_total_variance() refuses any tier fit with unique=FALSE (no diagonal Psi_t component) -- gaussian_small (this batch's only reused fixture) uses unique=FALSE. A dedicated has_diag=TRUE / unique=TRUE fixture variant is the correct follow-up but would need re-verifying every other case sharing gaussian_small under a changed DGP, out of scope here."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-profile_ci_total_variance",
+      "reason": "Same diagonal-component gate as namespace/export/profile_ci_total_variance (duplicate ledger row)."
+    },
+    {
+      "source_id": "namespace/export/profile_phylo_signal",
+      "reason": "Per the task brief's phylo-fixture instruction: no proven paired phylo fixture exists in this worktree's receipts. Julia's profile_phylo_signal(fit,t) docstring is explicit that it is scoped to the raw packed sigma_phy[t] SCALE parameter, present iff has_phy_unique=true -- gaussian_small has no phylo tier at all, so this case cannot even be attempted on the reused fixture, let alone paired against an R phylo fit."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-profile_phylo_signal",
+      "reason": "Same phylo-fixture absence as namespace/export/profile_phylo_signal (duplicate ledger row)."
+    },
+    {
+      "source_id": "namespace/export/profile_targets",
+      "reason": "NEW FINDING (verified from profile-targets.R against src/confint_profile.jl's own docstring): R's profile_targets() is a READINESS REGISTRY -- which parameters/targets COULD be profiled, without running anything, because TMB::tmbprofile() needs the fit's live tmb_obj checkpoint machinery to run cheaply and reversibly. Julia's profile_targets(fit, targets) instead RUNS every target's curve directly (no comparable checkpoint/readiness step exists in GLLVM.jl -- running profile_ci IS the cheap operation). A structural comparison (R's readiness set vs Julia successfully computing curves for the same named terms) is conceivable but needs a dedicated design pass and its own runtime budget for confirming R's readiness-flag semantics against the live oracle; out of this lean batch's scope."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-profile_targets",
+      "reason": "Same readiness-registry-vs-curve-runner surface-shape mismatch as namespace/export/profile_targets (duplicate ledger row)."
+    },
+    {
+      "source_id": "namespace/export/slope_sd_ci",
+      "reason": "Carried forward from surface-conversion-batch-contract.json's deferred[]: the R oracle route (.unlazy/core070-aghq/oracle-source/readback/R/slope-sd-ci.R) documents its own prior hand-indexing failure mode on the phylo augmented-slope route, and per the task brief no healthy GaussianRandomSlopeFit fixture exists in this worktree's receipts (R's random-slope path is documented elsewhere as 7/12 smoke-healthy). Building and validating a small healthy slope fixture pair is out of this lean batch's reuse-only scope."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-slope_sd_ci",
+      "reason": "Same GaussianRandomSlopeFit fixture absence as namespace/export/slope_sd_ci (duplicate ledger row)."
+    },
+    {
+      "source_id": "namespace/export/standard_errors",
+      "reason": "Carried forward from surface-conversion-batch-contract.json's deferred[]: R's standard_errors(fit) (standard-errors.R) returns THE FIT OBJECT ITSELF with sd_report populated as a deferred-computation side effect, not an SE table -- there is no $se field to read directly; the R-side SE vector needs to be read from fit$sd_report$cov.fixed or summary(fit$sd_report), and matching its fixed-parameter ordering to GLLVM.jl's confint(fit,y).se packed order needs live-R verification this batch does not have budget for."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-standard_errors",
+      "reason": "Same R-return-shape mismatch as namespace/export/standard_errors (duplicate ledger row)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Gamma",
+      "reason": "Carried forward from wave6-conversion-batch-contract.json's deferred[]: extract_Gamma(fit; row_traits, col_traits) requires a Lambda_phy-bearing fit built via fit_gaussian_gllvm(Y; K_phy>0, Sigma_phy=K*) from a two-lineage cross-kernel construction -- none of this batch's reused fixtures carry a phylo/cross-kernel tier, and the native Sigma_phy= route is explicitly NOT the same model as any R gllvmTMB coevolution formula (structured-native-mapping.md:49-56). No defensible R-paired case exists without inventing a dedicated coevolution fixture, out of scope here."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_cross_correlations",
+      "reason": "Carried forward from surface-conversion-batch-contract.json's deferred[]: R's extract_cross_correlations() requires a multinomial trait in the fit ('No multinomial trait in this fit; use extract_correlations'); gaussian_small has no multinomial trait. A model-class mismatch discovered by reading extract-correlations.R directly, not a call-syntax bug."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_lv_effects",
+      "reason": "Carried forward from wave6-conversion-batch-contract.json's deferred[]: Julia's extract_lv_effects(fit; type=:trait_effect) hard-gates on _has_lv_predictor(fit), requiring a fit_gaussian_gllvm(...; X_lv=...) concurrent/constrained-ordination fit; gaussian_small carries no X_lv predictor. Building and validating a dedicated X_lv/num.lv.c fixture pair (R+Julia) is a genuine new-fixture slice, out of this lean batch's scope."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_phylo_signal",
+      "reason": "Carried forward from surface-conversion-batch-contract.json's deferred[], reconfirmed by the task brief's phylo-fixture instruction: GLLVM.jl's phylo_signal(fit; Sigma_phy) takes an externally-supplied Sigma_phy on an ordinary GllvmFit while R's extract_phylo_signal() reads report$Sigma_phy off a genuine phylo_latent()/phylo_indep() structured fit -- not the same model class, and no proven paired phylo fixture exists in this worktree's receipts to bridge the two."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-loading_profile",
+      "reason": "Same confirmatory-fit gate as postfit/POSTFIT-SURFACE-loading_ci / namespace/export/loading_ci (no lambda_constraint pins on the reused unconstrained gaussian_small fixture)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-predictive_check",
+      "reason": "NEW FINDING: R's predictive_check() and Julia's predictive_check(fit,y) are both genuine simulate-and-summarise checks with the same conceptual shape, but their RNG streams are not coupled across languages (R's stats::simulate() vs Julia's simulate(fit,n;rng)) -- only a STRUCTURAL comparison (matching (stat,trait) grid, p-values in [0,1] on both sides, no crash) is possible, never a numeric-tolerance comparison. Designing and validating that structural pass criterion (what counts as 'agreeing' between two independently-seeded Monte Carlo runs) needs its own design pass and is out of this lean batch's scope; the per-quantity comparison design in this contract is 'point' or 'verdict' only, neither of which fits an unpaired stochastic table."
+    },
+    {
+      "source_id": "namespace/export/predictive_check",
+      "reason": "Same RNG-decoupling issue as postfit/POSTFIT-SURFACE-predictive_check (duplicate ledger row)."
+    },
+    {
+      "source_id": "namespace/export/gllvmTMB_check_consistency",
+      "reason": "NEW FINDING: gllvmTMB_check_consistency(fit,y) is a Monte-Carlo (n_sim re-simulations) score-centring diagnostic on both sides (R via TMB::checkConsistency(), Julia via a Hotelling T2 test on re-simulated packed-NLL scores per src/diagnostics.jl:24-133's own docstring), with independently-seeded RNGs in the two languages -- only a structural comparison (marginal_p_value in [0,1], no crash) is possible, and Julia's own docstring already documents this port does NOT reproduce TMB's internal joint/marginal Laplace split (re-simulates the generative model directly instead). Designing a defensible structural pass criterion is out of this lean batch's scope."
+    },
+    {
+      "source_id": "namespace/export/gllvmTMB_diagnose",
+      "reason": "NEW FINDING, verified from diagnose.R:2005-2213 (gllvmTMB_diagnose returns invisibly a list with components sanity/rotation/Sigma_B/Sigma_W/ICC_site/communality_B/communality_W/hints -- no single pass boolean) and Julia's gllvmTMB_diagnose (src/diagnostics.jl:281-324, returns (pass, sanity, boundary_flags, messages)): R's return shape is a rich human-report list keyed by biological summaries (ICC, communality per tier), not a boolean-plus-flags verdict; Julia's is a boolean pass over a generic variance/correlation boundary scan documented in its own docstring as NOT covering R's per-family boundary rows (binomial-prevalence, multinomial degeneracy, ordinal cutpoint span, spatial-domain diameter). A defensible coarse verdict bridge (e.g. R's $hints being empty vs Julia's pass=true) is plausible but was not attempted here given the remaining scope in this batch; left for a follow-up wave with a dedicated comparison-design pass rather than guessed at under time pressure."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-gllvmTMB_diagnose",
+      "reason": "Same rich-report-vs-boolean-verdict shape gap as namespace/export/gllvmTMB_diagnose (duplicate ledger row)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-check_gllvmTMB",
+      "reason": "NEW FINDING, verified from diagnose.R:1548-1958: R's check_gllvmTMB() returns a data.frame TABLE of named checks (optimizer_convergence, max_gradient, sdreport, ...) each with a PASS/WARN/FAIL/INFO status column and ~19 configurable thresholds, not a single pass boolean; Julia's check_gllvmTMB (src/diagnostics.jl:344-351) aggregates sanity_multi + check_auto_residual + the gllvmTMB_diagnose boundary scan into one pass::Bool. A coarse bridge (no FAIL row in R's table vs Julia pass=true) is plausible but needs the same dedicated comparison-design pass noted on gllvmTMB_diagnose above; deferred rather than guessed at under time pressure."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-diagnostic_table",
+      "reason": "NEW FINDING, verified from diagnostic-tables.R:53-151: R's diagnostic_table(x, table=...) requires x to ALREADY carry gllvmTMB_diagnostic metadata (attr(x,'gllvmTMB_diagnostic')), attached by a prior call to predictive_check() or residuals() -- calling it on a bare gllvmTMB_multi fit aborts with 'x does not carry gllvmTMB diagnostic metadata'. Julia's diagnostic_table(fit; ...) (src/diagnostics.jl:372-405) instead takes the raw fit directly and computes everything itself. A genuine call-shape mismatch requiring an extra R-side pre-step (predictive_check(fit_g, Y_g) or residuals(fit_g) first) that was not designed and verified in this batch; deferred rather than guessed at."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-compare_Sigma_table",
+      "reason": "NEW FINDING, verified from extract-sigma-table.R:494-544: R's compare_Sigma_table(x, truth, ...) compares a fit's implied Sigma table against a supplied GROUND-TRUTH matrix (typically the simulation's true covariance), not two fits against each other. Julia's compare_Sigma_table(fit1, fit2) (src/diagnostics.jl:487-512) is a two-fit bridge -- a genuinely different signature and purpose. gaussian_small's simulation truth (Lambda_true, sigma_true from tools/core070_surface_conversion_batch.R) COULD in principle be threaded through as R's `truth` argument, but that requires re-deriving R's `entries`/`measure`/`part` table-row semantics from extract_Sigma_table() to know which rows to compare against Julia's dense Sigma_y -- out of this batch's remaining scope; deferred."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-compare_dep_vs_two_psi",
+      "reason": "NEW FINDING, verified from extract-two-psi-cross-check.R:488-556: R's compare_dep_vs_two_psi(fit_two_psi, threshold, phylo_vcv, phylo_tree) takes a SINGLE fitted phylogenetic 'two-psi' model and internally REFITS an alternative 'dep' model via .refit_alt(), comparing Sigma_phy/Sigma_non components -- a phylo-specific identifiability cross-check for a named reparameterisation GLLVM.jl does not implement as a distinct family. Julia's compare_dep_vs_two_psi(fit_dep, fit_alt, n) (src/diagnostics.jl:546-578) is explicitly documented as the generic two-fit bridge this gap forces, per its own docstring's 'Gap vs R' note. Not pairable without a phylo two-psi fixture, which per the task brief's phylo instruction does not exist in this worktree's receipts."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-compare_indep_vs_two_psi",
+      "reason": "Same phylo-specific two-psi refit-and-compare mismatch as postfit/POSTFIT-SURFACE-compare_dep_vs_two_psi (extract-two-psi-cross-check.R:616-, the indep counterpart of the same construction)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-confint_inspect",
+      "reason": "R's confint_inspect() (confint-inspect.R:128-388) and Julia's confint_inspect(fit,y) (src/diagnostics.jl:667-711) are genuinely comparable in shape (both compare Wald vs profile-likelihood bounds per term and flag disagreement), but a live paired run needs per-term profile-likelihood CIs on BOTH engines for every packed term (~16 terms on gaussian_small: 5 trait coefficients + Lambda entries + sigma_eps), each requiring TMB::tmbprofile()-style bracket-then-bisect constrained refits on the R side and GLLVM.jl's own bracket-then-bisect profile_ci on the Julia side. That per-term profile-CI runtime budget is beyond what this lean batch attempted to verify feasible; deferred to a follow-up wave with a dedicated runtime budget rather than risking an unverified multi-minute R-side profile loop."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-diagnose_kernel_separability",
+      "reason": "Julia's diagnose_kernel_separability(fit) (src/diagnostics.jl:449-461) only has a comparable non-trivial answer for a fit with a K_W (within/unit_obs) loading tier (Lambda_B vs Lambda_W); gaussian_small (K_W=0, single-tier) returns separable=missing by construction ('nothing to separate'). R's kernel-helpers.R/kernel-keywords.R separability check is scoped to kernel_* structured terms (a different structured-covariance mechanism than the K_W tier), so no fixture reused by this batch exercises a genuinely comparable non-trivial case on either side."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-bootstrap_Sigma",
+      "reason": "NEW FINDING: R's bootstrap_Sigma() (bootstrap-sigma.R) and Julia's bootstrap_Sigma(fit; level=:unit, n_boot=500, ...) (src/confint_derived_wald.jl:801-830) are genuinely comparable in shape (per-entry Sigma bootstrap percentile CIs), but the comparison is inherently STRUCTURAL, not exact-numeric (independent bootstrap draws in each language, per the task brief's 'bootstrap cases structural-only' guidance), AND the point estimate itself needs R's bootstrap_Sigma()'s exact reconstruct-formula machinery (.reconstruct_gllvmTMB_formula, referenced at the top of bootstrap-sigma.R) read and verified before a paired point-estimate case can be built safely. That verification pass was not completed within this batch's remaining scope; deferred rather than guessed at."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-tmbprofile_wrapper",
+      "reason": "Julia's tmbprofile_wrapper(fit,param_index) (src/confint_profile.jl:643-690) forwards its lower/upper bounds from the already-tested profile_ci kernel, so a numeric pairing against R's confint(fit_g,parm='sigma_eps') (the exact quantity wave6's confint_sigma_eps_bounds case already proved pairable at 5e-3, see docs/dev-log/core070/wave6-conversion-batch-contract.json) is plausible in principle. It was not built here because R's TMB::tmbprofile()-backed tmbprofile_wrapper() is a genuinely different code path from confint()'s Wald route (checkpoint-based profile-curve machinery, not a Wald delta-method bound), and asserting the two converge to the same 5e-3-tolerance interval needs that TMB profile path exercised live, which this batch's remaining scope did not budget for; deferred to a follow-up wave with tmbprofile_wrapper's OWN R call, not confint()'s."
+    },
+    {
+      "source_id": "namespace/export/tmbprofile_wrapper",
+      "reason": "Same TMB-profile-vs-Wald-route verification gap as postfit/POSTFIT-SURFACE-tmbprofile_wrapper (duplicate ledger row)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-simulate.gllvmTMB_multi",
+      "reason": "R's simulate.gllvmTMB_multi() (methods-gllvmTMB.R:1431-) and Julia's simulate(fit::GllvmFit,n;rng) (src/families/aghq_gaussian_fit.jl:171) both draw parametric replicates from the fitted model, but their RNG streams are not coupled across languages -- only a structural comparison (matching shape, finite values, same marginal moments up to Monte Carlo error) is possible, and designing that structural pass criterion was not completed within this batch; same class of gap as predictive_check above."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-vcov.gllvmTMB_multi",
+      "reason": "NEW FINDING, verified from vcov-coef.R:69-98: R's vcov.gllvmTMB_multi(object) returns the FULL (potentially off-diagonal) covariance block of the FIXED-EFFECT (X_fix) coefficients only, read from sd_report$cov.fixed's 'b_fix' rows. Julia's vcov(fit,y) (src/postfit.jl:679-693) instead returns a Diagonal() over confint(fit,y)'s FULL packed-parameter set (fixed effects, loadings, sigma_eps, ...), with zero off-diagonal entries BY CONSTRUCTION. A partial diagonal-only comparison restricted to the trait-fixed-effect entries is conceivable (ignoring R's off-diagonal terms) but was not attempted here -- risks silently declaring victory on a genuinely different-scope quantity; deferred with this trace instead."
+    }
+  ],
+  "rejection_cases": [
+    {
+      "case_id": "CORE070-WAVE7-REJ-CHECK-AUTO-RESIDUAL-NOT-A-FIT",
+      "fixture": "gaussian_small",
+      "r_call": "check_auto_residual(42)",
+      "julia_call": "GLLVM.check_auto_residual(42)",
+      "expect": "R refuses a non-fit argument; Julia's port does NOT validate its `fit` argument's type the way R's inherits() guard does (documented asymmetry, not a matching-refusal case)",
+      "expect_r_raised": true,
+      "expect_julia_raised": false,
+      "julia_error_pattern": "",
+      "notes": "R: check-auto-residual.R:62-64 cli_abort()s unless inherits(fit,'gllvmTMB_multi'). Julia: GLLVM.check_auto_residual(42) hits hasfield(typeof(42), :link) === false and hasfield(typeof(42), :C) === false (src/diagnostics.jl:161), so it falls through with mixed_family=false, ordinal_probit=false and returns coherent=true WITHOUT erroring. This is a genuine ASYMMETRIC-behavior finding (Julia's check_auto_residual has no type guard analogous to R's inherits() check) recorded here per-side rather than forced into a false 'both refuse' claim; expect_r_raised=true, expect_julia_raised=false is the CORRECT (verified) outcome, not a defect masked as a pass."
+    }
+  ],
+  "negative_controls": [
+    {
+      "case_id": "NEG-WAVE7-UNKNOWN-CASE-ID",
+      "description": "A case_id not present in contract.cases[] must be rejected by the verifier before any run is trusted, never silently skipped."
+    },
+    {
+      "case_id": "NEG-WAVE7-WRONG-FIXTURE",
+      "description": "A case citing a fixture key not in contract.fixtures must be rejected before the tape."
+    },
+    {
+      "case_id": "NEG-WAVE7-BOGUS-KIND",
+      "description": "A case whose kind is not one of point/verdict/own_consistency must be rejected before the tape."
+    }
+  ],
+  "runner": "tools/core070_wave7_conversion_batch.R <frozen-library> <destination>",
+  "p0_contract": "docs/dev-log/core070/wave7-conversion-batch-contract.json",
+  "p0_contract_sha256": "cd9e3dcc9a1454b215234f9f22dd271c7737a18f78b82fb6d8cebce92a549c69",
+  "p0_to_p1_accessor_diff": [
+    {
+      "function": "check_auto_residual",
+      "file": "R/check-auto-residual.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "11759c1ec26f784cbe0eaf4de077de72b326610abbdca90e19f66d55328f044f",
+      "body_sha256_p1": "08f4d9c47b53a5e345f9af015ce9784fa0efaaec8416a2031e892ef641de5ae2"
+    },
+    {
+      "function": "sanity_multi",
+      "file": "R/methods-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "ae445a1fe6075cdcfdcbd74e0a4d0fb02926e5d320f1b3e3a297e40033e70082",
+      "body_sha256_p1": "ae445a1fe6075cdcfdcbd74e0a4d0fb02926e5d320f1b3e3a297e40033e70082"
+    },
+    {
+      "function": "compare_loadings",
+      "file": "R/rotate-loadings.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "aa2c887bb0a1ad12edaa95dc8c5eacd41e7cc510a8170689516b188d94f5ee8e",
+      "body_sha256_p1": "aa2c887bb0a1ad12edaa95dc8c5eacd41e7cc510a8170689516b188d94f5ee8e"
+    },
+    {
+      "function": "fitted.gllvmTMB_multi",
+      "file": "R/methods-gllvmTMB.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "fcdeecef9ce63852bdaa878e74c8c5d3d06d6864637b8d87b2ace5e38dcfb415",
+      "body_sha256_p1": "fcdeecef9ce63852bdaa878e74c8c5d3d06d6864637b8d87b2ace5e38dcfb415"
+    },
+    {
+      "function": "predict.gllvmTMB_multi",
+      "file": "R/methods-gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "cbe16cd14413d9894acc0f58c0e55b3704a01079f1544c4f0406a6cd89edf2e1",
+      "body_sha256_p1": "5f580aa6cb69635ade54101267d6e6cfb67814c33e7c0dbed8f251d7605887db"
+    },
+    {
+      "function": "residuals.gllvmTMB_multi",
+      "file": "R/predictive-diagnostics.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "63238bbca87201d702c1574d9f2676258335af209f3a3c76ac2197b867ae1e96",
+      "body_sha256_p1": "63238bbca87201d702c1574d9f2676258335af209f3a3c76ac2197b867ae1e96"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_postfit_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      }
+    ],
+    "carried_verbatim": "status, cases (r_call, quantity, tolerance, check, comparand), deferred, rejection_cases, negative_controls, fixtures, runner. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

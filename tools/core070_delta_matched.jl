@@ -76,6 +76,8 @@ println("DELTA_MATCHED_RESULT ",report)
  @test length(θ)==report["r_nfree"]==15
  @test all(isfinite,θ) && all(isfinite,rpars)
  @test all(x->isfinite(x)&&x>0,scale) && all(x->isfinite(x)&&x>0,r.disp_vec)
+ core070_record_values!("logLik"; julia=native.loglik, r=r.logLik, rtol=1e-6,
+                        test="@test native.loglik≈r.logLik rtol=1e-6")
  @test native.loglik≈r.logLik rtol=1e-6
  @test r.logLik≈-r.objective rtol=0 atol=1e-10
  @test report["native_reevaluation_delta"]<=1e-8

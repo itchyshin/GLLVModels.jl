@@ -1,0 +1,125 @@
+{
+  "schema": "core070-inference-p1-case-receipt/v2",
+  "case_id": "CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT",
+  "verdict": "PASS",
+  "evidence_kind": "reject_error_class",
+  "source_ids": [
+    "inference/CI-ROUTE-033",
+    "inference/CI-ROUTE-035"
+  ],
+  "batch": "tools/core070_inference_remainder_batch.R + .jl, GLLVM_PARITY_PIN=P1",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_inference_remainder_batch.py",
+    "argv": "tools/core070_verify_inference_remainder_batch.py --state {state} --self-test",
+    "status": "PASS",
+    "exit_code": 0,
+    "accept_marker": "CORE070_INFERENCE_REMAINDER_BATCH_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/verify.txt"
+  },
+  "r_call": "confint.gllvmTMB_multi(object, parm='rho:unit:1,2', method=<'wald_asym'|'bogus'>) -> .confint_rho(method=...) -> else-branch -> cli_abort('Method ... not supported for rho. Available: fisher-z, wald, bootstrap.'). tier='unit' avoids the separate unit_slope/cluster/cluster2 early-abort branches; .parse_rho_parm validates the tier string only, and the method else-branch never calls extract_correlations. NOTE: fisher-z IS a valid rho method in R (CI-ROUTE-034, bound in wave2 as CORE070-INFERENCE-RHO-CI-METHOD-ROUTE); this case therefore covers only wald_asym and bogus, not fisher-z.",
+  "julia_surface": "correlation_wald_ci(fit, i, j; method=<bad>) -- declares no `method` keyword, raises MethodError",
+  "check": "for each of the 2 bad method strings: R raises an error whose message contains 'not supported' and 'rho'; Julia raises MethodError",
+  "measured": {
+    "bogus": {
+      "r_raised": true,
+      "r_message_matches": true,
+      "r_message": "Method \"bogus\" not supported for `rho`.\n\u2139 Available: \"fisher-z\", \"wald\", \"bootstrap\".",
+      "julia_error_kind": "MethodError",
+      "pass": true
+    },
+    "wald_asym": {
+      "r_raised": true,
+      "r_message_matches": true,
+      "r_message": "Method \"wald_asym\" not supported for `rho`.\n\u2139 Available: \"fisher-z\", \"wald\", \"bootstrap\".",
+      "julia_error_kind": "MethodError",
+      "pass": true
+    }
+  },
+  "gllvmtmb_version": "0.7.1",
+  "why_not_numeric": "Both engines must refuse the method; the check is error class and message, not a number.",
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json": "5d6a257284adbc7b42cc403a129ca2f539d2a184bc94122a2bf2de0e5ffdcb8b",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json": "ef8ce3b20f20a5acf093a13ac1266209bceb5ac505ab117702a24db3aeec23c9",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/receipt.json": "b3e80d15aa6b7cb724ae3b5b8b3ed5a813c84065dad3400c3e9691e7fe60a0d7",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/run-commit.json": "b9d2edb34bee2ac66ed45784ccd11944d44d083a7678f15fe6526d023ab90a62",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/verify.txt": "b5a973267412a40985e8d6412757eac4ecebf8cc9c342d8f961a4aace72c31a2",
+    "docs/dev-log/core070/true-parity-latest/inference-remainder-batch-contract-p1.json": "4f4540a66d9e3dff509b4e5231d714088c3f279e3e1d480774b7f9e0bed3c9e2"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "61c5eda4822da20591b6fa91869f93c3faf5d369",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json": "ef8ce3b20f20a5acf093a13ac1266209bceb5ac505ab117702a24db3aeec23c9",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json": "5d6a257284adbc7b42cc403a129ca2f539d2a184bc94122a2bf2de0e5ffdcb8b",
+      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json": "b0c89cbfb5186f39c1800cbe9bda524d4d7d822d7048d2181b19c86fb7eaa925",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/receipt.json": "1a44df6689de09c56ac07238eabf4a2e655d1ed36aed9924163090451f0dd675",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json": "c209d8cb34692cf8bf2387eb057c396dee061720d7b10aab462e84c7d0be26d3",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt": "303ad3fd98e8194e031cfcf376b39fb5c751fa348fe7f3af603705e0837c373d",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json": "c37a34dc900c165a8d4ccbffae0fea66a3ad6444a12acb3c29c22ae0223d0a98",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65"
+    },
+    "cases": [
+      {
+        "case_id": "CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-033",
+        "kind": "refusal",
+        "r_observed": "Method \"wald_asym\" not supported for `rho`.",
+        "julia_observed": "ArgumentError: confint: method = :wald_asym is not available for Gaussian GllvmFit / parm rho[1,2]; available: :wald, :profile, :bootstrap",
+        "requested_method": "wald_asym",
+        "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=Symbol(\"wald_asym\"), \u03a3_phy)",
+        "julia_error_type": "ArgumentError",
+        "r_control": {
+          "kind": "route_probe_stub",
+          "call": "probe row CI-ROUTE-031",
+          "result": "routes to .confint_rho:wald",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-031"
+        },
+        "julia_control": {
+          "call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:wald, \u03a3_phy)",
+          "result": "wald_derived interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-033"
+        },
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#rho_reject.wald_asym",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-033"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-RHO-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-035",
+        "kind": "refusal",
+        "r_observed": "Method \"bogus\" not supported for `rho`.",
+        "julia_observed": "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit / parm rho[1,2]; available: :wald, :profile, :bootstrap",
+        "requested_method": "bogus",
+        "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=Symbol(\"bogus\"), \u03a3_phy)",
+        "julia_error_type": "ArgumentError",
+        "r_control": {
+          "kind": "route_probe_stub",
+          "call": "probe row CI-ROUTE-031",
+          "result": "routes to .confint_rho:wald",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-031"
+        },
+        "julia_control": {
+          "call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:wald, \u03a3_phy)",
+          "result": "wald_derived interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-035"
+        },
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#rho_reject.bogus",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-035"
+      }
+    ]
+  }
+}

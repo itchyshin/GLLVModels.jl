@@ -1,0 +1,19 @@
+# Twin fixture for postfit rows tidy.gllvmTMB_multi, POST-COEF-NAMED and POST-DEVIANCE
+# (gllvmTMB P1). Generated once by gen_postfit_twins_p1.R from ns_gauss_p1_data.csv
+# (sha256 guarded). Do not hand-edit; regenerate from the script.
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+
+[main]
+# value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE); seed 20261001 (data of ns_numeric_p1.toml [main])
+data_file = "ns_gauss_p1_data.csv"
+data_sha256 = "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+converged = true
+pd_hessian = true
+loglik = -1367.5955985303726
+coef_names = ["traitt1", "traitt2", "traitt3", "traitt4", "traitt5", "traitt6"]
+coef = [0.55820603380569955, -0.19181654412747803, 0.092834201736465602, 0.84178652316502189, -0.51585435005405211, 0.058444463325015003]
+tidy_term = ["traitt1", "traitt2", "traitt3", "traitt4", "traitt5", "traitt6"]
+tidy_estimate = [0.55820603380569955, -0.19181654412747803, 0.092834201736465602, 0.84178652316502189, -0.51585435005405211, 0.058444463325015003]
+deviance = 2735.1911970607453

@@ -1,0 +1,10 @@
+label	host	Δll_rel	rtol	verdict
+poisson_direct	laptop	0.0	1e-8	PASS
+nb2_direct	laptop	2.204197437733627e-16	1e-8	PASS
+nb2_fit_diag_precision_kernel	laptop	1.2224252163534862e-16	1e-8	PASS
+phylo_correlated_W	laptop	0.0	1e-8	PASS
+phylo_glm_dense_anchor	laptop	n/a	atol1e-6	PASS
+poisson_direct	totoro	0.0	1e-8	PASS
+nb2_direct	totoro	2.204197437733627e-16	1e-8	PASS
+nb2_fit_diag_precision_kernel	totoro	1.2224252163534862e-16	1e-8	PASS
+phylo_correlated_W	totoro	0.0	1e-8	PASS

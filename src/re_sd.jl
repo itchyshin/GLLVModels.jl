@@ -251,6 +251,8 @@ function latent_score_sd(fit::PoissonFit, Y::AbstractMatrix;
                  mask = nothing, offset = nothing)
     _is_poisson_aghq(fit) && throw(ArgumentError(
         "latent_score_sd is not implemented for AGHQ-integrated Poisson fits"))
+    fit.weights === nothing || throw(ArgumentError(
+        "latent_score_sd is not implemented for weighted Poisson fits"))
     _has_lv_predictor(fit) && throw(ArgumentError(
         "latent_score_sd is not implemented for predictor-informed (X_lv) fits: " *
         "the mode/curvature at each site needs the latent-mean offset " *

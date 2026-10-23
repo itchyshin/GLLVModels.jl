@@ -201,9 +201,10 @@ function fit_fourthcorner_gllvm(Y::AbstractMatrix; family,
         C = reshape(θ[(p + 1):(p + q * r)], q, r)
         Λ = unpack_lambda(θ[(p + q * r + 1):(p + q * r + rr)], p, K)
         disp = has_disp ? exp(θ[p + q * r + rr + 1]) : NaN
-        fam = _cov_family(family, disp)
         O = _build_offset_fourthcorner(Xenv, TR, C)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(family, disp)
             -_marginal_loglik_offset(fam, Yc, Nm, Λ, β, O, lk;
                                      mask = msk, maxiter = newton_maxiter, tol = newton_tol)
         catch

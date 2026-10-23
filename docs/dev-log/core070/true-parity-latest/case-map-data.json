@@ -1,0 +1,1804 @@
+{
+  "schema": 1,
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "data family: the 28 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 data batch (R helper replay against the pinned P1 source, Julia name-level introspection and a behavioural fit-time surface probe). The 28 rejected data rows are out of scope.",
+  "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The R side of a data row's batch case is a helper replay with no fit number, so by itself it binds nothing. Rows with a fit-level Julia twin (receipts/julia-twins/data-twins/, test/test_data_twins_p1.jl) cite it under evidence.receipt with evidence_tier numeric; every other row cites evidence.non_binding_receipts and is free.",
+  "generator": "tools/core070_data_p1_receipts.py",
+  "glvmodels_commit": "a875103063231a5ea233ddcd032572311893b04b",
+  "batch_verifiers": {
+    "data-p1": {
+      "tool": "tools/core070_verify_data_batch.py",
+      "argv": "tools/core070_verify_data_batch.py --state {state} --julia-receipt {state}/data-batch-julia-introspection.json --self-test",
+      "accept_marker": "CORE070_DATA_BATCH_VERIFIED",
+      "log": "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt",
+      "exit_code": 0,
+      "status": "PASS"
+    }
+  },
+  "counts": {
+    "numeric_pass": 26,
+    "numeric_fail": 0,
+    "numeric_held_batch_verifier_failed": 0,
+    "numeric_non_discriminating": 0,
+    "partial_non_numeric_case": 0,
+    "needs_surface_r_side_measured": 2,
+    "needs_surface_not_executed": 0,
+    "retired_at_p1_not_measured": 0,
+    "not_measured": 0
+  },
+  "p0_evidence_summary": {
+    "rows_with_p0_evidence_record": 28,
+    "rows_without_p0_evidence_record": 0,
+    "p0_raw_receipts_available_here": false
+  },
+  "runtimes_seconds": {
+    "r_replay_seconds": 0.9,
+    "julia_introspection_seconds": 1.7,
+    "julia_surface_probe_seconds": 56.6
+  },
+  "batch_artifacts": {
+    "data-p1": [
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/receipt.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-results.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/raw.tsv",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-introspection.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/data-batch-julia-surface-probe.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/run-commit.json",
+      "docs/dev-log/core070/true-parity-latest/receipts/data/data-p1/verify.txt"
+    ]
+  },
+  "rows": [
+    {
+      "source_id": "data/DATA-MISS-BOTH",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-MISS_BOTH-LOGLIK",
+        "P1-JULIA-DATA-MISS_BOTH-INTERCEPTS",
+        "P1-JULIA-DATA-MISS_BOTH-B-X",
+        "P1-JULIA-DATA-MISS_BOTH-COVARIATE-MODEL",
+        "P1-JULIA-DATA-MISS_BOTH-SDS",
+        "P1-JULIA-DATA-MISS_BOTH-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-BOTH.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-BOTH-CONTROL.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-MISS-BOTH-CONTROL"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-MISS-BOTH-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-MISS-BOTH-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-MISS-BOTH-CONTROL": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-MISS_BOTH-LOGLIK",
+          "P1-JULIA-DATA-MISS_BOTH-INTERCEPTS",
+          "P1-JULIA-DATA-MISS_BOTH-B-X",
+          "P1-JULIA-DATA-MISS_BOTH-COVARIATE-MODEL",
+          "P1-JULIA-DATA-MISS_BOTH-SDS",
+          "P1-JULIA-DATA-MISS_BOTH-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays miss_control('include', 'model') to a list; the twin is the DATA-MISS-MODEL fit with 44 response cells also NA (35 drawn at random, one cell of a unit whose x is missing, and every response of unit 5, x observed, and unit 17, x missing): R keeps them under response = 'include', Julia takes them as missing cells of Y in fit_gaussian_mi_fiml (the response mask this slice added). R's response = 'drop' removes units with no response altogether, so it differs from 'include' here; it is checked only as an assertion in the twin test (the Julia fit without units 5 and 17 reaches R's drop logLik), not as a receipt case. Same scope limits as DATA-MISS-MODEL."
+    },
+    {
+      "source_id": "data/DATA-MISS-DEFAULT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-POIS_NA_DROP-LOGLIK",
+        "P1-JULIA-DATA-POIS_NA_DROP-INTERCEPTS",
+        "P1-JULIA-DATA-POIS_NA_DROP-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-DEFAULT.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-DEFAULT-CONTROL.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-MISS-DEFAULT-CONTROL"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-MISS-DEFAULT-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-MISS-DEFAULT-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-MISS-DEFAULT-CONTROL": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-POIS_NA_DROP-LOGLIK",
+          "P1-JULIA-DATA-POIS_NA_DROP-INTERCEPTS",
+          "P1-JULIA-DATA-POIS_NA_DROP-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The twin covers response = 'drop' (missing responses dropped by default). The R case also asserts predictor = 'fail' (a missing covariate is refused); that part is not exercised. R's drop and include optima agree here, so this row and DATA-MISS-INCLUDE check two Julia input forms (missing entries in Y, and mask=) against numerically identical R fits."
+    },
+    {
+      "source_id": "data/DATA-MISS-INCLUDE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-POIS_NA_INCLUDE-LOGLIK",
+        "P1-JULIA-DATA-POIS_NA_INCLUDE-INTERCEPTS",
+        "P1-JULIA-DATA-POIS_NA_INCLUDE-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-INCLUDE.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-INCLUDE-CONTROL.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-MISS-INCLUDE-CONTROL"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-MISS-INCLUDE-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-MISS-INCLUDE-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-MISS-INCLUDE-CONTROL": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-POIS_NA_INCLUDE-LOGLIK",
+          "P1-JULIA-DATA-POIS_NA_INCLUDE-INTERCEPTS",
+          "P1-JULIA-DATA-POIS_NA_INCLUDE-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "data/DATA-MISS-MODEL",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-MISS_MODEL-LOGLIK",
+        "P1-JULIA-DATA-MISS_MODEL-INTERCEPTS",
+        "P1-JULIA-DATA-MISS_MODEL-B-X",
+        "P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL",
+        "P1-JULIA-DATA-MISS_MODEL-SDS",
+        "P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/MISS-MODEL.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-MISS-MODEL-CONTROL.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-MISS-MODEL-CONTROL"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_2_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_2_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-MISS-MODEL-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-MISS-MODEL-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-MISS-MODEL-CONTROL": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-MISS_MODEL-LOGLIK",
+          "P1-JULIA-DATA-MISS_MODEL-INTERCEPTS",
+          "P1-JULIA-DATA-MISS_MODEL-B-X",
+          "P1-JULIA-DATA-MISS_MODEL-COVARIATE-MODEL",
+          "P1-JULIA-DATA-MISS_MODEL-SDS",
+          "P1-JULIA-DATA-MISS_MODEL-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays miss_control(predictor = 'model') to a list; the twin is one Gaussian fit that uses it: mi(x) with covariate model x ~ z, x missing at 18 of 120 units, one latent factor (R gllvmTMB(..., missing = miss_control(predictor = 'model')), Julia fit_gaussian_mi_fiml). It covers one continuous unit-level predictor with a fixed-effect covariate model and a Gaussian response; R's other predictor = 'model' routes (grouped, phylogenetic, binary, ordered, categorical predictors, non-Gaussian responses) are not exercised. Julia has no miss_control constructor: the policy is chosen by the fitter."
+    },
+    {
+      "source_id": "data/DATA-OFF-ALL-COUNT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LOGLIK",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-INTERCEPTS",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LAMBDA-LAMBDAT",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-DISPERSION",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LOGLIK",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-INTERCEPTS",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LAMBDA-LAMBDAT",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LOGLIK",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-INTERCEPTS",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LAMBDA-LAMBDAT",
+        "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-DISPERSION"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-ALL-COUNT.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-ALL-COUNT-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-ALL-COUNT-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_off_all_count_twin_p1.jl, against R-at-P1 values copied from test/fixtures/off_all_count_twin_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-ALL-COUNT-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-ALL-COUNT-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-ALL-COUNT-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LOGLIK",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-INTERCEPTS",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-LAMBDA-LAMBDAT",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-NB2-DISPERSION",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LOGLIK",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-INTERCEPTS",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-TPOIS-LAMBDA-LAMBDAT",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LOGLIK",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-INTERCEPTS",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-LAMBDA-LAMBDAT",
+          "P1-JULIA-DATA-OFF-ALL-COUNT-TNB2-DISPERSION"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10 and 11 (nbinom2, truncated Poisson, truncated nbinom2), and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json, comparands 'R count-family id admission set {5,10,11}' and 'Julia count-family offset admission set'). Each admitted family is twinned with an exposure offset(log(e)), one data set each (p = 6, n = 150, one latent factor, per-trait dispersion for the two NB2 families), R gllvmTMB(..., family = nbinom2() / truncated_poisson() / truncated_nbinom2()) against Julia fit_gllvm(Y; family, K = 1, offset = log.(E)). Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation, not this row's. The earlier non-binding reason (commit 4ae7e109d: a mixed-family offset vector) no longer holds: the R case's last argument (d$kind) is a trait label, not a family, and the truncated families 10 and 11 are now covered. The truncated nbinom2 data were drawn with size 2 and every R dispersion is inside (1e-3, 1e3) (asserted in the generator), so no trait is at the Poisson limit, the ridge behind the FAMILY-11 health-check failure; that row is not changed by this twin."
+    },
+    {
+      "source_id": "data/DATA-OFF-EXPOSURE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-POIS_EXPOSURE-LOGLIK",
+        "P1-JULIA-DATA-POIS_EXPOSURE-INTERCEPTS",
+        "P1-JULIA-DATA-POIS_EXPOSURE-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-EXPOSURE.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-EXPOSURE-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-EXPOSURE-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-EXPOSURE-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-EXPOSURE-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-EXPOSURE-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-POIS_EXPOSURE-LOGLIK",
+          "P1-JULIA-DATA-POIS_EXPOSURE-INTERCEPTS",
+          "P1-JULIA-DATA-POIS_EXPOSURE-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-MIXED",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-OFF-MIXED-LOGLIK",
+        "P1-JULIA-DATA-OFF-MIXED-INTERCEPTS",
+        "P1-JULIA-DATA-OFF-MIXED-LAMBDA-LAMBDAT",
+        "P1-JULIA-DATA-OFF-MIXED-NB2-DISPERSION",
+        "P1-JULIA-DATA-OFF-MIXED-GAUSSIAN-SIGMA",
+        "P1-JULIA-DATA-OFF-MIXED-NO-OFFSET-LOGLIK"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-MIXED.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-MIXED-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-MIXED-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_off_mixed_twin_p1.jl, against R-at-P1 values copied from test/fixtures/off_mixed_twin_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-MIXED-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-MIXED-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-MIXED-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-OFF-MIXED-LOGLIK",
+          "P1-JULIA-DATA-OFF-MIXED-INTERCEPTS",
+          "P1-JULIA-DATA-OFF-MIXED-LAMBDA-LAMBDAT",
+          "P1-JULIA-DATA-OFF-MIXED-NB2-DISPERSION",
+          "P1-JULIA-DATA-OFF-MIXED-GAUSSIAN-SIGMA",
+          "P1-JULIA-DATA-OFF-MIXED-NO-OFFSET-LOGLIK"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) replays the row-wise offset admission of one mixed-family fit (family ids 2, 0, 5: poisson, gaussian, nbinom2): a zero offset on the non-count row next to nonzero offsets on the count rows. The twin is one real fit of that kind: p = 6 traits (poisson, gaussian, nbinom2, poisson, nbinom2, poisson), n = 150, one latent factor, R gllvmTMB(..., family = list(...) by trait) with offset(log(e)) against Julia fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)); e is exactly 1 on the gaussian trait and varies by cell on the count traits. It covers one gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit while fit_mixed_gllvm gives each Normal trait its own, so a fit with two or more gaussian traits is a different model on the two sides and is not compared. Both sides apply the row-wise admission rule: a nonzero offset on the gaussian trait is refused by R (message recorded in the fixture) and by fit_mixed_gllvm (ArgumentError naming the trait and family), asserted in the twin test; the refusal is behaviour, not a compared number. The same model without the offset is also matched (logLik within 1e-6) and scores lower by more than 1 on both sides."
+    },
+    {
+      "source_id": "data/DATA-OFF-NB1",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-NB1_EXPOSURE-LOGLIK",
+        "P1-JULIA-DATA-NB1_EXPOSURE-INTERCEPTS",
+        "P1-JULIA-DATA-NB1_EXPOSURE-LAMBDA-LAMBDAT",
+        "P1-JULIA-DATA-NB1_EXPOSURE-DISPERSION"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NB1.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NB1-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-NB1-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-NB1-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-NB1-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-NB1-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-NB1_EXPOSURE-LOGLIK",
+          "P1-JULIA-DATA-NB1_EXPOSURE-INTERCEPTS",
+          "P1-JULIA-DATA-NB1_EXPOSURE-LAMBDA-LAMBDAT",
+          "P1-JULIA-DATA-NB1_EXPOSURE-DISPERSION"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-NONCOUNT-ZERO",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-GAUSS_ZERO-LOGLIK",
+        "P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONCOUNT-ZERO.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-NONCOUNT-ZERO-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-GAUSS_ZERO-LOGLIK",
+          "P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "A zero offset cannot tell 'applied' from 'ignored', so this is a plain rank-2 Gaussian fit match plus acceptance of offset = zeros(p, n). Known differences, recorded not bound: Julia applies a nonzero Gaussian offset where R refuses it. (The scalar form offset = 0.0 is now broadcast like any scalar offset; see DATA-OFF-SCALAR.)"
+    },
+    {
+      "source_id": "data/DATA-OFF-NONE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-POIS_NONE-LOGLIK",
+        "P1-JULIA-DATA-POIS_NONE-INTERCEPTS",
+        "P1-JULIA-DATA-POIS_NONE-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-NONE.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-NONE-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-NONE-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-NONE-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-NONE-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-NONE-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-POIS_NONE-LOGLIK",
+          "P1-JULIA-DATA-POIS_NONE-INTERCEPTS",
+          "P1-JULIA-DATA-POIS_NONE-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      }
+    },
+    {
+      "source_id": "data/DATA-OFF-PREDICT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-OFF-PREDICT-LOGLIK",
+        "P1-JULIA-DATA-OFF-PREDICT-NEW-OFFSET-LINK"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-PREDICT.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_off_predict_twin_p1.jl, against R-at-P1 values copied from test/fixtures/off_predict_twin_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-PREDICT-POSTFIT-READBACK": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-OFF-PREDICT-LOGLIK",
+          "P1-JULIA-DATA-OFF-PREDICT-NEW-OFFSET-LINK"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "Bound under the maintainer ruling of 2026-10-05 (vault D-319, option (b)). The R batch case is a helper replay of the newdata offset path; the twin is one real prediction of that kind: the Poisson exposure fit of the DATA-OFF-TRAIN-STORED twin (p = 6, n = 150, one latent factor), predicted on the training units with a new exposure e_new. R predict(fit, newdata = nd, type = 'link') re-evaluates the stored offset expression on newdata and keeps the training units' latent modes (asserted in the generator); Julia predict(fit, Y; type = :link, offset = log.(E_new), modes = :training) computes eta = beta + O_new + Lambda z_train, the path added for this ruling. The default modes = :refit (modes re-solved at the new offset) is a different quantity and is not what R returns. Scope: training units only (new units have no training mode), one Poisson fit; through the matrix API the new offset reaches Julia as a value, not as an expression evaluated against newdata as in R's formula."
+    },
+    {
+      "source_id": "data/DATA-OFF-PREDICT-NONFINITE-HELPER",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK"
+      ],
+      "disposition": "DISPOSITION-SIGNED",
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/data/n7-offset-nonfinite-probe.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-PREDICT-NONFINITE-HELPER-POSTFIT-READBACK": "r_replay_julia_surface_absent"
+        }
+      },
+      "reason": "R-internal helper that differs by design, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's .gllvmTMB_offset_newdata evaluates the stored offset expression on newdata with no finiteness guard, so e = 0 gives log(0) = -Inf (P1 helper replay: c(-Inf, 0, log(2))). GLLVModels takes the offset as a value and refuses a non-finite offset at an observed cell with an ArgumentError, at fit time and at predict time (probe receipt n7-offset-nonfinite-probe.json, tools/true_parity_offset_nonfinite_probe.jl). No R-vs-Julia number exists to compare; the difference is recorded, not hidden.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
+    },
+    {
+      "source_id": "data/DATA-OFF-SCALAR",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-POIS_SCALAR-LOGLIK",
+        "P1-JULIA-DATA-POIS_SCALAR-INTERCEPTS",
+        "P1-JULIA-DATA-POIS_SCALAR-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-SCALAR.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-SCALAR-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-SCALAR-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-SCALAR-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-SCALAR-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-SCALAR-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-POIS_SCALAR-LOGLIK",
+          "P1-JULIA-DATA-POIS_SCALAR-INTERCEPTS",
+          "P1-JULIA-DATA-POIS_SCALAR-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The twin is one Poisson fit with a constant offset: R takes offset(log(2)) in the formula, Julia takes the scalar keyword offset = log(2) and broadcasts it to every cell (fit_gllvm; scalar input returned logLik -Inf before that was fixed). It does not exercise other families, and through fit_gllvm the offset reaches Julia as a value, not as an expression evaluated against the data as in R's formula."
+    },
+    {
+      "source_id": "data/DATA-OFF-TRAIN-LEGACY",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK"
+      ],
+      "disposition": "DISPOSITION-SIGNED",
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "needs_surface_r_side_measured",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK.json"
+        ],
+        "tier": "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only (other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, so a probe that records weights as absent predates them"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-TRAIN-LEGACY-POSTFIT-READBACK": "r_replay_julia_surface_absent"
+        }
+      },
+      "reason": "R-internal legacy fallback, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's .gllvmTMB_offset_vec returns rep(0, n) for a fit object that carries an offset expression but no cached offset vector, that is, an object saved before gllvmTMB cached training offsets (the P1 helper replay confirms it). GLLVModels has no such object generation: a Laplace fit made with an offset stores it in fit.offset at fit time (_stored_offset, src/families/fit_gllvm.jl), so there is no pre-cache object to fall back from, and the helper is not reachable from either package's public door. The stored-offset behaviour users meet is bound numerically by DATA-OFF-TRAIN-STORED.",
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
+    },
+    {
+      "source_id": "data/DATA-OFF-TRAIN-STORED",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-POIS_EXPOSURE_STORED-LOGLIK",
+        "P1-JULIA-DATA-POIS_EXPOSURE_STORED-OFFSET",
+        "P1-JULIA-DATA-POIS_EXPOSURE_STORED-PREDICT-LINK"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/OFF-TRAIN-STORED.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_predict_offset_twin_p1.jl, against R-at-P1 values copied from test/fixtures/predict_offset_twin_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-OFF-TRAIN-STORED-POSTFIT-READBACK": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-POIS_EXPOSURE_STORED-LOGLIK",
+          "P1-JULIA-DATA-POIS_EXPOSURE_STORED-OFFSET",
+          "P1-JULIA-DATA-POIS_EXPOSURE_STORED-PREDICT-LINK"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case reads back a vector written into a mock fit object; the twin compares the training offset a real Poisson exposure fit kept (R .gllvmTMB_offset_vec, Julia fit.offset) and the training-row link predictor that uses it (R predict(fit, type = 'link'), Julia predict(fit, Y; type = :link)). Training rows only, at the training offset. R's newdata prediction on the training units (offset re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset = O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Julia stores the training offset (fit.offset) on the Laplace Poisson, binomial, NB2, NB1, GP1, Beta, Gamma and Exponential fits, their grouped-dispersion variants (NB2, NB1, Beta, Gamma), the two-part fits (hurdle-Poisson, hurdle-NB, ZIP, ZINB, ZIB, delta-lognormal, delta-Gamma) and the mixed-family fit; this twin exercises the Poisson fit only."
+    },
+    {
+      "source_id": "data/DATA-W-DF-MASK-DROP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-DF-MASK-DROP-OBJECTIVE",
+        "P1-JULIA-DATA-W-DF-MASK-DROP-INTERCEPTS",
+        "P1-JULIA-DATA-W-DF-MASK-DROP-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-DF-MASK-DROP.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-DROP-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-DF-MASK-DROP-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-DF-MASK-DROP-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-DF-MASK-DROP-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-DF-MASK-DROP-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-DF-MASK-DROP-OBJECTIVE",
+          "P1-JULIA-DATA-W-DF-MASK-DROP-INTERCEPTS",
+          "P1-JULIA-DATA-W-DF-MASK-DROP-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (traits()-route per-unit weights replicated and shrunk to the retained observations when NA cells are dropped); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: a Poisson fit through the public traits() route with one weight per unit and the 14 NA cells dropped, against Julia with those cells missing in Y and weights = a length-n vector. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
+    },
+    {
+      "source_id": "data/DATA-W-DF-MASK-INCLUDE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-DF-MASK-INCLUDE-OBJECTIVE",
+        "P1-JULIA-DATA-W-DF-MASK-INCLUDE-INTERCEPTS",
+        "P1-JULIA-DATA-W-DF-MASK-INCLUDE-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-DF-MASK-INCLUDE.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-DF-MASK-INCLUDE-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-DF-MASK-INCLUDE-OBJECTIVE",
+          "P1-JULIA-DATA-W-DF-MASK-INCLUDE-INTERCEPTS",
+          "P1-JULIA-DATA-W-DF-MASK-INCLUDE-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (traits()-route per-unit weights kept at full length under response = 'include'); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: the DATA-W-DF-MASK-DROP fit under response = 'include', against Julia with a placeholder 0 at the 14 cells, mask = the observed cells and weights = a length-n vector; R's drop and include objectives agree within 1e-6 (asserted in the twin test). A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
+    },
+    {
+      "source_id": "data/DATA-W-DF-UNIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-DF-UNIT-OBJECTIVE",
+        "P1-JULIA-DATA-W-DF-UNIT-INTERCEPTS",
+        "P1-JULIA-DATA-W-DF-UNIT-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-DF-UNIT.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-DF-UNIT-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-DF-UNIT-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-DF-UNIT-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-DF-UNIT-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-DF-UNIT-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-DF-UNIT-OBJECTIVE",
+          "P1-JULIA-DATA-W-DF-UNIT-INTERCEPTS",
+          "P1-JULIA-DATA-W-DF-UNIT-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays a traits()-route per-unit weight vector replicated to every trait; the twin is a Poisson fit through the public traits() route, gllvmTMB(traits(t1, ..., t6) ~ 1 + latent(1 | unit, d = 1, unique = FALSE), weights = <one per unit>), against Julia weights = a length-n vector. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
+    },
+    {
+      "source_id": "data/DATA-W-FRACTIONAL",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-FRACTIONAL-OBJECTIVE",
+        "P1-JULIA-DATA-W-FRACTIONAL-INTERCEPTS",
+        "P1-JULIA-DATA-W-FRACTIONAL-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-FRACTIONAL.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-FRACTIONAL-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-FRACTIONAL-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-FRACTIONAL-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-FRACTIONAL-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-FRACTIONAL-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-FRACTIONAL-OBJECTIVE",
+          "P1-JULIA-DATA-W-FRACTIONAL-INTERCEPTS",
+          "P1-JULIA-DATA-W-FRACTIONAL-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays fractional weights rep(0.5, 6) unchanged; the twin is a Poisson fit through the long API with fractional weights in (0.25, 2) on every row, against Julia with the same p x n matrix. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
+    },
+    {
+      "source_id": "data/DATA-W-LONG",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-LONG-OBJECTIVE",
+        "P1-JULIA-DATA-W-LONG-INTERCEPTS",
+        "P1-JULIA-DATA-W-LONG-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-LONG.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-LONG-NATIVE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-LONG-NATIVE",
+          "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-LONG-NATIVE": "PASS",
+          "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-LONG-NATIVE": "PASS",
+          "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-LONG-NATIVE": "r_replay_julia_surface_absent",
+          "CORE070-DATA-W-LONG-NATIVE-NEGATIVE-CONTROL": "r_replay_negative_control"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-LONG-OBJECTIVE",
+          "P1-JULIA-DATA-W-LONG-INTERCEPTS",
+          "P1-JULIA-DATA-W-LONG-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays normalise_weights(1:6, 'long', ...) unchanged; the twin is a Poisson fit through the long API with an integer weight (1 to 3) on every row, against Julia with the same weights as a p x n matrix (Julia's Y is a matrix, so a long column has no direct Julia form). A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-CELLS",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-MATRIX-CELLS-OBJECTIVE",
+        "P1-JULIA-DATA-W-MATRIX-CELLS-INTERCEPTS",
+        "P1-JULIA-DATA-W-MATRIX-CELLS-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-CELLS.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-CELLS-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-MATRIX-CELLS-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-CELLS-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-CELLS-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-CELLS-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-MATRIX-CELLS-OBJECTIVE",
+          "P1-JULIA-DATA-W-MATRIX-CELLS-INTERCEPTS",
+          "P1-JULIA-DATA-W-MATRIX-CELLS-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays a full n x p wide-matrix weight flattened to the long vector; the twin is a Poisson fit with a per-cell weight matrix, R through gllvmTMB_wide()'s own normaliser and pivot, Julia weights = its transpose (Julia's layout is traits x units). A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-MASK-DROP",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-MATRIX-MASK-DROP-OBJECTIVE",
+        "P1-JULIA-DATA-W-MATRIX-MASK-DROP-INTERCEPTS",
+        "P1-JULIA-DATA-W-MATRIX-MASK-DROP-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-DROP.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-MASK-DROP-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-MATRIX-MASK-DROP-OBJECTIVE",
+          "P1-JULIA-DATA-W-MATRIX-MASK-DROP-INTERCEPTS",
+          "P1-JULIA-DATA-W-MATRIX-MASK-DROP-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (wide-matrix weights shrunk to the retained observations when NA cells are dropped); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: a Poisson fit with a per-cell weight matrix that is NA where Y is NA (14 cells), NA cells dropped, R through gllvmTMB_wide()'s own normaliser and pivot, against Julia with those cells missing in Y and weights = the transposed matrix with NaN there. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-MASK-INCLUDE",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-OBJECTIVE",
+        "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-INTERCEPTS",
+        "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-INCLUDE.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-MASK-INCLUDE-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-OBJECTIVE",
+          "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-INTERCEPTS",
+          "P1-JULIA-DATA-W-MATRIX-MASK-INCLUDE-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (wide-matrix weights zeroed in place at NA cells under response = 'include'); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: the DATA-W-MATRIX-MASK-DROP fit under response = 'include', against Julia with a placeholder 0 at the 14 cells, mask = the observed cells and the same NaN-bearing weights; R's drop and include objectives agree within 1e-6 (asserted in the twin test). A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-MASK-SCALAR",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-OBJECTIVE",
+        "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-INTERCEPTS",
+        "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-MASK-SCALAR.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-MASK-SCALAR-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-OBJECTIVE",
+          "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-INTERCEPTS",
+          "P1-JULIA-DATA-W-MATRIX-MASK-SCALAR-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (a scalar weight broadcast to the retained-observation count when NA cells are dropped); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: a Poisson fit with weight 2 on every cell and the 14 NA cells dropped, R through gllvmTMB_wide(), against Julia with those cells missing in Y and weights = 2.0. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-SCALAR",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-MATRIX-SCALAR-OBJECTIVE",
+        "P1-JULIA-DATA-W-MATRIX-SCALAR-INTERCEPTS",
+        "P1-JULIA-DATA-W-MATRIX-SCALAR-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-SCALAR.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-SCALAR-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-MATRIX-SCALAR-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-SCALAR-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-SCALAR-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-SCALAR-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-MATRIX-SCALAR-OBJECTIVE",
+          "P1-JULIA-DATA-W-MATRIX-SCALAR-INTERCEPTS",
+          "P1-JULIA-DATA-W-MATRIX-SCALAR-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays a scalar wide-matrix weight broadcast to every cell; the twin is a Poisson fit with weight 2 on every cell, R through gllvmTMB_wide()'s own normaliser and pivot, Julia weights = 2.0. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
+    },
+    {
+      "source_id": "data/DATA-W-MATRIX-UNIT",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-MATRIX-UNIT-OBJECTIVE",
+        "P1-JULIA-DATA-W-MATRIX-UNIT-INTERCEPTS",
+        "P1-JULIA-DATA-W-MATRIX-UNIT-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-MATRIX-UNIT.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-UNIT-NATIVE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE",
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE": "PASS",
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE": "PASS",
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE": "r_replay_julia_surface_absent",
+          "CORE070-DATA-W-MATRIX-UNIT-NATIVE-NEGATIVE-CONTROL": "r_replay_negative_control"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-MATRIX-UNIT-OBJECTIVE",
+          "P1-JULIA-DATA-W-MATRIX-UNIT-INTERCEPTS",
+          "P1-JULIA-DATA-W-MATRIX-UNIT-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays a per-unit wide-matrix weight vector flattened in R's units x traits order (its negative control pins that order); the twin is a Poisson fit with one weight per unit, R through gllvmTMB_wide()'s own normaliser and pivot, Julia weights = a length-n vector. The fit shows each cell gets its unit's weight, the observable consequence of the order; the order of R's internal long vector itself has no Julia counterpart. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised. gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference."
+    },
+    {
+      "source_id": "data/DATA-W-NULL",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-NULL-OBJECTIVE",
+        "P1-JULIA-DATA-W-NULL-INTERCEPTS",
+        "P1-JULIA-DATA-W-NULL-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-NULL.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-NULL-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-NULL-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-NULL-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-NULL-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-NULL-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-NULL-OBJECTIVE",
+          "P1-JULIA-DATA-W-NULL-INTERCEPTS",
+          "P1-JULIA-DATA-W-NULL-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "The R batch case replays normalise_weights(NULL) to NULL; the twin is the unweighted Poisson fit (p = 6, n = 120, one latent factor), R weights = NULL against Julia fit_gllvm(Y; family = Poisson(), K = 1) with weights omitted; the twin test also asserts that weights = nothing gives the identical fit. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
+    },
+    {
+      "source_id": "data/DATA-W-ZERO",
+      "classification": "required_core",
+      "arc": "A3",
+      "carry_scan_status": "DANGLING",
+      "executable_case_ids": [
+        "P1-JULIA-DATA-W-ZERO-OBJECTIVE",
+        "P1-JULIA-DATA-W-ZERO-INTERCEPTS",
+        "P1-JULIA-DATA-W-ZERO-LAMBDA-LAMBDAT"
+      ],
+      "disposition": null,
+      "p0_batch": "data-batch attempt-data-r3 (wave1)",
+      "p0_evidence": {
+        "recorded": true,
+        "batch": "data-batch attempt-data-r3 (wave1)",
+        "receipts": ".unlazy/core070-aghq/wave1-batches",
+        "preservation_sha256": "67c664e737c7d09985c5e4649675b9c49e3199dd9719666ff96de6ead8a8edef",
+        "raw_available_in_repo_or_on_this_host": false,
+        "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record (batch name, preservation sha256, verifier line) remains."
+      },
+      "evidence_tier": "numeric",
+      "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-ZERO.json"
+        ],
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/cases/CORE070-DATA-W-ZERO-NATIVE.json"
+        ],
+        "batch_case_ids": [
+          "CORE070-DATA-W-ZERO-NATIVE"
+        ],
+        "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_weights_twins_p1.jl, against R-at-P1 values copied from test/fixtures/weights_twins_p1.toml (an R fit that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. The helper-replay batch case this row carried has no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids"
+      },
+      "measured_result": {
+        "case_verdicts": {
+          "CORE070-DATA-W-ZERO-NATIVE": "PASS"
+        },
+        "batch_verifier": {
+          "CORE070-DATA-W-ZERO-NATIVE": "PASS"
+        },
+        "case_kinds": {
+          "CORE070-DATA-W-ZERO-NATIVE": "r_replay_julia_surface_absent"
+        },
+        "twin_case_ids": [
+          "P1-JULIA-DATA-W-ZERO-OBJECTIVE",
+          "P1-JULIA-DATA-W-ZERO-INTERCEPTS",
+          "P1-JULIA-DATA-W-ZERO-LAMBDA-LAMBDAT"
+        ],
+        "twin_verdict": "PASS"
+      },
+      "scope_note": "Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch case is a helper-internal vector shape of normalise_weights() (an all-zero length-6 vector returned unchanged); that shape itself has no Julia counterpart, so the twin compares its fit-level consequence: a Poisson fit through the long API with weight 0 on 15 of 720 rows and 1 elsewhere, against Julia with the same p x n matrix (an all-zero fit is a flat objective with nothing to compare); the twin test also asserts that the zero-weight fit equals the fit with those cells masked. A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial counts, are not exercised."
+    },
+    {
+      "source_id": "data/RD-URBANISATION-BINOMIAL",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK",
+        "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA",
+        "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT",
+        "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric_fail",
+      "measured_against": "P1",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json"
+        ],
+        "tier": "measured, does not bind: beta: abs difference 0.000231344 > tolerance 0.0001; LLt: abs difference 0.00164848 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000821878 > tolerance 1e-06"
+      },
+      "measured_result": {
+        "verdict": "FAIL",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK": 1.1885913409059867e-07,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA": 0.0002313439396757211,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT": 0.0016484796389644174,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA": 0.0008218778164135188
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK": true,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA": false,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT": false,
+          "CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA": false
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-CRABS-GAUSSIAN",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK",
+        "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA",
+        "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT",
+        "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric",
+      "measured_against": "P1",
+      "evidence": {
+        "receipt": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json"
+        ],
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
+      },
+      "measured_result": {
+        "verdict": "PASS",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": 5.8479827202972956e-08,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": 5.734798325107704e-08,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT": 1.4340849061461602e-06,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA": 1.6242267664168253e-07
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK": true,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA": true,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT": true,
+          "CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA": true
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-SPIDER-NB2",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK",
+        "CAMPAIGN-C4-RD-SPIDER-NB2-BETA",
+        "CAMPAIGN-C4-RD-SPIDER-NB2-LLT",
+        "CAMPAIGN-C4-RD-SPIDER-NB2-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric_fail",
+      "measured_against": "P1",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json"
+        ],
+        "tier": "measured, does not bind: logLik: abs difference 1.45732e-06 > tolerance 1e-06; LLt: abs difference 0.000161728 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 6.73994e-05 > tolerance 1e-06"
+      },
+      "measured_result": {
+        "verdict": "FAIL",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK": 1.4573231510439655e-06,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-BETA": 4.9511286195569326e-05,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-LLT": 0.00016172778977541213,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-ETA": 6.739944245026663e-05
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK": false,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-BETA": true,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-LLT": false,
+          "CAMPAIGN-C4-RD-SPIDER-NB2-ETA": false
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-BEETLE-NB2",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK",
+        "CAMPAIGN-C4-RD-BEETLE-NB2-BETA",
+        "CAMPAIGN-C4-RD-BEETLE-NB2-LLT",
+        "CAMPAIGN-C4-RD-BEETLE-NB2-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric_fail",
+      "measured_against": "P1",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json"
+        ],
+        "tier": "measured, does not bind: R's Hessian is not positive definite (pdHess is false); logLik: abs difference 9.08069e-06 > tolerance 1e-06; beta: abs difference 0.000287141 > tolerance 0.0001; LLt: abs difference 0.00463293 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000869455 > tolerance 1e-06"
+      },
+      "measured_result": {
+        "verdict": "FAIL",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK": 9.080691597773694e-06,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-BETA": 0.00028714120128903176,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-LLT": 0.004632934295180746,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-ETA": 0.0008694545642065066
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK": false,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-BETA": false,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-LLT": false,
+          "CAMPAIGN-C4-RD-BEETLE-NB2-ETA": false
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-FUNGI-BINOMIAL",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [
+        "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK",
+        "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA",
+        "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT",
+        "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA"
+      ],
+      "disposition": null,
+      "evidence_tier": "numeric_fail",
+      "measured_against": "P1",
+      "evidence": {
+        "non_binding_receipts": [
+          "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json"
+        ],
+        "tier": "measured, does not bind: beta: abs difference 0.000123933 > tolerance 0.0001; LLt: abs difference 0.000474438 > tolerance 0.0001; linear predictor on the training data (link scale): abs difference 0.000328279 > tolerance 1e-06"
+      },
+      "measured_result": {
+        "verdict": "FAIL",
+        "max_abs_diff_by_case": {
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK": 6.151276465971023e-08,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA": 0.000123932525228021,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT": 0.00047443752671583184,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA": 0.00032827901245191526
+        },
+        "within_tolerance_by_case": {
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK": true,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA": false,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT": false,
+          "CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA": false
+        }
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4"
+    },
+    {
+      "source_id": "data/RD-PHYLO-DISPOSITION",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [],
+      "disposition": "DISPOSITION-SIGNED",
+      "evidence_tier": "not_measured",
+      "measured_against": "P1",
+      "evidence": {
+        "tier": "no measurement: the row closes by the maintainer's signed disposition below"
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "D-319",
+      "signed_disposition": {
+        "capability": "phylo-structured real data",
+        "text": "gllvm::fungi ships a phylogeny (fungi$tree), so a real phylo workflow exists, but the campaign has no phylo-structured real-data run at P1. C4 accepts a direct-engine run (R gllvmTMB and Julia GLLVModels fitted to the same data), so one on fungi with fungi$tree would replace this disposition; revisit at P2.",
+        "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
+    },
+    {
+      "source_id": "data/RD-TEMPORAL-DISPOSITION",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [],
+      "disposition": "DISPOSITION-SIGNED",
+      "evidence_tier": "not_measured",
+      "measured_against": "P1",
+      "evidence": {
+        "tier": "no measurement: the row closes by the maintainer's signed disposition below"
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "D-319",
+      "signed_disposition": {
+        "capability": "temporal real data",
+        "text": "None of gllvm, vegan, MASS, ape ships a multivariate ecological time series the plan would call a real workflow; no bridge route for temporal at P1 (D-296).",
+        "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
+    },
+    {
+      "source_id": "data/RD-ISDM-DISPOSITION",
+      "classification": "required_core",
+      "arc": "campaign-C4",
+      "clause": "C4",
+      "executable_case_ids": [],
+      "disposition": "DISPOSITION-SIGNED",
+      "evidence_tier": "not_measured",
+      "measured_against": "P1",
+      "evidence": {
+        "tier": "no measurement: the row closes by the maintainer's signed disposition below"
+      },
+      "signed_by": "Shinichi Nakagawa",
+      "signed_on": "2026-10-05",
+      "signature_ref": "D-319",
+      "signed_disposition": {
+        "capability": "integrated SDM real data",
+        "text": "No real multi-source dataset in the packages checked; no bridge route for iSDM at P1 (D-296, D-300 row 1c-5).",
+        "status": "DISPOSITION-SIGNED: item F of the rulings page (three C4 dispositions), signed by the maintainer on 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit). Recorded by an agent, signed by the maintainer."
+      },
+      "ruling": "itchyshin/GLLVModels.jl#684 item 4 (row added); disposition signed under vault D-319, item F"
+    }
+  ]
+}

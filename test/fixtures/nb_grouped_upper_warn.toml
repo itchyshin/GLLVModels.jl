@@ -1,0 +1,14 @@
+# Literal data for test/test_nb_grouped_upper_warn.jl (2026-09-29). Only the
+# lower_case counts are stored here; the upper-end case reuses [nb_upper] in
+# gamma_beta_upper_boundary.toml (Poisson(2) counts, fitted NB2 r above 1e10).
+# lower_case: p = 3, n = 40, Y[t,s] = round(Int, min(exp(11 * randn), 1e15)) drawn
+# with MersenneTwister(8) on Julia 1.10.12 (aarch64-apple-darwin); the grouped NB2
+# fit (one group) puts r at about 1.5e-8, the extreme-overdispersion end.
+# Values are t-fastest (column-major). data_sha256 = sha256 of the bytes of vec(Int64.(Y)).
+[lower_case]
+p = 3
+n = 40
+K = 1
+group = [1, 1, 1]
+Y_column_major = [1, 9737283792, 150568103805, 0, 0, 0, 129, 1, 1126, 5054, 39, 0, 105252, 0, 196, 0, 0, 0, 2370, 4, 1, 8, 0, 42, 0, 3006, 75991, 0, 18, 13779543, 35401565996, 0, 83025554, 0, 0, 0, 24, 0, 0, 2049863311, 0, 4, 402, 38, 9408, 0, 0, 0, 48974, 0, 10626759, 0, 0, 104, 162224, 1, 27641, 12, 62523273, 49071, 0, 0, 150807665, 0, 0, 0, 48918, 0, 1365, 0, 0, 27, 0, 0, 54022, 86, 41, 0, 0, 4, 0, 379, 5645994, 4, 0, 0, 20500, 4953543, 0, 2510191, 0, 0, 0, 0, 0, 462606, 0, 0, 0, 120705867, 0, 0, 0, 14227573188, 4333, 257222464, 91, 0, 3, 2935284481, 0, 1217875233, 0, 0, 2, 3, 1, 0, 20, 0]
+data_sha256 = "b423aac70c55b7bdac9b268120c1a4a07086ac3b0e7afcb726ec097409a1180e"

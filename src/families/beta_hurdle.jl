@@ -213,10 +213,11 @@ function residuals(fit::BetaHurdleFit, Y::AbstractMatrix{<:Real};
             d = Beta(μ * φ, (1 - μ) * φ)
             yc = clamp(float(Y[t, s]), 1e-6, 1 - 1e-6)
             u  = (1 - πt) + πt * cdf(d, yc)
+            cu = πt * ccdf(d, yc)
+            R[t, s] = _ds_z(u, u, cu, cu, 1.0)
         else
-            u = (1 - πt) * rand(rng)
+            R[t, s] = _ds_z(0.0, 1 - πt, 1.0, πt, rand(rng); lmass = log1p(-πt))
         end
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
     end
     return R
 end
@@ -248,7 +249,7 @@ logit-scale positive residuals as loadings + a method-of-moments `φ₀` from th
 positive-part empirical variance.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search is always Fisher-scored. NOTE (2026-08-28): for this
+`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
 family the observed count-part weight is not yet specialised, so both selectors
 currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
@@ -261,6 +262,7 @@ function fit_beta_hurdle_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     p, n = size(Y)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_beta_hurdle_gllvm: hessian must be :observed or :fisher; got :$hessian"))
+    _check_twopart_support("fit_beta_hurdle_gllvm", Y, _tp_unit_ok, "0 (absence) or a value in the open interval (0,1)")
     rr = rr_theta_len(p, K)
 
     # --- Warm start --------------------------------------------------------

@@ -1,0 +1,16 @@
+{
+  "glvmodels_commit": "db5b9ed2e2467e296b153e24671874a017496907",
+  "dirty": [],
+  "host": "w-kw3k3y6229.psych.ualberta.ca",
+  "oracle_build_dir": "/Users/z3437171/local-scratch/a3cov-oracle/build",
+  "oracle_build_json_sha256": "0a648dc0ee299416b3796fefaa23419c1736f9c7b257aa77a5d8d108e3ba01af",
+  "threads": {
+    "OPENBLAS_NUM_THREADS": 1,
+    "JULIA_NUM_THREADS": 4
+  },
+  "wall_seconds": {
+    "r": 1.5,
+    "julia_including_compile": 6.5
+  },
+  "finished_utc": "2026-09-28T10:25:42Z"
+}

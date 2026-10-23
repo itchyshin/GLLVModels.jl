@@ -1,0 +1,90 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/S3method/tidy,gllvmTMB_multi"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#663",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "3fcf206986f934686204a3f70b7fe50edc27771d",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/ns_numeric_p1_b.toml",
+      "sha256": "6da8061f786b3bd46bce2a925dc8020566da1239e100b62fb0fa16b85b8bf868"
+    },
+    {
+      "path": "test/fixtures/ns_gauss_p1_data.csv",
+      "sha256": "e714fa10411f6a66150c534506dec87cf1c748fed4c55ae13942828f1fca0326"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_namespace_numeric_p1_twin_b.jl",
+      "sha256": "07c8426d1336ae44f711083e4c676c3e0fbf8bb91c53907475f7b709b048e3ff"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-TIDY-ESTIMATE",
+        "quantity": "tidy(fit) fixed rows, column `estimate`, 6 trait intercepts",
+        "r_source": "test/fixtures/ns_numeric_p1_b.toml [tidy.estimate]",
+        "julia_source": "GLLVModels.tidy(fit, Y), field estimate, as called at test/test_namespace_numeric_p1_twin_b.jl:63; fit as at test/test_namespace_numeric_p1_twin_b.jl:60",
+        "r_value": [
+          0.5582060338056996,
+          -0.19181654412747803,
+          0.0928342017364656,
+          0.8417865231650219,
+          -0.5158543500540521,
+          0.058444463325015
+        ],
+        "julia_value": [
+          0.5582060338057427,
+          -0.19181654412777674,
+          0.0928342017363344,
+          0.8417865231651739,
+          -0.5158543500539483,
+          0.05844446332495955
+        ],
+        "abs_diff": 2.9870550477539837e-13,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin_b.jl:68",
+        "tolerance_source_line": "@test isapprox([r.estimate for r in tb], Float64.(t[\"estimate\"]); atol = 1e-6, rtol = 0)",
+        "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked; the same data as the main fit of the extract_loadings twin), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Rows are the six trait intercepts in trait order (R terms traitt1..traitt6, Julia beta[1..6]); the test asserts the row count and the identity link on both sides, and the numbers are compared elementwise."
+      },
+      {
+        "case_id": "P1-JULIA-TIDY-STD-ERROR",
+        "quantity": "tidy(fit) fixed rows, column `std.error`, 6 Wald standard errors",
+        "r_source": "test/fixtures/ns_numeric_p1_b.toml [tidy.std_error]",
+        "julia_source": "GLLVModels.tidy(fit, Y), field std_error, as called at test/test_namespace_numeric_p1_twin_b.jl:63; fit as at test/test_namespace_numeric_p1_twin_b.jl:60",
+        "r_value": [
+          0.076239524981714,
+          0.07174587975441864,
+          0.07314990695559305,
+          0.07704303271849129,
+          0.07203498418425235,
+          0.06653344278806514
+        ],
+        "julia_value": [
+          0.07623947940744663,
+          0.07174577940245469,
+          0.0731496082536993,
+          0.07704318626438397,
+          0.07203471030128306,
+          0.06653325077122015
+        ],
+        "abs_diff": 2.987018937472552e-07,
+        "tolerance": 1e-05,
+        "tolerance_source": "test/test_namespace_numeric_p1_twin_b.jl:70",
+        "tolerance_source_line": "@test isapprox([r.std_error for r in tb], Float64.(t[\"std_error\"]); atol = 1e-5, rtol = 0)",
+        "note": "Rank-2 Gaussian fit on the fixture data (sha256 checked; the same data as the main fit of the extract_loadings twin), R: latent(0 + trait | unit, d = 2, unique = FALSE) converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Rows are the six trait intercepts in trait order (R terms traitt1..traitt6, Julia beta[1..6]); the test asserts the row count and the identity link on both sides, and the numbers are compared elementwise."
+      }
+    ]
+  }
+}

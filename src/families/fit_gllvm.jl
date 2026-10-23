@@ -1,21 +1,269 @@
 # Unified GLLVM fit entry point — dispatches on the response family.
 
+# Offset normaliser: the one place that decides what shape an `offset` may have, for
+# `fit_gllvm`, the `gllvm` formula front end AND every named fitter that takes an `offset`
+# keyword (each calls it first thing, so a direct `fit_zip_gllvm(Y; offset = ...)` gets the
+# same rules as `fit_gllvm(Y; family = ZIPoisson(), offset = ...)`).
+# The rule is Julia's own broadcast rule, so nothing here is ambiguous: a real scalar becomes
+# the p×n matrix `fill(c, p, n)` (R's gllvmTMB broadcasts `offset(log(2))` to every row); a
+# matrix whose sides are each the full size or 1 (p×n, 1×n = one offset per unit, p×1 = one
+# per trait) is stretched to p×n; a length-p vector is a column (one offset per trait);
+# `nothing` and a clean p×n matrix pass through untouched (same object). Anything else is
+# refused with an ArgumentError. A p×n matrix is always read as traits × units, so when p == n
+# an n×p (units × traits) matrix is read transposed; that orientation is the documented one.
+#
+# Two inputs are ambiguous rather than merely wrong, and are refused too. (1) A bare vector
+# when p == n: it could be one offset per trait or one per unit, and reading it per trait
+# makes the intercepts absorb it completely, so a per-unit effort vector would silently do
+# nothing. The caller says which with `reshape(o, 1, n)` or `reshape(o, p, 1)`. (2) A
+# non-finite value (NaN, Inf, missing) at an OBSERVED cell: the two-part and zero-inflated
+# routes turn it into a `-Inf`, unconverged fit. Non-finite values at cells that are not
+# observed (`mask[t, s] == false`, or `missing` in `Y`) are allowed: the engines never read
+# them (see also `aghq_gaussian_fit.jl`, which keeps them deliberately). `missing` there is
+# read as NaN (the returned matrix is then a plain `Float64` matrix), so it behaves exactly
+# like NaN on every route that honours `mask`.
+#
+# The fitters below do not check the shape themselves, and their objectives run inside
+# `try ... catch` that turns any exception into a sentinel value, so a scalar offset used to
+# come back as a loglik = -Inf, unconverged fit (the Gaussian route threw a
+# DimensionMismatch), and a p×1 offset as -Inf or, on some routes, a finite fit of the wrong
+# model. The two-part warm start read `offset[t, j]` unchecked, so a wrong shape reached
+# memory it did not own. A 1×n matrix already worked on the count and continuous Laplace
+# routes (the family code adds the offset by broadcast), and a length-p vector on most of
+# them; the expansion below gives bit-identical fits there and also makes the Gaussian and
+# AGHQ routes accept them. See the CHANGELOG for the routes where the old length-p and p×1
+# results were wrong. `caller` names the function in the error message; `maskable = false`
+# marks the routes that take neither `mask` nor `missing` responses (Lognormal, the two-part
+# and the zero-inflated families), where every cell is observed, so the message does not
+# suggest marking a cell unobserved.
+function _normalize_offset(offset, p::Integer, n::Integer; Y = nothing, mask = nothing,
+                           caller::AbstractString = "fit_gllvm", maskable::Bool = true)
+    offset === nothing && return nothing
+    if offset isa Real
+        isfinite(offset) || throw(ArgumentError(
+            "$caller: a scalar offset must be finite; got $offset"))
+        return fill(float(offset), p, n)
+    end
+    O = nothing
+    if offset isa AbstractMatrix
+        r, c = size(offset)
+        if (r == p || r == 1) && (c == n || c == 1)
+            O = (r == p && c == n) ? offset : repeat(offset, r == p ? 1 : p, c == n ? 1 : n)
+        end
+    elseif offset isa AbstractVector
+        if p == n && length(offset) == p
+            throw(ArgumentError(
+                "$caller: a bare length-$(p) offset vector is ambiguous when the number " *
+                "of traits equals the number of units (p = n = $(p)): it could be one " *
+                "offset per trait or one per unit. Pass reshape(o, 1, $(n)) for one offset " *
+                "per unit, or reshape(o, $(p), 1) for one offset per trait."))
+        elseif length(offset) == p
+            O = repeat(offset, 1, n)
+        end
+    end
+    O === nothing && throw(ArgumentError(
+        "$caller: offset must be a real scalar (the same offset for every cell), " *
+        "a $(p)×$(n) matrix (traits × units, the layout of Y; a $(p)×1 or 1×$(n) matrix is " *
+        "stretched along its length-1 side), or a length-$(p) vector (one offset per trait); " *
+        "got $(_describe_offset(offset)). For one offset per unit, pass reshape(o, 1, $(n))."))
+    _check_offset_observed(O, Y, mask, caller, maskable)
+    # `missing` is allowed only at unobserved cells (checked above); the engines never read
+    # such a cell, but a `Union{Missing, Float64}` matrix would make the arithmetic around it
+    # throw, so read it as NaN, which every mask-aware route already accepts there.
+    eltype(O) <: Real || (O = map(o -> o isa Real ? float(o) : NaN, O))
+    return O
+end
+
+# The training offset a Laplace fit keeps (a p×n Float64 copy), so `predict` and `getLV`
+# can add it by default; `nothing` when the fit had no offset.
+_stored_offset(::Nothing) = nothing
+_stored_offset(O::AbstractMatrix) = Matrix{Float64}(O)
+
+# What an offset looked like, for the error message ("a length-40 vector", "a 40×4 matrix").
+function _describe_offset(offset)
+    offset isa AbstractVector && return "a length-$(length(offset)) vector"
+    offset isa AbstractMatrix && return "a $(size(offset, 1))×$(size(offset, 2)) matrix"
+    offset isa AbstractArray && return "a $(join(size(offset), '×')) array"
+    return "a value of type $(typeof(offset))"
+end
+
+# Refuse a non-finite offset at an observed cell. A cell is not observed when `mask` (a p×n
+# Bool matrix) is false there or `Y` holds `missing` there.
+function _check_offset_observed(O::AbstractMatrix, Y, mask, caller::AbstractString = "fit_gllvm",
+                                maskable::Bool = true)
+    use_mask = maskable && mask isa AbstractMatrix && size(mask) == size(O)
+    use_Y = maskable && Y isa AbstractMatrix && size(Y) == size(O)
+    @inbounds for s in axes(O, 2), t in axes(O, 1)
+        o = O[t, s]
+        (o isa Real && isfinite(o)) && continue
+        use_mask && !mask[t, s] && continue
+        use_Y && ismissing(Y[t, s]) && continue
+        throw(ArgumentError(maskable ?
+            "$caller: offset must be finite at every observed cell; got $(repr(o)) at " *
+            "trait $t, unit $s. Give that cell a finite offset, or mark it unobserved " *
+            "(mask = false, or missing in Y)." :
+            "$caller: offset must be finite at every cell; got $(repr(o)) at trait $t, " *
+            "unit $s. This route does not support mask and takes no missing responses, so " *
+            "every cell is used: give that cell a finite offset."))
+    end
+    return nothing
+end
+
+# Families whose fitter has no `offset` keyword. A silent drop would be wrong and the raw
+# MethodError says only "unsupported keyword argument", so `fit_gllvm` (and `gllvm`, which
+# shares these rules) refuse an offset here first, naming the family. If a fitter below
+# gains offset support, remove it from this list: test/test_offset.jl fits every route
+# that is not listed and refuses every route that is. The gllvmTMB-twin zero-inflated
+# markers (`ZiPoisson`, `ZiNbinom2`, `ZiBinomial`) are defined in zi_twin.jl, which is
+# included after this file, so they join the list through a method there.
+const _OFFSET_UNSUPPORTED_FAMILIES = Union{Multinomial, StudentTFamily, COMPoisson,
+                                           BetaBinom, BetaHurdle, OrderedBeta,
+                                           Ordinal, OrdinalLogit}
+_offset_unsupported(family) = family isa _OFFSET_UNSUPPORTED_FAMILIES
+
+# Families whose fitter takes neither `mask` nor `missing` responses, so every cell is
+# observed and a non-finite offset anywhere is an error (no "unobserved cell" exemption).
+const _OFFSET_MASKLESS_FAMILIES = Union{Lognormal, DeltaLogNormal, DeltaGamma, HurdlePoisson,
+                                        HurdleNB, ZIPoisson, ZINegBin, ZIB}
+_offset_maskless(family) = family isa _OFFSET_MASKLESS_FAMILIES
+
+_refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentError(
+    "$caller: offset is not supported for $what; remove the offset keyword. " *
+    "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
+    "zero-inflated (ZIPoisson, ZINegBin, ZIB) routes listed in ?fit_gllvm."))
+
+# Drop `offset = nothing` (no offset; some routes would otherwise reject the keyword), and
+# normalise any other offset once. Shared by `fit_gllvm` and the `gllvm` formula front end,
+# which calls some fitters directly.
+function _normalize_offset_kwargs(kwargs, Y::AbstractMatrix; caller::AbstractString = "fit_gllvm",
+                                  maskable::Bool = true)
+    haskey(kwargs, :offset) || return kwargs
+    nt = NamedTuple(kwargs)
+    nt.offset === nothing && return Base.structdiff(nt, NamedTuple{(:offset,)})
+    return merge(nt, (offset = _normalize_offset(nt.offset, size(Y, 1), size(Y, 2);
+                                                 Y = Y, mask = get(nt, :mask, nothing),
+                                                 caller = caller, maskable = maskable),))
+end
+
+# Entry check for the named fitters that take their options as `kwargs...` (the AGHQ-aware
+# `fit_poisson_gllvm`, `fit_binomial_gllvm` and the grouped / Delta-Gamma AGHQ routes). No
+# offset, or `offset = nothing`: the very same `kwargs` come back untouched, so those fits
+# are bit-identical. Any other offset is normalised exactly as in `fit_gllvm`.
+function _entry_offset_kwargs(kwargs, Y::AbstractMatrix, caller::AbstractString;
+                              maskable::Bool = true)
+    (haskey(kwargs, :offset) && kwargs[:offset] !== nothing) || return kwargs
+    return _normalize_offset_kwargs(kwargs, Y; caller = caller, maskable = maskable)
+end
+
+# For a route that takes no offset: drop `offset = nothing`, refuse any other offset.
+function _no_offset_kwargs(kwargs, caller::AbstractString, what::AbstractString)
+    haskey(kwargs, :offset) || return kwargs
+    kwargs[:offset] === nothing || _refuse_offset(caller, what)
+    return Base.structdiff(NamedTuple(kwargs), NamedTuple{(:offset,)})
+end
+
+# ---------------------------------------------------------------------------
+# Observation weights (gllvmTMB's `weights`; slice W4-1a). A weight multiplies the
+# conditional log-density of its cell (src/families/laplace.jl), so 0 drops the cell
+# and fractional values are allowed. Shapes mirror gllvmTMB's wide routes on Julia's
+# traits × units layout: `nothing` (unweighted), a real scalar (every cell), a length-n
+# vector (one weight per unit, every trait: R's `nrow(Y)` vector), or a p×n matrix (per
+# cell; a 1×n or p×1 matrix stretches along its length-1 side). A bare vector of any
+# other length is refused: one weight per trait is written `reshape(w, p, 1)`. Values
+# must be real, finite and >= 0 at observed cells; an unobserved cell (`mask` false or
+# `missing` in `Y`) contributes nothing whatever its weight, so any value there (NaN,
+# `missing`) is accepted and stored as 0. Returns a fresh p×n Float64 matrix, or
+# `nothing`.
+function _normalize_weights(w, p::Integer, n::Integer; Y = nothing, mask = nothing,
+                            caller::AbstractString = "fit_gllvm")
+    w === nothing && return nothing
+    shape = if w isa Real
+        :scalar
+    elseif w isa AbstractVector
+        length(w) == n || throw(ArgumentError(
+            "$caller: a weights vector must have one entry per unit (length $(n)); got " *
+            "length $(length(w)). For one weight per trait pass reshape(w, $(p), 1); for per-cell " *
+            "weights pass a $(p)×$(n) matrix (traits × units)."))
+        :unit
+    elseif w isa AbstractMatrix
+        r, c = size(w)
+        ((r == p || r == 1) && (c == n || c == 1)) || throw(ArgumentError(
+            "$caller: a weights matrix must be $(p)×$(n) (traits × units), 1×$(n) (one per unit) " *
+            "or $(p)×1 (one per trait); got a $(r)×$(c) matrix" *
+            ((r, c) == (n, p) ? ". A units × traits matrix (gllvmTMB_wide's orientation) is " *
+                                "passed as permutedims(w)." : ".")))
+        :matrix
+    else
+        throw(ArgumentError("$caller: weights must be nothing, a real scalar, a length-$(n) " *
+                            "vector or a $(p)×$(n) matrix; got a value of type $(typeof(w))"))
+    end
+    W = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        observed = (mask === nothing || mask[t, s]) && (Y === nothing || !ismissing(Y[t, s]))
+        v = shape === :scalar ? w : shape === :unit ? w[s] :
+            w[size(w, 1) == 1 ? 1 : t, size(w, 2) == 1 ? 1 : s]
+        if !observed
+            W[t, s] = 0.0
+            continue
+        end
+        (v isa Real && isfinite(v) && v >= 0) || throw(ArgumentError(
+            "$caller: weights must be finite and non-negative at every observed cell; got " *
+            "$(repr(v)) at trait $t, unit $s"))
+        W[t, s] = Float64(v)
+    end
+    return W
+end
+
+_refuse_weights(caller::AbstractString, what::AbstractString) = throw(ArgumentError(
+    "$caller: weights are not supported for $what; remove the weights keyword. " *
+    "Observation weights are available on the Poisson Laplace route " *
+    "(fit_gllvm(Y; family = Poisson(), K, weights)) only."))
+
+# The one route that takes weights is the default Poisson Laplace fit. Everything else is
+# refused here, naming what blocks it, so no route silently ignores weights and none hits a
+# raw MethodError. `nothing` = admitted.
+function _weights_blocked_route(family; phylo = nothing, grouping = nothing,
+        row_eff::Symbol = :none, disp_group = nothing, pervar::Bool = false,
+        K = nothing, num_lv = nothing, kwargs = (;))
+    phylo === nothing || return "explicit precision (phylo) fits"
+    grouping === nothing || return "explicit grouping terms"
+    family isa Binomial && return "family Binomial (gllvmTMB reads binomial weights as trial " *
+        "counts; pass the trials as N instead)"
+    family isa Poisson || return "family $(nameof(typeof(family)))"
+    pervar && return "pervar = true"
+    row_eff === :none || return "row_eff = :$row_eff"
+    disp_group === nothing || return "disp_group"
+    (K === nothing && num_lv === nothing) && return "an estimated K (K omitted); supply K"
+    get(kwargs, :X_lv, nothing) === nothing || return "X_lv (predictor-informed latent scores)"
+    _aghq_request(get(kwargs, :aghq, false)) === :off || return "AGHQ integration (aghq)"
+    return nothing
+end
+
 """
-    fit_gllvm(Y; family = Normal(), K, num_lv = nothing,
+    fit_gllvm(Y; family = Normal(), K = nothing, num_lv = nothing, Kmax = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
 
 Fit a GLLVM, dispatching on the response `family` — a Distributions.jl
 distribution used as a marker (the GLM.jl convention):
 
-- `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal
+On ordinary Gaussian, Poisson Laplace, and NB2 Laplace routes, `optimizer`
+accepts `:lbfgs`, `:bfgs`, or a configured `Optim.LBFGS()` / `Optim.BFGS()`
+object. `nothing` keeps the existing default. The formula interface's default
+per-trait NB2 route is included; this changes only the solver, not the dispersion
+specification. Use [`optimizer_info`](@ref) to inspect the methods actually run.
+Nested and other family routes reject explicit selection.
+
+- `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal. Without `X`,
+  one intercept per trait is estimated (`pars.β`); `fit_gaussian_gllvm` itself treats
+  `X = nothing` as a zero mean. An explicit `X` defines the complete mean.
 - `Binomial()` → [`fit_binomial_gllvm`](@ref) — Laplace marginal (binary / binomial)
 - `Poisson()`  → [`fit_poisson_gllvm`](@ref) — Laplace marginal (counts)
 - `TruncatedPoisson()` → [`fit_truncated_poisson_gllvm`](@ref) — zero-truncated Poisson
 - `CensoredPoisson()` → [`fit_censored_poisson_gllvm`](@ref) — right-censored Poisson (Julia-forward)
 - `Lognormal()` → [`fit_lognormal_gllvm`](@ref) — one-part lognormal (twin fid 3)
 - `TruncatedNegBin2()` → [`fit_truncated_nbinom2_gllvm`](@ref) — zero-truncated NB2 (shared `r`)
-- `NegativeBinomial()` → [`fit_nb_gllvm_grouped`](@ref) with per-species `r`
-  (twin-aligned default; shared-`r` via [`fit_nb_gllvm`](@ref))
+- `NegativeBinomial()` → [`fit_nb_gllvm`](@ref) with one shared `r` (default since
+  #615); per-species `r` (gllvmTMB's estimand) via `disp_group = :species`
 - `Beta()`     → [`fit_beta_gllvm_grouped`](@ref) with per-species `φ`
   (twin-aligned default; shared-`φ` via [`fit_beta_gllvm`](@ref))
 - `NB1()`      → [`fit_nb1_gllvm_grouped`](@ref) with per-species linear-variance `φ`
@@ -66,8 +314,69 @@ distribution used as a marker (the GLM.jl convention):
   instance rather than as a keyword argument.
 
 `K` is the latent dimension; the gllvm-style alias `num_lv` is accepted as a synonym
-for `K` (gllvm uses `num.lv`). Family-specific keyword arguments (`link`, `N`,
-`Σ_phy`, …) pass through to the underlying fitter.
+for `K` (gllvm uses `num.lv`). On the default family route you may omit `K`: the
+dispatcher then sweeps `K = 1:Kmax` through [`select_lv`](@ref) (failed, unconverged,
+and runaway fits are skipped) and returns the chosen fit. `Kmax` defaults to
+`min(5, p - 1)` when omitted; it cannot be combined with an explicit `K`. Estimating
+`K` is unavailable with `row_eff` or `pervar` (pass `K` or call `select_lv` directly).
+Family-specific keyword arguments (`link`, `N`, `Σ_phy`, …) pass through to the
+underlying fitter.
+
+`offset` is the known additive term in `η = β + offset + Λz` (for example log-exposure);
+`β` is the offset-free intercept, so a constant offset is absorbed by the intercepts (same
+`loglik`, `β` shifted by minus the constant). It may be
+
+- a real scalar, broadcast to every cell as R's `offset(log(2))` is;
+- a `p×n` matrix (traits × units, the layout of `Y`). A `p×n` matrix is always read this
+  way, so when `p == n` an `n×p` (units × traits) matrix is read transposed: pass
+  `transpose(O)` if yours is laid out units × traits;
+- a `1×n` matrix (one offset per unit) or a `p×1` matrix (one offset per trait);
+- a length-`p` vector (one offset per trait). When `p == n` a bare vector cannot be told
+  from a per-unit vector, and reading it per trait would let the intercepts absorb it
+  silently, so it throws an `ArgumentError`: pass `reshape(o, 1, n)` for one offset per unit
+  or `reshape(o, p, 1)` for one per trait.
+
+That is Julia's own broadcast rule. Any other shape (a length-`n` vector when `p ≠ n`, an
+`n×p` matrix when `p ≠ n`, a non-finite scalar) throws an `ArgumentError` that names the
+accepted shapes, instead of returning a `-Inf`, unconverged fit. A non-finite entry (`NaN`,
+`Inf`, `missing`) in a matrix or vector offset throws too when it sits at an observed cell;
+at a cell that is not observed (`mask` is `false` there, or `Y` is `missing` there) it is
+ignored, and `missing` there is read as `NaN`. Only the families that take a `mask` can have
+such a cell: `Lognormal` and the two-part and zero-inflated families have no `mask`, so every
+cell is observed and a non-finite offset anywhere is refused. The check happens once here,
+so every family route below sees a `p×n` matrix; the named fitters (`fit_poisson_gllvm`,
+`fit_zip_gllvm`, `fit_delta_lognormal_gllvm`, ...) run the same check on entry, so a direct
+call gets the same rules, and the same `ArgumentError`, as a call through `fit_gllvm`.
+
+Routes that take no offset throw an `ArgumentError` ("offset is not supported for ...") for
+any offset other than `nothing`: the families `StudentTFamily`, `Ordinal` / `OrdinalLogit`
+(also with `aghq`), `COMPoisson`, `BetaBinom`, `BetaHurdle`, `OrderedBeta`, `Multinomial`
+and the gllvmTMB-twin zero-inflated markers `ZiPoisson` / `ZiNbinom2` / `ZiBinomial`, and
+the `pervar`, `row_eff`, `grouping` and `phylo` routes. Every other family listed above takes
+an offset. `gllvm(@formula(...))` applies the same rules; with covariates in the formula
+only `Normal()` takes one.
+
+# Observation weights
+
+`weights` multiplies each observed cell's conditional log-density by its weight, as
+gllvmTMB's `weights` argument does (a weight of 0 drops the cell; fractional weights are
+allowed). The fit then maximises a weighted objective; the fit's `loglik` field holds it,
+and `loglikelihood` / `aic` / `bic` / `confint` refuse a weighted fit, as gllvmTMB's
+`logLik()` does for non-unit weights. Accepted:
+
+- `nothing` (the default): unweighted, bit-identical to a call without the keyword;
+- a real scalar, applied to every cell;
+- a length-`n` vector: one weight per unit (site), applied to every trait, as gllvmTMB's
+  length-`nrow(Y)` vector;
+- a `p×n` matrix (traits × units) of per-cell weights, or a `1×n` / `p×1` matrix stretched
+  along its length-1 side. A units × traits matrix is passed as `permutedims(w)`.
+
+Weights must be finite and non-negative at observed cells. At unobserved cells (`mask` false
+or `missing` in `Y`) the weight is never read, so any value, including `NaN` or `missing`, is
+accepted there. Weights are supported on the Poisson Laplace route only
+(`family = Poisson()`, `K` given, no `row_eff`, `disp_group`, `pervar`, `grouping`, `phylo`,
+`X_lv` or `aghq`); every other route throws an `ArgumentError` naming what blocks it. For
+`Binomial()` gllvmTMB reads `weights` as trial counts; pass those as `N` instead.
 
 # Structural / dispersion variants (gllvm-style keyword routing)
 
@@ -80,9 +389,12 @@ the plain-call behaviour when they are at their defaults (regression safe):
   - `:random` → [`fit_row_random_gllvm`](@ref) — per-site random intercept `ρ_s ~ N(0, σ_row²)`.
 
 - `disp_group` — grouped / species-specific dispersion (gllvm's `disp.group`).
-  For `NegativeBinomial`, `Beta`, `NB1`, and `BetaBinom` only, `disp_group = nothing`
-  is coerced to `:species` (per-trait φ / `r`, matching gllvmTMB). Pass a length-`p`
-  integer vector of group ids for custom grouping, or `:species` explicitly. Routes to:
+  For `Beta`, `NB1`, and `BetaBinom`, `disp_group = nothing` is coerced to `:species`
+  (per-trait φ, matching gllvmTMB). For `NegativeBinomial`, `disp_group = nothing` fits
+  one shared `r` ([`fit_nb_gllvm`](@ref); maintainer decision 2026-10-01, #615); pass
+  `disp_group = :species` for per-trait `r` as in gllvmTMB. `gllvm(@formula(...))` and the
+  R bridge keep per-trait `r`. Pass a length-`p` integer vector of group ids for custom
+  grouping, or `:species` explicitly. Routes to:
   - `NegativeBinomial` → [`fit_nb_gllvm_grouped`](@ref) (per-group `r`)
   - `Beta`             → [`fit_beta_gllvm_grouped`](@ref) (per-group `φ`)
   - `Gamma`            → [`fit_gamma_gllvm_grouped`](@ref) (per-species shape `α`; opt-in only)
@@ -97,6 +409,12 @@ the plain-call behaviour when they are at their defaults (regression safe):
   dispersion for NB/Beta/NB1/BetaBinom remains available via the named fitters
   [`fit_nb_gllvm`](@ref) / [`fit_beta_gllvm`](@ref) / [`fit_nb1_gllvm`](@ref) /
   [`fit_beta_binomial_gllvm`](@ref).
+  For `DeltaLogNormal` / `DeltaGamma`, `disp_group` is not a grouping — it
+  selects the two-part fitter's own dispersion parameterisation
+  (`:species`/`:shared`, see [`fit_delta_lognormal_gllvm`](@ref) /
+  [`fit_delta_gamma_gllvm`](@ref)); `disp_group = nothing` is likewise
+  coerced to `:species` (per-trait σ/α, matching gllvmTMB's per-trait
+  dispersion), with `:shared` available as an explicit opt-in.
 
 - `pervar::Bool = false` — heteroscedastic (per-species variance) Gaussian. Only valid
   for `family = Normal()`; `true` routes to [`fit_gaussian_pervar_gllvm`](@ref).
@@ -137,7 +455,8 @@ two of them. Therefore at most one of `row_eff != :none`, effective
 fit_gllvm(Y; family = Normal(),   K = 2)                          # Gaussian
 fit_gllvm(Y; family = Binomial(), K = 2, link = LogitLink())      # binary
 fit_gllvm(Y; family = Poisson(),  K = 2, row_eff = :random)       # random row effect
-fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 2)          # per-species r (default)
+fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 2)          # shared r (default)
+fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)  # per-species r
 fit_gllvm(Y; family = Beta(), K = 2)                              # per-species φ (default)
 fit_gllvm(Y; family = NB1(),  K = 2)                              # per-species linear-variance φ
 fit_gllvm(Y; family = BetaBinom(), K = 2, N = trials)             # per-species φ; N is p×n, required
@@ -155,8 +474,46 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    grouping=nothing, unit=nothing, unit_obs=nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
-                   species_id=nothing, kwargs...)
+                   species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
+        requested = kwargs[:optimizer]
+        _optimizer_method(requested, Optim.LBFGS(); route = "fit_gllvm")
+        aghq = get(kwargs, :aghq, false)
+        _aghq_request(aghq) === :off || _refuse_optimizer(requested, "fit_gllvm",
+            "AGHQ integration")
+        (grouping === nothing && phylo === nothing && row_eff === :none && !pervar) ||
+            _refuse_optimizer(requested, "fit_gllvm", "grouped, phylogenetic, row-effect, or pervar fits")
+        if family isa Normal
+            disp_group === nothing || _refuse_optimizer(requested, "fit_gllvm", "dispersion variants")
+        elseif family isa Poisson
+            disp_group === nothing || _refuse_optimizer(requested, "fit_gllvm", "grouped Poisson dispersion")
+            haskey(kwargs, :X) && _refuse_optimizer(requested, "fit_gllvm", "Poisson covariates")
+        elseif family isa NegativeBinomial
+            haskey(kwargs, :X) && _refuse_optimizer(requested, "fit_gllvm", "NB2 covariates")
+        else
+            _refuse_optimizer(requested, "fit_gllvm", "this response family")
+        end
+    end
+    # `offset = nothing` means no offset; drop it so a route without an offset keyword
+    # does not reject it. Any other offset is checked below (or refused on the routes
+    # that take none).
+    if haskey(kwargs, :offset) && kwargs[:offset] === nothing
+        kwargs = Base.structdiff(NamedTuple(kwargs), NamedTuple{(:offset,)})
+    end
+    # Observation weights: `nothing` never reaches a fitter (every route sees the kwargs it
+    # saw before weights existed). Any other value is admitted on the Poisson Laplace route
+    # only, normalised here once, and refused with an ArgumentError everywhere else.
+    if weights !== nothing
+        blocked = _weights_blocked_route(family; phylo = phylo, grouping = grouping,
+            row_eff = row_eff, disp_group = disp_group, pervar = pervar, K = K,
+            num_lv = num_lv, kwargs = kwargs)
+        blocked === nothing || _refuse_weights("fit_gllvm", blocked)
+        kwargs = merge(NamedTuple(kwargs), (weights = _normalize_weights(weights,
+            size(Y, 1), size(Y, 2); Y = Y, mask = get(kwargs, :mask, nothing)),))
+    end
     if phylo !== nothing
+        haskey(kwargs, :offset) && _refuse_offset("fit_gllvm",
+            "explicit precision (phylo = PrecisionPhy) fits")
         phylo isa PrecisionPhy || throw(ArgumentError("phylo must be a PrecisionPhy"))
         family isa Normal || throw(ArgumentError("explicit precision fitting currently requires Gaussian responses"))
         K === nothing && num_lv === nothing || throw(ArgumentError(
@@ -182,6 +539,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     all(isnothing, (phylo_rank, phylo_mode, species_id)) || throw(ArgumentError(
         "phylo_rank, phylo_mode and species_id require an explicit phylo=PrecisionPhy"))
     if grouping !== nothing
+        haskey(kwargs, :offset) && _refuse_offset("fit_gllvm", "explicit grouping terms")
         (K === nothing && num_lv === nothing) || throw(ArgumentError(
             "explicit grouping terms own their ranks; do not also supply K or num_lv"))
         (row_eff === :none && disp_group === nothing && !pervar) || throw(ArgumentError(
@@ -197,6 +555,16 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     end
     all(isnothing, (unit, unit_obs, cluster, cluster2)) || throw(ArgumentError(
         "group identifiers do not add random effects; supply explicit grouping=[GroupingTerm(...)]"))
+    # Offset, once, for every route below: refuse it on the routes whose fitter takes none
+    # (before any shape check, so the message names the real problem), otherwise broadcast
+    # a scalar, expand a length-p vector or refuse an unusable shape (`_normalize_offset`).
+    if haskey(kwargs, :offset)
+        pervar && _refuse_offset("fit_gllvm", "pervar = true")
+        row_eff in (:fixed, :random) && _refuse_offset("fit_gllvm", "row_eff = :$row_eff")
+        _offset_unsupported(family) && _refuse_offset("fit_gllvm",
+            "family $(nameof(typeof(family)))")
+        kwargs = _normalize_offset_kwargs(kwargs, Y; maskable = !_offset_maskless(family))
+    end
     # gllvm's `num.lv` alias for K. If both given they must agree.
     if num_lv !== nothing
         if K !== nothing && K != num_lv
@@ -205,15 +573,48 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         K = num_lv
     end
 
+    # --- K omitted: estimate it (lane auto-d-20260926; docs/design/74). -------
+    # Sweep K = 1:Kmax through `select_lv` (guarded: failed, unconverged,
+    # non-monotone and runaway fits are never chosen) and return the chosen fit.
+    # Multinomial v1 has no latent variables, so it keeps its own K-free route.
+    Kmax === nothing || K === nothing || throw(ArgumentError(
+        "fit_gllvm: Kmax is used only when K is omitted (K is estimated); got K=$K and Kmax=$Kmax"))
+    if K === nothing && !(family isa Multinomial)
+        (row_eff === :none && !pervar) || throw(ArgumentError(
+            "fit_gllvm: estimating K is available for the default family route only; " *
+            "supply K with row_eff or pervar (or call select_lv directly)"))
+        p = size(Y, 1)
+        kmax = Kmax === nothing ? min(5, p - 1) : Int(Kmax)
+        kmax >= 1 || throw(ArgumentError("fit_gllvm: cannot estimate K with p = $p response(s)"))
+        sel = select_lv(Y; family = family, Kmax = kmax, disp_group = disp_group, kwargs...)
+        crit = get(kwargs, :criterion, :bic_sites)
+        @info "fit_gllvm: K not supplied; chose K = $(sel.best_k) by $(crit) over K = 1:$kmax " *
+              "(call select_lv for the full comparison). Intervals from this fit are " *
+              "conditional on the chosen K." sel
+        return sel.best
+    end
+
     # API B (Curie): NB/Beta/NB1/BetaBinom public default matches gllvmTMB per-trait
     # φ — the estimand already shipped on the R bridge and on `@formula` with X, so
     # the unified entry point must not default to a shared scalar instead. Shared-φ
     # engines remain `fit_nb_gllvm` / `fit_beta_gllvm` / `fit_nb1_gllvm` /
     # `fit_beta_binomial_gllvm`. The NB1 and BetaBinom markers' `φ` fields are never
     # read: φ is always estimated. Gamma unchanged.
+    # DeltaLogNormal / DeltaGamma joined this coerce on `accept delta dispersion A`
+    # (maintainer paste, 2026-09-24; docs/dev-log/decisions/2026-09-15-delta-dispersion-
+    # alignment-pending.md): their public default now matches gllvmTMB's per-trait
+    # `log_sigma_lognormal_delta` / `log_phi_gamma_delta` too. Shared dispersion
+    # remains available via `disp_group = :shared` on either the named fitters or here.
+    # NB2 is the exception (maintainer decision 2026-10-01, #615): bare
+    # `fit_gllvm(Y; family = NegativeBinomial())` fits one shared `r` (fit_nb_gllvm).
+    # On the #615 grid shared r recovered r better whenever r was common, and per-species
+    # r cost 110 to 260 times the time; per-species r stays one keyword away
+    # (`disp_group = :species`). The R bridge and `@formula` keep per-trait r (gllvmTMB's
+    # estimand): the formula front-end passes `disp_group = :species` itself.
     if disp_group === nothing &&
-       (family isa NegativeBinomial || family isa Beta || family isa NB1 ||
-        family isa BetaBinom || (family isa StudentTFamily && family.ν === nothing))
+       (family isa Beta || family isa NB1 ||
+        family isa BetaBinom || (family isa StudentTFamily && family.ν === nothing) ||
+        family isa DeltaLogNormal || family isa DeltaGamma)
         disp_group = :species
     end
 
@@ -265,6 +666,14 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         end
     end
 
+    # --- Delta two-part: disp_group is shared vs per-trait σ/α (not NB grouped routing). ---
+    if disp_group !== nothing && (family isa DeltaLogNormal || family isa DeltaGamma)
+        K === nothing && throw(ArgumentError("fit_gllvm: K (or num_lv) is required"))
+        disp_group in (:shared, :species) || throw(ArgumentError(
+            "fit_gllvm: Delta disp_group must be :shared or :species (got :$disp_group)"))
+        return _fit_gllvm(family, Y; K = K, disp_group = disp_group, kwargs...)
+    end
+
     # --- disp_group: grouped / species-specific dispersion. ------------------
     if disp_group !== nothing
         K === nothing && throw(ArgumentError("fit_gllvm: K (or num_lv) is required"))
@@ -286,7 +695,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                     _fit_gllvm(family, Y; K = K, kwargs...)
 end
 
-_fit_gllvm(::Normal,   Y::AbstractMatrix; kwargs...) = fit_gaussian_gllvm(Y; kwargs...)
+_fit_gllvm(::Normal,   Y::AbstractMatrix; kwargs...) = _fit_gaussian_trait_intercepts(Y; kwargs...)
 _fit_gllvm(::Binomial, Y::AbstractMatrix; kwargs...) = fit_binomial_gllvm(Y; kwargs...)
 _fit_gllvm(::Poisson,  Y::AbstractMatrix; kwargs...) = fit_poisson_gllvm(Y; kwargs...)
 _fit_gllvm(::TruncatedPoisson, Y::AbstractMatrix; kwargs...) =
@@ -299,7 +708,19 @@ _fit_gllvm(::TruncatedNegBin2, Y::AbstractMatrix; kwargs...) =
     fit_truncated_nbinom2_gllvm(Y; kwargs...)
 _fit_gllvm(::NegativeBinomial, Y::AbstractMatrix; kwargs...) = fit_nb_gllvm(Y; kwargs...)
 _fit_gllvm(::Beta,     Y::AbstractMatrix; kwargs...) = fit_beta_gllvm(Y; kwargs...)
-_fit_gllvm(::Ordinal,  Y::AbstractMatrix; kwargs...) = fit_ordinal_gllvm_pertrait(Y; kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_ordinal_route(Y::AbstractMatrix; aghq = false, aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off && return fit_ordinal_gllvm_pertrait(Y; kwargs...)
+    return fit_ordinal_gllvm_pertrait_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
+end
+_fit_gllvm(::Ordinal,  Y::AbstractMatrix; kwargs...) = _fit_ordinal_route(Y; kwargs...)
+# ordinal_logit(): same fitter as Ordinal(), but the marker pins the link —
+# refuse an explicit non-logit `link` instead of silently overriding it.
+function _fit_gllvm(::OrdinalLogit, Y::AbstractMatrix; kwargs...)
+    _check_ordinal_logit_link(kwargs)
+    return _fit_ordinal_route(Y; kwargs...)
+end
 _fit_gllvm(::Gamma,    Y::AbstractMatrix; kwargs...) = fit_gamma_gllvm(Y; kwargs...)
 _fit_gllvm(::Exponential, Y::AbstractMatrix; kwargs...) = fit_exponential_gllvm(Y; kwargs...)
 # `StudentTFamily` carries the degrees-of-freedom policy: numeric ν is fixed;
@@ -317,10 +738,22 @@ function _fit_gllvm(family::StudentTFamily, Y::AbstractMatrix; kwargs...)
 end
 # Delta markers are tag-payload markers: σ / α are always estimated by the named
 # fitters and are never read from the family instance (same pattern as NB1(φ)).
-_fit_gllvm(::DeltaLogNormal, Y::AbstractMatrix; kwargs...) =
-    fit_delta_lognormal_gllvm(Y; kwargs...)
-_fit_gllvm(::DeltaGamma, Y::AbstractMatrix; kwargs...) =
-    fit_delta_gamma_gllvm(Y; kwargs...)
+# The coerce block above already turns a `nothing` disp_group into `:species`
+# before either Delta family reaches this dispatch via `fit_gllvm`, so this
+# default only matters for a direct `_fit_gllvm` call; kept in sync with the
+# named fitters' own `:species` default (`accept delta dispersion A`, 2026-09-24).
+_fit_gllvm(::DeltaLogNormal, Y::AbstractMatrix; disp_group = :species, kwargs...) =
+    fit_delta_lognormal_gllvm(Y; disp_group = disp_group, kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_delta_gamma_route(Y::AbstractMatrix; disp_group = :species, aghq = false,
+        aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off &&
+        return fit_delta_gamma_gllvm(Y; disp_group = disp_group, kwargs...)
+    return fit_delta_gamma_gllvm_aghq(Y; disp_group = disp_group, aghq = aghq,
+                                      aghq_control = aghq_control, kwargs...)
+end
+_fit_gllvm(::DeltaGamma, Y::AbstractMatrix; kwargs...) = _fit_delta_gamma_route(Y; kwargs...)
 _fit_gllvm(::GeneralizedPoisson1, Y::AbstractMatrix; kwargs...) = fit_gp1_gllvm(Y; kwargs...)
 _fit_gllvm(::ZIPoisson, Y::AbstractMatrix; kwargs...) = fit_zip_gllvm(Y; kwargs...)
 _fit_gllvm(::ZINegBin, Y::AbstractMatrix; kwargs...) = fit_zinb_gllvm(Y; kwargs...)
@@ -379,13 +812,23 @@ function _fit_gllvm_grouped(::TruncatedNegBin2, Y::AbstractMatrix; group, kwargs
     return fit_truncated_nbinom2_gllvm_pertrait(Y; kwargs...)
 end
 
-_fit_gllvm_grouped(::NegativeBinomial, Y::AbstractMatrix; kwargs...) =
-    fit_nb_gllvm_grouped(Y; kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_gllvm_grouped(::NegativeBinomial, Y::AbstractMatrix; aghq = false,
+        aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off && return fit_nb_gllvm_grouped(Y; kwargs...)
+    return fit_nb_gllvm_grouped_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
+end
 _fit_gllvm_grouped(::Beta,  Y::AbstractMatrix; kwargs...) = fit_beta_gllvm_grouped(Y; kwargs...)
 _fit_gllvm_grouped(::Gamma, Y::AbstractMatrix; kwargs...) = fit_gamma_gllvm_grouped(Y; kwargs...)
 _fit_gllvm_grouped(::NB1,   Y::AbstractMatrix; kwargs...) = fit_nb1_gllvm_grouped(Y; kwargs...)
-_fit_gllvm_grouped(::TweedieED, Y::AbstractMatrix; kwargs...) =
-    fit_tweedie_gllvm_grouped(Y; kwargs...)
+# `aghq` / `aghq_control` are peeled here so the Laplace fitter's keyword set is
+# untouched; `aghq = false` (default) is exactly the previous call.
+function _fit_gllvm_grouped(::TweedieED, Y::AbstractMatrix; aghq = false,
+        aghq_control = (;), kwargs...)
+    _aghq_request(aghq) === :off && return fit_tweedie_gllvm_grouped(Y; kwargs...)
+    return fit_tweedie_gllvm_grouped_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
+end
 _fit_gllvm_grouped(family::StudentTFamily, Y::AbstractMatrix; group = nothing, kwargs...) =
     fit_studentt_gllvm(Y; nu = family.ν, disp_group = :species, kwargs...)
 

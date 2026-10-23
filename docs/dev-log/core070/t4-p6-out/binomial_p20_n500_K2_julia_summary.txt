@@ -1,0 +1,10 @@
+family=binomial
+p=20 n=500 K=2 seed=42
+converged=true
+logLik=-6744.539486896926
+wall_fit_sec=11.072756052017212
+pd_hessian=true
+wall_confint_sec=47.557060956954956
+dispersion_boundary=NA (Binomial has no dispersion parameter)
+boundary_terms=
+cond_H=162.07104176417607

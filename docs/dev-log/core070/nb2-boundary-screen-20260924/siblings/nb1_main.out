@@ -1,0 +1,70 @@
+
+[d07] phi_true=2.0  fit_time=13.2s  ybar=[0.825,1.6,2.125,5.15,7.7]
+  fitter: loglik=-817.849651 converged=true iters=103 phi_hat=[1.3,2.142,0.8625,1.687,0.6457] boundary_groups=Int64[]
+  harness: negll(theta_hat)=817.849651189  -fit.loglik=817.849651189  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=-830.069669
+  (a) fresh theta0 with log phi=0 (identical to fitter theta0: true): NOT re-run (deterministic replay of the fitter); loglik=-817.849651 boundary=Int64[]
+  (b) not applicable: no boundary groups
+  (c) SUPPLEMENTARY theta0 with log phi=log(10): loglik=-816.763020 conv=true iters=135 phi=[1.767,2.378,0.7312,1.993e-06,0.8861] boundary=Int64[]  gain_c=1.086631  stall_c=true
+  best_alt(a,b)=a_fresh_logphi0 loglik=-817.849651  gain=0.000000  STALL=false
+
+[d08] phi_true=2.0  fit_time=9.3s  ybar=[0.8875,1.325,2.587,4.05,7.05]
+  fitter: loglik=-808.066636 converged=true iters=91 phi_hat=[1.001,0.1795,1.042,0.9257,2.05] boundary_groups=Int64[]
+  harness: negll(theta_hat)=808.066635872  -fit.loglik=808.066635872  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=-822.627610
+  (a) fresh theta0 with log phi=0 (identical to fitter theta0: true): NOT re-run (deterministic replay of the fitter); loglik=-808.066636 boundary=Int64[]
+  (b) not applicable: no boundary groups
+  (c) SUPPLEMENTARY theta0 with log phi=log(10): loglik=-808.066636 conv=true iters=97 phi=[1.001,0.1795,1.042,0.9257,2.05] boundary=Int64[]  gain_c=-0.000000  stall_c=false
+  best_alt(a,b)=a_fresh_logphi0 loglik=-808.066636  gain=0.000000  STALL=false
+
+[d09] phi_true=2.0  fit_time=35.0s  ybar=[1.125,1.613,2.237,3.462,7.213]
+  fitter: loglik=-810.440002 converged=true iters=113 phi_hat=[1.287,2.308,4.598e-06,0.9797,1.603] boundary_groups=Int64[]
+  harness: negll(theta_hat)=810.440001718  -fit.loglik=810.440001718  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=-824.566310
+  (a) fresh theta0 with log phi=0 (identical to fitter theta0: true): NOT re-run (deterministic replay of the fitter); loglik=-810.440002 boundary=Int64[]
+  (b) not applicable: no boundary groups
+  (c) SUPPLEMENTARY theta0 with log phi=log(10): loglik=-810.440001 conv=true iters=128 phi=[1.287,2.308,3.57e-06,0.9797,1.603] boundary=Int64[]  gain_c=0.000001  stall_c=false
+  best_alt(a,b)=a_fresh_logphi0 loglik=-810.440002  gain=0.000000  STALL=false
+
+[d10] phi_true=2.0  fit_time=6.4s  ybar=[1.212,1.45,3.35,4.025,6.825]
+  fitter: loglik=-842.999199 converged=true iters=73 phi_hat=[0.869,0.4759,0.8206,1.301,1.233] boundary_groups=Int64[]
+  harness: negll(theta_hat)=842.999198692  -fit.loglik=842.999198692  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=-858.517445
+  (a) fresh theta0 with log phi=0 (identical to fitter theta0: true): NOT re-run (deterministic replay of the fitter); loglik=-842.999199 boundary=Int64[]
+  (b) not applicable: no boundary groups
+  (c) SUPPLEMENTARY: skipped (compute cap)
+  best_alt(a,b)=a_fresh_logphi0 loglik=-842.999199  gain=0.000000  STALL=false
+
+[d02] phi_true=0.05  fit_time=46.0s  ybar=[1.05,1.65,2.575,4.075,7.9]
+  fitter: loglik=-757.658178 converged=false iters=59 phi_hat=[3.846e-06,6.784e-08,7.36e-09,2.785e-07,0.0006572] boundary_groups=[2, 3, 4]
+  harness: negll(theta_hat)=757.658178121  -fit.loglik=757.658178121  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=-766.505706
+  (a) fresh theta0 with log phi=0 (identical to fitter theta0: true): NOT re-run (deterministic replay of the fitter); loglik=-757.658178 boundary=[2, 3, 4]
+  (b) restart boundary groups at log phi=0: loglik=-757.658182 conv=true iters=49 phi=[3.846e-06,1.249e-06,1.687e-07,1.283e-06,0.0006558]
+  (c) SUPPLEMENTARY: skipped (compute cap)
+  best_alt(a,b)=a_fresh_logphi0 loglik=-757.658178  gain=0.000000  STALL=false
+
+[d03] phi_true=0.05  fit_time=36.0s  ybar=[1.1,1.663,2.812,4.562,7.338]
+  fitter: loglik=-745.818158 converged=false iters=53 phi_hat=[1.322e-07,4.85e-06,2.044e-06,1.141e-07,5.71e-08] boundary_groups=[1, 4, 5]
+  harness: negll(theta_hat)=745.818157685  -fit.loglik=745.818157685  |diff|=0.000e+00  valid=true
+  objective at truth: loglik=-750.349644
+  (a) fresh theta0 with log phi=0 (identical to fitter theta0: true): NOT re-run (deterministic replay of the fitter); loglik=-745.818158 boundary=[1, 4, 5]
+  (b) restart boundary groups at log phi=0: loglik=-745.818186 conv=true iters=57 phi=[2.328e-06,4.85e-06,2.044e-06,1.029e-06,5.898e-07]
+  (c) SUPPLEMENTARY: skipped (compute cap)
+  best_alt(a,b)=a_fresh_logphi0 loglik=-745.818158  gain=0.000000  STALL=false
+┌ Warning: NB1 grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) [2, 3, 4]; those groups' overdispersion is at the Poisson limit or numerically flat on this data, and optimizer convergence flags are unreliable for them.
+└ @ GLLVModels ~/local-scratch/gllvm-nb2-finite-20260924/src/families/grouped_dispersion.jl:1606
+
+[d04] NOT RUN: compute cap reached (341.1s)
+
+[d05] NOT RUN: compute cap reached (341.1s)
+
+# SUMMARY
+dataset	phi	fitter_ll	mismatch	valid	boundary	ll_a	ll_b	best_alt	gain	stall	ll_c_supp	gain_c	stall_c
+d07	2.0	-817.849651	0.00e+00	true	Int64[]	-817.849651	NA	a_fresh_logphi0	0.000000	false	-816.763020	1.086631	true
+d08	2.0	-808.066636	0.00e+00	true	Int64[]	-808.066636	NA	a_fresh_logphi0	0.000000	false	-808.066636	-0.000000	false
+d09	2.0	-810.440002	0.00e+00	true	Int64[]	-810.440002	NA	a_fresh_logphi0	0.000000	false	-810.440001	0.000001	false
+d10	2.0	-842.999199	0.00e+00	true	Int64[]	-842.999199	NA	a_fresh_logphi0	0.000000	false	NaN	NaN	false
+d02	0.05	-757.658178	0.00e+00	true	[2, 3, 4]	-757.658178	-757.658182	a_fresh_logphi0	0.000000	false	NaN	NaN	false
+d03	0.05	-745.818158	0.00e+00	true	[1, 4, 5]	-745.818158	-745.818186	a_fresh_logphi0	0.000000	false	NaN	NaN	false
+harness_valid=true n_with_boundary=2 n_stalls=0 max_gain=0.0 max_mismatch=0.000e+00 n_stalls_supp_c=1 n_supp_c_run=3 max_gain_c=1.086631392652862 total_time=341.4s

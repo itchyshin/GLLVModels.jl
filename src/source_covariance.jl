@@ -36,8 +36,7 @@ function _gaussian_source_loglik(Y::AbstractMatrix{<:Real},
         C isa AbstractMatrix{<:Real} || throw(ArgumentError("source covariance must be a real matrix"))
         size(C, 1) == size(C, 2) && size(C, 1) > 0 ||
             throw(DimensionMismatch("source covariance must be nonempty and square"))
-        all(isfinite, C) && issymmetric(C) ||
-            throw(ArgumentError("source covariance must be finite and exactly symmetric"))
+        C = _symmetric_admit(C, "source covariance")
         all(g -> 1 <= g <= size(C, 1), view(groups, :, r)) ||
             throw(ArgumentError("group index outside source covariance"))
         cholesky(Symmetric(C)) # reject invalid source covariance even if noise masks it

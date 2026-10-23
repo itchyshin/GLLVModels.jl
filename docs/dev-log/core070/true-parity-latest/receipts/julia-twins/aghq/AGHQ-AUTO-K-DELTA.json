@@ -1,0 +1,147 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "aghq/AGHQ-AUTO-K-DELTA"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl#586",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "309042d17082f3b0f090312c679e1020942691d9",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1.toml",
+      "sha256": "7fd61b63ee6b92e497f0fc3f10325a37c5d8eb3cf8a20f927525b25c9b038062"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_delta_gamma_p5.csv",
+      "sha256": "0339fc4d3390a3e29662507b7c14011d66bac47092a4d66bba62317688180337"
+    },
+    {
+      "path": "test/fixtures/aghq_p1/aghq_p1_helpers.jl",
+      "sha256": "67c4a30132be21b035f54171144dda72ad2eedafcca1308f1515131c8c0f585f"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_aghq_p1_twin.jl",
+      "sha256": "f6dcef27c271bc247c669a35d544c5ae78713acf72350e462b3bc8d2d90aaa72"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-DELTA-DECISION",
+        "quantity": "integration actually used: [AGHQ used (1/0), node count k] (Laplace = [0, 0])",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-DELTA.r].used, k",
+        "julia_source": "GLLVModels fit_gllvm(DeltaGamma(), predictor = :shared, disp_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:61: integration.actual, integration.k",
+        "r_value": [
+          1.0,
+          5.0
+        ],
+        "julia_value": [
+          1.0,
+          5.0
+        ],
+        "abs_diff": 0.0,
+        "tolerance": 0.5,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:72",
+        "tolerance_source_line": "@test maximum(abs.(dec_j .- dec_r)) <= 0.5",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_delta_gamma_p5.csv (sha256 checked); delta_gamma p = 5, n = 150 (seed 20260900), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). Integers, so the test's <= 0.5 is exact equality."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-DELTA-LOGLIK",
+        "quantity": "logLik at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-DELTA.r].loglik",
+        "julia_source": "GLLVModels fit_gllvm(DeltaGamma(), predictor = :shared, disp_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:61: loglik",
+        "r_value": -981.2585773792022,
+        "julia_value": -981.258576700912,
+        "abs_diff": 6.782901209589909e-07,
+        "tolerance": 1e-06,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:73",
+        "tolerance_source_line": "@test isapprox(j.loglik, r[\"loglik\"]; atol = 1e-6, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_delta_gamma_p5.csv (sha256 checked); delta_gamma p = 5, n = 150 (seed 20260900), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-DELTA-BETA",
+        "quantity": "per-trait intercepts at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-DELTA.r].beta",
+        "julia_source": "GLLVModels fit_gllvm(DeltaGamma(), predictor = :shared, disp_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:61: beta",
+        "r_value": [
+          -0.5337409215612822,
+          -0.06028431222443491,
+          -0.13951787929615062,
+          0.4254509972538506,
+          0.4655732244757882
+        ],
+        "julia_value": [
+          -0.533749834913884,
+          -0.06028353944141663,
+          -0.13951607700576324,
+          0.42545280625094695,
+          0.4655715971438001
+        ],
+        "abs_diff": 8.913352601780389e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:74",
+        "tolerance_source_line": "@test isapprox(j.beta, Float64.(r[\"beta\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_delta_gamma_p5.csv (sha256 checked); delta_gamma p = 5, n = 150 (seed 20260900), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged)."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-DELTA-LAMBDA",
+        "quantity": "loadings at each side's own optimum, sign-aligned to R",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-DELTA.r].lambda",
+        "julia_source": "GLLVModels fit_gllvm(DeltaGamma(), predictor = :shared, disp_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:61: lambda (times +-1 so that sum(lambda_julia * lambda_R) >= 0)",
+        "r_value": [
+          0.8974713875250342,
+          -0.49716044956338196,
+          0.74237023572132,
+          -0.2847978335586561,
+          0.6287780525109457
+        ],
+        "julia_value": [
+          0.897477136710234,
+          -0.4971623418488845,
+          0.7423692650111651,
+          -0.28479673433345665,
+          0.6287773828592345
+        ],
+        "abs_diff": 5.749185199799278e-06,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:75",
+        "tolerance_source_line": "@test isapprox(j.lambda, Float64.(r[\"lambda\"]); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_delta_gamma_p5.csv (sha256 checked); delta_gamma p = 5, n = 150 (seed 20260900), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). The single latent axis is identified up to sign; Julia's loadings are multiplied by the +-1 the test applies."
+      },
+      {
+        "case_id": "P1-JULIA-AGHQ-AUTO-K-DELTA-LOG-PHI",
+        "quantity": "per-trait Gamma CV log(phi) at each side's own optimum",
+        "r_source": "test/fixtures/aghq_p1/aghq_p1.toml [case.AGHQ-AUTO-K-DELTA.r].phi (log)",
+        "julia_source": "GLLVModels fit_gllvm(DeltaGamma(), predictor = :shared, disp_group = :species)(...; K = 1, aghq = :auto) via test/fixtures/aghq_p1/aghq_p1_helpers.jl aghq_p1_fit, as called at test/test_aghq_p1_twin.jl:61: 1/sqrt(α) (log)",
+        "r_value": [
+          -0.5555967432671621,
+          -0.30686958362064837,
+          -0.9265346299001701,
+          -0.2997396779048974,
+          0.07599491324807163
+        ],
+        "julia_value": [
+          -0.5556070254326498,
+          -0.30687054735739194,
+          -0.9265179859074218,
+          -0.29973955693647203,
+          0.07599472452710992
+        ],
+        "abs_diff": 1.6643992748255343e-05,
+        "tolerance": 0.001,
+        "tolerance_source": "test/test_aghq_p1_twin.jl:78",
+        "tolerance_source_line": "haskey(r, \"phi\") && @test isapprox(log.(j.phi), log.(Float64.(r[\"phi\"])); atol = 1e-3, rtol = 0)",
+        "note": "Data read from test/fixtures/aghq_p1/aghq_delta_gamma_p5.csv (sha256 checked); delta_gamma p = 5, n = 150 (seed 20260900), aghq request \"auto\". R and Julia both converged (R: aghq$converged; Julia: fit.converged and reason :converged). Compared on the log scale, the optimised scale; R's phi is the Gamma coefficient of variation (shape = 1/phi^2), Julia's alpha is the shape, so Julia's phi is 1/sqrt(alpha). One latent drives both parts through one shared predictor on both sides."
+      }
+    ]
+  }
+}

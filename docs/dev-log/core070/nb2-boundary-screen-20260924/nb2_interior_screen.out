@@ -1,0 +1,10 @@
+Julia 1.10.12
+reject   seed=45 n=200 | jl -2072.385685 conv=true bd=0 | R -2072.385685 maxrelr=4.6e-05 | best push gain +5.022e-01 (trait 3)
+INTERIOR seed=46 n=200 | jl -2104.596668 conv=true bd=0 | R -2104.596668 maxrelr=3.7e-05 | best push gain -1.270e+00 (trait 3)
+reject   seed=47 n=200 | jl -2035.567040 conv=true bd=0 | R -2035.567040 maxrelr=4.9e-05 | best push gain +6.973e-01 (trait 5)
+INTERIOR seed=48 n=200 | jl -2021.489067 conv=true bd=0 | R -2021.489067 maxrelr=1.9e-05 | best push gain -2.440e-01 (trait 1)
+reject   seed=49 n=200 | jl -2122.586477 conv=true bd=0 | R -2122.586478 maxrelr=3.8e-05 | best push gain +8.970e-01 (trait 3)
+INTERIOR seed=50 n=200 | jl -2133.072646 conv=true bd=0 | R -2133.072646 maxrelr=4.4e-05 | best push gain -1.305e-01 (trait 3)
+reject   seed=51 n=200 | jl -2143.916494 conv=true bd=0 | R -2143.916495 maxrelr=6.7e-05 | best push gain +2.051e-01 (trait 3)
+reject   seed=52 n=200 | jl -2088.146290 conv=true bd=0 | R -2088.146290 maxrelr=9.7e-05 | best push gain +5.989e-01 (trait 5)
+julia +1.10.12 --startup-file=no --project=test/parity  2>&1  240.60s user 2.13s system 97% cpu 4:09.18 total

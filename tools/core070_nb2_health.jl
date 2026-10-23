@@ -12,7 +12,7 @@ include_string(Main,helpers*dgp,fixture)
 mkpath("health")
 datahash=bytes2hex(sha256(reinterpret(UInt8,vec(Float64.(Y)))))
 open(io->TOML.print(io,Dict("data_sha256"=>datahash,"Y_column_major"=>vec(Y),"p"=>p,"n"=>n,"K"=>K,"seed"=>45)),"health/data.toml","w")
-native=fit_gllvm(Y;family=GLLVModels.NegativeBinomial(),K=K,g_tol=1e-7,iterations=800)
+native=fit_gllvm(Y;family=GLLVModels.NegativeBinomial(),K=K,disp_group=:species,g_tol=1e-7,iterations=800)
 r=fit_gllvmtmb_parity_loglik(Y,K;family=:negbinomial)
 R"""
 r_obj <- fit_r$tmb_obj

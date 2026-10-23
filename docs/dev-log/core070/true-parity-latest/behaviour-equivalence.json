@@ -1,0 +1,529 @@
+{
+  "schema": 1,
+  "pin": "P1",
+  "citation_note": "R file:line citations are at gllvmTMB P1 (9539352f6). Julia file:line citations are at the commit that ran the cited receipt (61c5eda48 for the inference rows, fd92b6551 for the aghq rows, 681c4c3ca for CI-ROUTE-009, f58de0eb1 for the post-#709 public-confint rows, 1a80133a7 for the rows under the signed rulings of 2026-10-05), not at current main: src has changed since, so the lines may have moved.",
+  "classes": [
+    {
+      "kind": "route",
+      "canonical": "lambda:wald",
+      "r": [
+        ".confint_lambda:wald"
+      ],
+      "julia": [
+        "lambda:wald_packed"
+      ],
+      "basis": "R: confint.gllvmTMB_multi sends parm Lambda to .confint_lambda (R/z-confint-gllvmTMB.R:1627-1640, wald branch :285); Julia: confint(fit, y; parm, method=:wald) (src/confint.jl:359-368, default method=:wald at :364) reaches _gaussian_record_confint (src/families/aghq_gaussian_fit.jl:240), the Wald interval, so a call with no method and an explicit wald call take the Wald route in both."
+    },
+    {
+      "kind": "route",
+      "canonical": "sigma:wald",
+      "r": [
+        ".confint_sigma:wald"
+      ],
+      "julia": [
+        "sigma_B:wald_packed",
+        "sigma_W:wald_packed",
+        "sigma_phy:wald_packed"
+      ],
+      "basis": "R: .confint_sigma sends method wald to .confint_sigma_wald (R/z-confint-gllvmTMB.R:1803-1810, :1891); Julia: confint(fit, y; parm=sigma_*, method=:wald, \u03a3_phy) takes the one-argument Wald confint(fit) for structured fits (src/confint.jl:246, :359-368), which is Wald whatever method is passed."
+    },
+    {
+      "kind": "route",
+      "canonical": "beta:wald",
+      "r": [
+        "tidy:wald"
+      ],
+      "julia": [
+        "beta:wald_packed"
+      ],
+      "basis": "R: fixed-effect parm with method wald goes through tidy(object, \"fixed\") (R/z-confint-gllvmTMB.R:1774-1776); Julia: confint(fit, y; parm=\"beta[1]\", method=:wald) reaches _gaussian_record_confint (src/families/aghq_gaussian_fit.jl:240); both give the Wald interval for a fixed effect."
+    },
+    {
+      "kind": "route",
+      "canonical": "sigma_eps:wald",
+      "r": [
+        ".confint_wald_targets:wald"
+      ],
+      "julia": [
+        "sigma_eps:wald_packed"
+      ],
+      "basis": "R: profile_targets() parm sigma_eps with method wald goes to .confint_wald_targets (R/z-confint-gllvmTMB.R:1331, called at :1762); Julia: confint(fit, y; parm=\"sigma_eps\", method=:wald) reaches _gaussian_record_confint (src/families/aghq_gaussian_fit.jl:240); both give the Wald interval."
+    },
+    {
+      "kind": "route",
+      "canonical": "communality:wald",
+      "r": [
+        ".confint_communality:wald"
+      ],
+      "julia": [
+        "communality:wald_derived"
+      ],
+      "basis": "R: .confint_communality wald branch (R/z-confint-gllvmTMB.R:941, :969); Julia: communality_wald_ci (src/confint_derived_wald.jl:375 at 61c5eda48), a logit-scale Wald interval. The 61c5eda48 run called that function by name; since #709 the public confint(fit, y; parm=\"communality[t]\"), with the default method (:wald) or method=:wald, reaches it (src/confint.jl:777-806 at f58de0eb1), which is how CI-ROUTE-022 is measured."
+    },
+    {
+      "kind": "route",
+      "canonical": "proportion:wald",
+      "r": [
+        ".confint_proportion:wald"
+      ],
+      "julia": [
+        "proportion:wald_derived"
+      ],
+      "basis": "R: .confint_proportion wald branch (R/z-confint-gllvmTMB.R:1188, :1207); Julia: icc_wald_ci (src/confint_derived_wald.jl:395 at 61c5eda48), a logit-scale Wald interval for a proportion. The 61c5eda48 run called that function by name; since #709 the public confint(fit, y; parm=\"proportion:<component>[t]\"), with the default method (:wald) or method=:wald, reaches it (src/confint.jl:777-806 at f58de0eb1), which is how CI-ROUTE-036 is measured."
+    },
+    {
+      "kind": "route",
+      "canonical": "phylo_signal:wald",
+      "r": [
+        ".confint_phylo_signal:wald"
+      ],
+      "julia": [
+        "phylo_signal:wald_derived"
+      ],
+      "basis": "R: .confint_phylo_signal wald branch (R/z-confint-gllvmTMB.R:894, :916); Julia: phylo_signal_wald_ci (src/confint_derived_wald.jl:412 at 61c5eda48), a logit-scale Wald interval."
+    },
+    {
+      "kind": "route",
+      "canonical": "lambda:profile",
+      "r": [
+        ".confint_lambda:profile"
+      ],
+      "julia": [
+        "lambda:profile"
+      ],
+      "basis": "R: .confint_lambda profile branch calls loading_profile (R/z-confint-gllvmTMB.R:372-393); Julia: profile_ci(fit, \"Lambda_B[1,1]\"; y) (src/confint_profile.jl:532-537, :406 at 61c5eda48), the profile-likelihood interval."
+    },
+    {
+      "kind": "route",
+      "canonical": "beta:profile",
+      "r": [
+        ".confint_fixef_profile:profile"
+      ],
+      "julia": [
+        "beta:profile"
+      ],
+      "basis": "R: fixed-effect parm with method profile calls .confint_fixef_profile (R/z-confint-gllvmTMB.R:1776-1777, defined :2098); Julia: profile_ci(fit, \"beta[1]\"; y) (src/confint_profile.jl:532-537, :406 at 61c5eda48); both profile the likelihood and need no cached standard errors."
+    },
+    {
+      "kind": "route",
+      "canonical": "sigma_eps:profile",
+      "r": [
+        ".confint_profile_targets:profile"
+      ],
+      "julia": [
+        "sigma_eps:profile"
+      ],
+      "basis": "R: profile_targets() parm sigma_eps with method profile calls .confint_profile_targets (R/z-confint-gllvmTMB.R:1266, called at :1746); Julia: profile_ci(fit, \"sigma_eps\"; y) (src/confint_profile.jl:532-537, :406 at 61c5eda48)."
+    },
+    {
+      "kind": "route",
+      "canonical": "lambda:bootstrap",
+      "r": [
+        ".confint_lambda:bootstrap"
+      ],
+      "julia": [
+        "lambda:bootstrap"
+      ],
+      "basis": "R: .confint_lambda bootstrap branch calls .loading_ci_bootstrap (R/z-confint-gllvmTMB.R:346-368); Julia: bootstrap_ci(fit; parms=\"Lambda_B[1,1]\", y) (src/confint_bootstrap.jl:258 at 61c5eda48); both refit simulated data."
+    },
+    {
+      "kind": "route",
+      "canonical": "phylo_signal:profile",
+      "r": [
+        ".confint_phylo_signal:profile"
+      ],
+      "julia": [
+        "phylo_signal:profile"
+      ],
+      "basis": "R: .confint_phylo_signal profile branch calls profile_ci_phylo_signal (R/z-confint-gllvmTMB.R:910); Julia: confint(fit, y; parm=\"phylo_signal[t]\", method=:profile) calls profile_ci_phylo_signal (src/confint.jl:823 at f58de0eb1); both profile the phylogenetic signal of the requested trait."
+    },
+    {
+      "kind": "route",
+      "canonical": "phylo_signal:bootstrap",
+      "r": [
+        ".confint_phylo_signal:bootstrap"
+      ],
+      "julia": [
+        "phylo_signal:bootstrap"
+      ],
+      "basis": "R: .confint_phylo_signal bootstrap branch calls .phylo_signal_bootstrap_ci (R/z-confint-gllvmTMB.R:920-927); Julia: confint(fit, y; parm=\"phylo_signal[t]\", method=:bootstrap) calls bootstrap_ci_derived (src/confint.jl:841 at f58de0eb1); both refit simulated data."
+    },
+    {
+      "kind": "route",
+      "canonical": "communality:bootstrap",
+      "r": [
+        ".confint_communality:bootstrap"
+      ],
+      "julia": [
+        "communality:bootstrap"
+      ],
+      "basis": "R: .confint_communality bootstrap branch calls .communality_bootstrap_ci (R/z-confint-gllvmTMB.R:994); Julia: confint(fit, y; parm=\"communality[t]\", method=:bootstrap) calls bootstrap_ci_derived (src/confint.jl:841 at f58de0eb1); both refit simulated data. The estimand is gllvmTMB's aligned extract_communality on one side and communality(fit) on the other; the class is about the route, not the number."
+    },
+    {
+      "kind": "route",
+      "canonical": "rho:bootstrap",
+      "r": [
+        ".confint_rho:bootstrap"
+      ],
+      "julia": [
+        "rho:bootstrap"
+      ],
+      "basis": "R: .confint_rho with method bootstrap calls extract_correlations(method = \"bootstrap\") (R/z-confint-gllvmTMB.R:1061-1076); Julia: confint(fit, y; parm=\"rho[i,j]\", method=:bootstrap) calls bootstrap_ci_derived (src/confint.jl:841 at f58de0eb1); both refit simulated data. The estimand is gllvmTMB's aligned extract_correlations on one side and correlation(fit) on the other; the class is about the route."
+    },
+    {
+      "kind": "route",
+      "canonical": "proportion:bootstrap",
+      "r": [
+        ".confint_proportion:bootstrap"
+      ],
+      "julia": [
+        "proportion:bootstrap"
+      ],
+      "basis": "R: .confint_proportion bootstrap branch calls .proportions_bootstrap_ci (R/z-confint-gllvmTMB.R:1213); Julia: confint(fit, y; parm=\"proportion:<component>[t]\", method=:bootstrap) calls bootstrap_ci_derived (src/confint.jl:841 at f58de0eb1); both refit simulated data. The estimand is gllvmTMB's aligned extract_proportions on one side and proportions(fit; component) on the other; the class is about the route."
+    },
+    {
+      "kind": "route",
+      "canonical": "sigma:bootstrap",
+      "r": [
+        ".confint_sigma:bootstrap"
+      ],
+      "julia": [
+        "sigma_B:bootstrap",
+        "sigma_W:bootstrap",
+        "sigma_phy:bootstrap"
+      ],
+      "basis": "R: .confint_sigma sends method bootstrap to .confint_sigma_bootstrap (R/z-confint-gllvmTMB.R:1803-1805); Julia: confint(fit, y; parm=\"sigma_*[t]\", method=:bootstrap, \u03a3_phy) calls bootstrap_ci on the structured fit (src/confint.jl:598 at f58de0eb1) since #709, where before it returned the Wald interval; both refit simulated data."
+    },
+    {
+      "kind": "route",
+      "canonical": "rho:fisher-z",
+      "r": [
+        ".confint_rho:fisher-z"
+      ],
+      "julia": [
+        "rho:wald_derived"
+      ],
+      "basis": "R: .confint_rho with method fisher-z, R's default for rho (R/z-confint-gllvmTMB.R:1693), calls extract_correlations(method = \"fisher-z\"), a Fisher-z transformed Wald interval; Julia: confint(fit, y; parm=\"rho[i,j]\") with the default method :wald, or method = :fisher_z (an alias that returns exactly the :wald result, src/confint.jl:840 at 1a80133a7), computes the transformed Wald interval with transform :fisher_z (src/confint.jl:858). Signed as one route under signed rulings of 2026-10-05 (vault D-319): ruling 3 for the default (CI-ROUTE-029) and the fisher_z alias for the explicit request (CI-ROUTE-034). R's own method = \"wald\" for rho is a different route ('.confint_rho:wald') and is not in this class."
+    },
+    {
+      "kind": "refusal",
+      "canonical": "icc:profile-withdrawn",
+      "r": [
+        "A profile interval for canonical full-covariance repeatability is not currently available."
+      ],
+      "julia": [
+        "A profile interval for canonical full-covariance two-level repeatability is not currently available."
+      ],
+      "basis": "R: .confint_icc raises gllvmTMB_repeatability_profile_withdrawn for method profile (R/z-confint-gllvmTMB.R:855, :862-867); Julia: repeatability_ci throws TwoLevelRepeatabilityProfileWithdrawn for method=:profile (src/twolevel.jl:605-612 at 681c4c3ca). Both refuse the same request, name the same reason (the old profile estimated only a diagonal-companion ratio) and point to wald or bootstrap."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:off",
+      "r": [
+        "FALSE"
+      ],
+      "julia": [
+        "off"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq maps NULL and FALSE to FALSE, the Laplace approximation (R/gllvmTMB.R:2492); Julia: _aghq_request maps false and nothing to :off (src/families/aghq_fit_info.jl:38 at fd92b6551)."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:auto",
+      "r": [
+        "\"auto\""
+      ],
+      "julia": [
+        "auto"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq maps \"auto\" and TRUE to \"auto\" (R/gllvmTMB.R:2493-2494); Julia: _aghq_request maps true and :auto to :auto (src/families/aghq_fit_info.jl:39 at fd92b6551). Julia rejects the string \"auto\" itself with ArgumentError, so the Julia side is given the symbol :auto."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:nodes=1",
+      "r": [
+        "1L"
+      ],
+      "julia": [
+        "1"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: _aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at fd92b6551); one node."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:nodes=2",
+      "r": [
+        "2L"
+      ],
+      "julia": [
+        "2"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: _aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at fd92b6551); two nodes."
+    },
+    {
+      "kind": "route",
+      "canonical": "aghq:nodes=9",
+      "r": [
+        "9L"
+      ],
+      "julia": [
+        "9"
+      ],
+      "basis": "R: .gllvmTMB_normalize_aghq keeps a single positive integer as integer (R/gllvmTMB.R:2495-2498); Julia: _aghq_request keeps a positive Integer as Int (src/families/aghq_fit_info.jl:40-42 at fd92b6551); nine nodes. Julia rejects a whole-number float such as 9.0 with ArgumentError, so the Julia side is given Int 9."
+    },
+    {
+      "kind": "refusal",
+      "canonical": "icc:refuse:wald_asym",
+      "r": [
+        "Method \"wald_asym\" not supported for `icc`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :wald_asym is not available for Gaussian GllvmFit / parm icc[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_icc aborts for method 'wald_asym', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:880); Julia: confint(fit, y; parm=\"icc[1]\", method=Symbol(\"wald_asym\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "icc:refuse:fisher-z",
+      "r": [
+        "Method \"fisher-z\" not supported for `icc`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit / parm icc[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_icc aborts for method 'fisher-z', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:880); Julia: confint(fit, y; parm=\"icc[1]\", method=Symbol(\"fisher-z\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "icc:refuse:bogus",
+      "r": [
+        "Method \"bogus\" not supported for `icc`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit / parm icc[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_icc aborts for method 'bogus', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:880); Julia: confint(fit, y; parm=\"icc[1]\", method=Symbol(\"bogus\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "phylo_signal:refuse:wald_asym",
+      "r": [
+        "Method \"wald_asym\" not implemented for `phylo_signal`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :wald_asym is not available for Gaussian GllvmFit / parm phylo_signal[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_phylo_signal aborts for method 'wald_asym', which is outside its supported set (profile, wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:929); Julia: confint(fit, y; parm=\"phylo_signal[1]\", method=Symbol(\"wald_asym\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "phylo_signal:refuse:fisher-z",
+      "r": [
+        "Method \"fisher-z\" not implemented for `phylo_signal`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit / parm phylo_signal[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_phylo_signal aborts for method 'fisher-z', which is outside its supported set (profile, wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:929); Julia: confint(fit, y; parm=\"phylo_signal[1]\", method=Symbol(\"fisher-z\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "phylo_signal:refuse:bogus",
+      "r": [
+        "Method \"bogus\" not implemented for `phylo_signal`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit / parm phylo_signal[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_phylo_signal aborts for method 'bogus', which is outside its supported set (profile, wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:929); Julia: confint(fit, y; parm=\"phylo_signal[1]\", method=Symbol(\"bogus\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "communality:refuse:wald_asym",
+      "r": [
+        "Method \"wald_asym\" not implemented for `communality`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :wald_asym is not available for Gaussian GllvmFit / parm communality[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_communality aborts for method 'wald_asym', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:1013); Julia: confint(fit, y; parm=\"communality[1]\", method=Symbol(\"wald_asym\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "communality:refuse:fisher-z",
+      "r": [
+        "Method \"fisher-z\" not implemented for `communality`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit / parm communality[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_communality aborts for method 'fisher-z', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:1013); Julia: confint(fit, y; parm=\"communality[1]\", method=Symbol(\"fisher-z\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "communality:refuse:bogus",
+      "r": [
+        "Method \"bogus\" not implemented for `communality`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit / parm communality[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_communality aborts for method 'bogus', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:1013); Julia: confint(fit, y; parm=\"communality[1]\", method=Symbol(\"bogus\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs); a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "rho:refuse:wald_asym",
+      "r": [
+        "Method \"wald_asym\" not supported for `rho`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :wald_asym is not available for Gaussian GllvmFit / parm rho[1,2]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_rho aborts for method 'wald_asym', which is outside its supported set (fisher-z, wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:1088); Julia: confint(fit, y; parm=\"rho[1,2]\", method=Symbol(\"wald_asym\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs)"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "rho:refuse:bogus",
+      "r": [
+        "Method \"bogus\" not supported for `rho`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit / parm rho[1,2]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_rho aborts for method 'bogus', which is outside its supported set (fisher-z, wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:1088); Julia: confint(fit, y; parm=\"rho[1,2]\", method=Symbol(\"bogus\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs)"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "proportion:refuse:wald_asym",
+      "r": [
+        "Method \"wald_asym\" not implemented for `proportion`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :wald_asym is not available for Gaussian GllvmFit / parm proportion:shared[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_proportion aborts for method 'wald_asym', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:1222); Julia: confint(fit, y; parm=\"proportion:shared[1]\", method=Symbol(\"wald_asym\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs)"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "proportion:refuse:fisher-z",
+      "r": [
+        "Method \"fisher-z\" not implemented for `proportion`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit / parm proportion:shared[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_proportion aborts for method 'fisher-z', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:1222); Julia: confint(fit, y; parm=\"proportion:shared[1]\", method=Symbol(\"fisher-z\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs)"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "proportion:refuse:bogus",
+      "r": [
+        "Method \"bogus\" not implemented for `proportion`."
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit / parm proportion:shared[1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: .confint_proportion aborts for method 'bogus', which is outside its supported set (wald, bootstrap), and the message names the method and the estimand (R/z-confint-gllvmTMB.R:1222); Julia: confint(fit, y; parm=\"proportion:shared[1]\", method=Symbol(\"bogus\")) throws ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap (src/confint.jl:451, :781 at f58de0eb1), naming the method, the parm and the available methods. Both refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; Julia at f58de0eb1 computed a profile and refused fisher-z; since the signed rulings of 2026-10-05 (vault D-319) it withdraws the communality, rho and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order (R/z-confint-gllvmTMB.R:1643-1712; Julia checks the method before any estimator runs)"
+    },
+    {
+      "kind": "refusal",
+      "canonical": "lambda:refuse-unsupported-method",
+      "r": [
+        "'arg' should be one of \u201cwald\u201d, \u201cwald_asym\u201d, \u201cprofile\u201d, \u201cbootstrap\u201d"
+      ],
+      "julia": [
+        "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit (retained data record) / parm Lambda_B[1,1]; available: :wald, :profile, :bootstrap",
+        "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit (retained data record) / parm Lambda_B[1,1]; available: :wald, :profile, :bootstrap"
+      ],
+      "basis": "R: confint.gllvmTMB_multi validates method with match.arg over wald, wald_asym, profile, bootstrap (R/z-confint-gllvmTMB.R:1717), so fisher-z and bogus are refused before any estimator runs and the message lists the supported set without naming the method (hence one R label for both rows); Julia: confint(fit, y; parm=\"Lambda_B[1,1]\", method=Symbol(\"fisher-z\") or :bogus) throws ArgumentError from _confint_check_method (src/confint.jl:451, :500 at f58de0eb1). Both refuse the same two requests. Controls: R, a live confint(parm = \"Lambda\", method = \"wald\") on a confirmatory fit returned an interval (P1 refuses per-entry Wald on an unconstrained fit, so the control fit pins one loading); Julia, method=:wald on the Lambda_B term returned an interval. The supported sets differ outside these requests (R accepts wald_asym, Julia refuses it), and the class does not cover that."
+    },
+    {
+      "kind": "refusal",
+      "canonical": "communality:profile-withdrawn",
+      "r": [
+        "Nonlinear profile intervals for communality are not currently available."
+      ],
+      "julia": [
+        "ArgumentError: confint: nonlinear profile intervals for communality are withdrawn (parm communality[1]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald or method = :bootstrap, and report the method's limitations."
+      ],
+      "basis": "R: confint.gllvmTMB_multi forwards method profile to .confint_communality, which aborts with class gllvmTMB_nonlinear_profile_withdrawn (R/z-confint-gllvmTMB.R:964-968): the penalty-based constrained-refit prototype is withdrawn pending an exact constraint solver. Julia: confint(fit, y; parm, method=:profile) throws ArgumentError from _confint_profile_withdrawn (src/confint.jl:681 at 1a80133a7), saying the same profile is withdrawn and pointing to wald or bootstrap. Withdrawn in Julia under signed rulings of 2026-10-05 (vault D-319), ruling C. A refusal class of its own (the G7 label), separate from the bad-method refusal class."
+    },
+    {
+      "kind": "refusal",
+      "canonical": "rho:profile-withdrawn",
+      "r": [
+        "Nonlinear profile intervals for correlations are not currently available."
+      ],
+      "julia": [
+        "ArgumentError: confint: nonlinear profile intervals for correlations are withdrawn (parm rho[1,2]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald (the Fisher-z interval; :fisher_z is the same) or method = :bootstrap, and report the method's limitations."
+      ],
+      "basis": "R: confint.gllvmTMB_multi forwards method profile to .confint_rho, which aborts with class gllvmTMB_nonlinear_profile_withdrawn (R/z-confint-gllvmTMB.R:1055-1060): the penalty-based constrained-refit prototype is withdrawn pending an exact constraint solver. Julia: confint(fit, y; parm, method=:profile) throws ArgumentError from _confint_profile_withdrawn (src/confint.jl:681 at 1a80133a7), saying the same profile is withdrawn and pointing to wald or bootstrap. Withdrawn in Julia under signed rulings of 2026-10-05 (vault D-319), ruling C. A refusal class of its own (the G7 label), separate from the bad-method refusal class."
+    },
+    {
+      "kind": "refusal",
+      "canonical": "proportion:profile-withdrawn",
+      "r": [
+        "Nonlinear profile intervals for variance proportions are not currently available."
+      ],
+      "julia": [
+        "ArgumentError: confint: nonlinear profile intervals for variance proportions are withdrawn (parm proportion:shared[1]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald or method = :bootstrap, and report the method's limitations."
+      ],
+      "basis": "R: confint.gllvmTMB_multi forwards method profile to .confint_proportion, which aborts with class gllvmTMB_nonlinear_profile_withdrawn (R/z-confint-gllvmTMB.R:1202-1206): the penalty-based constrained-refit prototype is withdrawn pending an exact constraint solver. Julia: confint(fit, y; parm, method=:profile) throws ArgumentError from _confint_profile_withdrawn (src/confint.jl:681 at 1a80133a7), saying the same profile is withdrawn and pointing to wald or bootstrap. Withdrawn in Julia under signed rulings of 2026-10-05 (vault D-319), ruling C. A refusal class of its own (the G7 label), separate from the bad-method refusal class."
+    },
+    {
+      "kind": "route",
+      "canonical": "all-count:nonmixed-admitted",
+      "r": [
+        "all-count:nonmixed-admitted"
+      ],
+      "julia": [
+        "all-count:nonmixed-admitted"
+      ],
+      "basis": "Measured identical public-door behaviour for isdm/ISDM-COUNT; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-COUNT.json. Included by signed D-319 N6/N10."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "guard:family-length",
+      "r": [
+        "guard:family-length"
+      ],
+      "julia": [
+        "guard:family-length"
+      ],
+      "basis": "Measured identical public-door behaviour for isdm/ISDM-EXTRA-SOURCE; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-EXTRA-SOURCE.json. Included by signed D-319 N6/N10."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "guard:family-scale-per-trait",
+      "r": [
+        "guard:family-scale-per-trait"
+      ],
+      "julia": [
+        "guard:family-scale-per-trait"
+      ],
+      "basis": "Measured identical public-door behaviour for isdm/ISDM-MISSING-IN-TRAIT; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-MISSING-IN-TRAIT.json. Included by signed D-319 N6/N10."
+    },
+    {
+      "kind": "error_class",
+      "canonical": "guard:wrapper-law-refusal",
+      "r": [
+        "guard:wrapper-law-refusal"
+      ],
+      "julia": [
+        "guard:wrapper-law-refusal"
+      ],
+      "basis": "Measured identical public-door behaviour for isdm/ISDM-WRAPPER-LAW; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/ISDM-WRAPPER-LAW.json. Included by signed D-319 N6/N10."
+    },
+    {
+      "kind": "route",
+      "canonical": "residual-check:coherent",
+      "r": [
+        "residual-check:coherent"
+      ],
+      "julia": [
+        "residual-check:coherent"
+      ],
+      "basis": "Measured identical public-door behaviour for postfit/POSTFIT-SURFACE-check_auto_residual; P1 raw R and Julia outputs are preserved in docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/derived/POSTFIT-SURFACE-check_auto_residual.json. Included by signed D-319 N6/N10."
+    }
+  ]
+}

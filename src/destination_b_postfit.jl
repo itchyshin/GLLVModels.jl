@@ -103,13 +103,13 @@ function _destination_b_covariance_parts(fit::PrecisionMultivariateFit, level::S
     if level === :residual
         return zeros(Float64, p, p), copy(fit.residual_variance),
             Matrix(Diagonal(fit.residual_variance))
-    elseif level === :phylo
+    elseif level === :phylo || level === :phy
         shared = Matrix(fit.loading * fit.loading')
         unique = fit.phylo_unique_variance === nothing ? zeros(Float64, p) :
             copy(fit.phylo_unique_variance)
         return shared, unique, shared + Matrix(Diagonal(unique))
     end
-    throw(ArgumentError("level must be :phylo or :residual"))
+    throw(ArgumentError("unsupported level :$(level); level must be :phy (alias :phylo) or :residual"))
 end
 
 """
@@ -117,8 +117,8 @@ end
                   level, part=:total) -> NamedTuple
 
 Extract a fitted trait covariance.  For grouped fits `level` is a selected
-grouping-term name or `:residual`; for precision fits it is `:phylo` or
-`:residual`.  `:shared` returns the low-rank covariance, `:unique` its diagonal
+grouping-term name or `:residual`; for precision fits it is `:phy` (R's
+level name; `:phylo` is accepted as an alias) or `:residual`.  `:shared` returns the low-rank covariance, `:unique` its diagonal
 variance vector, and `:total` the sum with a correlation matrix.  These are
 marginal trait covariances, not conditional random-effect covariances.
 """

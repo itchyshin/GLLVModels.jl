@@ -1,0 +1,54 @@
+# Twin fixture for ordinal_logit() (family_id 20, gllvmTMB >= 0.7.1), pinned
+# to the R-side R export-recon commit ("P1"). Generated once from
+# ordinal_logit_p1_data.csv (sha256 guarded below) fitted with:
+#
+#   value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE)
+#
+# in R, and with GLLVModels.jl's Ordinal() / fit_ordinal_gllvm_pertrait on the
+# Julia side. `unique = FALSE` on the R side removes the per-trait latent()
+# Psi that gllvmTMB adds by default (Sigma = Lambda Lambda^T + Psi); this
+# keeps the loadings-only Sigma = Lambda Lambda^T structure that
+# GLLVModels.jl's per-trait ordinal fitter uses (it has no Psi term). This
+# does not change the R fit for ordinal families in practice: `ordinal_logit`
+# (family_id 20) is already in gllvmTMB's `auto_unique_off_family` gate
+# (Psi is unidentifiable against the fixed logistic residual variance
+# sigma_d^2 = pi^2/3), so `unique = TRUE` and `unique = FALSE` give the
+# IDENTICAL fit for this family -- the flag only silences an informational
+# warning here.
+#
+# Regenerate with test/fixtures/gen_ordinal_logit_p1.R against the pinned
+# gllvmTMB commit (see gllvmtmb_commit below); do not hand-edit the
+# r_reference block.
+
+data_file = "ordinal_logit_p1_data.csv"
+data_sha256 = "cf946246fda929f76c44c4f3b3d96c4a08c39f4305524ebff5204af1e1797766"
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+seed = 20260926
+p = 3
+n_unit = 150
+trait_names = ["t1", "t2", "t3"]
+
+[r_reference]
+# ordinal_logit(), value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE)
+loglik = -522.73266937176049
+convergence = 0
+# extract_cutpoints(fit): tau_1 = 0 fixed per trait (not stored), K - 2 = 2
+# free cutpoints per trait (K = 4 categories), in trait order t1, t2, t3.
+cutpoint_2 = [0.61890523603410441, 0.91851860818307485, 0.51299105879261797]
+cutpoint_3 = [1.432188109282964, 1.5975186560786583, 1.2741824298429623]
+# fit$opt$par[names(.) == "b_fix"]: per-trait fixed intercept (final MLE, NOT
+# fit$tmb_obj$par -- that stays at the pre-optimisation starting values).
+b_fix = [0.35970263271197861, -0.47579792256524062, 0.33374695768538692]
+# fit$report$Lambda_B (p x 1 loadings; K = 1 latent axis).
+lambda_b = [0.93551154031673955, -1.6602798106484222, 1.5383744180942449]
+# Lambda_B %*% t(Lambda_B): sign/rotation-free target for the Julia-side
+# loadings, since Lambda itself is sign-invariant (K = 1).
+lambda_lambda_t = [
+    [0.8751818420657986, -1.55321092301649, 1.439167021455215],
+    [-1.55321092301649, 2.756529049646761, -2.55413198757989],
+    [1.439167021455215, -2.55413198757989, 2.3665958502468065],
+]
+# link_residual_per_trait(fit): pi^2 / 3 exactly, for every trait.
+sigma_d2 = 3.2898681336964528

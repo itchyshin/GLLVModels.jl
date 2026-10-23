@@ -1,8 +1,10 @@
 # Confidence intervals
 
-GLLVModels.jl provides three complementary interval methods — **Wald**, **profile
+GLLVModels.jl provides three interval constructions — **Wald**, **profile
 likelihood**, and **parametric bootstrap** — for the Gaussian engine and the
-admitted non-Gaussian CI rows.
+admitted non-Gaussian CI rows. They quantify different approximations to
+uncertainty; none by itself guarantees calibrated coverage for a particular fit
+or data set.
 
 ## Non-Gaussian families — one entry point
 
@@ -23,16 +25,38 @@ confint(fit, Y; method = :bootstrap, n_boot = 500)       # parametric bootstrap
 marginal likelihood. The call returns a `NamedTuple` with `term`, `estimate`,
 `lower`, `upper`, and `method` (plus method-specific extras below).
 
-Supported fits: the GLM families (`PoissonFit`, `BinomialFit`, `NBFit`,
-`NB1Fit`, `BetaFit`, `GammaFit`), grouped-dispersion NB2/NB1/Beta/Gamma fits,
-the two-part families (`DeltaLogNormalFit`, `DeltaGammaFit`, `BetaHurdleFit`,
-`HurdlePoissonFit`, `HurdleNBFit`, `ZIPFit`, `ZIPCovFit`, `ZINBFit`,
-`ZINBCovFit`, `ZIBFit`), and
-shared-cutpoint ordinal (`OrdinalFit`). `ZIPCovFit` / `ZINBCovFit` need the
-design via `X` (`confint(fit, Y; method=…, X=X)`); term names add free dual
-slopes `gammaz[k]` / `gammac[k]` (`ZINBCovFit` also reports shared scalar `r`
-on the log scale). Grouped Tweedie and per-trait ordinal
-cutpoint CI endpoints are deliberate follow-ups.
+A fit made with an `offset` (the known additive term in `η = β + offset + Λz`, such
+as log-exposure or effort) is inferred on that offset: pass the same one,
+`confint(fit, Y; offset = O)`, as you pass `N` and `mask`. The Wald Hessian, the
+profile refits and the bootstrap all use it. A fit object does not store the
+offset, so `confint` checks that the objective it rebuilds reproduces the fit's own
+log-likelihood and refuses (with an `ArgumentError`) when it does not, for example
+when the offset is left out, instead of returning the intervals of an offset-free
+model. The check compares like with like, so offset-free fits from the variational
+fitters (`fit_*_gllvm_va`) and `hessian = :fisher` fits of the delta-gamma and
+truncated NB2 families are not refused. It cannot see a wrong offset at cells that
+do not enter the likelihood (masked cells; the `y = 0` cells of hurdle and
+separate-predictor delta fits, where the offset sits on the positive part only), and
+the bootstrap draws do use the offset there. AGHQ Poisson and binomial fits keep
+their offset and need no keyword. The same keyword is accepted by `vcov`,
+`coef_table` and `confint_lv_effects` (Wald and profile; the bootstrap of
+`confint_lv_effects` refuses an offset but still checks the fit, so an offset fit is
+not bootstrapped as if it had none). See [`confint`](@ref) for the fit types that
+take an offset.
+
+The generic entry point currently accepts the fitted types in its `_CIFit`
+dispatch: ordinary family fits (including Poisson, Binomial, NB/NB1, GP1,
+Beta, Gamma, Exponential, Tweedie, Beta-Binomial, row-random, lognormal,
+truncated-count, and Student-t routes); two-part fits; grouped-dispersion and
+grouped-dispersion-covariate fits; `OrdinalFit`, per-trait ordinal fits,
+`MultinomialFit`, `GllvmCovFit`, `ZIPCovFit`, `ZINBCovFit`, `OrderedBetaFit`,
+`QuadraticFit`, and `RowEffectFit`. Availability of a meaningful endpoint still
+depends on the selected fit, term, convergence, and curvature diagnostics.
+`ZIPCovFit` / `ZINBCovFit` need the design via `X`
+(`confint(fit, Y; method=…, X=X)`); term names add free dual slopes
+`gammaz[k]` / `gammac[k]` (`ZINBCovFit` also reports shared scalar `r` on the
+log scale). `GaussianPerVarFit` is not in this dispatch and currently has no
+public CI method.
 
 ### Term names
 
@@ -73,18 +97,26 @@ positive-definiteness check) are conditioned out; the rest of the parameters
 Hessian's inverse. The extra `boundary_terms::Vector{String}` names exactly
 which terms were conditioned out (empty when `pd_hessian == true`). This
 mirrors R's `sdreport()`, which NaNs only the degenerate block rather than the
-whole covariance matrix. Note this per-parameter degradation applies to the
+whole covariance matrix. Note this boundary conditioning applies to the
 family/grouped-dispersion route (`confint(fit::_CIFit, Y; ...)`,
-`src/confint_family.jl`); the Gaussian path (`confint(fit::GllvmFit; ...)`,
-`src/confint.jl`) is unchanged and still reports all-NaN on a non-PD Hessian.
+`src/confint_family.jl`). The Gaussian path (`confint(fit::GllvmFit; ...)`,
+`src/confint.jl`) does not condition out boundary terms. It reports every
+bound as NaN, with `pd_hessian = false`, only when the Hessian cannot be
+computed, is non-finite, or fails a Cholesky factorisation (so an indefinite
+Hessian is all-NaN). If the Hessian is positive definite but a diagonal entry
+of its inverse is non-finite or non-positive, only that entry's bounds are NaN
+and `pd_hessian = false`; the other parameters are still reported.
 
 ### Profile likelihood — `method = :profile`
 
-Inverts the likelihood-ratio test: the deviance `D(c) = 2(ℓ̂ − ℓ_p(c))` is
-χ²₁ under `θ_i = c`, and the interval is `{c : D(c) ≤ qchisq(level, 1)}`. Each
-side is located by **bracket-then-bisection**, re-optimising the other
-parameters at every candidate. Better coverage than Wald when the likelihood is
-asymmetric. Returns a per-term `status` (`:profile` / `:partial` / `:failed`).
+Uses a likelihood-ratio construction: the deviance `D(c) = 2(ℓ̂ − ℓ_p(c))` is
+compared with a χ²₁ cutoff, and the reported interval is
+`{c : D(c) ≤ qchisq(level, 1)}`. Each side is located by
+**bracket-then-bisection**, re-optimising the other parameters at every
+candidate. This can represent asymmetry that a local Wald approximation misses,
+but it remains conditional on successful constrained refits and the usual
+likelihood-ratio approximation; it is not an exact or coverage-guaranteed
+interval. Returns a per-term `status` (`:profile` / `:partial` / `:failed`).
 Use `profile_iterations`, `profile_g_tol`, `profile_max_expand`, and
 `profile_max_bisect` to tune the constrained-refit and bracketing budget when a
 profile canary needs tighter or cheaper refits.
@@ -92,8 +124,10 @@ profile canary needs tighter or cheaper refits.
 ### Parametric bootstrap — `method = :bootstrap`
 
 Simulates `n_boot` datasets from the fitted model, refits each, and takes
-percentile bounds. The gold standard for skewed or bounded parameters, at the
-cost of `n_boot` refits.
+percentile bounds. It can be useful where a local quadratic approximation is
+unpersuasive, but it is not a gold standard or a coverage guarantee: results
+also depend on the fitted model, the number of replicates, and successful
+refits.
 
 ```julia
 confint(fit, Y; method = :bootstrap, n_boot = 1000, parallel = true)
@@ -103,7 +137,8 @@ Set `parallel = true` to run replicates over `Threads.@threads`. **Each
 replicate seeds its own RNG (`seed + b`)**, so the result is independent of
 thread scheduling — multi-core and single-core give identical bounds. Returns an
 extra `n_converged::Int` (replicates whose refit failed or changed dimension are
-dropped). Start Julia with `julia -t auto` to use multiple threads.
+dropped). Inspect it before interpreting the percentile bounds. Start Julia
+with `julia -t auto` to use multiple threads.
 
 ## Gaussian engine
 
@@ -117,8 +152,79 @@ profile_ci(fit, "sigma_eps"; y = y)       # profile likelihood
 bootstrap_ci(fit; y = y, n_boot = 500)    # parametric bootstrap
 ```
 
+All three report the SD terms (`sigma_eps`, `sigma_B[t]`, `sigma_W[t]`) on the raw
+positive scale, so the same term name means the same quantity across methods; the
+signed `sigma_phy[t]`, `beta` and `Lambda_*` terms are reported as they are.
+`bootstrap_ci` leaves out refits that errored or did not converge when it takes the
+percentiles, and returns `n_used` and `n_dropped` (it warns when more than half of
+the refits are dropped).
+
 and derived-quantity CIs (Σ_y entries, communality, correlation, phylogenetic
 signal H²) via [`confint_derived`-family helpers](covariance-correlation.md).
+
+### One call for the Gaussian fit: `method` and derived `parm`
+
+`confint(fit, y; method, parm)` reaches the same three methods, and the derived
+quantities, without choosing among the helper functions:
+
+```julia
+confint(fit, y; parm = "sigma_eps", method = :profile)        # profile_ci for each term
+confint(fit, y; parm = "Lambda", method = :bootstrap, n_boot = 500)
+confint(fit, y; parm = "communality")                         # transformed Wald, every trait
+confint(fit, y; parm = "rho[1,2]", method = :bootstrap, n_boot = 500)
+confint(fit, y; parm = "icc[2]", method = :wald)
+confint(fit, y; parm = "phylo_signal[1]", method = :profile)
+```
+
+A call either runs the method it names or throws an `ArgumentError` that lists
+the methods available for that fit and `parm`; it never hands back a Wald
+interval for a profile or bootstrap request, and a keyword the route does not use
+is refused by name. The default is still `method = :wald`.
+
+| `parm` | quantity | `:wald` | `:profile` | `:bootstrap` |
+|--------|----------|---------|------------|--------------|
+| `"communality[t]"` | `communality(fit)[t]` | `communality_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"icc[t]"`, `"repeatability[t]"` | `extract_ICC_site(fit)[t]` | `icc_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"rho[i,j]"`, `"correlation[i,j]"` | `correlation(fit)[i,j]` | `correlation_wald_ci` (Fisher-z) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"proportion:<component>[t]"` | `proportions(fit; component)[t]` | `icc_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"phylo_signal[t]"` | `phylo_signal(fit)[t]` | `phylo_signal_wald_ci` (logit) | `profile_ci_phylo_signal` | `bootstrap_ci_derived` |
+| any term name (`"sigma_eps"`, `"Lambda"`, ...) | the packed parameter | observed information | `profile_ci` | `bootstrap_ci` |
+
+The derived intervals are the direct functions' own, value for value. The profile
+route clamps to the quantity's natural range. The component of a `proportion` is
+one of `shared`, `unique_B`, `unique_W`, `unique_Wd`, `residual`. gllvmTMB's tier
+spellings (`communality:unit:t`, `rho:unit:i,j`, `proportion:shared_unit:t`) are
+refused with an error: they name gllvmTMB's aligned estimands
+(`extract_communality`, `extract_correlations`, `extract_proportions`), which
+differ from `communality(fit)`, `correlation(fit)` and `proportions(fit)`. The bootstrap
+runs one set of refits per requested quantity, as gllvmTMB does, so ask for the
+traits you need. gllvmTMB withdrew its profile interval for icc, communality,
+rho and proportion; the profile route here is the existing penalty-based
+`profile_ci_derived` and is exploratory. A fit made with `lambda_constraint`
+pins takes `method = :wald` only, and its Wald intervals use the covariance of
+the free parameters, as gllvmTMB's `cov.fixed` does: a pinned loading has
+`se = 0` and `lower = upper = estimate`. If that information is not positive
+definite, every SE and bound is `NaN`, the pinned loadings' included, as in
+gllvmTMB's `loading_ci()`. See [`confint`](@ref) for the keywords.
+
+### Confirmatory fits and `loading_profile` (D3 Stage 1)
+
+`fit_gaussian_gllvm(y; K, lambda_constraint = M)` fits a **confirmatory**
+ordinary Gaussian model: `M` is a `p × K` matrix of raw `Λ` values (`NaN` =
+free, numeric = pinned at that value), mirroring R gllvmTMB's
+`lambda_constraint = list(unit = M)`. `loading_profile(fit; y, ...)` then
+profiles a grid over each **free** entry of such a fit, refitting with that
+one entry additionally pinned at each grid value — the confirmatory mirror of
+R's `loading_profile()`. It requires a confirmatory fit and refuses an
+ordinary (unpinned) one; see `loading_profile_exploratory` for the existing
+penalty-based profile CI on an unpinned fit's raw loadings.
+
+```julia
+fit = fit_gaussian_gllvm(y; K = 2, lambda_constraint = M)   # M: p × K, NaN = free
+loading_profile(fit; y = y, n_grid = 11)
+```
+
+**Current scope.** Confirmatory loading profiles are available for the ordinary Gaussian latent-variable model only: no phylogenetic or diagonal terms and no fixed-effect covariates `X`. `lambda_constraint` cannot yet be combined with `aghq`, `mask`, `offset`, or predictor-informed latent scores; such fits are refused with an error. The profile grid spacing follows a Wald-standard-error heuristic rather than R's exact spacing rule, and no cross-package numeric comparison against R's `loading_profile()` output has been published yet.
 
 ## Predictor-informed latent-score effects
 

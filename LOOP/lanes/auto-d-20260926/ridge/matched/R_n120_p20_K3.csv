@@ -1,0 +1,37 @@
+"n","p","K_true","rep","ridge","sel_bic","sel_bic_sites","statuses","secs"
+120,20,3,1,Inf,2,3,"ok/ok/ok/runaway",153.573437929153
+120,20,3,1,2,3,3,"ok/unconverged/ok/unconverged",79.62553191185
+120,20,3,2,Inf,NA,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 76.5 on the link scale for trait 9 (> 10)); d = 2:
+  runaway (latent SD 30.2 on the link scale for trait 9 (> 10)); d = 3: runaway
+  (latent SD 69 on the link scale for trait 9 (> 10)); d = 4: runaway (latent
+  SD 354 on the link scale for trait 7 (> 10))",126.229192972183
+120,20,3,2,2,3,3,"ok/unconverged/ok/unconverged",107.974024057388
+120,20,3,3,Inf,NA,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 32.5 on the link scale for trait 4 (> 10)); d = 2:
+  runaway (latent SD 383 on the link scale for trait 4 (> 10)); d = 3: runaway
+  (latent SD 336 on the link scale for trait 3 (> 10)); d = 4: runaway (latent
+  SD 297 on the link scale for trait 11 (> 10))",126.930561065674
+120,20,3,3,2,2,2,"ok/ok/unconverged/unconverged",97.821564912796
+120,20,3,4,Inf,1,2,"ok/ok/runaway/runaway",205.938459157944
+120,20,3,4,2,1,3,"ok/ok/ok/unconverged",70.7297201156616
+120,20,3,5,Inf,1,3,"ok/runaway/ok/runaway",190.935148000717
+120,20,3,5,2,2,2,"ok/ok/unconverged/unconverged",79.1816928386688
+120,20,3,6,Inf,2,2,"ok/ok/runaway/runaway",203.415887117386
+120,20,3,6,2,2,2,"ok/ok/unconverged/unconverged",80.1615030765533
+120,20,3,7,Inf,NA,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 30.2 on the link scale for trait 8 (> 10)); d = 2:
+  runaway (latent SD 27.7 on the link scale for trait 8 (> 10)); d = 3: runaway
+  (latent SD 21.5 on the link scale for trait 19 (> 10)); d = 4: runaway
+  (latent SD 90.9 on the link scale for trait 14 (> 10))",76.495530128479
+120,20,3,7,2,3,3,"ok/unconverged/ok/unconverged",82.5307929515839
+120,20,3,8,Inf,1,1,"ok/runaway/runaway/runaway",219.928477048874
+120,20,3,8,2,1,1,"ok/unconverged/unconverged/unconverged",111.522026062012
+120,20,3,9,Inf,2,2,"ok/ok/runaway/failed",101.453695058823
+120,20,3,9,2,2,2,"ok/ok/unconverged/unconverged",89.195200920105
+120,20,3,10,Inf,NA,NA,"ERROR No `d` in 1:4 was accepted by the guard.
+ℹ d = 1: runaway (latent SD 47.3 on the link scale for trait 12 (> 10)); d = 2:
+  runaway (latent SD 46.6 on the link scale for trait 3 (> 10)); d = 3: runaway
+  (latent SD 37 on the link scale for trait 3 (> 10)); d = 4: runaway (latent
+  SD 215 on the link scale for trait 3 (> 10))",116.15083694458
+120,20,3,10,2,2,2,"ok/ok/unconverged/unconverged",81.4755551815033

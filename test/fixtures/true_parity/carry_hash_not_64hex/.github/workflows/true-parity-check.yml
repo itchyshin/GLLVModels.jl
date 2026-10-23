@@ -1,0 +1,7 @@
+name: True-parity check negative controls
+on: [pull_request, workflow_dispatch]
+jobs:
+  negative-controls:
+    runs-on: ubuntu-latest
+    steps:
+      - run: node tools/test_true_parity_check.mjs

@@ -1,0 +1,27 @@
+# The SHIPPED configuration, measured. nelder_mead=true throughout: the demotion
+# was abandoned on measurement, so true is what ships. g_tol is left at its 1e-4
+# default. The arc's 2.0486 s was taken at nelder_mead=false and g_tol=1e-6 and
+# describes no shipped path; this file replaces it.
+# git_sha	8bcb576fc
+# julia	1.10.0
+# blas	LBTConfig([ILP64] libopenblas64_.dylib)
+# julia_threads	1
+# openblas_threads	8
+# config	nelder_mead=true g_tol=1e-4 analytic_gradient=default
+# thread_regime	user-default-ish (julia=1 openblas=8)
+# LABEL CORRECTION, appended after f667dffb0 reverted moment_start to opt-in:
+# the row named SHIPPED is hessian=:grad_fd WITH moment_start=true, which is NOT
+# the shipped default any more. The shipped default is the HESS row
+# (hessian=:grad_fd, moment_start=false). The SHIPPED row is retained as the
+# opt-in configuration's measurement. This file's own header rule, that a
+# benchmark must carry its keyword configuration, is what makes the mislabel
+# recoverable: every row states hess and moment explicitly.
+fixture	config	nelder_mead	hessian	moment_start	wall_median_s	wall_min_s	wall_max_s	reps	loglik	rel_loglik_vs_S8BASE	converged	iterations
+glmm_200x5	S8BASE	true	fd	false	0.116088	0.113821	0.143333	5	-2025.469254255519	0.000e+00	true	3
+glmm_200x5	HESS	true	grad_fd	false	0.111679	0.110744	0.116572	5	-2025.469254255519	0.000e+00	true	3
+glmm_200x5	MOMENT	true	fd	true	0.089685	0.089310	0.099049	5	-2025.4692542555274	4.154e-15	true	3
+glmm_200x5	SHIPPED	true	grad_fd	true	0.086268	0.082976	0.091707	5	-2025.4692542555274	4.154e-15	true	3
+glmm_5000x3_g500	S8BASE	true	fd	false	6.369450	6.334495	6.426400	3	-32557.752001459012	0.000e+00	true	8
+glmm_5000x3_g500	HESS	true	grad_fd	false	5.063145	5.033063	5.171895	3	-32557.752001459012	0.000e+00	true	8
+glmm_5000x3_g500	MOMENT	true	fd	true	6.408280	6.378201	6.453306	3	-32557.752001458935	2.347e-15	true	8
+glmm_5000x3_g500	SHIPPED	true	grad_fd	true	5.098757	5.034877	5.101311	3	-32557.752001458935	2.347e-15	true	8

@@ -1,0 +1,2 @@
+cell_id	kind	detail	wall_s	loglik	note	status	sha	host	threads
+gllvm-pois-phylo-small	G-phylo-nongauss; Poisson phylo tip smoke 6×12	fit_phylo_glm Poisson	0.019057	-136.451457	julia_abs_only	ok	4e976e2	totoro	4

@@ -22,8 +22,10 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
         σ_eps = 0.5
         σ²_B = [0.10, 0.20, 0.05, 0.15]
         σ²_W = [0.05, 0.10, 0.02, 0.08]
-        d_total = vec(sum(Λ_W .^ 2, dims = 2)) .+ σ²_B .+ σ²_W .+ σ_eps^2
-        Σ_y = Λ_B * Λ_B' + Diagonal(d_total)
+        # The W-tier scores are shared by all traits of a unit (as in the C++
+        # twin, issue #135), so Λ_W adds its full cross-trait block.
+        d_total = σ²_B .+ σ²_W .+ σ_eps^2
+        Σ_y = Λ_B * Λ_B' + Λ_W * Λ_W' + Diagonal(d_total)
         d_dist = MvNormal(zeros(p), Symmetric(Σ_y))
         y = rand(d_dist, n)
         ll_direct = sum(logpdf(d_dist, y[:, s]) for s in 1:n)
@@ -35,35 +37,37 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
     end
 
     @testset "recovery: W tier + diag RE on a clean fixture" begin
+        # p = 8 traits: with the W tier shared across traits (issue #135) the
+        # K_B = 1, K_W = 1 model is a rank-2 factor model, which p = 5 leaves
+        # with a single spare degree of freedom (Heywood cases on this seed).
         Random.seed!(2)
-        p, K_B, K_W, n = 5, 1, 1, 400
-        Λ_B = reshape([0.7, 0.5, 0.4, -0.3, 0.2], p, K_B)
-        Λ_W = reshape([0.3, 0.4, 0.2, 0.3, 0.1], p, K_W)
+        p, K_B, K_W, n = 8, 1, 1, 1000
+        Λ_B = reshape([0.7, 0.5, 0.4, -0.3, 0.2, 0.6, -0.5, 0.3], p, K_B)
+        Λ_W = reshape([0.3, 0.4, 0.2, 0.3, 0.1, -0.4, 0.2, 0.5], p, K_W)
         σ_eps = 0.5
         σ²_B = fill(0.10, p)
         σ²_W = fill(0.05, p)
-        # Simulate exactly as the engine assembles η:
-        #   y[t, s] = Λ_B[t, :] η_B[:, s] + sum_k Λ_W[t, k] η_W[k, t, s]
+        # Simulate exactly as the engine (and the C++ twin) assembles η:
+        #   y[t, s] = Λ_B[t, :] η_B[:, s] + Λ_W[t, :] η_W[:, s]
         #           + s_B[t, s] + s_W[t, s] + σ_eps ε[t, s]
+        # with one W-tier score vector per unit, shared by all traits.
         η_B = randn(K_B, n)
-        η_W = randn(K_W, p, n)
+        η_W = randn(K_W, n)
         s_B = sqrt.(σ²_B) .* randn(p, n)
         s_W = sqrt.(σ²_W) .* randn(p, n)
-        y = Λ_B * η_B
-        for t in 1:p, s_ix in 1:n
-            y[t, s_ix] += sum(Λ_W[t, :] .* η_W[:, t, s_ix])
-        end
+        y = Λ_B * η_B + Λ_W * η_W
         y += s_B + s_W + σ_eps * randn(p, n)
         fit = fit_gaussian_gllvm(y; K = K_B, K_W = K_W, has_diag = true)
         @test fit.converged
+        # Only Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ is identified in this one-unit-per-column
+        # layout, so recovery is checked on the full per-unit covariance.
+        Σ_true = Λ_B * Λ_B' + Λ_W * Λ_W' + Diagonal(σ²_B .+ σ²_W .+ σ_eps^2)
+        Σ_hat  = fit.pars.Λ * fit.pars.Λ' + fit.pars.Λ_W * fit.pars.Λ_W' +
+                 Diagonal(fit.pars.σ²_B .+ fit.pars.σ²_W .+ fit.pars.σ_eps^2)
+        @test sigma_y_site(fit) ≈ Σ_hat
         # Diagonal recovery (per-trait observation variance)
-        d_total_true = vec(sum(Λ_W .^ 2, dims = 2)) .+ σ²_B .+ σ²_W .+ σ_eps^2
-        d_total_hat  = vec(sum(fit.pars.Λ_W .^ 2, dims = 2)) .+
-                       fit.pars.σ²_B .+ fit.pars.σ²_W .+ fit.pars.σ_eps^2
-        @test maximum(abs.(d_total_hat .- d_total_true) ./ d_total_true) < 0.20
+        @test maximum(abs.(diag(Σ_hat) .- diag(Σ_true)) ./ diag(Σ_true)) < 0.20
         # Σ_y recovery (rotation invariant)
-        Σ_true = Λ_B * Λ_B' + Diagonal(d_total_true)
-        Σ_hat  = fit.pars.Λ * fit.pars.Λ' + Diagonal(d_total_hat)
         @test norm(Σ_true - Σ_hat) / norm(Σ_true) < 0.15
     end
 

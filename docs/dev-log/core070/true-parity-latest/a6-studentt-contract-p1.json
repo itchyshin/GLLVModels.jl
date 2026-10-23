@@ -1,0 +1,142 @@
+{
+  "status": "FROZEN_A6_STUDENTT_INTERIOR_NU_CONTRACT",
+  "revision": "2026-09-01b: split into a fixed-shape PRIMARY gating case and a free-nu SECONDARY structural-finding case, after Totoro run suite-run-01/a6-run (logs a6-1/2/3.log) surfaced an honest structural mismatch on the original single free-nu comparison.",
+  "leaf": "A6 (docs/dev-log/decisions/2026-09-01-maintainer-decisions-round2-3.md #11)",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "PAIRED_ENGINE_AGREEMENT_AT_INTERIOR_NU_PLUS_JULIA_HEALTH_WIRING",
+  "gap_it_closes": "docs/dev-log/core070/parity-panel-2026-09-01.md finding 4: the shared A6 harness cell sat both engines on the nu->infinity boundary; R correctly diagnosed it (false-convergence(8)), Julia missed it (converged=true at nu=3.0e31). This contract's fixture is deliberately genuinely heavy-tailed so BOTH engines are expected interior, isolating the health-wiring repair from the boundary pathology itself (which remains a separate, honestly-reported finding wherever it recurs).",
+  "totoro_finding_2026-09-01b": {
+    "run": "suite-run-01/a6-run (logs a6-1/2/3.log)",
+    "observed": "gen and R stages both exit 0; the paired compare failed HONESTLY -- not a numeric near-miss but a structural mismatch: R's student() with df=NULL estimates a degrees-of-freedom PARAMETER PER TRAIT (length p=5 vector), while GLLVM.jl's default disp_group=:shared fits ONE shared degrees-of-freedom across all traits. Loadings differed at ~0.05, model-mismatch scale (two different models fit to the same data, not the same model fit twice), matching the class of the NB2 benchmark's shared-r-vs-per-trait-phi lesson.",
+    "r_readback_verification": "R/gllvmTMB.R:167-168 documents this explicitly: 'The student() family fits one log-sigma and one log(df-1) per trait (df > 1; pass student(df = 3) to fix df at 3'. Confirmed as genuine documented behaviour (not a quirk) by reading the per-trait pin machinery directly, R/fit-multi.R:5317-5349 (dispersion_trait_family_mask + dispersion_trait_map for both log_sigma_student and log_df_student, with an explicit per-trait df_pin loop when the user supplies a numeric df). CRITICAL SECOND FINDING while verifying: sigma_student is ALSO always per-trait in R, unconditionally -- passing a numeric df pins ONLY log_df_student per trait (R/fit-multi.R:5325-5342, 'If the user supplied numeric df ... pin log_df_student per trait'); it does NOT collapse sigma_student to one shared value. This means the naive fix (just add nu=6.0 on the Julia side, leaving disp_group=:shared) would STILL have mismatched sigma shape (Julia 1 value vs R 5 values) even after pinning nu. The corrected fixed case therefore also switches the Julia side to disp_group=:species (per-trait sigma, matching R unconditionally) while pinning nu=6.0 as a scalar (matching R's df=6 pin, which sets every trait's df to the identical scalar value)."
+  },
+  "files": {
+    "r_stage": "tools/core070_a6_studentt_fixture.R",
+    "julia_stage_and_verifier": "tools/core070_a6_studentt_fixture.jl",
+    "notes": "docs/dev-log/core070/a6-studentt-notes.md",
+    "julia_health_wiring_test": "test/test_studentt_boundary.jl",
+    "julia_health_wiring_source": "src/families/studentt.jl"
+  },
+  "julia_health_wiring": {
+    "before": "StudentTFit.nu_boundary was additive only (commit efe3d644): converged semantics unchanged, so a boundary fit could still present as converged=true.",
+    "after": "fit_studentt_gllvm forces converged = converged && !nu_boundary (mirrors _tweedie_verdict's :power_at_boundary rule, families/tweedie.jl), which flows into the GENERIC family-agnostic fit-health gate (sanity_multi / gllvmTMB_diagnose, diagnostics.jl) via fit.converged with no diagnostics.jl edit needed. Tightens the gate only; no existing pass case is affected.",
+    "unit_test": "GLLVM._studentt_nu_boundary and the conv && !boundary composition, test/test_studentt_boundary.jl",
+    "red_first_fixture_test": "pure-Gaussian data (test/test_studentt_boundary.jl, 'red-first: near-Gaussian data walks estimated nu to the boundary'; same construction as test_studentt_boundary_honesty.jl) -- asserts fit.converged == false, sanity_multi(fit).pass == false, gllvmTMB_diagnose(fit).pass == false when the boundary is reached"
+  },
+  "fixture_design": {
+    "family_r": "student(link = \"identity\")  (R/families.R:367-381; estimates degrees of freedom unless df is supplied)",
+    "family_julia": "StudentTFamily()  (src/families/studentt.jl; identity link, nu estimated by default)",
+    "p": 5,
+    "K": 1,
+    "n": 250,
+    "seed": 20260901,
+    "generator": "tools/core070_a6_studentt_fixture.jl generate_fixture(rng): y_tj = beta_t + Lambda_t * z_j + sigma_true * eps_tj, z_j ~ N(0,1) iid across sites, eps_tj ~ standard t(nu_true) (Distributions.TDist). The SAME generated response matrix feeds both the fixed and free cases below.",
+    "beta_true": [
+      0.5,
+      -0.3,
+      0.2,
+      0.8,
+      -0.6
+    ],
+    "loading_true": [
+      0.9,
+      -0.7,
+      0.5,
+      0.6,
+      -0.4
+    ],
+    "sigma_true": 0.7,
+    "nu_true": 6.0,
+    "design_note": "nu_true = 6 is deliberately, genuinely heavy-tailed (not the pure-Gaussian construction used to exercise the boundary in test_studentt_boundary.jl / test_studentt_boundary_honesty.jl) -- both engines are expected to converge to an INTERIOR nu on this fixture. A local plumbing check (no real R; a synthetic 'R' file built from Julia's own fitted coordinates) reproduced converged=true, nu_boundary=false for both cases, with the fixed case's nu pinned exactly at 6.0 and the free case recovering nu_hat approx 5.89, sigma_hat approx 0.699 -- close to nu_true=6.0, sigma_true=0.7 -- confirming the fixture is well-conditioned and estimable at this size before any live R run."
+  },
+  "cases": {
+    "fixed": {
+      "role": "PRIMARY, GATING -- determines the script's exit code",
+      "r_call": "student(link = \"identity\", df = 6)  -- pins log_df_student at log(5) for EVERY trait (R/fit-multi.R:5325-5342)",
+      "julia_call": "fit_studentt_gllvm(Y; K = 1, nu = 6.0, disp_group = :species)  -- FAMILY-09-FIXED-SHAPE path (the nu::Real branch of fit_studentt_gllvm), with disp_group = :species so sigma is per-trait (matching R's unconditional per-trait sigma_student)",
+      "matched_model": "Both sides: per-trait sigma (length p), ONE scalar nu = 6.0 shared identically across every trait (R re-reports that identical scalar once per trait via df_student; Julia keeps it as a single Float64 -- the comparator broadcasts the Julia scalar against every R per-trait entry, see 'nu_comparison_note' below). No structural mismatch remains.",
+      "paired_tolerance": 0.0001,
+      "quantities_compared": [
+        "loglik",
+        "beta (per-species intercept)",
+        "sigma_student (per-species scale, length p)",
+        "df_student (per-species df, length p, all values expected == 6.0)",
+        "loading (per-species Lambda, sign-aligned for the K=1 indeterminacy)"
+      ],
+      "both_engine_health_required": {
+        "julia": "fit.converged == true AND fit.nu_boundary == false",
+        "r": "healthy == 1 (inline health check: optimizer convergence code 0, finite objective/parameters/gradient, scaled gradient <= 1e-3, sigma_student finite and > 0, df_student not at the nu_boundary_max = 1e6 Gaussian-limit boundary) AND nu_at_boundary == 0",
+        "if_either_fails_on_this_interior_fixture": "recorded as a finding in a6-studentt-notes.md / the Totoro run's own output, never silently fudged, tolerance-widened, or dropped from the comparison (round2-3 #11's explicit instruction)"
+      },
+      "nu_comparison_note": "Julia's fixed-nu fit reports fit.\u03bd as a single Float64 (nu is not per-trait when passed as a Real, independent of disp_group); R's report$df_student is always length p. tools/core070_a6_studentt_fixture.jl's _a6_compare broadcasts the Julia scalar against every entry of R's per-trait vector rather than requiring equal lengths -- a reporting-shape difference, not a real model mismatch, since nu was pinned identically on both sides."
+    },
+    "free": {
+      "role": "SECONDARY, NON-GATING -- printed for the record, never affects the exit code",
+      "r_call": "student(link = \"identity\")  -- df = NULL, R's documented per-trait-estimated default",
+      "julia_call": "fit_studentt_gllvm(Y; K = 1)  -- disp_group = :shared (default): ONE shared sigma and ONE shared nu across all traits",
+      "classification": "dispersion_structure_finding (see below) -- NOT a pass/fail numeric gate. Two different models (per-trait vs shared dispersion structure) are fit to the same data on purpose, to keep this divergence visible and documented rather than silently dropped from the harness.",
+      "reported_not_asserted": [
+        "loglik (both sides, plus an informational delta)",
+        "converged/healthy flags (both sides)",
+        "nu (Julia's single shared value vs R's p per-trait values)",
+        "sigma (Julia's single shared value vs R's p per-trait values)"
+      ]
+    }
+  },
+  "dispersion_structure_finding": {
+    "class": "Same class as the NB2 benchmark's shared-r-vs-per-trait-phi lesson: GLLVM.jl's disp_group kwarg (:shared default vs :species) must be set to match whichever dispersion structure the frozen R family actually fits by default, or the comparison is between two different statistical models, not two implementations of the same one.",
+    "r_default_confirmed_documented": true,
+    "r_default_confirmed_documented_evidence": "R/gllvmTMB.R:167-168 (docstring, unconditional: 'The student() family fits one log-sigma and one log(df-1) per trait') + R/fit-multi.R:5317-5349 (the actual per-trait map/pin machinery for both log_sigma_student and log_df_student) -- read directly from the local gllvmTMB checkout, not inferred from behaviour alone.",
+    "julia_default_is_shared": "fit_studentt_gllvm(...; disp_group = :shared) is GLLVM.jl's own default (src/families/studentt.jl), chosen independently of R's default at the time StudentTFamily was implemented.",
+    "julia_matching_path_exists": "disp_group = :species gives GLLVM.jl per-trait sigma AND (when nu is also estimated, i.e. nu = nothing) per-trait nu -- structurally matching R's free-nu default. This leaf does NOT switch the 'free' case to disp_group = :species: round2-3 #11 asked to keep the free-nu case as a recorded structural finding at its ORIGINAL (default-vs-default) configuration, not to fix it into a second gating case. A disp_group = :species free-nu paired case is a natural follow-up leaf, not built here.",
+    "recommendation_for_future_leaves": "Any new paired R/Julia family fixture should state its dispersion-structure alignment (shared vs per-trait, for every family that has a disp_group choice) explicitly in its contract BEFORE running the comparison, not discover it from a failed harness cell."
+  },
+  "argv_convention": {
+    "r_stage": "Rscript --vanilla tools/core070_a6_studentt_fixture.R <data_path> <r_output_path>  (argv 2; K and the fixed-case pinned nu are fixed in-script, not runtime arguments; fits BOTH cases -- fixed then free -- in one invocation, writing case-prefixed keys fixed_... / free_... to one output file)",
+    "julia_stage": "julia --project=. tools/core070_a6_studentt_fixture.jl <data_path> <r_output_path>  (argv 2; run once to generate <data_path> if missing, again after the R stage to verify; fits BOTH cases in one invocation) OR julia --project=. tools/core070_a6_studentt_fixture.jl --self-test (synthetic pair for the fixed/gating case only, no data/R required)"
+  },
+  "coverage_guard": "the Julia stage refuses to report a pass while r_output_path is missing (exit 1, CORE070_A6_STUDENTT_AWAITING_R) -- a missing oracle side is never silently treated as agreement. Applies to the whole invocation (both cases are read from the same file).",
+  "soft_fail": "read_r_output raises on any line it cannot parse as a scalar or indexed-vector key/value row rather than skipping it silently; read_r_result raises (Julia KeyError, not a silent skip) if a required case-prefixed key is absent from the R output; _a6_compare treats any missing required key on either side as a hard failure before any numeric comparison runs, for the fixed/gating case.",
+  "self_test": {
+    "invocation": "julia --project=. tools/core070_a6_studentt_fixture.jl --self-test",
+    "scope": "exercises _a6_compare only (the fixed/gating case's comparator); the free case has no tolerance gate to self-test, by design",
+    "mutations_asserted_rejected": 10,
+    "minimum_required": 4,
+    "revision_note": "the synthetic pair was updated to the realistic 'fixed' case shapes (Julia sigma length p, Julia nu length 1 broadcast against R's length-p df_student) after the disp_group=:species correction; one new mutation exercises the nu-broadcast comparison path directly (a single R per-trait df_student entry moved past tolerance)."
+  },
+  "totoro_command": [
+    "julia --project=. tools/core070_a6_studentt_fixture.jl /path/to/a6-data.tsv /path/to/a6-r-out.tsv",
+    "Rscript --vanilla tools/core070_a6_studentt_fixture.R /path/to/a6-data.tsv /path/to/a6-r-out.tsv",
+    "julia --project=. tools/core070_a6_studentt_fixture.jl /path/to/a6-data.tsv /path/to/a6-r-out.tsv"
+  ],
+  "not_run_locally": "The R stage has NOT been executed in this session (maintainer instruction: 'I will run the batch on Totoro after you deliver -- do NOT try to run R locally.'). Local verification covered: (1) the Julia health-wiring unit + red-first fixture tests (test/test_studentt_boundary.jl, all green), (2) the full test/test_studentt*.jl suite green after the converged-forcing change, (3) julia tools/core070_a6_studentt_fixture.jl --self-test (10/10 rejected mutations, minimum 4, post-revision), (4) end-to-end plumbing of the generate -> soft-fail -> compare states for BOTH cases using a hand-built stand-in 'R' TSV (built from Julia's own fixed-case fitted coordinates plus a plausible free-case row set, not a real R fit) to exercise file parsing, case-prefix keys, the nu-broadcast path, sign-alignment, and both the pass and fail comparison branches for the fixed/gating case, plus the non-gating free-case report.",
+  "p0_contract": "docs/dev-log/core070/a6-studentt-contract.json",
+  "p0_contract_sha256": "1ffc73929cbbd50cf46316dc36715583067948e2c1e9d37d24f621bb79204113",
+  "p0_to_p1_r_function_diff": [
+    {
+      "function": "gllvmTMB",
+      "file": "R/gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "14f23cf0ef0c46e074b4263790965ca5c7dcb41da86dc90ade29ed74928cf788",
+      "body_sha256_p1": "b47f6dadf35d6df05bfb783920da77f418202bd60b65f35f1e4de642c494c35d"
+    },
+    {
+      "function": "student",
+      "file": "R/families.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "934036a6e5967e57b9568952f3e28bf345a5f73a77c85076772f1b6b40d40a09",
+      "body_sha256_p1": "00a03bfac5584fc3464c35d15acdaf47e2cba847cf392e8b4cd7ccc2a2c23dc2"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_family_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      }
+    ],
+    "carried_verbatim": "status, cases (r_call, julia_surface, check, tolerance, fixture), bound rows, negative controls, approximation note, fixture and tolerance descriptions. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "schema": "core070-family-links-batch/v1",
+  "status": "FROZEN_FAMILY_LINKS_BATCH_CONTRACT",
+  "area": "family-links",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "ledger_source": "docs/dev-log/core070/required-source-case-map.json",
+  "reconciliation_source": "docs/dev-log/core070/family-reconciliation-2026-09-01.json",
+  "triage_method": "docs/dev-log/core070/family-reconciliation-2026-09-01.json audited both family/FAMILY-01-PROBIT and family/FAMILY-01-CLOGLOG and returned verdict=NO_EVIDENCE / recommended_disposition=needs_fresh_batch for each: no retained receipt anywhere in the repo executes a binomial-probit or binomial-cloglog GLLVM fit (the only cloglog artifact on file, FAMILY-08-CLOGLOG-ENGINE-REJECT in family-link-boundary-evidence.json, is a betabinomial rejection probe, not a fit). This batch closes both rows with fresh compute: one paired R-vs-Julia native-model fit per link, on a small Bernoulli fixture designed to stay off the documented cloglog saturation pathology (src/families/binomial.jl:105-273, check-log 2026-08-28).",
+  "approximation_note": "Both engines integrate the random effects out by the ORDINARY LAPLACE approximation for these cases, not AGHQ: the frozen R adapter's `aghq` control defaults to FALSE (Laplace) -- see .unlazy/core070-aghq/oracle-source/readback/R/gllvmTMB.R lines ~1591/2037/2056 ('aghq = FALSE uses the Laplace approximation (the current default)') -- and the Julia side calls `fit_binomial_gllvm` directly, whose marginal is `binomial_marginal_loglik_laplace` (src/families/binomial.jl), the same dense-Laplace kernel used throughout this engine. Because both sides use the identical integral approximation, this is a same-approximation comparison of two INDEPENDENT optimizations (distinct L-BFGS runs from distinct warm starts), matching the paired-independent-fit precedent already established in tests/testthat/test-julia-bridge.R (gllvmTMB lane) and in tools/core070_namespace_2_batch.jl's own tolerance-calibration comment: 1e-4 absolute on logLik and on max|coef delta|, not the 1e-6..1e-8 used for same-point objective-identity checks elsewhere in this repo.",
+  "row_count": 2,
+  "bound_rows": [
+    {
+      "source_id": "family/FAMILY-01-PROBIT",
+      "classification": "required_core",
+      "prior_disposition": "unbound (NO_EVIDENCE, needs_fresh_batch per family-reconciliation-2026-09-01.json)",
+      "case_id": "CORE070-FAMILY-01-PROBIT-NATIVE-MODEL"
+    },
+    {
+      "source_id": "family/FAMILY-01-CLOGLOG",
+      "classification": "required_core",
+      "prior_disposition": "unbound (NO_EVIDENCE, needs_fresh_batch per family-reconciliation-2026-09-01.json)",
+      "case_id": "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL"
+    }
+  ],
+  "expected_case_count": 2,
+  "cases": [
+    {
+      "case_id": "CORE070-FAMILY-01-PROBIT-NATIVE-MODEL",
+      "source_id": "family/FAMILY-01-PROBIT",
+      "evidence_kind": "native_model",
+      "r_call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), data = df_long_probit, unit = \"site\", trait = \"trait\", family = binomial(link = \"probit\"), control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+      "julia_surface": "fit_binomial_gllvm(Y; K = 1, link = ProbitLink()) (src/families/binomial.jl), the native family-dispatch fit path GLLVM._bridge_family_key(\"binomial_probit\") == \"binomial_probit\" (src/bridge.jl:147) routes to",
+      "check": "|loglik_R - loglik_Julia| and max|coef_R - coef_Julia| on the identical p=4,n=120,K=1 Bernoulli-probit fixture (seed 81011); the Julia fit must also report a non-saturated LaplaceSaturationHealth (n_clamp == 0 and n_wcollapse == 0) or the case FAILS regardless of the deltas.",
+      "tolerance": "<=1e-4 (paired-independent-fit precedent; both engines use the ordinary Laplace approximation, see approximation_note)",
+      "fixture": "bernoulli_probit_fixture"
+    },
+    {
+      "case_id": "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL",
+      "source_id": "family/FAMILY-01-CLOGLOG",
+      "evidence_kind": "native_model",
+      "r_call": "gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), data = df_long_cloglog, unit = \"site\", trait = \"trait\", family = binomial(link = \"cloglog\"), control = gllvmTMBcontrol(n_init = 1L, se = FALSE))",
+      "julia_surface": "fit_binomial_gllvm(Y; K = 1, link = CLogLogLink()) (src/families/binomial.jl), the native family-dispatch fit path GLLVM._bridge_family_key(\"binomial_cloglog\") == \"binomial_cloglog\" (src/bridge.jl:148) routes to",
+      "check": "|loglik_R - loglik_Julia| and max|coef_R - coef_Julia| on the identical p=4,n=120,K=1 Bernoulli-cloglog fixture (seed 81012); the Julia fit must also report a non-saturated LaplaceSaturationHealth (n_clamp == 0 and n_wcollapse == 0) or the case FAILS regardless of the deltas -- this is the documented 2026-08-28 cloglog saturation pathology's own guard (src/families/binomial.jl:105-112), applied as a pass/fail gate rather than only a warning.",
+      "tolerance": "<=1e-4 (paired-independent-fit precedent; both engines use the ordinary Laplace approximation, see approximation_note)",
+      "fixture": "bernoulli_cloglog_fixture"
+    }
+  ],
+  "negative_controls": [
+    {
+      "control_id": "NEG-COEF-SHIFTED-PROBIT",
+      "description": "shift the probit native-model Julia coefficient vector by +1.0 before comparing to the R oracle; must NOT pass the tolerance.",
+      "check": "max|coef_R_probit - (coef_Julia_probit + 1.0)| > 1e-4"
+    },
+    {
+      "control_id": "NEG-LOGLIK-SHIFTED-CLOGLOG",
+      "description": "shift the cloglog native-model Julia loglik by +1.0 before comparing to the R oracle; must NOT pass the tolerance.",
+      "check": "|loglik_R_cloglog - (loglik_Julia_cloglog + 1.0)| > 1e-4"
+    },
+    {
+      "control_id": "NEG-LINK-SWAPPED",
+      "description": "compare the probit R oracle's loglik against the cloglog Julia fit's loglik on their respective (distinct) fixtures -- a deliberately mismatched link/family pairing; must NOT pass the tolerance.",
+      "check": "|loglik_R_probit - loglik_Julia_cloglog| > 1e-4 (the two fixtures use independent draws so this generically fails)"
+    },
+    {
+      "control_id": "NEG-SATURATED-FIT-MUST-FAIL",
+      "description": "a synthetic, deliberately near-perfectly-separated Bernoulli-cloglog cell (Julia-only, no R oracle needed -- this exercises the LaplaceSaturationHealth mechanism itself, not the paired R/Julia comparison) must be FLAGGED saturated (n_clamp > 0 or n_wcollapse > 0) by fit_binomial_gllvm's post-fit diagnostic; a verifier that always reports non-saturated would silently accept an unreliable Laplace optimum, which is exactly the 2026-08-28 pathology this row exists to guard against.",
+      "check": "saturation.n_clamp > 0 || saturation.n_wcollapse > 0 on the synthetic separated fixture"
+    }
+  ],
+  "source_pins": {
+    "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+    "R/julia-bridge.R": "b588fd8084828586414a52ce4bc728ab75e282f0bd9253c5908d786fe1be26ee",
+    "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf"
+  },
+  "p0_contract": "docs/dev-log/core070/family-links-batch-contract.json",
+  "p0_contract_sha256": "9b404b81760b341456f1e07c30b475292f2bb18b44241267375d91868c8fcbf2",
+  "p0_to_p1_r_function_diff": [
+    {
+      "function": "gllvmTMB",
+      "file": "R/gllvmTMB.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "14f23cf0ef0c46e074b4263790965ca5c7dcb41da86dc90ade29ed74928cf788",
+      "body_sha256_p1": "b47f6dadf35d6df05bfb783920da77f418202bd60b65f35f1e4de642c494c35d"
+    },
+    {
+      "function": ".gllvm_julia_family_scalar",
+      "file": "R/julia-bridge.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "80c898a57c1d7f45b58d4c453adb37e68fe544f44f77f4aaee8c0e43e872ea6b",
+      "body_sha256_p1": "80c898a57c1d7f45b58d4c453adb37e68fe544f44f77f4aaee8c0e43e872ea6b"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_family_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      },
+      {
+        "field": "source_pins[R/families.R]",
+        "p0": "1d39b05e33ef60ffd11ded940e22f9fd3234fcea1cce0a91938d31dab61a5be6",
+        "p1": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/julia-bridge.R]",
+        "p0": "d6c167179b7cb9774655a3a68e401b133ac3a3d7f443028498529316d697fffa",
+        "p1": "b588fd8084828586414a52ce4bc728ab75e282f0bd9253c5908d786fe1be26ee",
+        "changed": true
+      },
+      {
+        "field": "source_pins[R/gllvmTMB.R]",
+        "p0": "bf78912c192311d1ca40704cd81493c2c06773eb3eb7aea14b826a7459dd6f20",
+        "p1": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+        "changed": true
+      }
+    ],
+    "carried_verbatim": "status, cases (r_call, julia_surface, check, tolerance, fixture), bound rows, negative controls, approximation note, fixture and tolerance descriptions. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

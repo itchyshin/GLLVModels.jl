@@ -1,0 +1,575 @@
+{
+  "schema": "core070-surface-conversion-batch/v1",
+  "status": "FROZEN_SURFACE_CONVERSION_BATCH_CONTRACT",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "scope": "Converts BLOCKED_NEEDS_JULIA_SURFACE ledger rows (postfit/, namespace/, inference/ prefixes) whose named function now exists in src/GLLVM.jl's export list, following the extractors (Cluster 1) and derived-CI (Cluster 2) slices.",
+  "target_source_ids": [
+    "inference/CI-ROUTE-005",
+    "inference/CI-ROUTE-008",
+    "inference/CI-ROUTE-009",
+    "inference/CI-ROUTE-010",
+    "inference/CI-ROUTE-011",
+    "namespace/export/getLoadings",
+    "namespace/export/getResidualCor",
+    "namespace/export/getResidualCov",
+    "namespace/export/loading_ci",
+    "namespace/export/loading_profile",
+    "namespace/export/profile_ci_phylo_signal",
+    "namespace/export/profile_ci_total_variance",
+    "namespace/export/slope_sd_ci",
+    "namespace/export/standard_errors",
+    "postfit/POSTFIT-SURFACE-extract_Gamma",
+    "postfit/POSTFIT-SURFACE-extract_ICC_site",
+    "postfit/POSTFIT-SURFACE-extract_Omega",
+    "postfit/POSTFIT-SURFACE-extract_Sigma",
+    "postfit/POSTFIT-SURFACE-extract_Sigma_table",
+    "postfit/POSTFIT-SURFACE-extract_communality",
+    "postfit/POSTFIT-SURFACE-extract_correlations",
+    "postfit/POSTFIT-SURFACE-extract_cross_correlations",
+    "postfit/POSTFIT-SURFACE-extract_cutpoints",
+    "postfit/POSTFIT-SURFACE-extract_loadings",
+    "postfit/POSTFIT-SURFACE-extract_lv_effects",
+    "postfit/POSTFIT-SURFACE-extract_ordination",
+    "postfit/POSTFIT-SURFACE-extract_phylo_signal",
+    "postfit/POSTFIT-SURFACE-extract_proportions",
+    "postfit/POSTFIT-SURFACE-extract_repeatability",
+    "postfit/POSTFIT-SURFACE-extract_residual_cor",
+    "postfit/POSTFIT-SURFACE-extract_residual_cov",
+    "postfit/POSTFIT-SURFACE-getLV",
+    "postfit/POSTFIT-SURFACE-getLoadings",
+    "postfit/POSTFIT-SURFACE-getResidualCor",
+    "postfit/POSTFIT-SURFACE-getResidualCov",
+    "postfit/POSTFIT-SURFACE-loading_ci",
+    "postfit/POSTFIT-SURFACE-loading_profile",
+    "postfit/POSTFIT-SURFACE-profile_ci_phylo_signal",
+    "postfit/POSTFIT-SURFACE-profile_ci_total_variance",
+    "postfit/POSTFIT-SURFACE-slope_sd_ci",
+    "postfit/POSTFIT-SURFACE-standard_errors"
+  ],
+  "expected_case_count": 20,
+  "expected_deferred_count": 21,
+  "cases": [
+    {
+      "source_id": "namespace/export/getLoadings",
+      "quantity": "loadings_crossprod",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "crossprod(getLoadings(fit_r))",
+      "julia_call": "GLLVM.getLoadings(fit) |> L -> L'L",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-NAMESPACE-EXPORT-GETLOADINGS"
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-getLoadings",
+      "quantity": "loadings_crossprod",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "crossprod(getLoadings(fit_r))",
+      "julia_call": "GLLVM.getLoadings(fit) |> L -> L'L",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLOADINGS"
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_loadings",
+      "quantity": "loadings_crossprod",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "crossprod(getLoadings(fit_r))",
+      "julia_call": "GLLVM.extract_loadings(fit) |> L -> L'L",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-LOADINGS"
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-getLV",
+      "quantity": "lv_predictor",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "as.matrix(report$Lambda_B) %*% t(as.matrix(getLV(fit_r)))",
+      "julia_call": "fit.pars.\u039b * GLLVM.getLV(fit)'  # p x n predictor, rotation-invariant",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETLV"
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Sigma",
+      "quantity": "sigma_unit_total",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "extract_Sigma(fit_r, level='unit', part='total')$Sigma",
+      "julia_call": "GLLVM.extract_Sigma(fit; level=:unit, part=:total).Sigma",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Sigma_table",
+      "quantity": "sigma_table",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "extract_Sigma_table(fit_r, level='unit', part='total')$value  # sorted (trait_i,trait_j)",
+      "julia_call": "GLLVM.extract_Sigma_table(fit; level=:unit, part=:total)  # sorted (trait_i,trait_j)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-SIGMA-TABLE",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_residual_cov",
+      "quantity": "residual_cov",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "extract_residual_cov(fit_r, level='unit_obs')",
+      "julia_call": "GLLVM.extract_residual_cov(fit; level=:unit_obs)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COV",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_residual_cor",
+      "quantity": "residual_cor",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "extract_residual_cor(fit_r, level='unit_obs')",
+      "julia_call": "GLLVM.extract_residual_cor(fit; level=:unit_obs)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COR",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance)."
+    },
+    {
+      "source_id": "namespace/export/getResidualCov",
+      "quantity": "residual_cov",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "getResidualCov(fit_r, level='unit_obs')",
+      "julia_call": "GLLVM.getResidualCov(fit; level=:unit_obs)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-NAMESPACE-EXPORT-GETRESIDUALCOV",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance)."
+    },
+    {
+      "source_id": "namespace/export/getResidualCor",
+      "quantity": "residual_cor",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "getResidualCor(fit_r, level='unit_obs')",
+      "julia_call": "GLLVM.getResidualCor(fit; level=:unit_obs)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-NAMESPACE-EXPORT-GETRESIDUALCOR",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-getResidualCov",
+      "quantity": "residual_cov",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "getResidualCov(fit_r, level='unit_obs')",
+      "julia_call": "GLLVM.getResidualCov(fit; level=:unit_obs)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOV",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-getResidualCor",
+      "quantity": "residual_cor",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "getResidualCor(fit_r, level='unit_obs')",
+      "julia_call": "GLLVM.getResidualCor(fit; level=:unit_obs)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-GETRESIDUALCOR",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_ordination",
+      "quantity": "ordination_sites",
+      "fixture": "gaussian_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "rowSums(extract_ordination(fit_r, Y)$sites^2)  # per-obs squared radius, rotation-invariant",
+      "julia_call": "sites,_,_ = GLLVM.extract_ordination(fit,Y); vec(sum(abs2, sites; dims=2))",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ORDINATION"
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_ICC_site",
+      "quantity": "icc_site",
+      "fixture": "twolevel_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "extract_ICC_site(fit_r)  # fit_r is the TWO-TIER twolevel_small fixture (needs both unit and unit_obs tiers)",
+      "julia_call": "GLLVM.extract_ICC_site(fit_tl)  # = extract_repeatability(fit_tl) for a TwoLevelFit",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ICC-SITE",
+      "tolerance_note": "Recalibrated from an earlier (miscalibrated) 1e-6 'same-process deterministic transform' tier to the 1e-4 paired-independent-fit precedent: this quantity is a transform of Lambda/sigma^2 estimated by TWO SEPARATE optimiser runs (R's TMB fit, Julia's LBFGS fit) on the same simulated Y, never the same fitted numbers passed through a single process. REPAIR 2026-09-01 (wave5-conversion4: EXTRACT-SIGMA/EXTRACT-SIGMA-TABLE failed at max_abs_diff=2.42e-6 vs the old 1e-6 bar, which is exactly the class of drift two independent LBFGS/TMB runs produce -- not a bug, a miscalibrated tolerance).",
+      "fixture_note": "REPAIR (2026-09-01, wave5-conversion5): R's extract_ICC_site() returned empty on gaussian_small (single-tier fixture, no unit_obs/W block) -- the accessor needs BOTH a unit and a unit_obs tier to be defined at all. Fixture reassignment (not a call bug, per the coordinator's directive): now runs on twolevel_small on both sides, where both tiers exist by construction. Numerically identical to repeatability_point on the same fixture, since Julia's extract_ICC_site(::TwoLevelFit) is itself defined as `= extract_repeatability(fit)`."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_repeatability",
+      "quantity": "repeatability_point",
+      "fixture": "twolevel_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "extract_repeatability(fit_r)$estimate",
+      "julia_call": "GLLVM.extract_repeatability(fit_tl)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-REPEATABILITY"
+    },
+    {
+      "source_id": "inference/CI-ROUTE-008",
+      "quantity": "icc_ci_default",
+      "fixture": "twolevel_small",
+      "tolerance": 0.001,
+      "kind": "ci",
+      "r_call": "confint(fit_r, parm='icc', level=0.95)  # R default method (wald)",
+      "julia_call": "GLLVM.repeatability_ci(fit_tl, y, individual)  # default method=:wald",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-008"
+    },
+    {
+      "source_id": "inference/CI-ROUTE-009",
+      "quantity": "icc_ci_profile",
+      "fixture": "twolevel_small",
+      "tolerance": null,
+      "kind": "refusal_pair",
+      "r_call": "confint(fit_r, parm='icc', method='profile', level=0.95)  # must raise gllvmTMB_repeatability_profile_withdrawn",
+      "julia_call": "GLLVM.repeatability_ci(fit_tl, y, individual; method=:profile)  # must throw TwoLevelRepeatabilityProfileWithdrawn",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-009"
+    },
+    {
+      "source_id": "inference/CI-ROUTE-010",
+      "quantity": "icc_ci_wald",
+      "fixture": "twolevel_small",
+      "tolerance": 0.001,
+      "kind": "ci",
+      "r_call": "confint(fit_r, parm='icc', method='wald', level=0.95)",
+      "julia_call": "GLLVM.repeatability_ci(fit_tl, y, individual; method=:wald)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-010"
+    },
+    {
+      "source_id": "inference/CI-ROUTE-011",
+      "quantity": "icc_ci_bootstrap",
+      "fixture": "twolevel_small",
+      "tolerance": null,
+      "kind": "bootstrap_structural",
+      "r_call": "confint(fit_r, parm='icc', method='bootstrap', level=0.95, nsim=200)",
+      "julia_call": "GLLVM.repeatability_ci(fit_tl, y, individual; method=:bootstrap, nsim=200, seed=11)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-INFERENCE-CI-ROUTE-011",
+      "structural_justification": "n_boot=200 parametric-bootstrap percentile CI endpoints carry substantial Monte Carlo error on each engine independently (R's bootstrap_Sigma()-based route and Julia's repeatability_bootstrap_ci() route are two SEPARATE stochastic simulate-refit procedures with no shared seed/replicate correspondence) -- a numeric endpoint-distance bar at any n_boot=200-scale tolerance is not a meaningful cross-engine check (wave5-conversion4 showed 0.52 vs the already-loose 0.05 bar). REPAIR (2026-09-01): re-typed as a structural check on EACH engine's own bootstrap CI independently -- finite endpoints, lower <= upper, and lower <= point_estimate <= upper (point estimate from that engine's own repeatability_point route) -- rather than a fabricated numeric pass. The numerically comparable ICC routes remain CI-ROUTE-008 (default->wald) and CI-ROUTE-010 (explicit wald), both still endpoint-tolerance cases at 1e-3."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_cutpoints",
+      "quantity": "cutpoints",
+      "fixture": "ordinal_small",
+      "tolerance": 0.0001,
+      "kind": "point",
+      "r_call": "extract_cutpoints(fit_r)$tau_estimate",
+      "julia_call": "GLLVM.extract_cutpoints(fit_ord).\u03c4  # free cutpoints only (drop \u03c41=0)",
+      "notes": "",
+      "case_id": "CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-CUTPOINTS",
+      "layout_note": "R's extract_cutpoints()$tau_estimate reports only the K-2 FREE cutpoints per trait (Hadfield 2015 convention: tau_1 = 0 fixed for identifiability, never reported). GLLVM.jl's OrdinalPerTraitFit.tau is a p x (C-1) matrix whose FIRST column is the fixed tau_1 = 0.0 (src/families/ordinal.jl: `tau[t, 1] = 0.0`). REPAIR (2026-09-01, wave5-conversion4: r_len=5 vs julia_len=10, i.e. R's p free cutpoints vs Julia's p*(C-1) INCLUDING the fixed column): the Julia side now flattens tau[:, 2:end] (dropping the fixed tau_1 column) to match R's free-cutpoints-only convention exactly. With C=3 (ordinal_small), that is 1 free cutpoint per trait, p=5 traits -> 5 entries on both sides."
+    }
+  ],
+  "deferred": [
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Gamma",
+      "reason": "Julia surface extract_Gamma already exists (src/extract_gamma.jl, exported) and is independently tested (test/test_coevolution_*.jl), so this is NOT a missing-Julia-surface case. No proven R-parity fixture for a coevolution (fit_coevolution_gaussian-class) model exists anywhere in this repo's tools/ or test/parity/ (grep -rl fit_coevolution_gaussian test/*.jl test/parity/*.jl returns only pure-Julia test files, zero RCall/gllvmTMB coevolution fixtures). Constructing one from scratch (correct R make_cross_kernel-style formula + tree + kernel spec) without live R access to verify is out of scope for this batch; would need a follow-up slice with its own proven fixture."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_lv_effects",
+      "reason": "Julia surface exists (src/postfit.jl extract_lv_effects(fit::GllvmFit; type)) but requires a fit built with fit_gaussian_gllvm(...; X_lv=...) (a constrained-ordination predictor block) -- the gaussian_small fixture this batch reuses has no X_lv term, so extract_lv_effects(fit_g) would throw ArgumentError on the very fixture the rest of this batch shares. Pairing it against R's own X_lv-analogous route needs a distinct fixture; out of scope for this batch, flagged for a follow-up slice."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_phylo_signal",
+      "reason": "Julia surface exists (src/extractors.jl forwards to phylo_signal(fit::GllvmFit; \u03a3_phy)), but GLLVM.jl's route takes an externally-supplied \u03a3_phy on an ordinary GllvmFit while R's extract_phylo_signal() reads report$Sigma_phy off a genuine phylo_latent()/phylo_indep() structured fit -- the two are not the same model class. A numerically paired comparison needs a live R phylo formula fit on the SAME tree/Y as the Julia \u03a3_phy, which cannot be safely constructed and verified without R access in this session."
+    },
+    {
+      "source_id": "namespace/export/profile_ci_phylo_signal",
+      "reason": "Same phylo model-class mismatch as extract_phylo_signal above; profile_ci_phylo_signal additionally needs a working bracket-then-bisect profile over that same R phylo fit."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-profile_ci_phylo_signal",
+      "reason": "Same as namespace/export/profile_ci_phylo_signal (duplicate ledger row, same underlying surface)."
+    },
+    {
+      "source_id": "namespace/export/slope_sd_ci",
+      "reason": "Julia surface exists (src/confint_derived_wald.jl, slope_sd_ci on GaussianRandomSlopeFit), but the R oracle route (.unlazy/core070-aghq/oracle-source/readback/R/slope-sd-ci.R) is explicitly documented in its own header as having a prior hand-indexing failure mode ('a first attempt at the phylo route indexed theta_dep_chol entries 2/5/8 instead of the correct 2/4/6') and needs an ADREPORT-differentiated packed expression read off sd_report -- the exact R formula/grouping-factor grammar for the diagonal augmented-slope route (theta_diag_B_slope) that would pair with GLLVM.jl's per-group \u03a3_b random-slope fit is not something this batch could construct and verify without live R access."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-slope_sd_ci",
+      "reason": "Same as namespace/export/slope_sd_ci (duplicate ledger row, same underlying surface)."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_cross_correlations",
+      "reason": "Julia surface exists (src/extractors.jl extract_cross_correlations), but R's extract_cross_correlations() (extract-correlations.R) is NOT a general trait-subset correlation extractor -- it requires a multinomial trait in the fit ('No multinomial trait in this fit; use extract_correlations') and computes nominal-vs-partner cross-correlations specifically. The gaussian_small fixture has no multinomial trait; this is a model-class mismatch discovered by reading extract-correlations.R directly, not a call-syntax bug. REPAIR (2026-09-01): moved from cases[] to deferred[] after wave5-conversion3's silent-coverage failure investigation."
+    },
+    {
+      "source_id": "inference/CI-ROUTE-005",
+      "reason": "Julia surface exists (loading_ci/standardized_loading_wald_ci). R's loading_ci(method='wald_asym') (loading-ci.R) refuses any fit with no fit$lambda_constraint pins: 'Per-entry Wald CIs on Lambda are well-defined only for confirmatory fits ... Lambda is identified only up to rotation.' gaussian_small is an ordinary exploratory reduced-rank fit with no lambda_constraint. GLLVM.jl's own docstring for standardized_loading_wald_ci already documents this exact R/Julia deviation (this repo has no confirmatory/exploratory distinction to gate on). Building a genuine R confirmatory_lambda()-pinned fixture is a distinct, larger construction than a call-argument fix. REPAIR (2026-09-01): moved from cases[] to deferred[] after wave5-conversion3's silent-coverage failure investigation."
+    },
+    {
+      "source_id": "namespace/export/loading_ci",
+      "reason": "Same confirmatory-fit gate as inference/CI-ROUTE-005 (loading_ci refuses fits with no lambda_constraint pins). REPAIR (2026-09-01): moved to deferred[]."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-loading_ci",
+      "reason": "Same confirmatory-fit gate as inference/CI-ROUTE-005 (loading_ci refuses fits with no lambda_constraint pins). REPAIR (2026-09-01): moved to deferred[]."
+    },
+    {
+      "source_id": "namespace/export/loading_profile",
+      "reason": "Julia surface exists (loading_profile). R's loading_profile() (loading-profile.R) builds its per-entry pin/profile machinery off fit$lambda_constraint the same way loading_ci() does -- profiling a Lambda entry on an exploratory (unpinned) fit is not the estimand this R function targets. Same confirmatory-fit gap as loading_ci. REPAIR (2026-09-01): moved to deferred[]."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-loading_profile",
+      "reason": "Same confirmatory-fit gate as namespace/export/loading_profile. REPAIR (2026-09-01): moved to deferred[]."
+    },
+    {
+      "source_id": "namespace/export/profile_ci_total_variance",
+      "reason": "Julia surface exists (profile_ci_total_variance). R's profile_ci_total_variance() (profile-derived.R, via .total_variance_spec()) refuses any tier fit with unique=FALSE (no diagonal Psi_t component): 'Total-variance intervals at tier need the diagonal component ... Fit the tier with unique = TRUE.' The gaussian_small fixture this batch shares across 25 other cases uses unique=FALSE. Adding unique=TRUE (and the matching Julia has_diag=true) would need re-verifying every OTHER case sharing that fixture under the new DGP, which is out of scope for this repair pass; a distinct has_diag fixture variant is the correct follow-up. REPAIR (2026-09-01): moved to deferred[] rather than risk destabilising the shared fixture under time pressure."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-profile_ci_total_variance",
+      "reason": "Same diagonal-component gate as namespace/export/profile_ci_total_variance. REPAIR (2026-09-01): moved to deferred[]."
+    },
+    {
+      "source_id": "namespace/export/standard_errors",
+      "reason": "Julia surface exists (standard_errors(fit,y), a thin confint() wrapper returning term/estimate/se/pd_hessian). R's standard_errors(fit) (standard-errors.R) returns THE FIT OBJECT ITSELF with sd_report populated (a deferred-computation side effect, not an SE table) -- 'if (!is.null(fit$sd_report)) return(fit)'. There is no $se field to read off the R return value directly; the R-side SE vector would need to be read from fit$sd_report$cov.fixed or summary(fit$sd_report), and matching its fixed-parameter ordering to GLLVM.jl's confint(fit,y).se packed order needs verification against a live R session this batch does not have. REPAIR (2026-09-01): moved to deferred[] rather than guess at an unverified ordering alignment."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-standard_errors",
+      "reason": "Same R-return-shape mismatch as namespace/export/standard_errors. REPAIR (2026-09-01): moved to deferred[]."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_communality",
+      "reason": "Julia surface exists (extract_communality(fit::GllvmFit) = communality(fit), src/confint_derived.jl), but the two engines compute a DIFFERENT ESTIMAND, not just a different call shape -- traced both to source. GLLVM.jl's communality(fit) denominator is sigma_y_site(fit), the FULL model-implied total variance across ALL tiers PLUS sigma_eps^2 (the Gaussian observation residual). R's extract_communality(fit, level) denominator is extract_Sigma(fit, level, part='total')$Sigma -- a SINGLE TIER's total only; sigma_eps^2 never enters any R extract_communality/extract_Sigma tier computation for a Gaussian fit at all (it is not one of the 'B'/'W'/'phy' component tiers the R tier system tracks). On gaussian_small (unique=FALSE, no W tier): level='unit' degenerates to an uninformative constant 1.0 for every trait (shared_B == total_B exactly, since there is no diag_B term to make them differ) -- confirmed the observed wave5-conversion4 diff (0.871) is exactly this: R's degenerate ~1.0 vs Julia's real shared/(shared+sigma_eps^2) ratio. level='unit_obs' returns NULL outright (fit$use$rr_W is FALSE, no W-tier loadings). No R call on this fixture targets the same 'shared vs grand total including the Gaussian residual' estimand Julia computes; this is a genuine cross-engine definition mismatch, not a fixable call bug. REPAIR (2026-09-01, wave5-conversion4): moved from cases[] to deferred[]."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_correlations",
+      "reason": "Julia surface exists (extract_correlations(fit::GllvmFit) = correlation(fit), src/confint_derived.jl), but traced both definitions to source (same class of mismatch as extract_communality). GLLVM.jl's correlation(fit) standardises by sigma_y_site(fit), the FULL model-implied total variance INCLUDING sigma_eps^2. R's route for this quantity (extract_Sigma(fit, level='unit', part='total')$R -- used because extract_correlations() itself returns an un-coercible long-format table, not a matrix) standardises by the 'unit' (B) tier total only, which never includes sigma_eps^2 for a Gaussian fit. On gaussian_small this produces a materially different correlation matrix (observed max_abs_diff 0.668, wave5-conversion5) -- a genuine cross-engine estimand mismatch, not a fixable call bug. REPAIR (2026-09-01): moved from cases[] to deferred[], joining extract_communality in the maintainer's estimand-alignment decision."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_proportions",
+      "reason": "Julia surface exists (extract_proportions(fit::GllvmFit; component) forwards to proportions(fit; component), src/confint_derived.jl), but traced to source: this is the SAME estimand mismatch as extract_communality, exactly -- extract_proportions(fit; component=:shared) IS communality(fit) mathematically (both \u039b\u039b^T[t,t] / sigma_y_site(fit)[t,t], the FULL total-variance denominator incl. sigma_eps^2). R's extract_proportions()'s 'shared_unit' component's proportion column denominator (total <- rowSums(M)) only ever sums the tier-scoped components R's system tracks; sigma_eps^2 is not one of them, so on gaussian_small (only the shared_unit component present) proportion degenerates to shared_unit/shared_unit == 1.0 for every trait -- the exact reason the observed max_abs_diff (0.8713, wave5-conversion5) matched extract_communality's own failure value precisely. REPAIR (2026-09-01): moved from cases[] to deferred[], joining extract_communality and extract_correlations in the maintainer's estimand-alignment decision."
+    },
+    {
+      "source_id": "postfit/POSTFIT-SURFACE-extract_Omega",
+      "reason": "Julia surface exists (extract_Omega(fit::GllvmFit), src/extractors.jl), but traced both compositions to source (wave5-conversion6). R's extract_Omega() sums ONLY the covariance tiers the fit actually carries -- gaussian_small has no W-tier (fit$use$rr_W and diag_W both FALSE), so R's tiers = 'B' only and Omega = Lambda_B Lambda_B^T exactly, with sigma_eps^2 never entering (it is not one of the B/W/phy component tiers R's tier system tracks; the Gaussian family's link_residual_per_trait() contributes 0 separately). GLLVM.jl's extract_Omega(fit::GllvmFit) UNCONDITIONALLY sums extract_Sigma(level=:unit,...).Sigma .+ extract_Sigma(level=:unit_obs,...).Sigma, and extract_Sigma(level=:unit_obs, part=:total) ALWAYS adds sigma_eps^2*I as a baseline term regardless of whether a genuine W-tier exists (src/extractors.jl's _sigma_unit_obs). So on gaussian_small, Julia's Omega = Lambda_B Lambda_B^T + sigma_eps^2*I, differing from R's by exactly sigma_eps^2 on the diagonal -- confirmed: the observed max_abs_diff (0.467) is diagonal-scale and close to sigma_true^2=0.49, matching this trace exactly. extract_Omega(fit::GllvmFit) takes NO tiers/level/link_residual kwargs at all (unlike getResidualCov's alignable level= argument), so there is no call-argument fix available. Also tried sourcing the R comparand as extract_Sigma(level='unit_obs',...)$Sigma directly (mirroring the extract_correlations substitution): R's own tier-existence gate returns NULL for level='unit_obs' on this single-tier fixture (the same gate behind wave5-conversion4's residual_cov r_len=0), so R's tier system has no way to express the Gaussian residual variance independent of a genuine W-tier at all -- the same structural gap already deferred for extract_communality/extract_correlations/extract_proportions. REPAIR (2026-09-01): moved from cases[] to deferred[], joining the estimand-alignment family (4th member: communality, correlations, proportions, Omega)."
+    }
+  ],
+  "fixtures": {
+    "gaussian_small": {
+      "description": "Single-tier Gaussian GllvmFit, reused verbatim from tools/core070_inference_remainder_batch.R (same seed/Lambda_true/sigma_true) so both that batch's own receipted evidence and this one rest on the identical canonical fixture.",
+      "p": 5,
+      "K": 2,
+      "n": 80,
+      "seed": 42,
+      "lambda_true": [
+        [
+          0.8,
+          0.0
+        ],
+        [
+          0.5,
+          0.6
+        ],
+        [
+          0.3,
+          -0.4
+        ],
+        [
+          -0.2,
+          0.5
+        ],
+        [
+          0.1,
+          0.3
+        ]
+      ],
+      "sigma_true": 0.7,
+      "r_formula": "value ~ 0 + trait + latent(0 + trait | site, d = K, unique = FALSE)",
+      "r_control": "gllvmTMBcontrol(n_init = 1L, se = TRUE)",
+      "julia_call": "fit_gaussian_gllvm(Y; K=K)"
+    },
+    "twolevel_small": {
+      "description": "Genuine two-tier repeatability fixture, call shape copied verbatim from .unlazy/core070-aghq/oracle-source/readback/R/extract-repeatability.R's own @examples (unit='site', unit_obs='site_species' -- REPAIR 2026-09-01: a first attempt passed unit='site_species' alone, which the frozen engine rejected on Totoro wave5-conversion; fixed to pass both unit and unit_obs exactly as the doc example shows).",
+      "p": 4,
+      "n_individual": 30,
+      "reps_per_individual": 4,
+      "seed": 1,
+      "r_formula": "value ~ 0 + trait + latent(0 + trait | site, d = 1) + latent(0 + trait | site_species, d = 1)",
+      "julia_call": "fit_twolevel_gaussian(Y, individual; K_B=1, K_W=1)",
+      "r_call_args": {
+        "unit": "site",
+        "unit_obs": "site_species",
+        "trait": "trait"
+      }
+    },
+    "ordinal_small": {
+      "description": "Proven ordinal-probit parity fixture, reused verbatim from test/parity/test_ordinal_probit_parity.jl (same seed/beta/Lambda/tau).",
+      "p": 5,
+      "K": 1,
+      "n": 60,
+      "C": 3,
+      "seed": 46,
+      "beta": [
+        0.3,
+        -0.2,
+        0.15,
+        -0.1,
+        0.05
+      ],
+      "lambda_true": [
+        0.8,
+        0.5,
+        0.3,
+        -0.2,
+        0.1
+      ],
+      "tau": [
+        0.0,
+        0.75
+      ],
+      "r_formula": "value ~ 0 + trait + latent(0 + trait | site, d = K, unique = FALSE)",
+      "r_family": "ordinal_probit()",
+      "julia_call": "fit_ordinal_gllvm_pertrait(Y; K=K, link=ProbitLink())"
+    }
+  },
+  "negative_controls": [
+    {
+      "case_id": "NEG-SURFCONV-BOGUS-QUANTITY",
+      "description": "A quantity key not present in the dispatcher's known-quantity table must be rejected before the tape (both R and Julia stages), never silently skipped."
+    },
+    {
+      "case_id": "NEG-SURFCONV-WRONG-FIXTURE",
+      "description": "A case citing a fixture key not in contract.fixtures must be rejected before the tape."
+    }
+  ],
+  "runner": {
+    "r_argv": [
+      "<frozen-library>",
+      "<destination>"
+    ],
+    "julia_env_var": "CORE070_SURFACE_CONVERSION_R_ORACLE",
+    "julia_argv": [
+      "<julia-results-output-path>"
+    ]
+  },
+  "p0_contract": "docs/dev-log/core070/surface-conversion-batch-contract.json",
+  "p0_contract_sha256": "1a90eb7b6f574dcd6d0c8fcc7554e26faf0385b10cfdc605c7adc0653c866760",
+  "p0_to_p1_accessor_diff": [
+    {
+      "function": "getLoadings",
+      "file": "R/output-methods.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "330ae2b4e1766f496e65a24ff9a7afc8885619a4a6c6a4727fceb89b995b1ab8",
+      "body_sha256_p1": "330ae2b4e1766f496e65a24ff9a7afc8885619a4a6c6a4727fceb89b995b1ab8"
+    },
+    {
+      "function": "extract_loadings",
+      "file": "R/output-methods.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "8daaf35824a32d95bb93762a8395c485201620afd26406dcad0f3b3a8cc0c772",
+      "body_sha256_p1": "8daaf35824a32d95bb93762a8395c485201620afd26406dcad0f3b3a8cc0c772"
+    },
+    {
+      "function": "getLV",
+      "file": "R/output-methods.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "cbac610e85ee2635c719b93dffa8bf775f03b36dec5ffd6590113e4fd3b31411",
+      "body_sha256_p1": "15f4cf221019fa9878d047db35226d3e03d31fa2fe1590ab2dbf0dfa51aea286"
+    },
+    {
+      "function": "extract_Sigma",
+      "file": "R/extract-sigma.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "e61a02707ed8d98db063c65539a2ba6db5d72bda3bc4df7c78b27046fb57ed15",
+      "body_sha256_p1": "d8b3a936b716817fe9b8d53d734ecd2cd1d2365fb8f9c12c32f45c16f3a9a24f"
+    },
+    {
+      "function": "extract_Sigma_table",
+      "file": "R/extract-sigma-table.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "ef947747cd89c3999a215a2940d39d4615666f027770785df9e9c7cef031ab00",
+      "body_sha256_p1": "ef947747cd89c3999a215a2940d39d4615666f027770785df9e9c7cef031ab00"
+    },
+    {
+      "function": "extract_residual_cov",
+      "file": "R/output-methods.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "43de81928e1bf6438b9c1aa241fb7101240baf83557ade99596f0e4bfcb40aec",
+      "body_sha256_p1": "43de81928e1bf6438b9c1aa241fb7101240baf83557ade99596f0e4bfcb40aec"
+    },
+    {
+      "function": "extract_residual_cor",
+      "file": "R/output-methods.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "3c3e612197e7a1b99fd8f5dbb100997155f4eceaec6cbc77d933de2176aad8f5",
+      "body_sha256_p1": "3c3e612197e7a1b99fd8f5dbb100997155f4eceaec6cbc77d933de2176aad8f5"
+    },
+    {
+      "function": "getResidualCov",
+      "file": "R/output-methods.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "9cf2017aca4afbd78a5ba2f6b6119a06d764481584b173a5cf044bf68b2f7668",
+      "body_sha256_p1": "9cf2017aca4afbd78a5ba2f6b6119a06d764481584b173a5cf044bf68b2f7668"
+    },
+    {
+      "function": "getResidualCor",
+      "file": "R/output-methods.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "c25511fcad66d171be6b649f72184e0e286f74572f37323ba923c0dd7b8c89c6",
+      "body_sha256_p1": "c25511fcad66d171be6b649f72184e0e286f74572f37323ba923c0dd7b8c89c6"
+    },
+    {
+      "function": "extract_ordination",
+      "file": "R/extractors.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "86eb3785c5d62bfd606c503495d25c7ca41f223018a478f23ac5310df8dce7d2",
+      "body_sha256_p1": "cb612d535690c29585b923cb69b231a2890c58fb59d8010a42f392f9fa394205"
+    },
+    {
+      "function": "extract_ICC_site",
+      "file": "R/extractors.R",
+      "body_identical_p0_p1": true,
+      "body_sha256_p0": "8b6924ec9b374a8ec49ee1beec3688ffc4441de614286f92e4ce3b69dea254e1",
+      "body_sha256_p1": "8b6924ec9b374a8ec49ee1beec3688ffc4441de614286f92e4ce3b69dea254e1"
+    },
+    {
+      "function": "extract_repeatability",
+      "file": "R/extract-repeatability.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "05fce52b257fa479742d9d95251c7a081e74808750607dfe2230538485f20d13",
+      "body_sha256_p1": "5a9a19dc7a61ff2112f8ae7b859bf4d37bb7b9560f9fc235461e2adde428a94b"
+    },
+    {
+      "function": "extract_cutpoints",
+      "file": "R/extract-cutpoints.R",
+      "body_identical_p0_p1": false,
+      "body_sha256_p0": "2b75ba9c91ed0e0a87e385c62abcc861b99690a2378abb211cc5618b9d220d76",
+      "body_sha256_p1": "69a5ff3a7345e0a1d83e1314387b653ed1d63af8618a33ee6f2fc6ce697528b3"
+    }
+  ],
+  "regeneration_log": {
+    "generator": "tools/core070_postfit_p1_contract.py",
+    "changes": [
+      {
+        "field": "reference_commit",
+        "p0": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+        "p1": "9539352f66f2db2cc26b1c393e67212a359b60c9"
+      }
+    ],
+    "carried_verbatim": "status, cases (r_call, quantity, tolerance, check, comparand), deferred, rejection_cases, negative_controls, fixtures, runner. No case, expectation or tolerance was edited; a P1 mismatch is recorded by the batch as a failure."
+  }
+}

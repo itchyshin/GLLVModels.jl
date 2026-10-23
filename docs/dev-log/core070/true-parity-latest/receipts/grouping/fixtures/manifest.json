@@ -1,0 +1,26 @@
+{
+  "generator": "tools/core070_grouping_p1_fixtures.py",
+  "model": {
+    "beta": [
+      0.3,
+      -0.5
+    ],
+    "sd": [
+      0.8,
+      0.5
+    ],
+    "sigma_eps": 0.4,
+    "seeds": {
+      "unit": 20260928,
+      "unit_obs": 20260929,
+      "cluster": 20260930,
+      "cluster2": 20261001
+    }
+  },
+  "files": {
+    "unit.csv": "553c89bcf06b7d864dd1bba5ed72288170c93caa6a5374091b0e305288fb9f7b",
+    "unit_obs.csv": "590ee4b9f67b2736daa3510d52819b42ca34b93bfac5a8317ecf237853537bcf",
+    "cluster.csv": "eed99dade526648ce54fdbe794003c2667ca20a59775e3b77151f571ffe58338",
+    "cluster2.csv": "f66c68823cfde7850eae6f239b3c07b7a93694d0a6623a6be258e832a53ef1b8"
+  }
+}

@@ -1,0 +1,40 @@
+# Julia estimates for the iSDM unique-variance cases. Written by
+# test/fixtures/isdm/export_julia_psi_estimates.jl. Do not edit.
+julia_version = "1.10.12"
+commit = "1d2088c4a13b43cd47cea760edd2f6e4d68c3367"
+
+[julia.psi4]
+loglik = -1197.225023485898
+converged = true
+cells_converged = true
+iterations = 51
+wall_seconds = 11.018
+b_fix_names = ["traitsp1", "traitsp2", "traitsp3", "traitsp4", "traitsp1:env", "traitsp2:env", "traitsp3:env", "traitsp4:env", "traitsp1:src_gbif", "traitsp2:src_gbif", "traitsp3:src_gbif", "traitsp4:src_gbif", "traitsp1:src_inat", "traitsp2:src_inat", "traitsp3:src_inat", "traitsp4:src_inat"]
+b_fix = [-0.68153694164285472, -0.16931100562602616, 0.41099719112694566, -0.51489943025619989, 0.34868339447869567, -0.36861019553179059, 0.17103125630060176, 0.18207249936330597, 0.466896944787215, 0.33240145777538949, 0.1169883575602102, 0.46121220429327081, 0.0430826890291326, -0.14796495998826006, -0.31887423934651399, -0.072428087390465065]
+K = 1
+theta_rr_B = [-0.71238159219410946, -0.64399682210707299, 0.68682346527155935, -0.38852937630465972]
+theta_diag_B = [-0.41558806777415436, -1.0922844962819231, -0.36783262374118364, -0.99969614581006794]
+
+[julia.predict_default]
+loglik = -134.93841516969036
+converged = true
+cells_converged = true
+iterations = 64
+wall_seconds = 2.532
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "traitsp1:src_gbif", "traitsp2:src_gbif"]
+b_fix = [-0.1940672858043225, 0.20183402293180938, 0.42022412573366402, -0.3732796265353473, 0.16963351622812531, 0.11163709981975446]
+K = 1
+theta_rr_B = [-0.47631494411826436, -0.3694918041597941]
+theta_diag_B = [-15.638156513614895, -16.315896067856169]
+
+[julia.ms3_default]
+loglik = -214.30539059353424
+converged = true
+cells_converged = true
+iterations = 66
+wall_seconds = 0.937
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "traitsp1:srcliterature", "traitsp2:srcliterature", "traitsp1:srcsurvey", "traitsp2:srcsurvey"]
+b_fix = [-0.026934211031627971, 0.17208383461513035, 0.47676606303413388, -0.37416285933259269, -0.15415071183272361, 0.10008347386037585, 0.1241360789578045, -0.11311868026875563]
+K = 1
+theta_rr_B = [6.6866727774367276e-08, 7.5294594488859331e-08]
+theta_diag_B = [-15.736849204098499, -15.636664022057001]

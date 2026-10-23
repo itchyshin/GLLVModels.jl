@@ -8,7 +8,9 @@
 # fitters — which default to `:observed` — ran an unguarded, possibly-indefinite
 # Newton (Beta's observed weight is measurably negative). The converged mode is
 # unaffected either way: it is the fixed point of `Λ's − z = 0`, which does not
-# involve W at all.
+# involve W at all. Exception (part of #503): where Fisher scoring fails at an NB2
+# site under LogLink, `_nb_grouped_loglik_site` falls back to observed-curvature
+# Newton, which is exact and SPD for NB2/log.
 #
 # of species) instead of one shared r. With G = 1 this reduces EXACTLY to the
 # shared-dispersion NB2 fit (`fit_nb_gllvm`): both routes default to
@@ -35,6 +37,96 @@ function _nb_grouped_laplace_weight(hessian::Symbol, f::NegativeBinomial, μ, me
     return _nb2_observed_weight(μ, f.r, y)
 end
 
+# Per-site mode search for the NB2 grouped kernel (part of #503; the #507 NB1 pattern).
+# Returns `(z, converged)`. `step_weight` picks the curvature that sets the Newton step;
+# it never changes the mode, which is the fixed point of `Λ's − z = 0` whatever W is.
+#
+# Before this fix the kernel ran undamped Fisher scoring and returned whatever `z` it
+# held when the loop stopped, converged or not. Where a count sits far above its mean
+# the NB2 Fisher weight μr/(r+μ) under-states the observed curvature μr(r+y)/(r+μ)² by
+# the factor (r+y)/(r+μ), so the Fisher step overshoots and can settle into a 2-cycle.
+# The site then returned a finite value away from the mode. On a p=20, n=300, K_true=3
+# NB fixture (test/fixtures/nb2_grouped_seed1_Y.toml) this steered L-BFGS to poor optima
+# that reported converged = true.
+#
+# Now a step that lowers the per-site log-posterior is halved (the generic core's
+# `_laplace_mode` rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when the full proposed step is below `tol`,
+# which is the old loop's own stopping test.
+function _nb_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link, step_weight::Symbol;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    z = zeros(K)
+    for _ in 1:maxiter
+        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        s  = _glm_score.(fams, μ, n, me, y)
+        W  = _nb_grouped_laplace_weight.(Ref(step_weight), fams, μ, me, y, Ref(link))
+        if mask !== nothing
+            s = ifelse.(mask, s, 0.0)
+            W = ifelse.(mask, W, 0.0)
+        end
+        A  = Symmetric(Λ' * (W .* Λ) + I)
+        Δ  = _safe_solve(A, Λ' * s .- z)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
+    end
+    return z, false
+end
+
+# The NB2 site-mode chain shared by the likelihood and getLV (#503 follow-up): damped
+# Fisher, observed-Newton under LogLink, then a 20x Fisher retry. Returns (z, converged).
+function _nb_grouped_site_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _nb_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                             mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Fallback 1 (part of #503). Under LogLink the observed NB2 weight μr(r+y)/(r+μ)²
+    # is positive, so this is an exact, always-SPD Newton step on the concave per-site
+    # log-posterior. It converges in a few steps where Fisher scoring 2-cycles
+    # (measured: 5 steps at the fixture site, where Fisher had not settled after 2000).
+    # It runs only where Fisher failed. Sites where the old loop converged keep its
+    # path; the damped search's full-step certification moves their values by about
+    # 1e-10 to 1e-8.
+    if !ok && link isa LogLink
+        z, ok = _nb_grouped_mode(fams, y, n, Λ, β, link, :observed;
+                                 mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    end
+    # Fallback 2 (mirrors #507's NB1 retry): other links have no observed weight here,
+    # so retry Fisher scoring with a 20x budget from z = 0.
+    ok || ((z, ok) = _nb_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                                      mask = mask, offset = offset,
+                                      maxiter = 20 * maxiter, tol = tol))
+    return z, ok
+end
+
 # Per-site Laplace log-marginal with per-species NB dispersion markers `fams`.
 function _nb_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
@@ -42,35 +134,17 @@ function _nb_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Abs
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = zeros(K)
-    local A
-    for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
-        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
-        me = mu_eta.(Ref(link), η)
-        s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored,
-        # ALWAYS — `:fisher` here is not the caller's selector. Expected
-        # information is >= 0, so `Λ'WΛ + I` is SPD by construction and every
-        # Newton step is a descent step. The observed weight CAN be negative
-        # (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218), which made this
-        # loop an unguarded, possibly-indefinite Newton whenever the caller
-        # asked for `:observed` — and the grouped fitters default to it.
-        # The selector still governs the post-loop log-det below, which is the
-        # only role that needs the observed curvature. The converged mode is
-        # unchanged either way: it is the fixed point of `Λ's − z = 0`, which
-        # does not involve W at all — W only sets the step.
-        W  = _nb_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link))
-        if mask !== nothing
-            s = ifelse.(mask, s, 0.0)
-            W = ifelse.(mask, W, 0.0)
-        end
-        A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
-    end
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
+    # `:fisher` here is not the caller's selector, which governs only the post-loop
+    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
+    # construction. The converged mode is unchanged either way: it is the fixed point
+    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+    z, ok = _nb_grouped_site_mode(fams, y, n, Λ, β, link;
+                                  mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # A search that did not converge must not produce a finite value. -Inf makes the
+    # fitters' objective return its 1e12 sentinel instead of a garbage surface (#503,
+    # the #479 pattern).
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -84,7 +158,7 @@ function _nb_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Abs
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # Per-species log-posterior for one site: the backtracking merit function.
@@ -99,9 +173,22 @@ function _grouped_laplace_mode_logpost(fams::AbstractVector, y::AbstractVector,
     q = -0.5 * dot(z, z)
     @inbounds for t in 1:p
         (mask === nothing || mask[t]) || continue
-        q += _glm_logpdf(fams[t], μ[t], n[t], y[t])
+        q += _laplace_mode_merit_term(fams[t], μ[t], n[t], y[t])
     end
     return q
+end
+
+# Gradient of that per-site log-posterior, `Λ's − z`: the overshoot test's probe.
+function _grouped_laplace_mode_grad(fams::AbstractVector, y::AbstractVector,
+        n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, link::Link,
+        z::AbstractVector; mask = nothing, offset = nothing)
+    off = offset === nothing ? false : offset
+    η  = _clamp_eta.(β .+ off .+ Λ * z)
+    μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+    me = mu_eta.(Ref(link), η)
+    s  = _glm_score.(fams, μ, n, me, y)
+    mask === nothing || (s = ifelse.(mask, s, 0.0))
+    return Λ' * s .- z
 end
 
 function _grouped_laplace_mode(fams::AbstractVector, y::AbstractVector,
@@ -135,7 +222,8 @@ function _grouped_laplace_mode(fams::AbstractVector, y::AbstractVector,
             W = ifelse.(mask, W, 0.0)
         end
         A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
+        g  = Λ' * s .- z
+        Δ  = _safe_solve(A, g)
         if Δ === nothing || !all(isfinite, Δ)
             if !restarted
                 z = zeros(K)
@@ -145,34 +233,77 @@ function _grouped_laplace_mode(fams::AbstractVector, y::AbstractVector,
             break
         end
         step_taken = 1.0
-        if norm(Δ) <= 1e-3 * (1 + norm(z)) || !backtrack
+        if !backtrack
             z = z .+ Δ
         else
-            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
-                                               mask = mask, offset = offset)
-            if isfinite(q0)
+            # A trial step must pass two tests; each failure halves it.
+            # (1) Large steps only: it must not lower the per-site log-posterior.
+            # (2) Overshoot guard (2026-09-28): the gradient along Δ at the trial
+            #     point must not have turned past −½ of its starting value, i.e. the
+            #     step may not exceed 1.5 Newton steps along Δ. Test (1) alone let
+            #     Fisher scoring 2-cycle around the mode wherever the observed
+            #     curvature is about twice the Fisher weight W: an overshoot of just
+            #     under 2 still raises the log-posterior, and small steps skipped (1)
+            #     entirely. The loop then stopped wherever `maxiter` fell (truncated
+            #     NB2, y = 121 at μ ≈ 27.5: off by 1.3e-3, a 5.5e-4 jump in the
+            #     Laplace objective for a 1e-5 step in log r). With (2) each accepted
+            #     step contracts the error by at least ½ on a locally quadratic
+            #     log-posterior. A full step that passes is bit-identical to the old
+            #     update.
+            small = norm(Δ) <= 1e-3 * (1 + norm(z))
+            q0 = small ? NaN : _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                                             mask = mask, offset = offset)
+            if !small && !isfinite(q0)
+                z = z .+ Δ
+            else
+                gΔ = dot(g, Δ)
                 accepted = false
-                step = 1.0
                 for _half in 1:30
-                    ztrial = z .+ step .* Δ
-                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
-                                                       mask = mask, offset = offset)
-                    if isfinite(q1) && q1 >= q0
+                    ztrial = step_taken == 1.0 ? z .+ Δ : z .+ step_taken .* Δ
+                    ok = true
+                    if !small
+                        q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                           mask = mask, offset = offset)
+                        ok = isfinite(q1) && q1 >= q0
+                    end
+                    if ok && gΔ > 0
+                        g1Δ = dot(_grouped_laplace_mode_grad(fams, y, n, Λ, β, link, ztrial;
+                                                             mask = mask, offset = offset), Δ)
+                        ok = isfinite(g1Δ) && g1Δ >= -0.5 * gΔ
+                    end
+                    if ok
                         z = ztrial
-                        step_taken = step
                         accepted = true
                         break
                     end
-                    step *= 0.5
+                    step_taken *= 0.5
                 end
-                accepted || break
-            else
-                z = z .+ Δ
+                # As before: a large step with no acceptable length ends the search;
+                # a small one takes the last (tiny) trial, which trips the stop test.
+                if !accepted
+                    small || break
+                    z = z .+ step_taken .* Δ
+                end
             end
         end
         step_taken * maximum(abs, Δ) < tol && break
     end
     return z
+end
+
+# getLV must return the z at which the fit's Laplace objective was evaluated. Families
+# whose likelihood kernel has its own mode chain (NB2, NB1, Gamma, Beta) reuse it; where
+# that chain fails (the likelihood returned -Inf there) keep the generic kernel's z.
+# Everything else keeps `_grouped_laplace_mode`.
+_grouped_site_mode(fams::AbstractVector{<:NegativeBinomial}, a...; kw...) = _nb_grouped_site_mode(fams, a...; kw...)
+_grouped_site_mode(fams::AbstractVector{<:NB1}, a...; kw...)              = _nb1_grouped_site_mode(fams, a...; kw...)
+_grouped_site_mode(fams::AbstractVector{<:Gamma}, a...; kw...)            = _gamma_grouped_site_mode(fams, a...; kw...)
+_grouped_site_mode(fams::AbstractVector{<:Beta}, a...; kw...)             = _beta_grouped_site_mode(fams, a...; kw...)
+_grouped_site_mode(fams::AbstractVector, a...; kw...)                     = (_grouped_laplace_mode(fams, a...; kw...), true)
+function _grouped_getLV_mode(fams, y, n, Λ, β, link; mask = nothing, offset = nothing)
+    size(Λ, 2) == 0 && return zeros(Float64, 0)
+    z, ok = _grouped_site_mode(fams, y, n, Λ, β, link; mask = mask, offset = offset)
+    return ok ? z : _grouped_laplace_mode(fams, y, n, Λ, β, link; mask = mask, offset = offset)
 end
 
 function _grouped_getLV(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractVector,
@@ -187,11 +318,24 @@ function _grouped_getLV(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractVecto
     @inbounds for s in 1:n
         mi = mask === nothing ? nothing : view(mask, :, s)
         oi = offset === nothing ? nothing : view(offset, :, s)
-        Z[:, s] = _grouped_laplace_mode(fams, view(Y, :, s), view(Nm, :, s),
-                                        Λ, β, link; mask = mi, offset = oi)
+        Z[:, s] = _grouped_getLV_mode(fams, view(Y, :, s), view(Nm, :, s),
+                                      Λ, β, link; mask = mi, offset = oi)
     end
     Zt = permutedims(Z)
     return rotate ? Zt * _svd_rotation(Λ) : Zt
+end
+
+# The offset `getLV` / `predict` add for a grouped fit that keeps its training offset in
+# `fit.offset` (NBGroupedFit, NB1GroupedFit, BetaGroupedFit, GammaGroupedFit; #788). An
+# explicit matrix whose size is not that of Y is a DimensionMismatch, as before the fit kept
+# its offset; otherwise the rule of `_laplace_prediction_offset` (src/postfit.jl): a Y of
+# the training size uses the stored offset, new units need their own offset (a p×n matrix,
+# a scalar or a length-p vector), and an offset fit refuses new units without one.
+function _grouped_prediction_offset(fit, Y::AbstractMatrix, offset, mask,
+                                    caller::AbstractString)
+    offset isa AbstractMatrix && size(offset) != size(Y) &&
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
+    return _laplace_prediction_offset(fit.offset, Y, offset, mask, caller)
 end
 
 """
@@ -205,6 +349,10 @@ equals the shared-dispersion [`nb_marginal_loglik_laplace`](@ref) to machine
 precision — both default `hessian=:observed` (TMB's conditional NB2/log
 Hessian) since 2026-08-27; `hessian=:fisher` selects the previous
 expected-information objective on both routes.
+
+Returns `-Inf` when a site's mode search does not converge (damped Fisher scoring,
+then observed-curvature Newton under `LogLink`, then a 20x Fisher retry), so a
+caller's objective sees a failure rather than a value away from the mode.
 """
 function nb_grouped_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, rvec::AbstractVector; link::Link = LogLink(),
@@ -242,11 +390,139 @@ end
 #     φ → ∞, mirroring r → ∞ for NB2).
 #   - Beta `φ` (`Var = μ(1-μ)/(1+φ)`): φ < 1e-6 is the maximal-variance
 #     (near-Bernoulli) limit; φ > 1e6 is the near-deterministic collapse
-#     (Var → 0).
+#     (Var → 0), which is identified, so grouped Beta fits flag only the lower
+#     end (`_dispersion_group_lower_boundary` below).
 #   - Gamma `α` (`Var = μ²/α`): α < 1e-6 is extreme overdispersion (Var → ∞);
-#     α > 1e6 is the near-deterministic collapse (Var → 0).
+#     α > 1e6 is the near-deterministic collapse (Var → 0), which is identified,
+#     so grouped Gamma fits flag only the lower end.
 _dispersion_group_boundary(dvec::AbstractVector{<:Real}) =
     Bool[(d > 1e6) || (d < 1e-6) for d in dvec]
+
+# Lower end only, for the Gamma shape α and the Beta precision φ (maintainer
+# decision 2026-09-29). Their upper end is the near-deterministic collapse
+# (Var → 0), which the data identify rather than a flat-likelihood limit: on data
+# drawn with true α = 1e8 or φ = 1e8 the grouped fits estimate 8.9e7 to 1.3e8
+# (test/fixtures/gamma_beta_upper_boundary.toml), so flagging α, φ > 1e6 reported
+# a well-identified optimum as not converged. NB2 r and NB1 φ keep both ends in the
+# `dispersion_boundary` field (`_dispersion_group_boundary`). For `converged`, the
+# Poisson limit only warns (maintainer decision 2026-09-29: gllvmTMB itself puts a
+# trait's dispersion there on about 4 of 5 ordinary NB fits). That limit is the upper
+# end for NB2 r (so the grouped NB2 fitters use this helper) but the lower end for NB1 φ
+# (so the grouped NB1 fitters test `φ > 1e6` instead).
+# The bootstrap adapters already leave the Gamma/Beta upper end unflagged (#565, #568).
+_dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
+    Bool[d < 1e-6 for d in dvec]
+
+# `_clamp_eta` caps η at ±_ETA_CLAMP, so once β_t (plus offset) is above the cap the
+# objective is exactly flat in β_t: its gradient is zero and the optimiser's gradient test
+# fires on that plateau (#553). On mvabund::spider (K = 0, per-species r) L-BFGS stepped one
+# intercept to 35.3 (μ = 2e15 against a sample mean of 20.8) and reported converged = true
+# 27.5 log-likelihood units below the MLE, with the loglik evaluated at the clamped μ. An
+# NB2 mean of e^30 ≈ 1e13 is never an optimum, so the grouped NB2 objectives return the
+# failure sentinel when any site's β_t + offset is above the cap: the line search then
+# backtracks off that region instead of settling on it. Upper end only: an all-zero
+# species legitimately heads to the lower cap. Only cells the objective reads count: an
+# offset may be NaN or ±Inf at an unobserved cell (`mask = false`; see
+# `_check_offset_observed`), and a masked +Inf would otherwise make every θ the sentinel.
+_nb_eta_above_clamp(β::AbstractVector, offset; mask = nothing) =
+    _eta_above_clamp(β, offset; mask = mask)   # shared helper, families/laplace.jl
+
+# NB2 grouped fits can stall with a group's log r out at the Poisson boundary, where
+# the likelihood is nearly flat, well below a better point (#477). From the returned
+# point, restart with the boundary groups at r = 1: all of them together and, when
+# there are several, each one on its own (a group can genuinely belong at the
+# boundary while another does not). Keep the best result, and only if it lowers the
+# negative log-likelihood by more than 1e-6. Fits that never reach the boundary are
+# returned unchanged. The likelihood can have several maxima on small data, so this
+# is a better local search, not a guarantee of the global maximum.
+# `grad` (optional, −∇negll closure or `nothing`): when given, the restarts use the same
+# exact-gradient optimiser as the main fit (`_optimize_with_analytic`).
+function _nb_boundary_restart(negll, res, ls, opts, first_log_r::Integer; grad = nothing,
+                              stage_callback = nothing)
+    θ = Optim.minimizer(res)
+    bd = findall(_dispersion_group_boundary(exp.(θ[first_log_r:end])))
+    isempty(bd) && return res
+    trials = length(bd) == 1 ? [bd] : vcat([bd], [[g] for g in bd])
+    best = res
+    for groups in trials
+        θs = copy(θ)
+        θs[first_log_r - 1 .+ groups] .= 0.0
+        trial = grad === nothing ?
+            Optim.optimize(negll, θs, ls, opts; autodiff = :finite) :
+            _optimize_with_analytic(negll, grad, θs, ls, opts)
+        accepted = Optim.minimum(trial) < Optim.minimum(best) - 1e-6
+        stage_callback === nothing || stage_callback(:boundary_restart, ls, trial; accepted)
+        accepted && (best = trial)
+    end
+    return best
+end
+
+# Toward the Poisson limit the likelihood in log r flattens but keeps rising, so
+# L-BFGS can crawl along that ridge until the iteration cap and report a fit that is
+# not converged (#615: per-species fits at p = 12, n = 60 stopped at r = 1.8e4 and
+# 9.5e5 after 500 iterations). Only for such a fit, run up to `rounds` more fits from
+# the current point. Each round fixes the groups with r > 1e3 at r = 1e10 and refits
+# the other parameters. In the first round, when several groups qualify, it also tries
+# each one alone; every round finally tries a plain continuation with nothing fixed.
+# A round keeps its first refit that is no worse than the current point (by 1e-6) and
+# either converged or strictly better, and the rounds stop once the fit converges or
+# a round keeps nothing. Extra rounds matter at p = 24 (#615): there the first refit
+# often stopped at the cap just short of convergence, and a species below 1e3 could
+# keep crawling up the ridge. A group fixed at 1e10 reports r_group = 1e10, which the
+# fitters already treat as the Poisson limit (warn only).
+# `grad` (optional, full-θ exact gradient) is restricted to the free coordinates in
+# every round. Returns `(θ, nll, converged, iterations)`; a converged fit is returned unchanged.
+# The refits use dense BFGS (`alg`), not the caller's `ls`: near the optimum L-BFGS
+# crawls (#615: 17 common-r p = 24 fits stayed non-converged after three L-BFGS
+# rounds, while BFGS from the same points converged on 17 of 17 within 126
+# iterations). `alg` matches `_COV_BFGS()`, so the exact-gradient route is unchanged.
+# The limit is a keyword so NB1 can use it too: there the Poisson limit is φ → 0, so the
+# NB1 fitters pass `at_limit = <(1e-3)` and `limit_log = log(1e-10)`. `conv_test`
+# judges each fit (the NB1 fitters add their #485 gradient test to Optim's verdict).
+function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
+                                  rounds::Integer = 3, grad = nothing,
+                                  alg = Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
+                                  at_limit = >(1e3), limit_log = log(1e10),
+                                  conv_test = Optim.converged, stage_callback = nothing)
+    θ = Optim.minimizer(res)
+    f0 = Optim.minimum(res)
+    conv = conv_test(res)
+    iters = Optim.iterations(res)
+    (conv || _nll_failed(f0)) && return (θ, f0, conv, iters)
+    for round in 1:rounds
+        cand = findall(at_limit, exp.(θ[first_log_r:end]))
+        trials = round == 1 && length(cand) > 1 ? vcat([cand], [[g] for g in cand]) : [cand]
+        isempty(cand) || push!(trials, Int[])
+        kept = false
+        for groups in trials
+            fixed = first_log_r - 1 .+ groups
+            free = setdiff(eachindex(θ), fixed)
+            θs = copy(θ)
+            θs[fixed] .= limit_log
+            sub(x) = negll(setindex!(copy(θs), x, free))
+            # With an exact full-θ gradient, restrict it to the free coordinates.
+            trial = grad === nothing ?
+                Optim.optimize(sub, θs[free], alg, opts; autodiff = :finite) :
+                _optimize_with_analytic(sub, x -> begin
+                        g = grad(setindex!(copy(θs), x, free))
+                        g === nothing ? nothing : g[free]
+                    end, θs[free], alg, opts)
+            f1 = Optim.minimum(trial)
+            c1 = conv_test(trial)
+            accepted = f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+            stage_callback === nothing || stage_callback(:ridge_polish, alg, trial; accepted)
+            if accepted
+                θs[free] = Optim.minimizer(trial)
+                θ, f0, conv = θs, f1, c1
+                iters += Optim.iterations(trial)
+                kept = true
+                break
+            end
+        end
+        (conv || !kept) && break
+    end
+    return (θ, f0, conv, iters)
+end
 
 """
     NBGroupedFit
@@ -257,8 +533,12 @@ Result of [`fit_nb_gllvm_grouped`](@ref): intercepts `β` (length p), loadings `
 `iterations`. The per-species dispersion is `r_group[group[t]]`. `dispersion_boundary`
 (length G, T14 F1, 2026-09-02) flags groups whose fitted `r_group[g]` fell outside
 `[1e-6, 1e6]` (see `_dispersion_group_boundary`) — the Poisson limit at the upper
-end, extreme unidentified overdispersion at the lower end; `converged` is forced
-`false` whenever any group is flagged.
+end, extreme unidentified overdispersion at the lower end. Only the lower end
+(`r_group[g] < 1e-6`) forces `converged` to `false`; an `r_group[g] > 1e6` (the
+Poisson limit, which is a normal outcome) only emits a warning and leaves `converged`
+at the optimizer verdict (maintainer decision 2026-09-29).
+`offset` is the p×n training offset the fit was made with (`nothing` when the fit had
+none); [`getLV`](@ref), [`predict`](@ref) and [`residuals`](@ref) use it by default.
 """
 struct NBGroupedFit
     β::Vector{Float64}
@@ -271,6 +551,8 @@ struct NBGroupedFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group Poisson-limit / degenerate flag (T14 F1)
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
+    optimizer_info::Union{Nothing,OptimizerRecord}
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -284,6 +566,13 @@ NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations) =
 NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian::Symbol) =
     NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian,
                 _dispersion_group_boundary(r_group))
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
+    NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
+NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian::Symbol,
+            dispersion_boundary, offset) =
+    NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian,
+                 dispersion_boundary, offset, nothing)
 
 function Base.show(io::IO, f::NBGroupedFit)
     p, K = size(f.Λ)
@@ -305,41 +594,98 @@ function _nparams(fit::NBGroupedFit)
 end
 
 """
-    getLV(fit::NBGroupedFit, Y; N=nothing, rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::NBGroupedFit, Y; N=nothing, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-dispersion NB2 fit, using the
 per-trait dispersion `r_group[group[t]]` in the same Laplace mode equations as
 the grouped likelihood.
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::NBGroupedFit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
     rvec = [fit.r_group[fit.group[t]] for t in 1:p]
     fams = [NegativeBinomial(float(rvec[t]), 0.5) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          N = N, rotate = rotate, mask = mask)
+                          N = N, rotate = rotate, mask = mask, offset = offset)
+end
+
+# Warm start shared by the grouped NB2 / Beta / NB1 fitters: `β_init` and `Λ_init` when
+# given (the `fit_nb_gllvm` convention, src/families/negbin.jl), otherwise empirical
+# link-scale means and SVD loadings of the centred link-scale data. As in `fit_nb_gllvm`,
+# a supplied `β_init` also centres the data the default loadings are taken from. With
+# `guarded`, a `β_init` entry above the η clamp falls back to the default (#874).
+function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init;
+                             offset = nothing, mask = nothing, guarded::Bool = false,
+                             caller::AbstractString = "fit")
+    p, n = size(Zemp)
+    if β_init !== nothing
+        length(β_init) == p || throw(ArgumentError(
+            "β_init has length $(length(β_init)); expected p = $p"))
+    end
+    if Λ_init !== nothing
+        size(Λ_init) == (p, K) || throw(ArgumentError(
+            "Λ_init has size $(size(Λ_init)); expected (p, K) = ($p, $K)"))
+    end
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = mask,
+                           guarded = guarded, caller = caller)
+    Λ_init === nothing || return β0, collect(float.(Λ_init))
+    Zc = Zemp .- β0
+    F = svd(Zc); kk = min(K, length(F.S))
+    Λ0 = zeros(p, K)
+    @inbounds for j in 1:kk
+        Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
+    end
+    return β0, Λ0
 end
 
 """
     fit_nb_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
-                         hessian=:observed, …) -> NBGroupedFit
+                         hessian=:observed, β_init=nothing, Λ_init=nothing,
+                         optimizer=nothing, …) -> NBGroupedFit
 
 Fit a negative-binomial GLLVM with grouped / species-specific dispersion (gllvm's
 `disp.group`): species `t` shares dispersion `r_group[group[t]]`. `group` is a
 length-p vector of group ids (relabelled to `1..G` internally). L-BFGS over
 `[β; vec(Λ); log r_1 … log r_G]`; finite-difference gradient; warm start from
-empirical log-means + SVD loadings + a moderate per-group `r₀`. With one group this
+empirical log-means + SVD loadings + a moderate per-group `r₀`. If a group's `r`
+ends at the Poisson boundary (outside `[1e-6, 1e6]`), the fit restarts from that
+point with the boundary groups at `r = 1` (together, and each on its own when there
+are several) and keeps the best restart only if its log-likelihood is higher by
+more than `1e-6`; otherwise the boundary fit stands and is flagged in
+`dispersion_boundary` (which flags both ends; only `r < 1e-6` also makes `converged`
+false, `r > 1e6` warns). `iterations` then counts the kept run only. On small data the
+likelihood can have several maxima, so this improves the local search but does not
+guarantee the global maximum. The per-site mode search is damped and falls back to
+an exact observed-curvature Newton search where Fisher scoring does not converge; a
+site that still fails makes the objective return its failure sentinel. With one group this
 matches [`fit_nb_gllvm`](@ref) when `hessian=:fisher`. `hessian=:observed` (the
 default) uses the exact conditional NB2/log curvature used by TMB's Laplace
 objective; set `hessian=:fisher` to retain the expected-information approximation.
+`β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
+as in [`fit_nb_gllvm`](@ref); `r_group` still starts at `r₀ = 10`.
+`optimizer` accepts `:lbfgs`, `:bfgs`, or a configured Optim method object.
+`nothing` preserves the historical initial LBFGS, boundary restarts, and
+conditional BFGS Poisson-ridge polish. Explicit LBFGS uses LBFGS for the initial
+and boundary stages and skips the polish; explicit BFGS uses BFGS at every
+executed stage. [`optimizer_info`](@ref) retains the per-attempt results.
 """
 function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
         link::Link = LogLink(), mask = nothing, offset = nothing,
-        hessian::Symbol = :observed,
-        g_tol::Real = 1e-5, iterations::Integer = 500,
+        hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
+        optimizer = nothing, g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_nb_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -352,13 +698,8 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0 = vec(sum(Zemp; dims = 2)) ./ n
-    Zc = Zemp .- β0
-    F = svd(Zc); kk = min(K, length(F.S))
-    Λ0 = zeros(p, K)
-    @inbounds for j in 1:kk
-        Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
-    end
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, mask = msk,
+                                 guarded = true, caller = "fit_nb_gllvm_grouped")   # #874
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
 
     function negll(θ)
@@ -366,6 +707,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         rg = exp.(θ[(p + rr + 1):(p + rr + G)])
         rvec = [rg[gidx[t]] for t in 1:p]
+        _nb_eta_above_clamp(β, offset; mask = msk) && return 1e12   # #553: flat plateau past the η clamp
         v = try
             -nb_grouped_marginal_loglik_laplace(Yc, Λ, β, rvec; link = link, mask = msk,
                                                 offset = offset, hessian = hessian,
@@ -376,18 +718,56 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         end
         return isfinite(v) ? v : 1e12
     end
-    ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
-    θ̂ = Optim.minimizer(res)
+    default_ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+    ls = _optimizer_method(optimizer, default_ls; route = "fit_nb_gllvm_grouped")
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    stages = OptimizerStage[]
+    stage_controls = (; g_tol, iterations, newton_maxiter, newton_tol, show_trace = false,
+                      optim_options = opts)
+    derivative = link isa LogLink ? :analytic : :finite_difference
+    callback(name, method, result; accepted = false) =
+        _optimizer_stage!(stages, name, method, derivative, stage_controls, result; accepted)
+    # Exact gradient under LogLink: the covariate fitter's (`_nb_grouped_cov_negll_grad`)
+    # with no covariates (q = 0) and this fit's offset; θ has the same layout. The
+    # finite-difference gradient cost 2·(p + rr + G) Laplace passes per step and made
+    # per-species fits take minutes at p = 30 (#552: 494 s against tmb's 7 s). Only the
+    # gradient changes: the optimisers stay as they were (L-BFGS, then the restart and
+    # the BFGS ridge polish). Dense BFGS from the start, as the covariate fitter uses,
+    # picks a different local maximum on test/fixtures/nb2_restart_seed52.toml
+    # (-833.6085 against -833.1814). Other links keep the finite-difference gradient.
+    X0 = zeros(p, n, 0)
+    grad = link isa LogLink ?
+        (θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
+                                         hessian, newton_maxiter, newton_tol;
+                                         offset = offset)) : nothing
+    res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
+                             _optimize_with_analytic(negll, grad, θ0, ls, opts)
+    callback(:initial, ls, res; accepted = true)
+    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad,
+                               stage_callback = callback)
+    explicit = optimizer !== nothing
+    if !explicit || ls isa Optim.BFGS
+        θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
+            grad = grad, alg = explicit ? ls : Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
+            stage_callback = callback)
+    else
+        θ̂ = Optim.minimizer(res)
+        nll = Optim.minimum(res)
+        conv0 = Optim.converged(res)
+        iters0 = Optim.iterations(res)
+    end
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    boundary = _dispersion_group_boundary(r̂g)
-    any(boundary) && @warn "NB2 grouped-dispersion fit reached the per-group boundary (r_group outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' overdispersion is not distinguishable from the Poisson/extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
-    return NBGroupedFit(β̂, Λ̂, r̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
-                        boundary)
+    boundary = _dispersion_group_boundary(r̂g)   # flags BOTH ends; feeds `dispersion_boundary` and the interval code
+    lowb = _dispersion_group_lower_boundary(r̂g)   # only the lower end blocks `converged` (upper end: warn only)
+    any(lowb) && @warn "NB2 grouped-dispersion fit reached the per-group lower boundary (r_group below 1e-6) for group(s) $(findall(lowb)); those groups' overdispersion is extreme and not identified from this data; converged is false for this fit." maxlog=1
+    any(>(1e6), r̂g) && @warn "NB2 grouped-dispersion fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
+    loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
+    receipt = _optimizer_record(optimizer, stages; controls = stage_controls,
+                                derivative, actual = _last_accepted_optimizer(stages))
+    return NBGroupedFit(β̂, Λ̂, r̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
+                        boundary, _stored_offset(offset), receipt)
 end
 
 """
@@ -399,8 +779,8 @@ dispersion `r_group`, species→group map `group`, `link`, maximised Laplace
 `loglik`, `converged`, and `iterations`. Linear predictor
 `η = β + Xγ + Λz` with species dispersion `r_group[group[t]]`. `dispersion_boundary`
 (length G, T14 F1, 2026-09-02) flags groups whose fitted `r_group[g]` fell outside
-`[1e-6, 1e6]` (see `_dispersion_group_boundary`); `converged` is forced `false`
-whenever any group is flagged.
+`[1e-6, 1e6]` (see `_dispersion_group_boundary`); only the lower end (`< 1e-6`)
+forces `converged` to `false`, while `r_group[g] > 1e6` (the Poisson limit) only warns.
 """
 struct NBGroupedCovFit
     β::Vector{Float64}
@@ -460,6 +840,87 @@ function getLV(fit::NBGroupedCovFit, Y::AbstractMatrix{<:Integer},
                           rotate = rotate, mask = mask, offset = O)
 end
 
+# −∇θ of `fit_nb_gllvm_grouped_cov`'s objective, θ = [β; γ_free; pack(Λ); log r_1..r_G],
+# (with q = 0 and an `offset`, also of `fit_nb_gllvm_grouped`'s objective),
+# or `nothing` (finite-difference fallback) when a site's mode search fails or the AD
+# pass errors. Mode: the objective's own chain (`_nb_grouped_site_mode`); log-det weight:
+# `_nb_grouped_laplace_weight` at the objective's `hessian`.
+function _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, msk,
+                                    hessian, maxiter, tol; offset = nothing)
+    try
+        n = size(Yc, 2)
+        N1 = ones(Int, p)
+        β = θ[1:p]; γ = θ[(p + 1):(p + q)]
+        Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
+        rg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
+        fams = [NegativeBinomial(float(rg[gidx[t]]), 0.5) for t in 1:p]
+        # An offset may be NaN or ±Inf at an unobserved cell (the engine never reads it).
+        # Zero those cells so they cannot put a NaN into the AD pass (#552 review).
+        if offset !== nothing && msk !== nothing
+            offset = ifelse.(msk, offset, 0.0)
+        end
+        O = _build_offset(X_fit, γ)
+        offset === nothing || (O = O .+ offset)
+        ẑs = Vector{Vector{Float64}}(undef, n)
+        for s in 1:n
+            mi = msk === nothing ? nothing : view(msk, :, s)
+            z, ok = _nb_grouped_site_mode(fams, view(Yc, :, s), N1, Λ, β, link;
+                                          mask = mi, offset = view(O, :, s),
+                                          maxiter = maxiter, tol = tol)
+            ok || return nothing
+            ẑs[s] = z
+        end
+        function marg(θd)
+            βd = θd[1:p]; γd = θd[(p + 1):(p + q)]
+            Λd = unpack_lambda(θd[(p + q + 1):(p + q + rr)], p, K)
+            rgd = exp.(θd[(p + q + rr + 1):(p + q + rr + G)])
+            famsd = [NegativeBinomial(rgd[gidx[t]], 0.5) for t in 1:p]
+            Od = _build_offset(X_fit, γd)
+            offset === nothing || (Od = Od .+ offset)
+            acc = zero(eltype(θd))
+            for s in 1:n
+                y = view(Yc, :, s)
+                mi = msk === nothing ? nothing : view(msk, :, s)
+                ldw = (t, μ, me, η) -> _nb_grouped_laplace_weight(hessian, famsd[t], μ, me,
+                                                                  y[t], link)
+                acc += _cov_site_diffable(famsd, y, N1, Λd, βd .+ view(Od, :, s), link,
+                                          ẑs[s], ldw; mask = mi)
+            end
+            return acc
+        end
+        g = ForwardDiff.gradient(marg, θ)
+        return all(isfinite, g) ? -g : nothing
+    catch
+        return nothing
+    end
+end
+
+# Shared-slope least squares start: Z[t,i] ≈ β_t + Σ_k γ_k X[t,i,k]. Per-trait centring removes
+# β; γ solves the pooled normal equations; returns (β, γ, residual matrix).
+function _cov_ols_start(Z::AbstractMatrix, X::AbstractArray{<:Real, 3})
+    p, n = size(Z); q = size(X, 3)
+    zbar = vec(sum(Z; dims = 2)) ./ n
+    Zc = Z .- zbar
+    q == 0 && return zbar, Float64[], Zc
+    Xbar = sum(X; dims = 2) ./ n
+    Xc = X .- Xbar
+    A = zeros(q, q); b = zeros(q)
+    @inbounds for k in 1:q
+        b[k] = sum(view(Xc, :, :, k) .* Zc)
+        for l in k:q
+            A[k, l] = A[l, k] = sum(view(Xc, :, :, k) .* view(Xc, :, :, l))
+        end
+    end
+    γ = (Symmetric(A) + 1e-8 * I) \ b
+    β = zbar .- [sum(γ[k] * Xbar[t, 1, k] for k in 1:q) for t in 1:p]
+    R = copy(Zc)
+    @inbounds for k in 1:q
+        R .-= γ[k] .* view(Xc, :, :, k)
+    end
+    return β, γ, R
+end
+
+
 """
     fit_nb_gllvm_grouped_cov(Y; X, K, group=1:p, link=LogLink(), mask=nothing,
                              γ_fixed=nothing, hessian=:observed, …) -> NBGroupedCovFit
@@ -469,15 +930,23 @@ Fit a negative-binomial GLLVM with **grouped / per-trait dispersion** and
 `[β; γ_free; pack(Λ); log r_1 … log r_G]`; offset `O = Xγ` is passed into the
 grouped Laplace marginal. Default `hessian=:observed` matches TMB; identity
 checks against shared [`fit_gllvm_cov`](@ref) should force `hessian=:fisher`.
+`starts = :both` (default) fits from two starting points, the trait-mean start with `γ = 0`
+and a covariate-adjusted least-squares start, and keeps the higher log-likelihood (ties keep
+the first; differences under 1e-6 are ties); `starts = :default` runs only the first, at about half the cost. The NB2
+covariate objective has several local optima and neither start wins everywhere.
+Groups that end at the Poisson boundary get the same restart as
+[`fit_nb_gllvm_grouped`](@ref) (together and each on its own, kept only if better).
 Public / bridge default under X for NB2 (twin API B). Keep `fit_gllvm_cov` for
 the shared-`r` + X opt-in.
 """
 function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3},
         K::Integer, group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogLink(), mask = nothing, γ_fixed = nothing,
-        hessian::Symbol = :observed,
+        hessian::Symbol = :observed, starts::Symbol = :both,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    starts in (:both, :default) ||
+        throw(ArgumentError("starts must be :both or :default; got :$starts"))
     p, n = size(Y)
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
@@ -511,6 +980,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
         rg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         rvec = [rg[gidx[t]] for t in 1:p]
         O = _build_offset(X_fit, γ)
+        _nb_eta_above_clamp(β, O; mask = msk) && return 1e12   # #553: flat plateau past the η clamp
         v = try
             -nb_grouped_marginal_loglik_laplace(Yc, Λ, β, rvec; link = link, mask = msk,
                                                 offset = O, hessian = hessian,
@@ -522,19 +992,50 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
-    θ̂ = Optim.minimizer(res)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    # Exact gradient (implicit one-Newton-step + ForwardDiff, `_cov_site_diffable` in
+    # covariates.jl) under LogLink, the only link whose observed log-det weight the
+    # objective defines; other links keep the finite-difference gradient.
+    grad = link isa LogLink ?
+        (θ -> _nb_grouped_cov_negll_grad(Yc, X_fit, θ, p, q, K, rr, G, gidx, link, msk,
+                                         hessian, newton_maxiter, newton_tol)) : nothing
+    # Dense BFGS on the exact-gradient route (see `_COV_BFGS` in covariates.jl for why).
+    ls_ad = grad === nothing ? ls : _COV_BFGS()
+    function _fit_from(θstart)
+        r = grad === nothing ? Optim.optimize(negll, θstart, ls, opts; autodiff = :finite) :
+                               _optimize_with_analytic(negll, grad, θstart, ls_ad, opts)
+        r = _nb_boundary_restart(negll, r, ls_ad, opts, p + q + rr + 1; grad = grad)
+        return _nb_poisson_ridge_polish(negll, r, ls_ad, opts, p + q + rr + 1; grad = grad)
+    end
+    θ̂, nll, conv0, iters0 = _fit_from(θ0)
+    if starts === :both && q > 0
+        # The objective is multimodal and the start picks the basin. Second start: shared-slope
+        # least squares for β, γ and loadings from the SVD of what is left (gllvmTMB's start).
+        # Keep the better fit; differences under 1e-6 count as ties and keep the default-start fit.
+        β1, γ1, Zc1 = _cov_ols_start(Zemp, X_fit)
+        F1 = svd(Zc1); kk1 = min(K, length(F1.S))
+        Λ1 = zeros(p, K)
+        @inbounds for j in 1:kk1
+            Λ1[:, j] = F1.U[:, j] .* (F1.S[j] / sqrt(n))
+        end
+        θ1 = vcat(β1, γ1, pack_lambda(Λ1), fill(log(10.0), G))
+        θ̂2, nll2, conv2, iters2 = _fit_from(θ1)
+        if isfinite(nll2) && nll2 < nll - 1e-6
+            θ̂, nll, conv0, iters0 = θ̂2, nll2, conv2, iters2
+        end
+    end
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     r̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
-    boundary = _dispersion_group_boundary(r̂g)
-    any(boundary) && @warn "NB2 grouped-cov fit reached the per-group boundary (r_group outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' overdispersion is not distinguishable from the Poisson/extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
+    boundary = _dispersion_group_boundary(r̂g)   # flags BOTH ends; feeds `dispersion_boundary` and the interval code
+    lowb = _dispersion_group_lower_boundary(r̂g)   # only the lower end blocks `converged` (upper end: warn only)
+    any(lowb) && @warn "NB2 grouped-cov fit reached the per-group lower boundary (r_group below 1e-6) for group(s) $(findall(lowb)); those groups' overdispersion is extreme and not identified from this data; converged is false for this fit." maxlog=1
+    any(>(1e6), r̂g) && @warn "NB2 grouped-cov fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
+    loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
     return NBGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, r̂g, gidx, link,
-                           loglik, conv && !any(boundary), iters, hessian, boundary)
+                           loglik, conv && !any(lowb), iters, hessian, boundary)
 end
 
 # ===========================================================================
@@ -563,6 +1064,91 @@ function _beta_grouped_laplace_weight(hessian::Symbol, f::Beta, μ, me, y, link:
     return φ^2 * ν * me^2 - φ * (ystar - μstar) * μeta2
 end
 
+# Damped per-site mode search for the Beta grouped kernel (#503 class). Before this, the
+# kernel ran undamped Fisher scoring and scored whatever `z` it held at `maxiter`,
+# converged or not. Where the observed curvature exceeds about twice the Fisher
+# curvature (responses near 0 or 1), the step overshoots into a 2-cycle: on one measured
+# site Fisher alternated between z = −0.318 and −0.983 around a mode at −0.555, and the
+# site's Laplace value was off by up to 15 log-likelihood units.
+#
+# Same rule as `_gamma_grouped_mode` (#479): a step that lowers the per-site
+# log-posterior is halved (small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when a full proposed step is below `tol`.
+# `step_weight` is `:fisher` or `:dominant`. The observed Beta weight can be negative,
+# so the NB2/Gamma observed-Newton fallback is not safe here; `:dominant` uses
+# max(observed, Fisher) per cell instead, which is positive (so `Λ'WΛ + I` is SPD) and
+# never understates the curvature that caused the overshoot. W only sets the step: the
+# mode is the fixed point of `Λ's − z = 0` whatever W is.
+function _beta_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link, step_weight::Symbol;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    z = zeros(K)
+    for _ in 1:maxiter
+        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        s  = _glm_score.(fams, μ, n, me, y)
+        W  = _beta_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        if step_weight === :dominant
+            Wo = _beta_grouped_laplace_weight.(Ref(:observed), fams, μ, me, y, Ref(link), η)
+            W  = max.(W, Wo)
+        end
+        if mask !== nothing
+            s = ifelse.(mask, s, 0.0)
+            W = ifelse.(mask, W, 0.0)
+        end
+        A  = Symmetric(Λ' * (W .* Λ) + I)
+        Δ  = _safe_solve(A, Λ' * s .- z)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
+    end
+    return z, false
+end
+
+# The Beta site-mode chain shared by the likelihood and getLV. Returns (z, converged).
+function _beta_grouped_site_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _beta_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                               mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Fallback 1: max(observed, Fisher) weight, defined for LogitLink only.
+    if !ok && link isa LogitLink
+        z, ok = _beta_grouped_mode(fams, y, n, Λ, β, link, :dominant;
+                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    end
+    # Fallback 2 (mirrors #507): a genuinely slow site gets a 20x Fisher budget.
+    ok || ((z, ok) = _beta_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                                        mask = mask, offset = offset,
+                                        maxiter = 20 * maxiter, tol = tol))
+    return z, ok
+end
+
 # Per-site Laplace log-marginal with per-species Beta precision markers `fams`.
 function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
@@ -570,35 +1156,15 @@ function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::A
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = zeros(K)
-    local A
-    for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
-        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
-        me = mu_eta.(Ref(link), η)
-        s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored,
-        # ALWAYS — `:fisher` here is not the caller's selector. Expected
-        # information is >= 0, so `Λ'WΛ + I` is SPD by construction and every
-        # Newton step is a descent step. The observed weight CAN be negative
-        # (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218), which made this
-        # loop an unguarded, possibly-indefinite Newton whenever the caller
-        # asked for `:observed` — and the grouped fitters default to it.
-        # The selector still governs the post-loop log-det below, which is the
-        # only role that needs the observed curvature. The converged mode is
-        # unchanged either way: it is the fixed point of `Λ's − z = 0`, which
-        # does not involve W at all — W only sets the step.
-        W  = _beta_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
-        if mask !== nothing
-            s = ifelse.(mask, s, 0.0)
-            W = ifelse.(mask, W, 0.0)
-        end
-        A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
-    end
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first; the
+    # caller's `hessian` governs only the post-loop log-det below. The observed
+    # weight CAN be negative (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218),
+    # which is why the step never uses it alone.
+    z, ok = _beta_grouped_site_mode(fams, y, n, Λ, β, link;
+                                    mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # A search that did not converge must not produce a finite value. -Inf makes the
+    # fitters' objective return its 1e12 sentinel instead of a garbage surface.
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -612,7 +1178,7 @@ function _beta_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::A
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -650,10 +1216,14 @@ Result of [`fit_beta_gllvm_grouped`](@ref): intercepts `β` (length p), loadings
 (p×K), the per-group precision vector `φ` (length G), the species→group map `group`
 (length p), the `link`, the maximised Laplace `loglik`, `converged`, and
 `iterations`. The per-species precision is `φ[group[t]]`. `dispersion_boundary`
-(length G, T14 F1, 2026-09-02) flags groups whose fitted `φ[g]` fell outside
-`[1e-6, 1e6]` (see `_dispersion_group_boundary`) — the near-Bernoulli
-maximal-variance limit at the lower end, the near-deterministic collapse at the
-upper end; `converged` is forced `false` whenever any group is flagged.
+(length G, T14 F1, 2026-09-02) flags groups whose fitted `φ[g]` fell below
+`1e-6` (see `_dispersion_group_lower_boundary`), the near-Bernoulli
+maximal-variance limit. A large `φ` (the near-deterministic end) is identified by
+the data and is not flagged (2026-09-29); `converged` is forced `false` whenever
+any group is flagged, and is
+`true` only when the optimizer's gradient criterion was met (#480).
+`offset` is the p×n training offset the fit was made with (`nothing` when the fit had
+none); [`getLV`](@ref) uses it by default.
 """
 struct BetaGroupedFit
     β::Vector{Float64}
@@ -665,7 +1235,8 @@ struct BetaGroupedFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
-    dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli / near-deterministic flag (T14 F1)
+    dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli (lower-end) flag (T14 F1)
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -674,7 +1245,10 @@ BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations) =
     BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, :observed)
 BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian::Symbol) =
     BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian,
-                   _dispersion_group_boundary(φ))
+                   _dispersion_group_lower_boundary(φ))
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
+    BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
 
 function Base.show(io::IO, f::BetaGroupedFit)
     p, K = size(f.Λ)
@@ -697,41 +1271,164 @@ function _nparams(fit::BetaGroupedFit)
 end
 
 """
-    getLV(fit::BetaGroupedFit, Y; rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::BetaGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-precision Beta fit, using the
 per-trait precision `φ[group[t]]` in the same Laplace mode equations as the
 grouped likelihood.
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::BetaGroupedFit, Y::AbstractMatrix{<:Real};
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [Beta(float(φvec[t]), 1.0) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          rotate = rotate, mask = mask)
+                          rotate = rotate, mask = mask, offset = offset)
+end
+
+# Beta grouped fits can stop on a zero-length line-search step, which Optim counts as
+# "the objective did not change" (f_converged) and reports as converged, while the
+# gradient is still large (#480; screen dataset d05: Optim g residual 9.06 against
+# g_tol 1e-5, logLik 265.976 where a fresh start reaches 272.609). When the run stops
+# without Optim's gradient criterion, restart once from the warm start with every
+# log φ = 0 and once from the returned point, and keep the best run only if it lowers
+# the negative log-likelihood by more than 1e-6. A run that meets the gradient
+# criterion is returned as it is unless it sits on a precision plateau
+# (`_beta_grouped_phi_plateau`, below). `first_log_phi` indexes the first log φ in θ; the
+# log φ block runs to the end of θ.
+# Scale-aware gradient test, as in `_tweedie_verdict`: the residual is judged against
+# `g_tol` scaled by the objective's own size, so a caller's g_tol below the
+# finite-difference noise floor does not turn a stationary point into a non-converged fit.
+_beta_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
+    isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
+
+# Large-precision Beta fits (φ above about 1e5, near-deterministic proportions) can never
+# meet `_beta_grouped_g_met`: the intercept curvature grows like φ (measured 1.1e9 at
+# φ = 9.6e7), so a stationary point to within the objective's own noise (about 1e-6)
+# still shows a raw finite-difference gradient of 1 to 10. There the gradient is judged in
+# standard-error units instead, |g_i| / sqrt(H_ii), against the same scale-aware
+# threshold `max(g_tol, g_tol * |nll|)`, after a diagonal Newton polish that is accepted
+# only when it lowers the objective. `_beta_grouped_curvature_probe` widens each
+# coordinate's step (1e-6 to 0.1) until the symmetric rise clears 1e-4, well above the
+# noise, so g_i and H_ii are measured rather than noise; a coordinate whose symmetric
+# rise never clears it (flat, or falling on both sides) fails the test. Measured on the #620
+# beta_huge fixture: 0.0153 before the polish, 2.5e-4 after two steps (threshold 0.0152).
+# A caller's tiny g_tol still fails (d01, g_tol = 1e-12: 1.9e-4 against 2.7e-10).
+function _beta_grouped_curvature_probe(f, θ, f0)
+    d = length(θ)
+    g = fill(NaN, d); H = fill(NaN, d)
+    e = zeros(d)
+    for i in 1:d
+        h = 1e-6
+        while h <= 0.1
+            e[i] = h
+            fp, fm = f(θ .+ e), f(θ .- e)
+            e[i] = 0.0
+            rise = (fp + fm) / 2 - f0
+            if rise >= 1e-4
+                g[i] = (fp - fm) / (2h); H[i] = 2rise / h^2
+                break
+            end
+            h *= 10
+        end
+        isnan(H[i]) && return g, H, false
+    end
+    return g, H, true
+end
+
+function _beta_grouped_scaled_polish(f, θ, f0, thr; maxit::Integer = 10)
+    for _ in 1:maxit
+        g, H, ok = _beta_grouped_curvature_probe(f, θ, f0)
+        ok || return θ, f0, false      # a coordinate that is flat or not convex
+        maximum(abs.(g) ./ sqrt.(H)) <= thr && return θ, f0, true
+        step = g ./ H
+        t = 1.0; moved = false
+        for _ in 1:20
+            ft = f(θ .- t .* step)
+            if isfinite(ft) && ft < f0
+                θ = θ .- t .* step; f0 = ft; moved = true
+                break
+            end
+            t /= 2
+        end
+        moved || return θ, f0, false
+    end
+    return θ, f0, false
+end
+
+# The Beta grouped verdict: `_fit_verdict`, then the #480 gradient test, then (only when
+# that fails) the standard-error-scaled test above. Returns the point to report.
+function _beta_grouped_verdict(negll, res, g_tol)
+    loglik, conv, iters = _fit_verdict(res)
+    θ̂ = Optim.minimizer(res)
+    (!conv || _beta_grouped_g_met(res, g_tol)) && return θ̂, loglik, conv, iters
+    f0 = Optim.minimum(res)
+    θp, fp, ok = _beta_grouped_scaled_polish(negll, θ̂, f0, max(g_tol, g_tol * abs(f0)))
+    return ok ? (θp, -fp, true, iters) : (θ̂, loglik, false, iters)
+end
+
+# A group precision far above the rest is the flat-plateau sign #480 described: as φ grows
+# the Beta tends to a point mass and that group's log-φ gradient goes to zero, so L-BFGS can
+# stop there and still meet the gradient test. Measured on the #480 screen dataset d05
+# after the Beta kernel fix: a stationary point at logLik 269.30 with φ5 ≈ 1139 (about
+# 550x the median, log-φ5 gradient exactly 0), where the restart reaches 272.61. The
+# restart keeps a run only if it is better, so a false trigger costs time, not accuracy.
+function _beta_grouped_phi_plateau(θ, first_log_phi::Integer)
+    lφ = θ[first_log_phi:end]
+    length(lφ) >= 2 || return false
+    return maximum(lφ) - median(lφ) > log(100)
+end
+
+function _beta_grouped_gradient_restart(negll, res, θ_warm, ls, opts, first_log_phi::Integer)
+    _beta_grouped_g_met(res, Optim.g_tol(res)) &&
+        !_beta_grouped_phi_plateau(Optim.minimizer(res), first_log_phi) && return res
+    θa = copy(θ_warm)
+    θa[first_log_phi:end] .= 0.0
+    best = res
+    for θs in (θa, copy(Optim.minimizer(res)))
+        trial = Optim.optimize(negll, θs, ls, opts; autodiff = :finite)
+        Optim.minimum(trial) < Optim.minimum(best) - 1e-6 && (best = trial)
+    end
+    return best
 end
 
 """
     fit_beta_gllvm_grouped(Y; K, group, link=LogitLink(), mask=nothing, offset=nothing,
-                           hessian=:observed, …) -> BetaGroupedFit
+                           hessian=:observed, β_init=nothing, Λ_init=nothing, …) -> BetaGroupedFit
 
 Fit a Beta GLLVM with grouped / species-specific precision (gllvm's `disp.group`):
 species `t` shares precision `φ[group[t]]`. `group` is a length-p vector of group
 ids (relabelled to `1..G` internally; default `1:p` = per-species). L-BFGS over
 `[β; vec(Λ); log φ_1 … log φ_G]`; finite-difference gradient; warm start from
-empirical logit-mean intercepts + SVD loadings + a moderate per-group `φ₀`. With one
+empirical logit-mean intercepts + SVD loadings + a moderate per-group `φ₀`.
+`converged` is `true` only when the optimizer's gradient criterion (`g_tol`) is met.
+If the first run stops without it, or stops with one group's precision more than 100
+times the median (a flat-plateau stationary point), the fit restarts once from the warm
+start with every `φ = 1` and once from the returned point, and keeps the best run only
+if its log-likelihood is higher by more than `1e-6`; `iterations` then counts the kept run
+only. This improves the local search but does not guarantee the global maximum. With one
 group this matches [`fit_beta_gllvm`](@ref). `hessian=:observed` (the default)
 uses the exact conditional Beta/logit curvature used by TMB's Laplace objective;
 set `hessian=:fisher` to retain the expected-information approximation.
+`β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
+as in [`fit_nb_gllvm`](@ref); the per-group `φ` still starts at `φ₀ = 10`.
 """
 function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogitLink(), mask = nothing, offset = nothing,
-        hessian::Symbol = :observed,
+        hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_beta_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -740,17 +1437,12 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc  = _sanitize_missing(Y, 0.5)
+    _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped")
+    Yc  = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0 = vec(sum(Zemp; dims = 2)) ./ n
-    Zc = Zemp .- β0
-    F = svd(Zc); kk = min(K, length(F.S))
-    Λ0 = zeros(p, K)
-    @inbounds for j in 1:kk
-        Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
-    end
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init)
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
 
     function negll(θ)
@@ -769,17 +1461,17 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
-    θ̂ = Optim.minimizer(res)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    res = _beta_grouped_gradient_restart(negll, res, θ0, ls, opts, p + rr + 1)
+    θ̂, loglik, conv, iters = _beta_grouped_verdict(negll, res, g_tol)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    boundary = _dispersion_group_boundary(φ̂g)
-    any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
+    boundary = _dispersion_group_lower_boundary(φ̂g)
+    any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     return BetaGroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
-                          boundary)
+                          boundary, _stored_offset(offset))
 end
 
 """
@@ -790,9 +1482,10 @@ covariate coefficients `γ` (with `γ_fixed` zero mask), loadings `Λ`, per-grou
 precision `φ`, species→group map `group`, `link`, maximised Laplace `loglik`,
 `converged`, and `iterations`. Linear predictor `η = β + Xγ + Λz` with species
 precision `φ[group[t]]`. `dispersion_boundary` (length G, T14 F1, 2026-09-02)
-flags groups whose fitted `φ[g]` fell outside `[1e-6, 1e6]` (see
-`_dispersion_group_boundary`); `converged` is forced `false` whenever any group
-is flagged.
+flags groups whose fitted `φ[g]` fell below `1e-6` (see
+`_dispersion_group_lower_boundary`; a large `φ` is identified and not flagged,
+2026-09-29); `converged` is forced `false` whenever any group
+is flagged, and is `true` only when the optimizer's gradient criterion was met (#480).
 """
 struct BetaGroupedCovFit
     β::Vector{Float64}
@@ -806,7 +1499,7 @@ struct BetaGroupedCovFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
-    dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli / near-deterministic flag (T14 F1)
+    dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli (lower-end) flag (T14 F1)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -816,7 +1509,7 @@ BetaGroupedCovFit(β, γ, γ_fixed, Λ, φ, group, link, loglik, converged, iter
 BetaGroupedCovFit(β, γ, γ_fixed, Λ, φ, group, link, loglik, converged, iterations,
                   hessian::Symbol) =
     BetaGroupedCovFit(β, γ, γ_fixed, Λ, φ, group, link, loglik, converged, iterations,
-                      hessian, _dispersion_group_boundary(φ))
+                      hessian, _dispersion_group_lower_boundary(φ))
 
 function Base.show(io::IO, f::BetaGroupedCovFit)
     p, K = size(f.Λ); q = length(f.γ)
@@ -860,7 +1553,10 @@ Fit a Beta GLLVM with **grouped / per-trait precision** and **shared site
 covariates** `X` (`p×n×q`). Working vector `[β; γ_free; pack(Λ); log φ_1 … log φ_G]`;
 offset `O = Xγ` is passed into the grouped Laplace marginal. Default
 `hessian=:observed` matches TMB; identity checks against shared
-[`fit_gllvm_cov`](@ref) should force `hessian=:fisher`. Public / bridge default
+[`fit_gllvm_cov`](@ref) should force `hessian=:fisher`. `converged` requires the
+optimizer's gradient criterion, and a run that stops without it gets the same
+restart as [`fit_beta_gllvm_grouped`](@ref) (warm start with `γ = 0` and every
+`φ = 1`, and the returned point; kept only if better by more than `1e-6`). Public / bridge default
 under X for Beta (twin API B). Keep `fit_gllvm_cov` for the shared-`φ` + X opt-in.
 """
 function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3},
@@ -883,7 +1579,8 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = _sanitize_missing(Y, 0.5)
+    _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped_cov")
+    Yc = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -913,17 +1610,17 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
-    θ̂ = Optim.minimizer(res)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    res = _beta_grouped_gradient_restart(negll, res, θ0, ls, opts, p + q + rr + 1)
+    θ̂, loglik, conv, iters = _beta_grouped_verdict(negll, res, g_tol)
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     φ̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
-    boundary = _dispersion_group_boundary(φ̂g)
-    any(boundary) && @warn "Beta grouped-cov fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
+    boundary = _dispersion_group_lower_boundary(φ̂g)
+    any(boundary) && @warn "Beta grouped-cov fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     return BetaGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
                              loglik, conv && !any(boundary), iters, hessian, boundary)
 end
@@ -951,6 +1648,90 @@ function _gamma_grouped_laplace_weight(hessian::Symbol, f::Gamma, μ, me, y, lin
     return f.α * y / μ
 end
 
+# Per-site mode search for the Gamma grouped kernel (#479). Returns `(z, converged)`.
+# `step_weight` picks the curvature that sets the Newton step. It never changes the
+# mode, which is the fixed point of `Λ's − z = 0` whatever W is.
+#
+# Before #479 the kernel ran undamped Fisher scoring and returned whatever `z` it held
+# when the loop stopped, converged or not. Gamma/log's Fisher weight is the constant α,
+# blind to y/μ, so the step overshoots when y/μ is far from 1: on one site of the
+# fitter's own warm start it cycled out to z ≈ 1e11 and the kernel returned a FINITE
+# −1.4e23. That value slipped past the fitter's 1e12 sentinel and stopped L-BFGS at
+# iteration 2, 43 log-likelihood units below the optimum, with converged = true.
+#
+# Now a step that lowers the per-site log-posterior is halved (the generic core's
+# `_laplace_mode` rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when the full proposed step is below `tol`,
+# which is the old loop's own stopping test. A heavily halved step does NOT count.
+function _gamma_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link, step_weight::Symbol;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    z = zeros(K)
+    for _ in 1:maxiter
+        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        s  = _glm_score.(fams, μ, n, me, y)
+        W  = _gamma_grouped_laplace_weight.(Ref(step_weight), fams, μ, me, y, Ref(link))
+        if mask !== nothing
+            s = ifelse.(mask, s, 0.0)
+            W = ifelse.(mask, W, 0.0)
+        end
+        A  = Symmetric(Λ' * (W .* Λ) + I)
+        Δ  = _safe_solve(A, Λ' * s .- z)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
+    end
+    return z, false
+end
+
+# The Gamma site-mode chain shared by the likelihood and getLV (#503 follow-up).
+function _gamma_grouped_site_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _gamma_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                                mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Fallback (#479). Fisher scoring converges only linearly for Gamma/log and can
+    # take far longer than `maxiter` even with halving (measured: 1532 iterations on the
+    # #479 site at the fitter's warm start, contraction factor about 0.991). Under LogLink the observed weight α·y/μ is >= 0 for every admissible
+    # response (masked cells are zeroed), so `Λ'WΛ + I` stays SPD and the step is exact
+    # damped Newton on a strictly concave per-site objective (measured: at most 6
+    # iterations on every site probed across the sibling screen's 10 datasets). It
+    # runs only where the Fisher search failed, so every site that converged before
+    # keeps its old path.
+    if !ok && link isa LogLink
+        z, ok = _gamma_grouped_mode(fams, y, n, Λ, β, link, :observed;
+                                    mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    end
+    return z, ok
+end
+
 # Per-site Laplace log-marginal with per-species Gamma shape markers `fams`.
 function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
@@ -958,35 +1739,16 @@ function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = zeros(K)
-    local A
-    for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
-        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
-        me = mu_eta.(Ref(link), η)
-        s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored,
-        # ALWAYS — `:fisher` here is not the caller's selector. Expected
-        # information is >= 0, so `Λ'WΛ + I` is SPD by construction and every
-        # Newton step is a descent step. The observed weight CAN be negative
-        # (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218), which made this
-        # loop an unguarded, possibly-indefinite Newton whenever the caller
-        # asked for `:observed` — and the grouped fitters default to it.
-        # The selector still governs the post-loop log-det below, which is the
-        # only role that needs the observed curvature. The converged mode is
-        # unchanged either way: it is the fixed point of `Λ's − z = 0`, which
-        # does not involve W at all — W only sets the step.
-        W  = _gamma_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link))
-        if mask !== nothing
-            s = ifelse.(mask, s, 0.0)
-            W = ifelse.(mask, W, 0.0)
-        end
-        A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
-    end
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
+    # `:fisher` here is not the caller's selector, which governs only the post-loop
+    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
+    # construction. The converged mode is unchanged either way: it is the fixed point
+    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+    z, ok = _gamma_grouped_site_mode(fams, y, n, Λ, β, link;
+                                     mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # A search that did not converge must not produce a finite value. -Inf makes the
+    # fitters' objective return its 1e12 sentinel instead of a garbage surface.
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -1000,7 +1762,7 @@ function _gamma_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -1011,8 +1773,12 @@ Total Laplace log-marginal of a Gamma GLLVM with **per-species** shape `αvec`
 (length p; `Var_t = μ_t²/αvec[t]`). `Y` is the p×n matrix of positive reals; `Λ`
 p×K; `β` length-p. With a constant `αvec = fill(α, p)` this equals the shared-shape
 [`gamma_marginal_loglik_laplace`](@ref) to machine precision when
-`hessian=:fisher` (the default). `hessian=:observed` uses the conditional
-Gamma/log Hessian used by TMB's Laplace objective.
+`hessian=:fisher`. `hessian=:observed` (the default) uses the conditional
+Gamma/log Hessian used by TMB's Laplace objective. If any site's mode search fails
+to converge to `tol` (default 1e-9), the total is `-Inf`, never a value computed at
+an unconverged mode (#479). The search is Fisher scoring with step halving for up to
+`maxiter` steps (default 100) and, under `LogLink`, a damped Newton search of up to
+`maxiter` more.
 """
 function gamma_grouped_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, αvec::AbstractVector; link::Link = LogLink(),
@@ -1038,10 +1804,13 @@ Result of [`fit_gamma_gllvm_grouped`](@ref): intercepts `β` (length p), loading
 (p×K), the per-group shape vector `α` (length G), the species→group map `group`
 (length p), the `link`, the maximised Laplace `loglik`, `converged`, and
 `iterations`. The per-species shape is `α[group[t]]`. `dispersion_boundary`
-(length G, T14 F1, 2026-09-02) flags groups whose fitted `α[g]` fell outside
-`[1e-6, 1e6]` (see `_dispersion_group_boundary`) — extreme overdispersion at the
-lower end, the near-deterministic collapse at the upper end; `converged` is
-forced `false` whenever any group is flagged.
+(length G, T14 F1, 2026-09-02) flags groups whose fitted `α[g]` fell below
+`1e-6` (see `_dispersion_group_lower_boundary`), the extreme-overdispersion
+limit. A large `α` (the near-deterministic end) is identified by the data and is
+not flagged (2026-09-29); `converged` is forced `false` whenever any group is
+flagged.
+`offset` is the p×n training offset the fit was made with (`nothing` when the fit had
+none); [`getLV`](@ref) uses it by default.
 """
 struct GammaGroupedFit
     β::Vector{Float64}
@@ -1053,7 +1822,8 @@ struct GammaGroupedFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
-    dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion / collapse flag (T14 F1)
+    dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion (lower-end) flag (T14 F1)
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1062,7 +1832,10 @@ GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations) =
     GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, :observed)
 GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian::Symbol) =
     GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian,
-                    _dispersion_group_boundary(α))
+                    _dispersion_group_lower_boundary(α))
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
+    GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
 
 function Base.show(io::IO, f::GammaGroupedFit)
     p, K = size(f.Λ)
@@ -1085,19 +1858,26 @@ function _nparams(fit::GammaGroupedFit)
 end
 
 """
-    getLV(fit::GammaGroupedFit, Y; rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::GammaGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-shape Gamma fit, using the
 per-trait shape `α[group[t]]` in the same Laplace mode equations as the grouped
 likelihood.
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::GammaGroupedFit, Y::AbstractMatrix{<:Real};
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
     αvec = [fit.α[fit.group[t]] for t in 1:p]
     fams = [Gamma(float(αvec[t]), 1.0) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          rotate = rotate, mask = mask)
+                          rotate = rotate, mask = mask, offset = offset)
 end
 
 """
@@ -1120,6 +1900,8 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_gamma_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -1128,7 +1910,8 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc  = _sanitize_missing(Y, 1.0)
+    _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped")
+    Yc  = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -1146,6 +1929,7 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         αg = exp.(θ[(p + rr + 1):(p + rr + G)])
         αvec = [αg[gidx[t]] for t in 1:p]
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -gamma_grouped_marginal_loglik_laplace(Yc, Λ, β, αvec; link = link, mask = msk,
                                                    offset = offset, hessian = hessian,
@@ -1163,11 +1947,12 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     α̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    boundary = _dispersion_group_boundary(α̂g)
-    any(boundary) && @warn "Gamma grouped-dispersion fit reached the per-group boundary (α outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
+    boundary = _dispersion_group_lower_boundary(α̂g)
+    any(boundary) && @warn "Gamma grouped-dispersion fit reached the per-group lower boundary (α below 1e-6) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_gamma_gllvm_grouped")
     return GammaGroupedFit(β̂, Λ̂, α̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
-                           boundary)
+                           boundary, _stored_offset(offset))
 end
 
 """
@@ -1178,9 +1963,9 @@ covariate coefficients `γ` (with `γ_fixed` zero mask), loadings `Λ`, per-grou
 shape `α`, species→group map `group`, `link`, maximised Laplace `loglik`,
 `converged`, and `iterations`. Linear predictor `η = β + Xγ + Λz` with species
 shape `α[group[t]]` (`Var = μ²/α`). `dispersion_boundary` (length G, T14 F1,
-2026-09-02) flags groups whose fitted `α[g]` fell outside `[1e-6, 1e6]` (see
-`_dispersion_group_boundary`); `converged` is forced `false` whenever any group
-is flagged.
+2026-09-02) flags groups whose fitted `α[g]` fell below `1e-6` (see
+`_dispersion_group_lower_boundary`; a large `α` is identified and not flagged,
+2026-09-29); `converged` is forced `false` whenever any group is flagged.
 """
 struct GammaGroupedCovFit
     β::Vector{Float64}
@@ -1194,7 +1979,7 @@ struct GammaGroupedCovFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
-    dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion / collapse flag (T14 F1)
+    dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion (lower-end) flag (T14 F1)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1204,7 +1989,7 @@ GammaGroupedCovFit(β, γ, γ_fixed, Λ, α, group, link, loglik, converged, ite
 GammaGroupedCovFit(β, γ, γ_fixed, Λ, α, group, link, loglik, converged, iterations,
                    hessian::Symbol) =
     GammaGroupedCovFit(β, γ, γ_fixed, Λ, α, group, link, loglik, converged, iterations,
-                       hessian, _dispersion_group_boundary(α))
+                       hessian, _dispersion_group_lower_boundary(α))
 
 function Base.show(io::IO, f::GammaGroupedCovFit)
     p, K = size(f.Λ); q = length(f.γ)
@@ -1273,7 +2058,8 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = _sanitize_missing(Y, 1.0)
+    _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped_cov")
+    Yc = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -1292,6 +2078,7 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
         αg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         αvec = [αg[gidx[t]] for t in 1:p]
         O = _build_offset(X_fit, γ)
+        _eta_cap_guarded(link) && _eta_above_clamp(β, O; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -gamma_grouped_marginal_loglik_laplace(Yc, Λ, β, αvec; link = link, mask = msk,
                                                    offset = O, hessian = hessian,
@@ -1311,9 +2098,11 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     α̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
-    boundary = _dispersion_group_boundary(α̂g)
-    any(boundary) && @warn "Gamma grouped-cov fit reached the per-group boundary (α outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion or near-deterministic limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
+    boundary = _dispersion_group_lower_boundary(α̂g)
+    any(boundary) && @warn "Gamma grouped-cov fit reached the per-group lower boundary (α below 1e-6) for group(s) $(findall(boundary)); those groups' shape is at the extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     loglik, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, link, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
+                            caller = "fit_gamma_gllvm_grouped_cov")
     return GammaGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, α̂g, gidx, link,
                               loglik, conv && !any(boundary), iters, hessian, boundary)
 end
@@ -1340,8 +2129,106 @@ function _nb1_grouped_laplace_weight(hessian::Symbol, f::NB1, μ, me, y, link::L
         "hessian=:observed is currently supported only for NB1 with LogLink()"))
     φ = float(f.φ)
     r = μ / φ
-    s_μ = (digamma(y + r) - digamma(r) - log1p(φ)) / φ
-    return -μ * s_μ - (μ / φ)^2 * (trigamma(y + r) - trigamma(r))
+    d1, d2 = _nb1_rise_diffs(r, Int(y))   # stable toward φ → 0 (negbin1.jl)
+    s_μ = (d1 - log1p(φ)) / φ
+    return -μ * s_μ - (μ / φ)^2 * d2
+end
+
+# Per-site mode search for the NB1 grouped kernel (#503, the #479 pattern). Returns
+# `(z, converged)`. `step_weight` picks the curvature that sets the Newton step; it
+# never changes the mode, which is the fixed point of `Λ's − z = 0` whatever W is.
+#
+# Before this fix the kernel ran undamped Fisher scoring (the loop below, unmodified
+# apart from the halving) and returned whatever `z` it held when the loop stopped,
+# converged or not — the same defect #479 fixed for Gamma. The audit's stress probe
+# (Λ scaled up to 3x, warm start perturbed ±50%) measured a 3.6% rate (108/3000, later
+# re-measured 20/600) of sites where the returned z had |grad log-posterior| > 1e-4
+# while a from-scratch restart converged cleanly, yet the kernel still returned a
+# finite site log-likelihood.
+#
+# Now a step that lowers the per-site log-posterior is halved (the generic core's
+# `_laplace_mode` rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` is true only when the full proposed step is below `tol`,
+# which is the old loop's own stopping test. A heavily halved step does NOT count.
+function _nb1_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link, step_weight::Symbol;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    z = zeros(K)
+    for _ in 1:maxiter
+        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
+        me = mu_eta.(Ref(link), η)
+        s  = _glm_score.(fams, μ, n, me, y)
+        W  = _nb1_grouped_laplace_weight.(Ref(step_weight), fams, μ, me, y, Ref(link))
+        if mask !== nothing
+            s = ifelse.(mask, s, 0.0)
+            W = ifelse.(mask, W, 0.0)
+        end
+        A  = Symmetric(Λ' * (W .* Λ) + I)
+        Δ  = _safe_solve(A, Λ' * s .- z)
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
+    end
+    return z, false
+end
+
+# The NB1 site-mode chain shared by the likelihood and getLV (#503 follow-up).
+function _nb1_grouped_site_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _nb1_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                              mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Larger-budget retry (review of #507, mirrors #509's Student-t fallback). A
+    # genuinely converging site can still need more than the default
+    # `maxiter = 100` Fisher-scored steps under ill-conditioned curvature
+    # (measured: reviewer's stress probe found 2/200 stationary, negative-definite
+    # sites failing at `maxiter = 100` that converge cleanly, to the same `z`, at
+    # `maxiter = 2000`). Retry Fisher scoring with a 20x iteration budget, still
+    # restarting from z = 0, before falling back to the `:observed` direction below —
+    # it runs only where the default budget failed, so every site that converged
+    # within `maxiter` keeps its original path and iteration count.
+    ok || ((z, ok) = _nb1_grouped_mode(fams, y, n, Λ, β, link, :fisher;
+                                       mask = mask, offset = offset,
+                                       maxiter = 20 * maxiter, tol = tol))
+    # Fallback (#503, the #479 pattern). If Fisher scoring does not converge, retry
+    # with the observed weight, but only under LogLink — the only link this kernel's
+    # :observed weight supports (see `_nb1_grouped_laplace_weight`). Unlike Gamma's
+    # fallback, NB1's observed curvature is not established to be sign-definite in
+    # general, so this is offered only as a second candidate DIRECTION: the
+    # step-halving accept test inside `_nb1_grouped_mode` still requires the trial
+    # point to raise the per-site log-posterior over its own q0, so an indefinite or
+    # wrong-signed step is rejected (falls through to non-convergence), never accepted.
+    if !ok && link isa LogLink
+        z, ok = _nb1_grouped_mode(fams, y, n, Λ, β, link, :observed;
+                                  mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    end
+    return z, ok
 end
 
 # Per-site Laplace log-marginal with per-species NB1 dispersion markers `fams`.
@@ -1351,35 +2238,17 @@ function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Ab
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = zeros(K)
-    local A
-    for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
-        μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
-        me = mu_eta.(Ref(link), η)
-        s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored,
-        # ALWAYS — `:fisher` here is not the caller's selector. Expected
-        # information is >= 0, so `Λ'WΛ + I` is SPD by construction and every
-        # Newton step is a descent step. The observed weight CAN be negative
-        # (measured: Beta at φ=12, η=−1.2, y=0.87 gives −1.218), which made this
-        # loop an unguarded, possibly-indefinite Newton whenever the caller
-        # asked for `:observed` — and the grouped fitters default to it.
-        # The selector still governs the post-loop log-det below, which is the
-        # only role that needs the observed curvature. The converged mode is
-        # unchanged either way: it is the fixed point of `Λ's − z = 0`, which
-        # does not involve W at all — W only sets the step.
-        W  = _nb1_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link))
-        if mask !== nothing
-            s = ifelse.(mask, s, 0.0)
-            W = ifelse.(mask, W, 0.0)
-        end
-        A  = Symmetric(Λ' * (W .* Λ) + I)
-        Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
-    end
+    # Role separation (2026-08-25). The MODE SEARCH is Fisher-scored first:
+    # `:fisher` here is not the caller's selector, which governs only the post-loop
+    # log-det below. Expected information is >= 0, so `Λ'WΛ + I` is SPD by
+    # construction. The converged mode is unchanged either way: it is the fixed point
+    # of `Λ's − z = 0`, which does not involve W at all. W only sets the step.
+    z, ok = _nb1_grouped_site_mode(fams, y, n, Λ, β, link;
+                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # A search that did not converge must not produce a finite value. -Inf makes the
+    # fitters' objective return its 1e12 sentinel instead of a garbage surface (#503,
+    # the #479 pattern).
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -1393,7 +2262,7 @@ function _nb1_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::Ab
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -1434,8 +2303,11 @@ Result of [`fit_nb1_gllvm_grouped`](@ref): intercepts `β` (length p), loadings 
 `Var_t = μ_t(1+φ[group[t]])`). `dispersion_boundary` (length G, T14 F1,
 2026-09-02) flags groups whose fitted `φ[g]` fell outside `[1e-6, 1e6]` (see
 `_dispersion_group_boundary`) — the Poisson limit at the lower end, numerically
-flat overdispersion at the upper end; `converged` is forced `false` whenever
-any group is flagged.
+flat overdispersion at the upper end. Only the upper end (`φ[g] > 1e6`) forces
+`converged` to `false`; `φ[g] < 1e-6`, the NB1 Poisson limit, only warns (maintainer
+decision 2026-09-29: the Poisson limit warns only).
+`offset` is the p×n training offset the fit was made with (`nothing` when the fit had
+none); [`getLV`](@ref) uses it by default.
 """
 struct NB1GroupedFit
     β::Vector{Float64}
@@ -1448,6 +2320,7 @@ struct NB1GroupedFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group Poisson-limit / flat-overdispersion flag (T14 F1)
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1457,6 +2330,9 @@ NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations) =
 NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian::Symbol) =
     NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian,
                  _dispersion_group_boundary(φ))
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
+    NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
 
 function Base.show(io::IO, f::NB1GroupedFit)
     p, K = size(f.Λ)
@@ -1479,25 +2355,43 @@ function _nparams(fit::NB1GroupedFit)
 end
 
 """
-    getLV(fit::NB1GroupedFit, Y; N=nothing, rotate=true, mask=nothing) -> n×K matrix
+    getLV(fit::NB1GroupedFit, Y; N=nothing, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a grouped-dispersion NB1 fit, using the
 per-trait linear-variance dispersion `φ[group[t]]` in the same Laplace mode
 equations as the grouped likelihood.
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
+stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
+`offset` you pass (a p×n matrix, a scalar or a length-p vector). New units from an
+offset fit without an `offset` are refused, as gllvmTMB refuses `newdata` that lacks
+the offset variable.
 """
 function getLV(fit::NB1GroupedFit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-               rotate::Bool = true, mask = nothing)
+               rotate::Bool = true, mask = nothing, offset = nothing)
     p = size(Y, 1)
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [NB1(float(φvec[t])) for t in 1:p]
     return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
-                          N = N, rotate = rotate, mask = mask)
+                          N = N, rotate = rotate, mask = mask, offset = offset)
 end
+
+# NB1 grouped fits can stop on a zero-length line-search step, which Optim counts as
+# "the objective did not change" (f_converged) and reports as converged, while the
+# gradient is still large (#485). Scale-aware gradient test, as in `_tweedie_verdict`
+# and `_beta_grouped_g_met`: the residual is judged against `g_tol` scaled by the
+# objective's own size, so a caller's g_tol below the finite-difference noise floor
+# does not turn a stationary point into a non-converged fit. A gradient residual at or
+# above ~1e11 is what a finite-difference step looks like when it lands on the 1e12
+# objective-failure penalty — that fails this test on scale alone and is never a pass.
+_nb1_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
+    isfinite(gres) && gres <= max(g_tol, g_tol * abs(Optim.minimum(res))))
 
 """
     fit_nb1_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
-                          hessian=:observed, …) -> NB1GroupedFit
+                          hessian=:observed, β_init=nothing, Λ_init=nothing, …) -> NB1GroupedFit
 
 Fit a negative-binomial type-1 (NB1) GLLVM with grouped / species-specific
 dispersion (gllvm's `disp.group`): species `t` shares dispersion `φ[group[t]]`
@@ -1520,14 +2414,18 @@ approximation.
     already defaulting to `:observed` — matched `gllvmTMB` to 1.3e-8. Aligning this
     default with the NB2 ([`fit_nb_gllvm_grouped`](@ref)) and Beta siblings closes
     the gap. Caught by `test/parity/test_nox_dispersion_parity.jl`.
+`β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
+as in [`fit_nb_gllvm`](@ref); the per-group `φ` still starts at `φ₀ = 1`.
 """
 function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogLink(), mask = nothing, offset = nothing,
-        hessian::Symbol = :observed,
+        hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_nb1_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -1540,13 +2438,9 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0 = vec(sum(Zemp; dims = 2)) ./ n
-    Zc = Zemp .- β0
-    F = svd(Zc); kk = min(K, length(F.S))
-    Λ0 = zeros(p, K)
-    @inbounds for j in 1:kk
-        Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
-    end
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, mask = msk,
+                                 guarded = _eta_cap_guarded(link),
+                                 caller = "fit_nb1_gllvm_grouped")   # #874
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(1.0), G))
 
     function negll(θ)
@@ -1554,6 +2448,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φg = exp.(θ[(p + rr + 1):(p + rr + G)])
         φvec = [φg[gidx[t]] for t in 1:p]
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -nb1_grouped_marginal_loglik_laplace(Yc, Λ, β, φvec; link = link, mask = msk,
                                                  offset = offset, hessian = hessian,
@@ -1565,17 +2460,27 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
-    θ̂ = Optim.minimizer(res)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    # NB1's Poisson limit is φ → 0: a non-converged fit crawling there is refit with those
+    # groups fixed at φ = 1e-10 (the NB2 polish mirrored; #615 NB1 follow-up).
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
+        at_limit = <(1e-3), limit_log = log(1e-10),
+        conv_test = r -> Optim.converged(r) && _nb1_grouped_g_met(r, g_tol))
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    boundary = _dispersion_group_boundary(φ̂g)
-    any(boundary) && @warn "NB1 grouped-dispersion fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' overdispersion is at the Poisson limit or numerically flat on this data, and optimizer convergence flags are unreliable for them." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
-    return NB1GroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
-                         boundary)
+    boundary = _dispersion_group_boundary(φ̂g)   # flags BOTH ends; feeds `dispersion_boundary` and the interval code
+    # NB1 (Var = μ(1+φ)) has its Poisson limit at the LOWER end, φ → 0, so the maintainer
+    # decision ("the Poisson limit warns only", 2026-09-29) applies there; φ above 1e6 is
+    # extreme overdispersion the data do not identify and still blocks `converged`.
+    lowb = φ̂g .> 1e6
+    any(lowb) && @warn "NB1 grouped-dispersion fit has φ above 1e6 for group(s) $(findall(lowb)); that overdispersion is numerically flat and not identified from this data; converged is false for this fit." maxlog=1
+    any(<(1e-6), φ̂g) && @warn "NB1 grouped-dispersion fit has φ below 1e-6 for group(s) $(findall(<(1e-6), φ̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
+    loglik, conv, iters = _fit_verdict(nll, conv0, iters0)   # conv0 includes the #485 gradient test
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm_grouped")
+    return NB1GroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
+                         boundary, _stored_offset(offset))
 end
 
 """
@@ -1587,8 +2492,9 @@ linear-variance dispersion `φ`, species→group map `group`, `link`, maximised
 Laplace `loglik`, `converged`, and `iterations`. Linear predictor
 `η = β + Xγ + Λz` with species dispersion `φ[group[t]]` (`Var = μ(1+φ)`).
 `dispersion_boundary` (length G, T14 F1, 2026-09-02) flags groups whose fitted
-`φ[g]` fell outside `[1e-6, 1e6]` (see `_dispersion_group_boundary`);
-`converged` is forced `false` whenever any group is flagged.
+`φ[g]` fell outside `[1e-6, 1e6]` (see `_dispersion_group_boundary`); only the upper
+end (`> 1e6`, unidentified overdispersion) forces `converged` to `false`, while
+`φ[g] < 1e-6` (the NB1 Poisson limit) only warns.
 """
 struct NB1GroupedCovFit
     β::Vector{Float64}
@@ -1700,6 +2606,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
         φg = exp.(θ[(p + q + rr + 1):(p + q + rr + G)])
         φvec = [φg[gidx[t]] for t in 1:p]
         O = _build_offset(X_fit, γ)
+        _eta_cap_guarded(link) && _eta_above_clamp(β, O; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -nb1_grouped_marginal_loglik_laplace(Yc, Λ, β, φvec; link = link, mask = msk,
                                                  offset = O, hessian = hessian,
@@ -1711,19 +2618,29 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
-                         autodiff = :finite)
-    θ̂ = Optim.minimizer(res)
+    opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    res = Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+    # NB1's Poisson limit is φ → 0: a non-converged fit crawling there is refit with those
+    # groups fixed at φ = 1e-10 (the NB2 polish mirrored; #615 NB1 follow-up).
+    θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + q + rr + 1;
+        at_limit = <(1e-3), limit_log = log(1e-10))
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     φ̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
-    boundary = _dispersion_group_boundary(φ̂g)
-    any(boundary) && @warn "NB1 grouped-cov fit reached the per-group boundary (φ outside [1e-6, 1e6]) for group(s) $(findall(boundary)); those groups' overdispersion is at the Poisson limit or numerically flat on this data, and optimizer convergence flags are unreliable for them." maxlog=1
-    loglik, conv, iters = _fit_verdict(res)
+    boundary = _dispersion_group_boundary(φ̂g)   # flags BOTH ends; feeds `dispersion_boundary` and the interval code
+    # NB1 (Var = μ(1+φ)) has its Poisson limit at the LOWER end, φ → 0, so the maintainer
+    # decision ("the Poisson limit warns only", 2026-09-29) applies there; φ above 1e6 is
+    # extreme overdispersion the data do not identify and still blocks `converged`.
+    lowb = φ̂g .> 1e6
+    any(lowb) && @warn "NB1 grouped-cov fit has φ above 1e6 for group(s) $(findall(lowb)); that overdispersion is numerically flat and not identified from this data; converged is false for this fit." maxlog=1
+    any(<(1e-6), φ̂g) && @warn "NB1 grouped-cov fit has φ below 1e-6 for group(s) $(findall(<(1e-6), φ̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
+    loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
+    conv = _eta_cap_verdict(conv, link, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
+                            caller = "fit_nb1_gllvm_grouped_cov")
     return NB1GroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
-                            loglik, conv && !any(boundary), iters, hessian, boundary)
+                            loglik, conv && !any(lowb), iters, hessian, boundary)
 end
 
 # ===========================================================================
@@ -1768,27 +2685,30 @@ function _tweedie_grouped_laplace_weight(hessian::Symbol, f::TweedieED, μ, me, 
     return _glm_obs_weight(f, μ, 1, me, y, link, η)
 end
 
-# Per-site Laplace log-marginal with per-species Tweedie dispersion markers `fams`.
-function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+# Per-site mode search for the Tweedie grouped kernel (#503, the #479 / NB1 pattern).
+# Returns `(z, converged)`. The step is Fisher-scored always: expected information is
+# >= 0, so `Λ'WΛ + I` is SPD and every Newton direction ascends; the converged mode is
+# the fixed point of `Λ's − z = 0`, which does not involve W.
+#
+# Before this change the kernel ran undamped Fisher scoring (`z .+ Δ`) and returned
+# whatever `z` it held when the loop stopped, converged or not, so a site that
+# overshot still produced a finite log-likelihood (#503 audit: 4.3-7.3% of stress
+# draws on the Tweedie grouped kernel). Now a large step that lowers the per-site
+# log-posterior is halved (`_grouped_laplace_mode_logpost`; small steps and accepted
+# full steps are bit-identical to the old update), and `converged` is true only when
+# the FULL proposed step is below `tol`, the old loop's own stopping test. A heavily
+# halved step does not count.
+function _tweedie_grouped_mode(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
-        mask = nothing, offset = nothing, hessian::Symbol = :observed,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        mask = nothing, offset = nothing, maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
     z = zeros(K)
-    local A
     for _ in 1:maxiter
         η  = _clamp_eta.(β .+ off .+ Λ * z)
         μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(fams, μ, n, me, y)
-        # Role separation (mirrors NB2/Beta/NB1 above). The MODE SEARCH is
-        # Fisher-scored, ALWAYS — `:fisher` here is not the caller's selector.
-        # Expected information is >= 0, so `Λ'WΛ + I` is SPD by construction
-        # and every Newton step is a descent step. The selector still governs
-        # the post-loop log-det below, which is the only role that needs the
-        # observed curvature. The converged mode is unchanged either way: it
-        # is the fixed point of `Λ's − z = 0`, which does not involve W at all.
         W  = _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
         if mask !== nothing
             s = ifelse.(mask, s, 0.0)
@@ -1796,10 +2716,56 @@ function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n
         end
         A  = Symmetric(Λ' * (W .* Λ) + I)
         Δ  = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z  = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, z;
+                                               mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _grouped_laplace_mode_logpost(fams, y, n, Λ, β, link, ztrial;
+                                                       mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
+    return z, false
+end
+
+# Per-site Laplace log-marginal with per-species Tweedie dispersion markers `fams`.
+function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n::AbstractVector,
+        Λ::AbstractMatrix, β::AbstractVector, link::Link;
+        mask = nothing, offset = nothing, hessian::Symbol = :observed,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p, K = size(Λ)
+    off = offset === nothing ? false : offset
+    # Role separation (mirrors NB2/Beta/NB1 above): the MODE SEARCH is Fisher-scored,
+    # always; `hessian` governs only the post-search log-det below.
+    z, ok = _tweedie_grouped_mode(fams, y, n, Λ, β, link;
+                                  mask = mask, offset = offset, maxiter = maxiter, tol = tol)
+    # Larger-budget retry from z = 0 (mirrors #507's NB1 retry), only where the default
+    # budget failed, so sites that converged within `maxiter` keep their path.
+    ok || ((z, ok) = _tweedie_grouped_mode(fams, y, n, Λ, β, link;
+                                           mask = mask, offset = offset,
+                                           maxiter = 20 * maxiter, tol = tol))
+    # A search that did not converge must not produce a finite value: -Inf makes the
+    # fitter's objective return its failure sentinel (`_TWEEDIE_FAIL_PENALTY`) instead
+    # of a garbage surface (#503).
+    ok || return -Inf
     η  = _clamp_eta.(β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
@@ -1813,7 +2779,7 @@ function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n
         (mask === nothing || mask[t]) || continue
         ℓ += _glm_logpdf(fams[t], μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -2028,6 +2994,8 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_tweedie_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_tweedie_gllvm_grouped: hessian must be :fisher or :observed; got :$hessian"))
@@ -2060,6 +3028,7 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φg = exp.(θ[(p + rr + 1):(p + rr + G)])
         φvec = [φg[gidx[t]] for t in 1:p]
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return _TWEEDIE_FAIL_PENALTY   # #869: η-clamp plateau
         ξ = spec.nfree == 0 ? Float64[] : @view θ[(p + rr + G + 1):end]
         pw = if spec.nfree == 0
             spec.values
@@ -2105,6 +3074,7 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
         @warn "fit_tweedie_gllvm_grouped: the power ran to the boundary of (1, 2) \
                (p̂ = $(p̂), φ̂ = $(φ̂g)); the fit is flagged as not converged."
     end
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_tweedie_gllvm_grouped")
     if spec.mode === :species && !spec.fixed
         return TweediePerTraitPowerFit(β̂, Λ̂, φ̂g, collect(p̂), gidx, link, loglik, conv,
                                        Optim.iterations(res), hessian)

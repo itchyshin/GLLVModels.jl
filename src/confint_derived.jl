@@ -145,9 +145,10 @@ function _derived_unpack(θ::AbstractVector, spec::NamedTuple)
 end
 
 # ---------------------------------------------------------------------------
-# Σ_y_site = Λ_B Λ_B' + diag(d_total) — the per-site (within-species)
-# trait covariance. The phylogenetic block (rank-1 across species) is not
-# part of the per-site covariance; it contributes only to the species-level
+# Σ_y_site = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total) — the per-site (within-species)
+# trait covariance. The W tier carries its full cross-trait block (issue #135).
+# The phylogenetic block (rank-1 across species) is not part of the per-site
+# covariance; it contributes only to the species-level
 # shared variance. Following the bootstrap-sigma R convention.
 # ---------------------------------------------------------------------------
 function _sigma_y_site_from_unpacked(u::NamedTuple, spec::NamedTuple)
@@ -157,13 +158,11 @@ function _sigma_y_site_from_unpacked(u::NamedTuple, spec::NamedTuple)
     σ² = u.σ_eps^2
     Λ_B = u.Λ_B
     A = Λ_B * Λ_B'
+    if K_W > 0 && u.Λ_W !== nothing
+        A = A + u.Λ_W * u.Λ_W'
+    end
     @inbounds for t in 1:p
         v = σ²
-        if K_W > 0 && u.Λ_W !== nothing
-            for k in 1:size(u.Λ_W, 2)
-                v += u.Λ_W[t, k]^2
-            end
-        end
         if has_diag && u.σ²_B !== nothing
             v += u.σ²_B[t]
         end
@@ -179,8 +178,9 @@ end
     sigma_y_site(fit::GllvmFit) -> Matrix
 
 The per-site (within-species) trait covariance
-`Σ_y_site = Λ_B Λ_B' + diag(d_total)` where
-`d_total[t] = (Λ_W Λ_W')[t,t] + σ²_B[t] + σ²_W[t] + σ²_eps`. For J1,
+`Σ_y_site = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total)` where
+`d_total[t] = σ²_B[t] + σ²_W[t] + σ²_eps`. The W tier contributes its full
+cross-trait block `Λ_W Λ_W'`, as in gllvmTMB (#135). For J1,
 `Λ_W = nothing`, `σ²_B = σ²_W = 0`, so the diagonal collapses to `σ²_eps`.
 
 The phylogenetic block is *not* included — for J3, the phylo
@@ -202,8 +202,14 @@ end
     communality(fit::GllvmFit) -> Vector
 
 Per-trait communality `c²[t] = (Λ_B Λ_B')[t, t] / Σ_y_site[t, t]`. This
-is the fraction of the per-site trait variance explained by the shared
-latent factors. Values are in [0, 1].
+is the fraction of the per-site trait variance explained by the unit-tier
+latent factors `Λ_B`. Values are in [0, 1]. The W-tier block `Λ_W Λ_W'` is
+also shared across traits (#135) but is not counted here.
+
+With `K_W > 0`, each column of `y` is one unit observed once, so the data
+identify only `Λ_B Λ_B' + Λ_W Λ_W'`, not how it splits between the tiers.
+This value then depends on the starting values and should not be
+interpreted; see the Identifiability section of the Model page.
 """
 function communality(fit::GllvmFit)
     spec = _derived_spec(fit)
@@ -217,9 +223,17 @@ end
     proportions(fit::GllvmFit; component::Symbol = :shared) -> Vector
 
 Per-trait variance decomposition. Each entry is in [0, 1]; the
-`:shared`, `:unique_W`, `:unique_B`, and `:residual` shares sum to 1
-(when has_diag and W tier are off, only `:shared` and `:residual` are
-non-zero).
+`:shared`, `:unique_W`, `:unique_B`, `:unique_Wd` and `:residual` shares
+sum to 1 (when has_diag and W tier are off, only `:shared` and `:residual`
+are non-zero).
+
+Despite its name, `:unique_W` is the diagonal of the W-tier block
+`Λ_W Λ_W'`, which also covaries across traits (#135). With one unit
+per column of `y`, the data identify only the sum of the `:shared` and
+`:unique_W` shares, and only the sum of the `:unique_B`, `:unique_Wd` and
+`:residual` shares. With `K_W > 0` or `has_diag = true`, the individual
+shares within each sum depend on the starting values and should not be
+interpreted; see the Identifiability section of the Model page.
 
 `component` can be:
   - `:shared`    — `(Λ_B Λ_B')[t,t] / Σ_y_site[t,t]`   (== communality)
@@ -275,15 +289,32 @@ Cross-trait correlation derived from `Σ_y_site`:
 `ρ[i, j] = Σ_y_site[i, j] / sqrt(Σ_y_site[i, i] · Σ_y_site[j, j])`.
 
 Diagonal entries are exactly 1.0. The off-diagonals are the *site-level*
-correlations driven by the shared loadings Λ_B.
+correlations driven by the loadings Λ_B and, when present, Λ_W. They depend
+only on the identified total `Σ_y_site`, so they do not depend on how a
+`K_W > 0` fit splits the covariance between the two tiers.
+
+Degenerate traits: the correlation is undefined for a trait whose
+`Σ_y_site[t, t] ≤ 0` (zero variance, or a round-off negative). Every entry
+of row and column `t` — including the diagonal — is then `NaN`, and one
+warning naming the affected traits is emitted per call. No `DomainError`
+or silent `Inf` is produced.
 """
 function correlation(fit::GllvmFit)
     Σ = sigma_y_site(fit)
     p = size(Σ, 1)
     R = similar(Σ, Float64)
+    bad = [t for t in 1:p if !(Σ[t, t] > 0)]
+    isempty(bad) || @warn "correlation: trait(s) $(bad) have non-positive variance " *
+        "Σ_y_site[t, t] ≤ 0; their correlations are returned as NaN" maxlog = 1
     @inbounds for j in 1:p, i in 1:p
-        denom = sqrt(Σ[i, i] * Σ[j, j])
-        R[i, j] = Σ[i, j] / denom
+        if Σ[i, i] > 0 && Σ[j, j] > 0
+            denom = sqrt(Σ[i, i] * Σ[j, j])
+            # the product can underflow to 0 although each variance is positive
+            denom > 0 || (denom = sqrt(Σ[i, i]) * sqrt(Σ[j, j]))
+            R[i, j] = Σ[i, j] / denom
+        else
+            R[i, j] = NaN
+        end
     end
     return R
 end
@@ -399,13 +430,11 @@ function _derived_site_cov(fit::GllvmFit)
     σ² = fit.pars.σ_eps^2
     Λ_B = fit.pars.Λ
     A = Λ_B * Λ_B'
+    if K_W > 0 && fit.pars.Λ_W !== nothing
+        A = A + fit.pars.Λ_W * fit.pars.Λ_W'      # full W-tier block (issue #135)
+    end
     @inbounds for t in 1:p
         v = σ²
-        if K_W > 0 && fit.pars.Λ_W !== nothing
-            for k in 1:size(fit.pars.Λ_W, 2)
-                v += fit.pars.Λ_W[t, k]^2
-            end
-        end
         if has_diag && fit.pars.σ²_B !== nothing
             v += fit.pars.σ²_B[t]
         end
@@ -477,7 +506,19 @@ Returns a NamedTuple with fields:
   - `n_converged::Int`       — number of bootstrap fits that converged
   - `n_valid::Int`           — number of replicates with a finite derived value
   - `replicates::Vector{Float64}` — the n_boot derived-quantity samples
-                                    (with `NaN` for failed refits)
+                                    (with `NaN` for failed refits; values from
+                                    refits that did not converge are kept for
+                                    inspection but are not used for the bounds)
+  - `converged::Vector{Bool}` — per refit: did it converge
+  - `n_used::Int`            — replicates that entered the percentiles
+                               (converged and finite)
+  - `n_dropped::Int`         — `n_boot - n_used`
+
+A refit that errors or does not converge is dropped from the percentile
+computation, as in gllvmTMB's `bootstrap_Sigma`; `n_used` and `n_dropped`
+report the counts, and one warning is issued per call when more than half of
+the refits are dropped. The bounds are `NaN` when fewer than 10 replicates are
+used.
 
 Pass `y`, `X`, `Σ_phy` matching what was originally passed to
 `fit_gaussian_gllvm` (the bootstrap needs them to simulate and refit).
@@ -494,15 +535,23 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
                               n_sites::Union{Nothing, Integer} = nothing,
                               X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                               Σ_phy::Union{Nothing, AbstractMatrix} = nothing,
-                              verbose::Bool = false)
+                              verbose::Bool = false,
+                              # Internal test seam, not API (see `bootstrap_ci`, #140).
+                              _refit::Function = fit_gaussian_gllvm)
 
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     n_boot ≥ 1   || throw(ArgumentError("n_boot must be ≥ 1; got $n_boot"))
+    _check_unpinned_refit(fit, "bootstrap_ci_derived")
 
     if _has_gaussian_record(fit)
         data=y===nothing ? fit.integration.data.responses : y
-        return _gaussian_record_bootstrap_derived(fit,derived_fn;Y=data,X=X,Σ_phy=Σ_phy,
+        r=_gaussian_record_bootstrap_derived(fit,derived_fn;Y=data,X=X,Σ_phy=Σ_phy,
             n_sites=n_sites,n_boot=n_boot,level=level,seed=seed)
+        # The record refit already keeps only converged refits, and its percentiles use
+        # the finite derived values among them (`n_valid`), so those are the ones used (#140).
+        n_dropped=n_boot-r.n_valid
+        _bootstrap_warn_dropped("bootstrap_ci_derived",n_dropped,n_boot)
+        return merge(r,(n_used=r.n_valid,n_dropped=n_dropped))
     end
 
     model = fit.model
@@ -528,6 +577,7 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
             "`y = ...`, `X = ...`, or `n_sites = ...`."))
     end
 
+    X = _mean_X(fit, X, n)
     if q > 0 && X === nothing
         throw(ArgumentError(
             "Fitted model has q = $q fixed effects; pass X to bootstrap_ci_derived."))
@@ -576,24 +626,22 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
 
     rng = MersenneTwister(seed)
     replicates = fill(NaN, n_boot)
-    n_converged = 0
+    converged = fill(false, n_boot)
 
     y_b = Matrix{Float64}(undef, p, n)
 
     for b in 1:n_boot
         _derived_simulate!(rng, y_b, μ̂, L_site, L_phy, Λ_phy_aug)
         try
-            fit_b = fit_gaussian_gllvm(y_b;
-                                       K = K_B,
-                                       K_W = K_W,
-                                       has_diag = has_diag,
-                                       K_phy = K_phy,
-                                       has_phy_unique = has_phy_unique,
-                                       Σ_phy = Σ_phy,
-                                       X = X)
-            if fit_b.converged
-                n_converged += 1
-            end
+            fit_b = _refit(y_b;
+                           K = K_B,
+                           K_W = K_W,
+                           has_diag = has_diag,
+                           K_phy = K_phy,
+                           has_phy_unique = has_phy_unique,
+                           Σ_phy = Σ_phy,
+                           X = X)
+            converged[b] = fit_b.converged
             v = call_derived(fit_b)
             if isfinite(v)
                 replicates[b] = v
@@ -604,9 +652,16 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
     end
 
     α = (1 - level) / 2
-    valid = filter(isfinite, replicates)
-    n_valid = length(valid)
-    lower, upper = if n_valid ≥ 10
+    n_valid = count(isfinite, replicates)
+    n_converged = count(converged)
+    # Percentiles over converged refits only (#140): a finite derived value from a
+    # refit that stopped far from the optimum is not a draw from the estimator.
+    usable = [converged[b] && isfinite(replicates[b]) for b in 1:n_boot]
+    valid = replicates[usable]
+    n_used = length(valid)
+    n_dropped = n_boot - n_used
+    _bootstrap_warn_dropped("bootstrap_ci_derived", n_dropped, n_boot)
+    lower, upper = if n_used ≥ 10
         (_derived_percentile(valid, α), _derived_percentile(valid, 1 - α))
     else
         (NaN, NaN)
@@ -617,7 +672,10 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
             upper       = upper,
             n_converged = n_converged,
             n_valid     = n_valid,
-            replicates  = replicates)
+            replicates  = replicates,
+            converged   = converged,
+            n_used      = n_used,
+            n_dropped   = n_dropped)
 end
 
 # ---------------------------------------------------------------------------
@@ -682,6 +740,9 @@ function _derived_safe_nll(θ::AbstractVector, y::AbstractMatrix,
     end
     return isfinite(v) ? v : T(_DERIVED_NLL_BARRIER)
 end
+
+# Absolute tolerance on |g(θ_refit) − c| (R: `.fix_and_refit_constraint_tol`).
+const _DERIVED_CONSTRAINT_TOL = 0.05
 
 # Constrained refit returning (ll_profile, success, θ_warm_new, g_at_min).
 # Uses an increasing-w (augmented-Lagrangian-flavoured) schedule, a
@@ -774,6 +835,13 @@ function _derived_refit_with_fixed(fit::GllvmFit,
     catch
         return (NaN, false, θ_min, NaN)
     end
+    # Constraint-satisfaction gate, mirroring R's `.fix_and_refit_nll()`
+    # (R/profile-derived.R `.fix_and_refit_constraint_tol` = 0.05): a refit whose
+    # achieved g(θ) misses the target c by more than the tolerance did not
+    # enforce the constraint, so its deviance is not a profile deviance.
+    if !isfinite(g_at_min) || abs(g_at_min - c_float) > _DERIVED_CONSTRAINT_TOL
+        return (NaN, false, θ_min, g_at_min)
+    end
     return (-nll_unpen, true, θ_min, g_at_min)
 end
 
@@ -852,13 +920,58 @@ function _derived_bisect_side(D::Function, x0::Real, step_init::Real,
     return (lo + hi) / 2
 end
 
+# ---------------------------------------------------------------------------
+# Natural-bounds handling for a derived-quantity profile CI (#142).
+#
+# A derived quantity often has a natural support: [0, 1] for communality,
+# ICC and phylogenetic signal, [-1, 1] for a correlation, [0, Inf) for a
+# variance. The bracket-then-bisect search does not know it, so a bound can
+# overshoot the support (constrained refits just past the edge still meet
+# the 0.05 constraint tolerance), or the search can stop with NaN when the
+# profile stays below the cutoff out to the edge. Given the support
+# [lo_bound, hi_bound], each side is post-processed:
+#   - a finite bound outside the support is set to the edge (boundary);
+#   - a NaN bound with a finite edge: the deviance is evaluated AT the
+#     edge. At or below the cutoff, the profile is flat to the edge and the
+#     bound is the edge (boundary). Above the cutoff, or if the refit at the
+#     edge fails, the side stays NaN: the search did not locate the
+#     crossing, and no bound is invented for it.
+# A finite bound inside the support is returned untouched, so interior
+# results do not change. Because the estimate must lie in the support, every
+# finite result satisfies lower <= estimate <= upper.
+# ---------------------------------------------------------------------------
+function _derived_check_bounds(bounds::Tuple{Real, Real}, estimate::Real)
+    lo, hi = float(bounds[1]), float(bounds[2])
+    lo < hi || throw(ArgumentError(
+        "bounds must satisfy lower < upper; got $(bounds)"))
+    lo ≤ estimate ≤ hi || throw(ArgumentError(
+        "bounds $(bounds) do not contain the estimate $(estimate)"))
+    return lo, hi
+end
+
+# One side of the natural-bounds post-processing. `D(c)` is the profile
+# deviance at c (NaN on a failed refit); `lower_side` says which side `bound`
+# and `edge` are on. Returns (bound, at_edge::Bool).
+function _derived_bound_side(D::Function, bound::Real, edge::Real,
+                             cutoff::Real, lower_side::Bool)
+    isfinite(edge) || return (bound, false)
+    if isfinite(bound)
+        outside = lower_side ? bound < edge : bound > edge
+        return outside ? (float(edge), true) : (bound, false)
+    end
+    D_edge = D(edge)
+    (isfinite(D_edge) && D_edge ≤ cutoff) && return (float(edge), true)
+    return (bound, false)
+end
+
 """
     profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                        level = 0.95, y = nothing,
                        X = nothing, Σ_phy = nothing,
                        penalty_weight = 1e6,
                        initial_step = nothing,
-                       max_expand = 20, max_bisect = 30)
+                       max_expand = 20, max_bisect = 30,
+                       bounds = nothing)
         -> NamedTuple{(:lower, :upper, :estimate, :method)}
 
 Profile-likelihood CI for a scalar-valued *derived quantity*
@@ -878,7 +991,14 @@ helpers:
 ```julia
 spec = GLLVModels._derived_spec(fit)
 f_c1 = θ -> GLLVModels._communality_packed(θ, spec, 1)
-ci   = GLLVModels.profile_ci_derived(fit, f_c1; y = y)
+ci   = GLLVModels.profile_ci_derived(fit, f_c1; y = y, bounds = (0, 1))
+```
+
+For a correlation, pass its natural support `bounds = (-1, 1)`:
+
+```julia
+f_ρ12 = GLLVModels._make_correlation_closure(spec, 1, 2)
+ci    = GLLVModels.profile_ci_derived(fit, f_ρ12; y = y, bounds = (-1, 1))
 ```
 
 Or, for σ²_eps (sanity check vs the parameter profile CI on σ_eps):
@@ -903,12 +1023,29 @@ inside the bisection grows the step rapidly, while a small first step
 keeps the very first constrained refit close to θ̂ (where the safe-NLL
 barrier is rarely triggered).
 
+`bounds` (default `nothing`) gives the natural support `(lo, hi)` of the
+quantity: `(0, 1)` for a communality, ICC or phylogenetic signal, `(-1, 1)`
+for a correlation, `(0, Inf)` for a variance. The search itself does not
+change; each side of its result is then checked against the support:
+  - a bound outside `[lo, hi]` (a constrained refit just past the edge can
+    still meet the constraint tolerance) is set to the edge;
+  - a `NaN` bound is checked at the edge: if the deviance at the edge is at
+    or below the χ²₁ cutoff (the profile is flat out to the edge), the bound
+    is the edge; if it is above the cutoff, or the refit at the edge fails,
+    the bound stays `NaN`.
+A bound already inside the support is returned unchanged. `bounds` must
+contain the estimate, so every finite result satisfies
+`lower ≤ estimate ≤ upper`. With `bounds = nothing` no check is made, and a
+bound may lie outside the support or be `NaN` on a flat profile.
+
 Returns a NamedTuple with fields:
   - `estimate::Float64` — `g(θ̂)` at the original MLE
   - `lower::Float64`    — lower CI bound (NaN if bracket failed)
   - `upper::Float64`    — upper CI bound (NaN if bracket failed)
   - `method::Symbol`    — `:profile` (both bounds), `:partial`
                           (one side NaN), or `:failed` (both NaN)
+  - `boundary::Bool`    — only when `bounds` is given: `true` when a bound
+                          was set to an edge of the support
 """
 function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                             level::Real = 0.95,
@@ -918,15 +1055,19 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                             penalty_weight::Real = 1e6,
                             initial_step::Union{Nothing, Real} = nothing,
                             max_expand::Integer = 20,
-                            max_bisect::Integer = 30)
+                            max_bisect::Integer = 30,
+                            bounds::Union{Nothing, Tuple{Real, Real}} = nothing)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
+    _check_unpinned_refit(fit, "profile_ci_derived")
     y === nothing && throw(ArgumentError(
         "profile_ci_derived requires the data matrix `y`"))
+    X = _mean_X(fit, X, size(y, 2))
 
     θ̂ = fit.pars.θ_packed
     g_hat = Float64(derived_fn(θ̂))
     isfinite(g_hat) || throw(ArgumentError(
         "derived_fn returned a non-finite value at the MLE: $g_hat"))
+    lo_b, hi_b = bounds === nothing ? (-Inf, Inf) : _derived_check_bounds(bounds, g_hat)
 
     cutoff = quantile(Chisq(1), level)
     ll_full = fit.logLik
@@ -972,6 +1113,13 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                                  max_expand = max_expand,
                                  max_bisect = max_bisect)
 
+    boundary = false
+    if bounds !== nothing
+        lower, at_lo = _derived_bound_side(deviance_lower, lower, lo_b, cutoff, true)
+        upper, at_hi = _derived_bound_side(deviance_upper, upper, hi_b, cutoff, false)
+        boundary = at_lo || at_hi
+    end
+
     method = if isnan(lower) && isnan(upper)
         :failed
     elseif isnan(lower) || isnan(upper)
@@ -979,24 +1127,17 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
     else
         :profile
     end
-    return (lower = lower, upper = upper,
-            estimate = g_hat, method = method)
+    r = (lower = lower, upper = upper, estimate = g_hat, method = method)
+    return bounds === nothing ? r : merge(r, (; boundary = boundary))
 end
 
 # ---------------------------------------------------------------------------
-# Feasible-range clamp + boundary flag for a profile_ci_derived result.
-#
-# profile_ci_derived's bracket-then-bisect walk has no notion of the derived
-# quantity's natural feasible range [lo_bound, hi_bound]: a bound can
-# overshoot past it (numerical slack near a genuinely near-boundary
-# optimum), or the deviance can plateau below the χ²₁ cutoff all the way out
-# to the range edge without ever crossing it (max_expand exhausted → NaN /
-# :partial, indistinguishable from an unrelated bracketing failure). This
-# wrapper (1) clamps any bound that violates the feasible range back to the
-# edge, and (2) for a NaN bound with a finite edge, evaluates the deviance
-# AT the edge itself — if it is still below cutoff, the CI plateaus at the
-# boundary and that is reported as the bound with `boundary = true`, rather
-# than a bare NaN/:partial.
+# Feasible-range clamp + boundary flag for an existing profile_ci_derived
+# result `r` (computed without `bounds`). Applies the same natural-bounds
+# rules as `profile_ci_derived(...; bounds = (lo_bound, hi_bound))` (see
+# `_derived_bound_side`), with each edge refit warm-started from θ̂ rather
+# than from the search path. profile_ci_total_variance and
+# profile_ci_phylo_signal now pass `bounds` directly.
 # ---------------------------------------------------------------------------
 function _profile_ci_bounded(fit::GllvmFit, derived_fn::Function, r::NamedTuple;
                              level::Real, y::AbstractMatrix,
@@ -1004,31 +1145,15 @@ function _profile_ci_bounded(fit::GllvmFit, derived_fn::Function, r::NamedTuple;
                              Σ_phy::Union{Nothing, AbstractMatrix},
                              lo_bound::Real, hi_bound::Real)
     cutoff = quantile(Chisq(1), level)
-    lower, upper, boundary = r.lower, r.upper, false
-
-    if isfinite(lower) && lower < lo_bound
-        lower, boundary = float(lo_bound), true
-    elseif isnan(lower) && isfinite(lo_bound)
-        ll_c, ok, _, _ = _derived_refit_with_fixed(fit, derived_fn, lo_bound, y, X, Σ_phy)
-        if ok
-            D = 2.0 * (fit.logLik - ll_c)
-            if isfinite(D) && D ≤ cutoff
-                lower, boundary = float(lo_bound), true
-            end
-        end
+    lo_b, hi_b = _derived_check_bounds((lo_bound, hi_bound), r.estimate)
+    X = _mean_X(fit, X, size(y, 2))
+    D = function(c)
+        ll_c, ok, _, _ = _derived_refit_with_fixed(fit, derived_fn, c, y, X, Σ_phy)
+        return ok ? 2.0 * (fit.logLik - ll_c) : NaN
     end
-
-    if isfinite(upper) && upper > hi_bound
-        upper, boundary = float(hi_bound), true
-    elseif isnan(upper) && isfinite(hi_bound)
-        ll_c, ok, _, _ = _derived_refit_with_fixed(fit, derived_fn, hi_bound, y, X, Σ_phy)
-        if ok
-            D = 2.0 * (fit.logLik - ll_c)
-            if isfinite(D) && D ≤ cutoff
-                upper, boundary = float(hi_bound), true
-            end
-        end
-    end
+    lower, at_lo = _derived_bound_side(D, r.lower, lo_b, cutoff, true)
+    upper, at_hi = _derived_bound_side(D, r.upper, hi_b, cutoff, false)
+    boundary = at_lo || at_hi
 
     method = if isnan(lower) && isnan(upper)
         :failed
@@ -1074,11 +1199,12 @@ applied — the total variance is strictly positive but unbounded above, so
 the raw-scale bracket-then-bisect search (mirroring how this file already
 profiles `σ²_eps`) can in principle return a `lower` bound that drifted at
 or below `0`, or a plateau that never crosses the χ²₁ cutoff before the
-bracket expansion gives up. [`_profile_ci_bounded`](@ref) is applied to the
-result: any `lower < 0` is clamped to `0`, and a `NaN` `lower` whose
-deviance-at-`0` is itself still below cutoff is reported as `lower = 0`
-instead — both cases set the additional `boundary::Bool` field on the
-returned NamedTuple.
+bracket expansion gives up. The search therefore runs with
+`bounds = (0, Inf)` (see [`profile_ci_derived`](@ref)): any `lower < 0` is
+clamped to `0`, and a `NaN` `lower` whose deviance-at-`0` is itself still
+below cutoff is reported as `lower = 0` instead (otherwise it stays `NaN`).
+Both cases set the additional `boundary::Bool` field on the returned
+NamedTuple to `true`.
 """
 function profile_ci_total_variance(fit::GllvmFit, t::Integer;
                                    level::Real = 0.95,
@@ -1088,10 +1214,8 @@ function profile_ci_total_variance(fit::GllvmFit, t::Integer;
                                    kwargs...)
     spec = _derived_spec(fit)
     f = _make_total_variance_closure(spec, t)
-    r = profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                           kwargs...)
-    return _profile_ci_bounded(fit, f, r; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                               lo_bound = 0.0, hi_bound = Inf)
+    return profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
+                              bounds = (0.0, Inf), kwargs...)
 end
 
 """
@@ -1109,11 +1233,12 @@ unit diagonal when omitted), consistent with `phylo_signal`/
 `phylo_signal_wald_ci`. `t` is a 1-based trait index; all keyword
 arguments forward to `profile_ci_derived`.
 
-`H²[t] ∈ [0, 1]` (see [`phylo_signal`](@ref)): [`_profile_ci_bounded`](@ref)
-is applied to the result, clamping any bound outside `[0, 1]` back to the
-edge and reporting a boundary plateau (deviance-at-`0`-or-`1` already below
-the χ²₁ cutoff) as that edge instead of `NaN`/`:partial`. The returned
-NamedTuple carries the additional `boundary::Bool` field.
+`H²[t] ∈ [0, 1]` (see [`phylo_signal`](@ref)): the search runs with
+`bounds = (0, 1)` (see [`profile_ci_derived`](@ref)), clamping any bound
+outside `[0, 1]` back to the edge and reporting a boundary plateau
+(deviance-at-`0`-or-`1` already below the χ²₁ cutoff) as that edge instead
+of `NaN`/`:partial`. The returned NamedTuple carries the additional
+`boundary::Bool` field.
 """
 function profile_ci_phylo_signal(fit::GllvmFit, t::Integer;
                                  level::Real = 0.95,
@@ -1124,10 +1249,8 @@ function profile_ci_phylo_signal(fit::GllvmFit, t::Integer;
     spec = _derived_spec(fit)
     diag_Σphy = Σ_phy === nothing ? nothing : diag(Σ_phy)
     f = _make_phylo_signal_closure(spec, t; diag_Σphy = diag_Σphy)
-    r = profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                           kwargs...)
-    return _profile_ci_bounded(fit, f, r; level = level, y = y, X = X, Σ_phy = Σ_phy,
-                               lo_bound = 0.0, hi_bound = 1.0)
+    return profile_ci_derived(fit, f; level = level, y = y, X = X, Σ_phy = Σ_phy,
+                              bounds = (0.0, 1.0), kwargs...)
 end
 
 """
@@ -1138,20 +1261,21 @@ end
 
 Profile-likelihood CI for the RAW reduced-rank loading entry `Λ[t, k]` on an
 **exploratory (unpinned)** fit (`component = :B`, default — the shared/between
-tier; `component = :W` for the within tier). GLLVModels.jl has no separate
-confirmatory fit mode with `lambda_constraint` pins; the lower-triangular
-packing convention (`src/packing.jl`) is this package's built-in identifiability
-device, so this function runs on any fit.
+tier; `component = :W` for the within tier). On an exploratory fit the
+lower-triangular packing convention (`src/packing.jl`) is the identifiability
+device. On a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`
+whose `M` pins a loading, it throws an `ArgumentError` for an entry with
+`k ≤ t`, because the profile refits would drop the pins; [`loading_profile`](@ref)
+profiles the free loadings of such a fit with the pins held.
 
-**Estimand scope (Core070 D3, 2026-09-04):** this is **not** R's
-`loading_profile()`, which profiles a Λ entry on a **confirmatory
-(pinned-loadings)** fit gated on R's `fit\$lambda_constraint`
-(`.unlazy/core070-aghq/oracle-source/readback/R/loading-profile.R`). Same
-family of quantity, different estimand — the rename makes that gap visible in
-the API rather than hiding it behind a matching signature.
+**Difference from R.** This is not R's `loading_profile()`. R profiles a
+loading from a confirmatory model in which selected loadings were fixed before
+fitting. GLLVModels.jl instead profiles a raw loading from its exploratory
+model under the built-in lower-triangular constraint. The functions therefore
+concern the same kind of quantity but estimate it under different constraints.
+The name `loading_profile_exploratory` makes that distinction explicit.
 
-Implementation: a thin wrapper around [`profile_ci_derived`](@ref) using the
-packed-θ closure `θ -> Λ_component(θ)[t, k]`; all keyword arguments forward.
+Additional keyword arguments are passed to the profile-likelihood calculation.
 
 For `k > t` on the lower-triangular reduced-rank packing convention, the entry
 is structurally pinned at `0`: this returns

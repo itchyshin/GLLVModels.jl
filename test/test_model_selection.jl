@@ -9,7 +9,7 @@ using GLLVModels, Test, Random, Distributions, Statistics
         η = β_true .+ Λ_true * randn(K, n)
         Y = [rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n]
 
-        sel = select_lv(Y; family = Poisson(), Kmax = 3)
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, criterion = :bic)
 
         @test sel isa LVSelection
         @test length(sel.K) == 3
@@ -29,8 +29,7 @@ using GLLVModels, Test, Random, Distributions, Statistics
         @test isfinite(GLLVModels._loglik(sel.best))
         @test sel.best isa PoissonFit
 
-        # AIC default agrees with the BIC selection consistency: best row is the
-        # argmin of the chosen criterion (default :bic).
+        # Best row is the argmin of the chosen criterion (:bic here, by cells).
         @test sel.best_k == sel.K[argmin(sel.bic)]
 
         # bic uses nobs(fit, Y), R's p·n observed-cell count, not the site
@@ -48,4 +47,486 @@ using GLLVModels, Test, Random, Distributions, Statistics
         sel = select_lv(Y; family = Poisson(), Kmax = 3, criterion = :aic)
         @test sel.best_k == sel.K[argmin(sel.aic)]
     end
+end
+
+# --- Warm-start safeguard (lane auto-d-20260926) ---------------------------------
+# A K+1 model nests the K model, so a correct maximum can never have a lower
+# log-likelihood. Measured on origin/main 2847b5dbf (NB2, n=300, p=20, K_true=3):
+# K=3 and K=4 fits reported converged=true with logLik below K=2. These tests drive
+# select_lv's guard with a stand-in fitter so they are exact and fast.
+struct _FakeLVFit
+    ll::Float64
+    np::Int
+    converged::Bool
+    β::Vector{Float64}
+    Λ::Matrix{Float64}
+end
+GLLVModels._loglik(f::_FakeLVFit) = f.ll
+GLLVModels._nparams(f::_FakeLVFit) = f.np
+GLLVModels.StatsAPI.aic(f::_FakeLVFit) = 2f.np - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeLVFit, Y::AbstractMatrix; mask = nothing) =
+    f.np * log(mask === nothing ? length(Y) : count(mask)) - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeLVFit, n::Integer) = f.np * log(n) - 2f.ll
+
+# Loglik per K on a default start, and on a warm start (used only if the fitter
+# accepts Λ_init). K=3 is a bad optimum from the default start only.
+const _LL_DEFAULT = Dict(1 => -500.0, 2 => -400.0, 3 => -450.0, 4 => -395.0)
+const _LL_WARM    = Dict(3 => -390.0, 4 => -389.0)
+
+function _fake_fitter(calls; warm_ok::Bool, fail_at = nothing, unconv_at = nothing)
+    return function (Y; family, K, kwargs...)
+        push!(calls, (K = K, warm = haskey(kwargs, :Λ_init), kwargs = kwargs))
+        K == fail_at && error("singular at K=$K")
+        p = size(Y, 1)
+        if haskey(kwargs, :Λ_init)
+            warm_ok || throw(ArgumentError("unsupported keyword Λ_init"))
+            ll = get(_LL_WARM, K, _LL_DEFAULT[K])
+        else
+            ll = _LL_DEFAULT[K]
+        end
+        return _FakeLVFit(ll, 10K, K != unconv_at, zeros(p), fill(0.5, p, K))
+    end
+end
+
+@testset "select_lv — warm-start safeguard" begin
+    Y = zeros(6, 40)
+
+    @testset "healthy sweep: no retries, results unchanged" begin
+        calls = Any[]
+        f = function (Y; family, K, kwargs...)
+            push!(calls, K)
+            return _FakeLVFit(-500.0 + 60K, 10K, true, zeros(6), fill(0.5, 6, K))
+        end
+        sel = select_lv(Y; Kmax = 4, _fitter = f)
+        @test calls == [1, 2, 3, 4]
+        @test sel.K == [1, 2, 3, 4]
+        @test all(a -> a.status === :ok, sel.attempts)
+    end
+
+    @testset "non-monotone K is retried from the K-1 solution and accepted" begin
+        calls = Any[]
+        sel = select_lv(Y; Kmax = 4, _fitter = _fake_fitter(calls; warm_ok = true))
+        warm = filter(c -> c.warm, calls)
+        # K=3 is retried; then default K=4 (−395) sits below the warm K=3 (−390),
+        # so K=4 is retried too and accepted at −389.
+        @test [c.K for c in warm] == [3, 4]
+        @test only(filter(a -> a.K == 4, sel.attempts)).status === :warm_start
+        Λ0 = warm[1].kwargs[:Λ_init]
+        @test size(Λ0) == (6, 3)
+        @test Λ0[:, 1:2] == fill(0.5, 6, 2)          # previous solution kept
+        @test all(iszero, Λ0[1:2, 3])                  # lower-triangular new column
+        @test Λ0[3, 3] > 0
+        a3 = only(filter(a -> a.K == 3, sel.attempts))
+        @test a3.status === :warm_start
+        @test a3.loglik == -390.0
+        @test 3 in sel.K
+    end
+
+    @testset "non-monotone K without warm-start support is excluded, not chosen" begin
+        calls = Any[]
+        sel = select_lv(Y; Kmax = 3, criterion = :aic,
+                        _fitter = _fake_fitter(calls; warm_ok = false))
+        a3 = only(filter(a -> a.K == 3, sel.attempts))
+        @test a3.status === :nonmonotone
+        @test !(3 in sel.K)
+        @test sel.best_k == 2
+    end
+
+    @testset "a throwing fit is recorded with its reason, not silently dropped" begin
+        sel = select_lv(Y; Kmax = 3, _fitter = _fake_fitter(Any[]; warm_ok = true, fail_at = 2))
+        a2 = only(filter(a -> a.K == 2, sel.attempts))
+        @test a2.status === :failed
+        @test occursin("singular", a2.message)
+        @test !(2 in sel.K)
+    end
+
+    @testset "an unconverged fit is excluded when require_converged = true" begin
+        sel = select_lv(Y; Kmax = 3, require_converged = true,
+                        _fitter = _fake_fitter(Any[]; warm_ok = true, unconv_at = 2))
+        a2 = only(filter(a -> a.K == 2, sel.attempts))
+        @test a2.status === :unconverged
+        @test !(2 in sel.K)
+    end
+
+    @testset "warm_start = false disables the retry but keeps the guard" begin
+        calls = Any[]
+        sel = select_lv(Y; Kmax = 3, warm_start = false,
+                        _fitter = _fake_fitter(calls; warm_ok = true))
+        @test !any(c -> c.warm, calls)
+        @test only(filter(a -> a.K == 3, sel.attempts)).status === :nonmonotone
+    end
+
+    @testset "InterruptException is not swallowed" begin
+        f = (Y; family, K, kwargs...) -> throw(InterruptException())
+        @test_throws InterruptException select_lv(Y; Kmax = 2, _fitter = f)
+    end
+end
+
+# --- Runaway detector (lane auto-d-20260926) -------------------------------------
+# Latent variables are standardised (u ~ N(0, I)), so a trait's loading row norm is
+# its latent SD on the link scale; ~4 is as strong as real gradients get and 10 is
+# saturated (vault note "Two runaway modes in GLLVM loadings"). Mode B (common
+# inflation) needs a SCALE check; Mode A (one binary trait separates) needs a RATIO
+# check, which is blind to Mode B by construction.
+@testset "select_lv — runaway detector" begin
+    Y = zeros(6, 40)
+    # K = 3 is a common-inflation runaway (all rows × 40) with the best logLik.
+    inflate = function (Y; family, K, kwargs...)
+        haskey(kwargs, :Λ_init) && return _FakeLVFit(-380.0, 10K, true, zeros(6), fill(0.5, 6, K))
+        Λ = K == 3 ? fill(20.0, 6, K) : fill(0.5, 6, K)
+        return _FakeLVFit(Dict(1 => -500.0, 2 => -400.0, 3 => -300.0)[K], 10K, true, zeros(6), Λ)
+    end
+
+    @testset "Mode B: a common-inflation K is retried, and excluded if still runaway" begin
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, criterion = :aic, warm_start = false,
+                        _fitter = inflate)
+        a3 = only(filter(a -> a.K == 3, sel.attempts))
+        @test a3.status === :runaway
+        @test occursin("latent SD", a3.message)
+        @test !(3 in sel.K)
+        @test sel.best_k == 2
+    end
+
+    @testset "Mode B: the warm-start refit replaces a runaway when it is healthy" begin
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, _fitter = inflate)
+        a3 = only(filter(a -> a.K == 3, sel.attempts))
+        @test a3.status === :warm_start
+        @test a3.loglik == -380.0
+    end
+
+    @testset "Mode A: one binary trait separating is caught by the ratio check" begin
+        sep = function (Y; family, K, kwargs...)
+            Λ = fill(0.5, 6, K); K == 2 && (Λ[4, 1] = 15.0)   # one trait at 30× the median
+            K == 3 && (Λ[4, 1] = 48.0)
+            return _FakeLVFit(-500.0 + 60K, 10K, true, zeros(6), Λ)
+        end
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        max_latent_sd = Inf, _fitter = sep)
+        @test only(filter(a -> a.K == 2, sel.attempts)).status === :runaway   # ratio 30 ≥ 25
+        @test occursin("ratio", only(filter(a -> a.K == 2, sel.attempts)).message)
+        @test sel.K == [1]
+    end
+
+    @testset "the ratio check is binomial-only; the scale check can be disabled" begin
+        one_big = (Y; family, K, kwargs...) ->
+            _FakeLVFit(-500.0 + 60K, 10K, true, zeros(6), (Λ = fill(0.5, 6, K); Λ[4, 1] = 9.0; Λ))
+        sel = select_lv(Y; family = Poisson(), Kmax = 2, _fitter = one_big)
+        @test sel.K == [1, 2]                                                  # ratio 18, rows < 10
+        sel2 = select_lv(Y; family = Poisson(), Kmax = 3, max_latent_sd = Inf,
+                         warm_start = false, _fitter = inflate)
+        @test 3 in sel2.K
+    end
+end
+
+# --- Omitting K estimates it (lane auto-d-20260926; public API, awaiting sign-off) --
+@testset "fit_gllvm without K selects K via select_lv" begin
+    Random.seed!(11)
+    p, n = 6, 150
+    Λ_true = 0.9 .* randn(p, 1)
+    η = log(3.0) .+ Λ_true * randn(1, n)
+    Y = [rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n]
+
+    fit = @test_logs (:info, r"chose K") match_mode = :any fit_gllvm(Y; family = Poisson())
+    sel = select_lv(Y; family = Poisson(), Kmax = min(5, p - 1))
+    @test fit isa PoissonFit
+    @test size(fit.Λ, 2) == sel.best_k
+    @test GLLVModels._loglik(fit) ≈ GLLVModels._loglik(sel.best)
+
+    one = fit_gllvm(Y; family = Poisson(), Kmax = 1)
+    @test size(one.Λ, 2) == 1
+    @test_throws ArgumentError fit_gllvm(Y; family = Poisson(), K = 2, Kmax = 3)
+    @test_throws ArgumentError fit_gllvm(Y; family = Poisson(), num_lv = 1, Kmax = 3)
+
+    # Explicit K is untouched by the auto path.
+    @test GLLVModels._loglik(fit_gllvm(Y; family = Poisson(), K = 1)) ≈
+          GLLVModels._loglik(fit_gllvm(Y; family = Poisson(), num_lv = 1))
+end
+
+# --- criterion = :bic_sites (BIC with log(number of sites), lane auto-d) -----------
+# The recovery grid compares log(p·n) (current :bic) with log(n sites); both are kept.
+@testset "select_lv criterion = :bic_sites" begin
+    Y = zeros(6, 40)
+    # Gains chosen so log(p·n) = log(240) prefers K = 1 and log(n) = log(40) prefers K = 2.
+    f = (Y; family, K, kwargs...) ->
+        _FakeLVFit(Dict(1 => -500.0, 2 => -477.0, 3 => -476.0)[K], 10K, true, zeros(6), fill(0.5, 6, K))
+    sel_pn = select_lv(Y; Kmax = 3, criterion = :bic, _fitter = f)
+    sel_n  = select_lv(Y; Kmax = 3, criterion = :bic_sites, _fitter = f)
+    @test sel_pn.best_k == 1
+    @test sel_n.best_k == 2
+    @test sel_n.bic_sites ≈ [10k * log(40) - 2ll for (k, ll) in ((1, -500.0), (2, -477.0), (3, -476.0))]
+    @test_throws ArgumentError select_lv(Y; Kmax = 2, criterion = :bogus, _fitter = f)
+end
+
+# --- Panel fixes (D-43 statistical review, 2026-09-27) -----------------------------
+@testset "select_lv — review fixes" begin
+    Y = zeros(6, 40)
+    mk(ll, K; Λ = fill(0.5, 6, K), conv = true) = _FakeLVFit(ll, 10K, conv, zeros(6), Λ)
+
+    @testset "bar = best converged non-runaway fit at any smaller K, rejected or not" begin
+        # K=1 −500, K=2 −400 accepted; K=3 −450 rejected; K=4 −430 is below K=2 → rejected.
+        f = (Y; family, K, kwargs...) -> mk(Dict(1 => -500.0, 2 => -400.0, 3 => -450.0, 4 => -430.0)[K], K)
+        sel = select_lv(Y; family = Poisson(), Kmax = 4, warm_start = false, _fitter = f)
+        @test only(filter(a -> a.K == 4, sel.attempts)).status === :nonmonotone
+        # A runaway K (inflated logLik) must NOT set the bar for later K.
+        g = (Y; family, K, kwargs...) -> K == 2 ? mk(-300.0, 2; Λ = fill(20.0, 6, 2)) :
+                                          mk(Dict(1 => -500.0, 3 => -420.0)[K], K)
+        sel2 = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false, _fitter = g)
+        @test only(filter(a -> a.K == 2, sel2.attempts)).status === :runaway
+        @test only(filter(a -> a.K == 3, sel2.attempts)).status === :ok   # runaway −300 is not the bar
+    end
+
+    @testset "tolerance is relative to the logLik scale" begin
+        # At |ℓ| ≈ 1e7 the tolerance is 1e-6·|ℓ| = 10: a 5-unit dip is accepted, 20 is not.
+        f = (Y; family, K, kwargs...) -> mk(Dict(1 => -1.0e7, 2 => -1.0e7 - 5.0, 3 => -1.0e7 - 20.0)[K], K)
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false, _fitter = f)
+        @test only(filter(a -> a.K == 2, sel.attempts)).status === :ok
+        @test only(filter(a -> a.K == 3, sel.attempts)).status === :nonmonotone
+    end
+
+    @testset "warm start pads from the last accepted K when K−1 was rejected" begin
+        calls = Any[]
+        f = function (Y; family, K, kwargs...)
+            push!(calls, (K = K, kw = kwargs))
+            K == 2 && return mk(-300.0, 2; Λ = fill(20.0, 6, 2))       # runaway, refit too
+            haskey(kwargs, :Λ_init) && return mk(-350.0, K)
+            return mk(Dict(1 => -500.0, 3 => -520.0)[K], K; Λ = K == 3 ? fill(0.5, 6, 3) : fill(0.5, 6, 1))
+        end
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, _fitter = f)
+        w3 = only(filter(c -> c.K == 3 && haskey(c.kw, :Λ_init), calls))
+        Λ0 = w3.kw[:Λ_init]
+        @test size(Λ0) == (6, 3)
+        @test Λ0[:, 1] == fill(0.5, 6)                       # from accepted K = 1
+        @test Λ0[1, 2] == 0 && all(iszero, Λ0[1:2, 3])        # lower-triangular padding
+        @test Λ0[2, 2] > 0 && Λ0[3, 3] > 0
+    end
+
+    @testset "runaway check skips Normal family (pervar loadings are in data units)" begin
+        f = (Y; family, K, kwargs...) -> mk(-500.0 + 60K, K; Λ = fill(50.0, 6, K))
+        sel = select_lv(Y; family = Normal(), Kmax = 2, _fitter = f)
+        @test sel.K == [1, 2]
+    end
+
+    @testset "fit_gllvm without K refuses out-of-scope routes" begin
+        Yc = rand(0:5, 5, 40)
+        @test_throws ArgumentError fit_gllvm(Yc; family = Poisson(), row_eff = :fixed)
+        @test_throws ArgumentError fit_gllvm(Float64.(Yc); family = Normal(), pervar = true)
+    end
+end
+
+@testset "select_lv — review fixes (code lens)" begin
+    Y = zeros(6, 40)
+    mk(ll, K) = _FakeLVFit(ll, 10K, true, zeros(6), fill(0.5, 6, K))
+    @testset "an ArgumentError at K = 1 is a misconfiguration and is re-raised" begin
+        f = (Y; family, K, kwargs...) -> throw(ArgumentError("bad combination"))
+        @test_throws ArgumentError select_lv(Y; Kmax = 3, _fitter = f)
+    end
+    @testset "mask reaches the criteria (cells and sites)" begin
+        m = trues(6, 40); m[:, 31:40] .= false; m[1:3, 1:10] .= false   # 30 sites, 150 cells
+        f = (Y; family, K, kwargs...) -> mk(-500.0 + 30K, K)
+        sel = select_lv(Y; Kmax = 2, mask = m, _fitter = f)
+        @test sel.bic ≈ [10k * log(150) - 2(-500.0 + 30k) for k in 1:2]
+        @test sel.bic_sites ≈ [10k * log(30) - 2(-500.0 + 30k) for k in 1:2]
+    end
+end
+
+# Recovery grid (lane auto-d, 13 506 datasets): rejecting a fit only because the optimiser
+# did not report convergence cost recovery (Poisson 0.999 → 0.991, NB 0.904 → 0.866); every
+# broken unconverged fit was already caught as runaway or non-monotone. Default is lenient.
+@testset "select_lv — unconverged fits are kept by default, flagged" begin
+    Y = zeros(6, 40)
+    sel = select_lv(Y; Kmax = 3, _fitter = _fake_fitter(Any[]; warm_ok = true, unconv_at = 2))
+    a2 = only(filter(a -> a.K == 2, sel.attempts))
+    @test a2.status === :ok
+    @test occursin("did not report convergence", a2.message)
+    @test 2 in sel.K
+    # still rejected if it is also a runaway
+    f = (Y; family, K, kwargs...) -> _FakeLVFit(-500.0 + 60K, 10K, K != 2, zeros(6),
+                                               K == 2 ? fill(30.0, 6, 2) : fill(0.5, 6, K))
+    sel2 = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false, _fitter = f)
+    @test only(filter(a -> a.K == 2, sel2.attempts)).status === :runaway
+end
+
+@testset "select_lv default criterion is :bic_sites (maintainer decision 2026-09-27)" begin
+    Y = zeros(6, 40)
+    f = (Y; family, K, kwargs...) ->
+        _FakeLVFit(Dict(1 => -500.0, 2 => -477.0, 3 => -476.0)[K], 10K, true, zeros(6), fill(0.5, 6, K))
+    @test select_lv(Y; Kmax = 3, _fitter = f).best_k ==
+          select_lv(Y; Kmax = 3, criterion = :bic_sites, _fitter = f).best_k == 2
+end
+
+# --- binary_ridge: single-trial Binomial sweeps get a loading ridge (D-293, lane
+# auto-d-20260926) --------------------------------------------------------------
+# Maintainer decision: for K selection on Bernoulli data, sweep with a loading
+# ridge and compare criteria on the UNPENALISED log-likelihood at the ridge
+# optimum. A separate lane is adding `loading_ridge` to the binomial fitter
+# itself (src/families/binomial.jl); here we only check that select_lv wires the
+# keyword through correctly, using a stand-in fitter that records its kwargs.
+function _ridge_fitter(calls)
+    return function (Y; family, K, kwargs...)
+        push!(calls, (K = K, kwargs = kwargs))
+        p = size(Y, 1)
+        return _FakeLVFit(-500.0 + 60K, 10K, true, zeros(p), fill(0.5, p, K))
+    end
+end
+
+@testset "select_lv — binary_ridge for single-trial Binomial" begin
+    Y = zeros(6, 40)
+
+    @testset "default binary_ridge = 2.0: every Binomial call gets loading_ridge" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
+        a1 = only(filter(a -> a.K == 1, sel.attempts))
+        @test occursin("loading_ridge", a1.message)
+    end
+
+    @testset "binary_ridge = Inf disables the ridge (today's behaviour)" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        binary_ridge = Inf, _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> !haskey(c.kwargs, :loading_ridge), calls)
+    end
+
+    @testset "the caller's own loading_ridge wins over the default" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        loading_ridge = 5.0, _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 5.0, calls)
+    end
+
+    @testset "non-Binomial families never get loading_ridge" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Poisson(), Kmax = 3, warm_start = false,
+                        _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> !haskey(c.kwargs, :loading_ridge), calls)
+    end
+
+    @testset "multi-trial Binomial (N not all ones) never gets loading_ridge" begin
+        calls = Any[]
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, warm_start = false,
+                        N = fill(3, size(Y)), _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> !haskey(c.kwargs, :loading_ridge), calls)
+    end
+
+    @testset "the warm-start refit also carries loading_ridge" begin
+        calls = Any[]
+        f = function (Y; family, K, kwargs...)
+            push!(calls, (K = K, kwargs = kwargs))
+            if haskey(kwargs, :Λ_init)
+                return _FakeLVFit(-380.0, 10K, true, zeros(6), fill(0.5, 6, K))
+            end
+            ll = K == 3 ? -450.0 : Dict(1 => -500.0, 2 => -400.0)[K]
+            return _FakeLVFit(ll, 10K, true, zeros(6), fill(0.5, 6, K))
+        end
+        sel = select_lv(Y; family = Binomial(), Kmax = 3, _fitter = f)
+        warm = filter(c -> haskey(c.kwargs, :Λ_init), calls)
+        @test !isempty(warm)                                    # the retry did happen
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
+    end
+end
+
+# --- Monotone bar under the loading ridge --------------------------------------------
+# Nesting guarantees the PENALISED objective improves with K, not the unpenalised logLik at
+# the ridge optimum, so with a ridge the non-monotone check compares ℓ − ½Σλ²/τ².
+struct _FakeRidgeFit
+    ll::Float64
+    np::Int
+    converged::Bool
+    β::Vector{Float64}
+    Λ::Matrix{Float64}
+    loading_ridge::Float64
+end
+GLLVModels._loglik(f::_FakeRidgeFit) = f.ll
+GLLVModels._nparams(f::_FakeRidgeFit) = f.np
+GLLVModels.StatsAPI.aic(f::_FakeRidgeFit) = 2f.np - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeRidgeFit, Y::AbstractMatrix; mask = nothing) = f.np * log(length(Y)) - 2f.ll
+GLLVModels.StatsAPI.bic(f::_FakeRidgeFit, n::Integer) = f.np * log(n) - 2f.ll
+
+@testset "select_lv — monotone check uses the penalised objective under a ridge" begin
+    Y = zeros(6, 40)
+    # τ = 2: K=1 Λ = 1.0 (pen 0.125·6 = 0.75); K=2 Λ = 0.1 everywhere (pen 0.015).
+    # Unpenalised ℓ falls 0.5 (−500 → −500.5) but the penalised value rises (−500.75 → −500.515).
+    f = (Y; family, K, loading_ridge = Inf, kwargs...) ->
+        K == 1 ? _FakeRidgeFit(-500.0, 10, true, zeros(6), fill(1.0, 6, 1), loading_ridge) :
+                 _FakeRidgeFit(-500.5, 20, true, zeros(6), fill(0.1, 6, 2), loading_ridge)
+    sel = select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false, _fitter = f)
+    @test only(filter(a -> a.K == 2, sel.attempts)).status === :ok
+    # Without the ridge the same unpenalised fall is rejected.
+    sel0 = select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false, binary_ridge = Inf, _fitter = f)
+    @test only(filter(a -> a.K == 2, sel0.attempts)).status === :nonmonotone
+end
+
+# --- Ridge review fixes (2026-09-27): route gating, warm start under a ridge, explicit N ---
+@testset "select_lv — binary ridge only on the Laplace fit_binomial_gllvm route" begin
+    Y = zeros(6, 40)
+    @testset "explicit all-ones N counts as single-trial" begin
+        calls = Any[]
+        select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false,
+                  N = fill(1, size(Y)), _fitter = _ridge_fitter(calls))
+        @test !isempty(calls)
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
+    end
+    for (label, kw) in (("aghq = true", (aghq = true,)), ("aghq = 1", (aghq = 1,)),
+                        ("row_eff = :fixed", (row_eff = :fixed,)),
+                        ("row_eff = :random", (row_eff = :random,)),
+                        ("disp_group", (disp_group = :species,)))
+        @testset "$label: no loading_ridge, and the attempt says so" begin
+            calls = Any[]
+            sel = select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false,
+                            _fitter = _ridge_fitter(calls), kw...)
+            @test !isempty(calls)
+            @test all(c -> !haskey(c.kwargs, :loading_ridge), calls)
+            @test all(a -> occursin("binary ridge not applied", a.message), sel.attempts)
+        end
+    end
+    @testset "aghq = false keeps the ridge" begin
+        calls = Any[]
+        select_lv(Y; family = Binomial(), Kmax = 2, warm_start = false, aghq = false,
+                  _fitter = _ridge_fitter(calls))
+        @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
+    end
+end
+
+@testset "select_lv — warm start is judged on the penalised objective under a ridge" begin
+    Y = zeros(6, 40)
+    # τ = 2. K = 1: ℓ = −500, Λ = 1 (penalised −500.75, the bar).
+    # K = 2 cold: ℓ = −500.2 is above the bar unpenalised, but Λ = 2 gives
+    # penalised −503.2, below it; the warm refit (ℓ = −499, Λ = 0.1) passes.
+    # Judging acceptable() on the unpenalised ℓ would keep the cold fit as :ok.
+    f = function (Y; family, K, loading_ridge = Inf, kwargs...)
+        K == 1 && return _FakeRidgeFit(-500.0, 10, true, zeros(6), fill(1.0, 6, 1), loading_ridge)
+        haskey(kwargs, :Λ_init) &&
+            return _FakeRidgeFit(-499.0, 20, true, zeros(6), fill(0.1, 6, 2), loading_ridge)
+        return _FakeRidgeFit(-500.2, 20, true, zeros(6), fill(2.0, 6, 2), loading_ridge)
+    end
+    sel = select_lv(Y; family = Binomial(), Kmax = 2, _fitter = f)
+    a2 = only(filter(a -> a.K == 2, sel.attempts))
+    @test a2.status === :warm_start
+    @test a2.loglik == -499.0
+end
+
+@testset "select_lv — real binary fits: default ridge, and routes without it still run" begin
+    rng = MersenneTwister(7)
+    p, n = 5, 40
+    Λt = 0.8 .* randn(rng, p, 1)
+    Y = Int.(rand(rng, p, n) .< 1 ./ (1 .+ exp.(-(Λt * randn(rng, 1, n)))))
+    sel = select_lv(Y; family = Binomial(), Kmax = 2)
+    @test sel.best.loading_ridge == 2.0
+    @test_throws ArgumentError confint(sel.best, Y)
+    # Unpenalised row-effect binary fits may run away here; what matters is that each
+    # K is fitted (no :failed from a rejected loading_ridge keyword) and the note shows.
+    msg = try
+        selr = select_lv(Y; family = Binomial(), Kmax = 2, row_eff = :fixed)
+        join(("K=$(a.K) $(a.status) $(a.message)" for a in selr.attempts), "; ")
+    catch e
+        sprint(showerror, e)
+    end
+    @test !occursin("failed", msg)
+    @test occursin("binary ridge not applied (not supported with row_eff)", msg)
 end

@@ -1,5 +1,12 @@
 # Truncated NB2 near the Poisson limit: diagnostic algebra
 
+**Status 2026-09-25:** landed. The engine repair this diagnosis called for
+landed in commit `376044e7f` ("Stabilize truncated NB2 scalar kernel with
+derivative regressions"), with derivative regression tests
+(`test/test_truncnb2_precision.jl`) and evidence in
+`docs/dev-log/core070/truncnb2-kernel-evidence.json`. The "engine repair and
+derivative validation pending" line below is stale.
+
 Status: VERIFIED_SCALAR_DIAGNOSIS; engine repair and derivative validation pending.
 
 For integer y>=1, mean mu>0 and dispersion r>0, NB2 mass is

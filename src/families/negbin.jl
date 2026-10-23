@@ -59,7 +59,9 @@ the estimated dispersion `r` (Var = μ + μ²/r), the `link`, the maximised Lapl
 `loglik`, the optimiser `converged` flag, and `iterations`. Fits using `X_lv`
 additionally retain `alpha_lv`, the raw latent-axis coefficients for the
 predictor-informed score mean; use [`extract_lv_effects`](@ref) for the
-rotation-stable trait-scale product `Λ * alpha_lv'`.
+rotation-stable trait-scale product `Λ * alpha_lv'`. `offset` is the p×n training
+offset the fit was made with (`nothing` when the fit had none); [`predict`](@ref)
+and [`getLV`](@ref) use it by default.
 """
 struct NBFit
     β::Vector{Float64}
@@ -72,7 +74,16 @@ struct NBFit
     alpha_lv::Union{Nothing, Matrix{Float64}}
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    optimizer_info::Union{Nothing,OptimizerRecord}
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, offset) =
+    NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, offset, nothing)
+
+NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
+    NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -136,7 +147,7 @@ function nb_lv_nll_packed(params::AbstractVector, Y::AbstractMatrix,
 
     lv_offset = _lv_mean_eta(Λ, X_lv, alpha_lv)
     off = offset === nothing ? lv_offset : offset .+ lv_offset
-    return -nb_marginal_loglik_laplace(Y, Λ, β, r; mask = mask, offset = off,
+    return -nb_marginal_loglik_laplace(Y, Λ, β, r; link = link, mask = mask, offset = off,
                                        maxiter = maxiter, tol = tol)
 end
 
@@ -163,6 +174,11 @@ no-mask/no-offset path, with an internal finite-difference fallback; masked or
 offset fits use finite differences. Warm start = empirical log-mean intercepts +
 an SVD loadings init + a moderate `r₀`.
 
+`optimizer` may be `:lbfgs`, `:bfgs`, or a configured `Optim.LBFGS()` /
+`Optim.BFGS()` object; `nothing` retains the historical L-BFGS method.
+[`optimizer_info`](@ref) records the actual method, derivative path, controls,
+and raw outer result.
+
 Missing data: pass a `mask` (p×n Bool, `false` = unobserved) or `missing` entries in
 `Y`; masked cells are dropped from the marginal and the warm start, so the fit
 depends only on the observed cells.
@@ -172,6 +188,10 @@ depends only on the observed cells.
 Fisher-scored. Default: NB2/log default `:observed` (changed 2026-08-27 on the
 curvature-adjudication campaign evidence). Omitting it is exactly the default-path
 behaviour.
+
+`converged` is forced `false` when the fitted `r` lies outside `[1e-6, 1e6]` (the
+Poisson limit above, unidentified extreme overdispersion below), matching the grouped
+NB fitters; the reported `loglik` is unchanged.
 """
 function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
@@ -181,8 +201,11 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
+        optimizer = nothing)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_nb_gllvm")
     rr = rr_theta_len(p, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_nb_gllvm: hessian must be :fisher or :observed; got :$hessian"))
@@ -230,7 +253,9 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_nb_gllvm")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
@@ -266,6 +291,7 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         r = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -marginal_loglik_laplace(NegativeBinomial(float(r), 0.5), Yc, N1, Λ, β, link;
                                      hessian = hessian,
@@ -277,12 +303,24 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
+    outer_optimizer = _optimizer_method(optimizer, ls; route = "fit_nb_gllvm")
+    controls = (g_tol = g_tol, iterations = iterations, show_trace = false)
+    stages = OptimizerStage[]
+    derivative_route = :finite
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
+    controls = merge(controls, (optim_options = opts,))
     res = if X_lv_fit !== nothing
+        derivative_route = :finite
         # Predictor-informed latent-score route: joint (β, alpha_lv, Λ, log r) by
         # finite differences — the offset depends jointly on Λ and alpha_lv.
         θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0), logr0)
         negll_lv = θ -> begin
+            if _eta_cap_guarded(link)   # #869: the additive η term is offset + the X_lv mean
+                Λ_g = unpack_lambda(view(θ, (p + q_lv * K + 1):(p + q_lv * K + rr)), p, K)
+                lv_g = _lv_mean_eta(Λ_g, X_lv_fit, reshape(view(θ, (p + 1):(p + q_lv * K)), q_lv, K))
+                _eta_above_clamp(view(θ, 1:p), offset === nothing ? lv_g : offset .+ lv_g;
+                                 mask = msk) && return 1e12   # #869: η-clamp plateau
+            end
             v = try
                 nb_lv_nll_packed(θ, Yc, p, K, link;
                                  X_lv = X_lv_fit, q_lv = q_lv,
@@ -293,17 +331,22 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
             end
             return isfinite(v) ? v : 1e12
         end
-        Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing &&
+        Optim.optimize(negll_lv, θ0_lv, outer_optimizer, opts; autodiff = :finite)
+    elseif gradient === :analytic && offset === nothing && link isa LogLink &&
            hessian === _default_hessian(NegativeBinomial(1.0, 0.5), link)
+        derivative_route = :analytic
+        # `nb_laplace_grad` is derived for the log link only; any other link takes the
+        # :finite path below, which differentiates the actual objective.
         ag = θ -> begin
             β = θ[1:p]; Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K); rv = exp(θ[p + rr + 1])
             try -nb_laplace_grad(Yc, Λ, β, rv; mask = msk) catch; nothing end
         end
-        _optimize_with_analytic(negll, ag, θ0, ls, opts)
+        _optimize_with_analytic(negll, ag, θ0, outer_optimizer, opts)
     else
-        Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
+        derivative_route = :finite
+        Optim.optimize(negll, θ0, outer_optimizer, opts; autodiff = :finite)
     end
+    _optimizer_stage!(stages, :primary, outer_optimizer, derivative_route, controls, res)
     θ̂ = Optim.minimizer(res)
     if X_lv_fit !== nothing
         cursor = 0
@@ -314,12 +357,45 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
         cursor += rr
         r̂ = exp(θ̂[cursor + 1])
-        return NBFit(β̂, Λ̂, r̂, link, _fit_verdict(res)...,
-                     alpha_hat, collect(Float64, θ̂), hessian)
+        ll, conv, iters = _nb_shared_r_verdict(res, r̂)
+        lv_hat = _lv_mean_eta(Λ̂, X_lv_fit, alpha_hat)
+        conv = _eta_cap_verdict(conv, link, β̂, offset === nothing ? lv_hat : offset .+ lv_hat;
+                                mask = msk, caller = "fit_nb_gllvm")
+        return NBFit(β̂, Λ̂, r̂, link, ll, conv, iters,
+                     alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset),
+                     _optimizer_record(optimizer, stages; controls = controls,
+                         derivative = derivative_route, actual = outer_optimizer))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         r̂ = exp(θ̂[p + rr + 1])
-        return NBFit(β̂, Λ̂, r̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        ll, conv, iters = _nb_shared_r_verdict(res, r̂)
+        conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb_gllvm")
+        return NBFit(β̂, Λ̂, r̂, link, ll, conv, iters, nothing, Float64[], hessian,
+                     _stored_offset(offset),
+                     _optimizer_record(optimizer, stages; controls = controls,
+                         derivative = derivative_route, actual = outer_optimizer))
     end
+end
+
+# Shared-r dispersion verdict. Maintainer decision 2026-09-29 ("NB upper end: warn only
+# everywhere"): a fitted r ABOVE 1e6 is the Poisson limit. There the likelihood is flat in
+# log r, but the other estimates are the Poisson fit's, so the fit only WARNS and keeps
+# Optim's verdict (gllvmTMB 0.7.1 itself puts one trait's dispersion above 1e6 on 4 of 5
+# ordinary per-trait NB fits, so flagging this end would mark most normal fits as failed).
+# Measured on origin/main 0ce4a35aa: Poisson data fitted with fit_nb_gllvm reached r = 1.7e7
+# (fixture test/fixtures/nb_shared_r_boundary.toml) with no message at all. A fitted r
+# BELOW 1e-6 (unidentified extreme overdispersion) still forces converged = false. The
+# loglik and iteration count stay as `_fit_verdict` computed them. Returns the triple in
+# `_fit_verdict`'s order, ready for `NBFit`.
+_nb_shared_r_lower(r::Real) = r < 1e-6
+
+function _nb_shared_r_verdict(res, r::Real)
+    loglik, conv, iters = _fit_verdict(res)
+    if r > 1e6
+        @warn "NB2 shared-dispersion fit reached the Poisson limit (r = $(round(r; sigdigits = 4)) above 1e6): the data show no overdispersion; the other estimates are those of a Poisson fit and are unaffected." maxlog=1
+    end
+    lower = _nb_shared_r_lower(r)
+    lower && @warn "NB2 shared-dispersion fit reached the lower boundary (r = $(round(r; sigdigits = 4)) below 1e-6); the overdispersion is not identified on this data, so converged is set to false." maxlog=1
+    return (loglik, conv && !lower, iters)
 end

@@ -1,0 +1,32 @@
+# Twin fixture for namespace row export/animal_scalar (gllvmTMB P1). Generated once by
+# gen_animal_scalar_p1.R, which also writes the two CSVs (sha256 recorded). Do not hand-edit;
+# regenerate from the script.
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+
+[scalar]
+# value ~ 0 + trait + animal_scalar(id, A = A), unit = "site", cluster = "id", Gaussian
+formula = "value ~ 0 + trait + animal_scalar(id, A = A)"
+data_file = "animal_scalar_p1_data.csv"
+data_sha256 = "6b94a95d07fa0b8029fb65e03cb12f81c2a29cf1e2361c08e75371a12b1ca0d0"
+A_file = "animal_scalar_p1_A.csv"
+A_sha256 = "ac7ee8d87680e4beef8142e45cfb862833d843508a912900168d6b7067192490"
+p = 3
+n_id = 60
+n_site = 120
+trait_names = ["t1", "t2", "t3"]
+# gllvmTMB fits A + jitter * I (measured from tmb_data$Cphy_inv)
+A_jitter = 1e-08
+converged = true
+pd_hessian = true
+r_gradient_max = 2.0990793770945238e-06
+# logLik(pedigree = ped route, A without jitter) - loglik below
+pedigree_route_loglik_diff = -2.0615254925360205e-07
+loglik = -473.61150882709421
+# b_fix: trait intercepts, in trait order
+beta = [0.40017349083009651, -0.50376230029252944, 0.28713902110062872]
+# exp(loglambda_phy): the one shared additive (animal) variance
+sigma2_a = 0.79706582069547338
+# exp(log_sigma_eps): the residual SD
+sigma_eps = 0.66461571627608396

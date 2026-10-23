@@ -108,8 +108,8 @@ Implied trait covariance at one tier of a fitted Gaussian GLLVM, mirroring
                   `Σ_W = Λ_W Λ_Wᵀ + diag(σ²_W) + σ²_eps·I`.
   - `:site`     — the full per-site covariance `sigma_y_site(fit)` (a GLLVModels.jl
                   extension not present in the R tier vocabulary; combines
-                  both tiers' diagonal contributions with the Gaussian
-                  residual, excluding the phylogenetic block).
+                  both tiers, including the full `Λ_W Λ_Wᵀ` block, with the
+                  Gaussian residual, excluding the phylogenetic block).
 
 Legacy aliases `:B`/`:W` are accepted for `:unit`/`:unit_obs`.
 
@@ -125,6 +125,16 @@ Legacy aliases `:B`/`:W` are accepted for `:unit`/`:unit_obs`.
 Deviation from R: GLLVModels.jl has no `phy`/`spatial`/`*_slope` tiers yet (those
 augmented-block tiers belong to structured-term recognizers, Cluster 3 of
 the missing-surface work order); requesting them throws `ArgumentError`.
+
+Identification: each column of `y` is one unit observed once, so the data
+identify only the sum of the two tiers, `Λ_B Λ_Bᵀ + Λ_W Λ_Wᵀ` and
+`σ²_B + σ²_W + σ²_eps`, not the split (#135). With `K_W > 0` (for the
+loadings) or `has_diag = true` (for the diagonal), the `:unit` and
+`:unit_obs` results depend on the starting values and should not be
+interpreted; `:site` uses only the identified total. A `GllvmFit` with
+`K_W > 0` matches a single-tier fit with `K + K_W` axes. To separate the
+tiers, fit repeated observations per unit with
+[`fit_twolevel_gaussian`](@ref) and use the [`TwoLevelFit`](@ref) method.
 """
 function extract_Sigma(fit::GllvmFit; level::Symbol = :unit, part::Symbol = :total)
     lvl = _canonical_level(level)
@@ -257,12 +267,25 @@ extract_rotated_loadings(fit) = (Λ = getLoadings(fit; rotate = true), R = rotat
 ## alignment ledger row).
 ## ---------------------------------------------------------------------------
 
-# Tier total with NO σ_eps² folded in, mirroring R's B/W tier Sigma
+# A Gaussian fit with `has_diag = true` and no W-tier loadings (`K_W == 0`)
+# has one unit per column of `y`, so the data identify only the SUM
+# `σ²_B + σ²_W + σ_eps²` of its diagonal terms, never the split. R fits that
+# whole sum as the single unit-tier unique part, so the matching unit-tier
+# total is `sigma_y_site(fit)` (the same denominator `communality()` uses),
+# and the diagonal W tier is already folded into it (#701).
+_r_unit_folds_diag(fit::GllvmFit) = fit.model.has_diag && fit.model.K_W == 0
+
+# Tier total with NO σ_eps² folded in, mirroring R's B/W tier Sigma, except
+# the `:unit` tier of a has_diag fit with K_W == 0, which is the identified
+# total `sigma_y_site(fit)` and so includes σ²_W and σ_eps² (#701).
 # (`extract_Sigma(fit, level, part="total", link_residual="none")` on a
 # Gaussian fit — Gaussian's link_residual contributes 0 regardless).
 function _r_tier_total(fit::GllvmFit, lvl::Symbol)
     p = fit.model.p
-    if lvl === :unit
+    if lvl === :unit && _r_unit_folds_diag(fit)
+        # Identified total (#701): see `_r_unit_folds_diag`.
+        return Matrix(sigma_y_site(fit))
+    elseif lvl === :unit
         Σ = fit.pars.Λ * fit.pars.Λ'
         if fit.model.has_diag && fit.pars.σ²_B !== nothing
             Σ = Σ + diagm(collect(Float64, fit.pars.σ²_B))
@@ -280,16 +303,6 @@ function _r_tier_total(fit::GllvmFit, lvl::Symbol)
     end
 end
 
-# Unit-level tier total for the R-style extractors. On a `has_diag` fit with
-# one observation per unit, σ²_B, σ²_W and σ²_eps enter the likelihood only
-# through their sum, so σ²_B alone is not an identified denominator (#701).
-# The identified one is the per-site total, the same denominator `communality`
-# uses (and the one gllvmTMB reports for such a fit).
-function _unit_total_identified(fit::GllvmFit)
-    fit.model.has_diag && return Matrix(sigma_y_site(fit))
-    return _r_tier_total(fit, :unit)
-end
-
 # Tier shared (ΛΛᵀ) block alone — no diagonal, no σ_eps².
 function _r_tier_shared(fit::GllvmFit, lvl::Symbol)
     p = fit.model.p
@@ -301,6 +314,7 @@ end
 # Whether the fit genuinely carries a given tier at all (mirrors R's
 # `fit$use$rr_B || fit$use$diag_B` / `rr_W || diag_W` tier-presence gate).
 function _r_tier_present(fit::GllvmFit, lvl::Symbol)
+    lvl === :unit_obs && _r_unit_folds_diag(fit) && return false
     lvl === :unit && return fit.model.K > 0 ||
         (fit.model.has_diag && fit.pars.σ²_B !== nothing)
     fit.model.K_W > 0 || (fit.model.has_diag && fit.pars.σ²_W !== nothing)
@@ -319,16 +333,10 @@ end
 
 Per-trait communality at ONE tier, `c²_t = (Λ_tier Λ_tierᵀ)_tt /
 Σ_tier,total_tt`, mirroring `gllvmTMB::extract_communality(level = ...)`.
-The default `level = :unit` matches R's
-tier-scoped denominator exactly: `σ_eps²` (the Gaussian observation
-residual) never enters, because it is not one of R's `B`/`W`/`phy` tier
-components. `level = :unit_obs` is the within-unit (W) twin.
-
-On a `has_diag = true` fit, `level = :unit` uses the identified per-site total
-(`sigma_y_site(fit)`, i.e. `ΛΛᵀ + diag(σ²_B + σ²_W + σ²_eps)`) as the
-denominator, the same one as [`communality`](@ref). With one observation per
-unit, `σ²_B` cannot be separated from `σ²_W` and `σ²_eps`, so `σ²_B` alone is
-not an identified unique part (#701).
+The default `level = :unit` matches R's tier-scoped
+denominator on fits without a diagonal term: `σ_eps²` (the Gaussian
+observation residual) never enters there, because it is not one of R's
+`B`/`W`/`phy` tier components. `level = :unit_obs` is the within-unit (W) twin.
 
 On a fit with no diagonal Ψ_tier component (e.g. `has_diag = false`), the
 shared and total tiers coincide exactly and `c²_t` degenerates to `1.0` for
@@ -338,12 +346,22 @@ every trait, matching `gllvmTMB` for the same model structure.
 (forwards to [`communality`](@ref)): shared / `sigma_y_site(fit)`, i.e.
 every non-phylo tier the fit carries plus `σ_eps²`. The two estimands agree
 only when `σ_eps == 0` and there is no W-tier.
+
+With `has_diag = true` and `K_W == 0`, the data identify only the sum
+`σ²_B + σ²_W + σ_eps²` of the diagonal terms (one unit per column of `y`),
+and R fits that whole sum as the unit-tier unique part. The `:unit` value
+therefore uses the identified denominator `sigma_y_site(fit)` and equals
+[`communality`](@ref) (#701); `level = :unit_obs` carries no separate tier in
+that case. With `K_W > 0`, a `GllvmFit` does not identify the split between
+the `:unit` and `:unit_obs` tiers, so the tier-scoped value depends on the
+starting values; see [`extract_Sigma(::GllvmFit)`](@ref). With `K_W > 0` this
+holds for `level = :total` too, because its numerator is `Λ_B Λ_Bᵀ` alone.
 """
 function extract_communality(fit::GllvmFit; level::Symbol = :unit)
     lvl = _validate_communality_level(level)
     lvl === :total && return communality(fit)
     shared = diag(_r_tier_shared(fit, lvl))
-    total = diag(lvl === :unit ? _unit_total_identified(fit) : _r_tier_total(fit, lvl))
+    total = diag(_r_tier_total(fit, lvl))
     return [(isfinite(t) && t > 0) ? s / t : NaN for (s, t) in zip(shared, total)]
 end
 
@@ -376,21 +394,27 @@ Cross-trait correlation at ONE tier, `cov2cor(Σ_tier,total)`, mirroring
 `gllvmTMB::extract_correlations(tier = ...)`'s point-only route
 (`extract_Sigma(fit, level = tier, part = "total")\$R`). This is now the
 DEFAULT (`level = :unit`): `σ_eps²` never enters the
-tier total, matching R exactly (same tier-scoping as
-[`extract_communality`](@ref)). On a `has_diag = true` fit, `level = :unit`
-standardises by the identified per-site total (as [`extract_communality`](@ref)
-does), not by `σ²_B` alone (#701). `level = :unit_obs` is the within-unit (W)
+tier total on fits without a diagonal term, matching R (same tier-scoping as
+[`extract_communality`](@ref)). `level = :unit_obs` is the within-unit (W)
 twin.
 
 `level = :total` recovers GLLVModels.jl's original TOTAL-variance estimand
 (forwards to [`correlation`](@ref)): `ρ_ij = Σ_y_site,ij / √(Σ_y_site,ii ·
 Σ_y_site,jj)`, standardising by every non-phylo tier plus `σ_eps²`. The two
-estimands agree only when `σ_eps == 0` and there is no W-tier.
+estimands agree only when `σ_eps == 0` and there is no W-tier. `level = :total`
+uses only the identified total, so it is the safe choice for a `K_W > 0` fit.
+
+With `has_diag = true` and `K_W == 0`, the `:unit` correlation standardises
+by the identified total `sigma_y_site(fit)` (the sum `σ²_B + σ²_W + σ_eps²`
+is identified, its split is not), so it equals [`correlation`](@ref) (#701).
+With `K_W > 0`, a `GllvmFit` does not identify the split between the `:unit`
+and `:unit_obs` tiers (one unit per column of `y`), so the tier-scoped value
+depends on the starting values; see [`extract_Sigma(::GllvmFit)`](@ref).
 """
 function extract_correlations(fit::GllvmFit; level::Symbol = :unit)
     lvl = _validate_communality_level(level)
     lvl === :total && return correlation(fit)
-    return _cov2cor(lvl === :unit ? _unit_total_identified(fit) : _r_tier_total(fit, lvl))
+    return _cov2cor(_r_tier_total(fit, lvl))
 end
 
 """
@@ -492,12 +516,13 @@ getResidualCor(fit::_GllvmOrTwoLevel; level::Symbol = :unit) = extract_residual_
 # ---------------------------------------------------------------------------
 
 """
-    extract_ordination(fit, Y; rotate::Bool = true) -> (sites, species, rotation)
+    extract_ordination(fit, Y; rotate::Bool = true, kwargs...) -> (sites, species, rotation)
 
 Canonical snake_case accessor forwarding to [`ordination`](@ref), mirroring
-`gllvmTMB::extract_ordination()`.
+`gllvmTMB::extract_ordination()`. Other keywords (`X`, `N`, ...) are forwarded too.
 """
-extract_ordination(fit, Y::AbstractMatrix; rotate::Bool = true) = ordination(fit, Y; rotate = rotate)
+extract_ordination(fit, Y::AbstractMatrix; rotate::Bool = true, kwargs...) =
+    ordination(fit, Y; rotate = rotate, kwargs...)
 
 # ---------------------------------------------------------------------------
 # Ordinal cutpoints.
@@ -544,6 +569,13 @@ Any other `component` (`:unique_W`, `:unique_B`, `:unique_Wd`, `:residual`),
 or `level = :total`, forwards unchanged to the existing [`proportions`](@ref)
 generic (GLLVModels.jl's original TOTAL-variance composition, `sigma_y_site(fit)`
 denominator) — those components/level are not part of this alignment slice.
+
+With `has_diag = true` and `K_W == 0`, the denominator is the identified
+`sigma_y_site(fit)` diagonal and the `:shared` value equals
+[`communality`](@ref) (#701); the diagonal W tier is already inside it. With
+`K_W > 0`, a `GllvmFit` does not identify the split between the `:unit` and
+`:unit_obs` tiers (one unit per column of `y`), so the tier-scoped value
+depends on the starting values; see [`extract_Sigma(::GllvmFit)`](@ref).
 """
 function extract_proportions(fit::GllvmFit; component::Symbol = :shared, level::Symbol = :unit)
     (component !== :shared || level === :total) && return proportions(fit; component = component)
@@ -552,6 +584,83 @@ function extract_proportions(fit::GllvmFit; component::Symbol = :shared, level::
     _r_tier_present(fit, :unit_obs) && (total .+= diag(_r_tier_total(fit, :unit_obs)))
     shared_unit = diag(_r_tier_shared(fit, :unit))
     return [(isfinite(t) && t > 0) ? s / t : NaN for (s, t) in zip(shared_unit, total)]
+end
+
+# Variance components of a two-level Gaussian fit, in gllvmTMB's order and names
+# (`shared_unit`, `unique_unit`, `shared_unit_obs`, `unique_unit_obs`), each kept only if
+# some trait has a positive value, as R's `add_comp()` does.
+function _twolevel_components(fit::TwoLevelFit)
+    comps = Pair{Symbol, Vector{Float64}}[]
+    add!(name, v) = any(>(0), v) && push!(comps, name => Vector{Float64}(v))
+    add!(:shared_unit, vec(sum(abs2, fit.Λ_B; dims = 2)))
+    add!(:unique_unit, fit.σ²_B)
+    add!(:shared_unit_obs, vec(sum(abs2, fit.Λ_W; dims = 2)))
+    add!(:unique_unit_obs, fit.σ²_W)
+    return comps
+end
+
+"""
+    extract_proportions(fit::TwoLevelFit; format::Symbol = :long) -> NamedTuple
+
+Per-trait variance-share decomposition of a two-level Gaussian fit
+([`fit_twolevel_gaussian`](@ref)), mirroring `gllvmTMB::extract_proportions()`
+with `link_residual = "none"` (a Gaussian fit has no link residual to add). The
+components, in R's order and names, are `:shared_unit` (`diag(Λ_B Λ_Bᵀ)`),
+`:unique_unit` (`σ²_B`), `:shared_unit_obs` (`diag(Λ_W Λ_Wᵀ)`) and
+`:unique_unit_obs` (`σ²_W`); a component enters only if some trait has a
+positive value. Each trait's proportion is its component variance over the row
+sum of all entering components; a trait whose total is not finite and positive
+gets `NaN`.
+
+`format = :long` (default) returns the columns `(trait, component, variance,
+proportion)` with one row per (component, trait), component-major as in R, where
+`trait` is the integer trait index and `component` a `Symbol`. `format = :wide`
+returns `(trait, <one column per component proportion>, total_variance)`. Unlike
+the [`GllvmFit`](@ref) method, which returns only the `:shared` proportion vector,
+this method returns every component.
+"""
+function extract_proportions(fit::TwoLevelFit; format::Symbol = :long)
+    format in (:long, :wide) || throw(ArgumentError("format must be :long or :wide; got $(format)"))
+    comps = _twolevel_components(fit)
+    isempty(comps) && throw(ArgumentError("No identifiable variance components in this fit."))
+    p = size(fit.Λ_B, 1)
+    total = zeros(Float64, p)
+    for (_, v) in comps
+        total .+= v
+    end
+    ok = [isfinite(t) && t > 0 for t in total]
+    prop(v) = [ok[t] ? v[t] / total[t] : NaN for t in 1:p]
+    if format === :long
+        return (trait = repeat(collect(1:p), length(comps)),
+                component = reduce(vcat, [fill(c, p) for (c, _) in comps]),
+                variance = reduce(vcat, [v for (_, v) in comps]),
+                proportion = reduce(vcat, [prop(v) for (_, v) in comps]))
+    end
+    cnames = Tuple(c for (c, _) in comps)
+    cols = Tuple(prop(v) for (_, v) in comps)
+    return merge((trait = collect(1:p),), NamedTuple{cnames}(cols), (total_variance = total,))
+end
+
+"""
+    extract_residual_split(fit::TwoLevelFit) -> NamedTuple
+
+Per-trait split of the observation-level variance of a two-level Gaussian fit,
+mirroring `gllvmTMB::extract_residual_split()`. Returns the columns
+`(trait, sigma2_d, sigma2_e, sigma2_total)`: `sigma2_d` is the distribution-specific
+residual, `0` for a Gaussian fit (identity link, as in R); `sigma2_e` is the
+estimated observation-level diagonal variance `σ²_W`; `sigma2_total = sigma2_d +
+sigma2_e`. In a [`TwoLevelFit`](@ref) every observation carries its own per-trait
+diagonal term, which is the "genuine observation-level diagonal" case in which
+R reports `σ²_W` (and not `0`) as `sigma2_e`. Only the Gaussian two-level fit
+exists in this package, so the non-Gaussian `sigma2_d` values R reports for
+binomial, Poisson and the other families are not reachable here.
+"""
+function extract_residual_split(fit::TwoLevelFit)
+    p = length(fit.σ²_W)
+    sigma2_d = zeros(Float64, p)
+    sigma2_e = Vector{Float64}(fit.σ²_W)
+    return (trait = collect(1:p), sigma2_d = sigma2_d, sigma2_e = sigma2_e,
+            sigma2_total = sigma2_d .+ sigma2_e)
 end
 
 """
@@ -588,6 +697,11 @@ Per-trait unit-level intraclass correlation `ICC_t = v_B,t / (v_B,t + v_W,t)`,
 `GllvmFit` is Gaussian-only so there is no implicit link residual to add).
 NaN where `v_B,t + v_W,t` is not finite-positive, matching R's
 `.safe_icc_ratio()`.
+
+With `K_W > 0` or `has_diag = true`, a `GllvmFit` does not identify the split
+between the `:unit` and `:unit_obs` tiers (one unit per column of `y`), so
+the tier-scoped value depends on the starting values; see
+[`extract_Sigma(::GllvmFit)`](@ref).
 """
 function extract_ICC_site(fit::GllvmFit)
     vB = diag(extract_Sigma(fit; level = :unit, part = :total).Sigma)
@@ -617,7 +731,11 @@ genuinely carries — the phylogenetic block (`Λ_phy_aug Λ_phy_augᵀ` when
 `K_phy > 0 || has_phy_unique`), the `:unit` tier (when `K > 0` or a diagonal
 `σ²_B` is present), and the `:unit_obs` tier (when `K_W > 0` or a diagonal
 `σ²_W` is present) — using each present tier's R-tier-scoped total (no
-`σ_eps²`, see [`extract_communality`](@ref)). Mirrors
+`σ_eps²`, see [`extract_communality`](@ref)). On a Gaussian fit with
+`has_diag = true` and `K_W == 0` the data identify only the sum
+`σ²_B + σ²_W + σ_eps²`, so the `:unit` tier is the identified total
+`sigma_y_site(fit)` (which includes `σ_eps²`) and the diagonal `:unit_obs`
+tier is folded into it rather than added again (#701). Mirrors
 `gllvmTMB::extract_Omega()` with `tiers = NULL` (auto-detected) and
 `link_residual = "none"` (Gaussian `GllvmFit` has no implicit link residual
 to add). The default `level = :auto` includes only tiers present in the fit
@@ -656,8 +774,9 @@ end
 # ---------------------------------------------------------------------------
 # Still blocked (no stub — see docs/dev-log/core070/extractors-slice-notes.md
 # for the full accounting):
-#   * extract_residual_split — needs the per-family link-residual bank wired
-#     to an explicit OLRE fit tag; GLLVModels.jl's K_W tier is not that tag.
+#   * extract_residual_split for a GllvmFit and for the non-Gaussian families:
+#     needs the per-family link-residual bank wired to an explicit OLRE fit tag;
+#     only the Gaussian TwoLevelFit method exists (see its docstring).
 #   * extract_coevolution_modules — needs a module/eigen-decomposition of Γ
 #     that no coevolution fit type currently computes.
 #   * getREsd — needs TMB-sdreport-style marginal SDs of the random effects

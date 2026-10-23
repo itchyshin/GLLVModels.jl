@@ -1,0 +1,15 @@
+{
+ "pin": "P1",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "generated_by": "git -C <gllvmTMB clone, read only> show P1:<file> | sha256",
+ "files": {
+  "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+  "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791",
+  "R/isdm-sources.R": "e06bbe7bc3c88697080173f0e1b68f3e5a1947729124e72d34587730cd1b6f73",
+  "R/extract-sigma.R": "dbd337827707a7ca04c31ee57d6caf143b08e633d30a495f809f5b8728f90a14",
+  "R/extract-cutpoints.R": "38c195646d91db683cbb31da1e3ba60fb1d857d5c0637f0877514176b11bc151",
+  "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+  "R/temporal.R": "93ec5bfe19b2f64afa04c50d9a7a8c85d2b0d9b9a6410eeceb5504895b280902",
+  "DESCRIPTION": "ce3ba8fd8787a096e0c1142a2145cef167869325c937c8436c8916a526552283"
+ }
+}

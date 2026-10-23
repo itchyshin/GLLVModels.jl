@@ -1,0 +1,46 @@
+# Julia estimates for the iSDM P1 paired cases. Written by
+# test/fixtures/isdm/export_julia_estimates.jl. Do not edit.
+julia_version = "1.10.12"
+commit = "869effb0bac5c16f51d3e5ff94b441853d743802"
+
+[julia.predict]
+loglik = -134.9384151696901
+converged = true
+cells_converged = true
+iterations = 22
+wall_seconds = 10.211
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "traitsp1:src_gbif", "traitsp2:src_gbif"]
+b_fix = [-0.19406723556214253, 0.20183400644159505, 0.42022413657342722, -0.37327961471484633, 0.16963346707475271, 0.11163710790061032]
+K = 1
+theta_rr_B = [-0.47631493662598379, -0.36949181822253896]
+
+[julia.ms3]
+loglik = -214.3053905935333
+converged = true
+cells_converged = true
+iterations = 25
+wall_seconds = 2.206
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "traitsp1:srcliterature", "traitsp2:srcliterature", "traitsp1:srcsurvey", "traitsp2:srcsurvey"]
+b_fix = [-0.026934240535702609, 0.17208384776741995, 0.47676606232902052, -0.37416285537820937, -0.154150682646222, 0.10008344482451174, 0.12413613598329352, -0.1131186332707269]
+K = 1
+theta_rr_B = [-2.1488085553633881e-08, -2.2772652257748913e-08]
+
+[julia.srcform_pois]
+loglik = -1124.348105263889
+converged = true
+cells_converged = true
+iterations = 23
+wall_seconds = 2.205
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "isdm_source:gbif:(Intercept)", "isdm_source:gbif:access", "isdm_source:survey:(Intercept)", "isdm_source:survey:observero2", "isdm_source:survey:methodwalk"]
+b_fix = [-0.32861115361778725, 0.10040564968478034, 0.32809281639862686, -0.21072259597720128, 0.28598602149702052, 0.50746573884210122, 0.045907526146026285, 0.0093080205935554307, 0.25675418087305718]
+K = 0
+
+[julia.srcform_mixed]
+loglik = -471.96468978796764
+converged = true
+cells_converged = true
+iterations = 28
+wall_seconds = 0.396
+b_fix_names = ["traitsp1", "traitsp2", "traitsp1:env", "traitsp2:env", "isdm_source:gbif:(Intercept)", "isdm_source:gbif:access", "isdm_source:survey:(Intercept)", "isdm_source:survey:observero2", "isdm_source:survey:methodwalk"]
+b_fix = [-0.2444214608072896, 0.18747639667366883, 0.27627229346287929, -0.20722199365388833, 0.3206263102341787, 0.43339446142354021, -1.3348913970028629, 0.008955147220645325, 0.079824163439741538]
+K = 0

@@ -62,20 +62,62 @@ _bb_logistic(x) = x ≥ 0 ? inv(one(x) + exp(-x)) : (e = exp(x); e / (one(x) + e
 const _BB_MU_LO = 1e-12
 const _BB_MU_HI = 1 - 1e-12
 
+# Beyond this precision the direct loggamma formula below is numerically wrong,
+# not just imprecise (#515). a=μφ and b=(1−μ)φ both grow like φ, so each of the
+# formula's six loggamma terms grows like φ·log(φ) while their SUM (the actual
+# log-pmf) stays O(1) — a huge cancellation. Float64's ~2.2e-16 relative
+# rounding in each term becomes an ABSOLUTE error in the sum of order
+# φ·log(φ)·2.2e-16: negligible at φ=1e6 (≈2e-10, measured against the same
+# formula in 256-bit BigFloat during the #515 diagnosis) but ~1e-3 by
+# φ=1e12 and unbounded from there — a genuine beta-binomial log-pmf reads back
+# as a huge, wrong, but still-finite number, silently. That is the mechanism
+# behind #515's reported `loglik ≈ +7.18e54` at `φ ≈ 3.3e65`: the outer L-BFGS
+# search (finite-difference gradient) reads the cancellation noise as room to
+# improve and runs φ further into it. Beyond this threshold the Beta(μφ,
+# (1−μ)φ) has already collapsed to a point mass at μ (file header), so the
+# Binomial(N, μ) log-pmf IS the φ→∞ limit the direct formula is trying (and,
+# above this threshold, numerically failing) to compute. Matches the boundary
+# `_dispersion_group_boundary` (`grouped_dispersion.jl`) already uses for
+# NB1/NB2 group dispersion, and is far above any φ a healthy fit reaches (this
+# family's own tests fit φ_true=12), so this never perturbs a healthy fit.
+# NOTE (#872): `betabinomial_logp` no longer switches to Binomial at this value (the
+# switch stepped the objective); it uses the cancellation-free `_bb_shift` form
+# everywhere. The constant now only marks where fitters flag φ as non-identified.
+const _BB_PHI_STABLE = 1e6
+
+# shift(x, n) = loggamma(x + n) − loggamma(x) − n·log x = Σ_{k<n} log1p(k/x),
+# without the cancellation of the three-term form at large x (#872). For x > 50
+# it uses Stirling's series for the loggamma difference,
+#   shift = (x + n − ½)·log1p(n/x) − n + S(x + n) − S(x),
+#   S(z)  = 1/(12z) − 1/(360z³) + 1/(1260z⁵) − 1/(1680z⁷)   (next term < 1e-18),
+# which tends to 0 smoothly as x → ∞, so the pmf needs no switch to Binomial.
+function _bb_shift(x, n)
+    n == 0 && return zero(x)
+    x <= 50 && return loggamma(x + n) - loggamma(x) - n * log(x)
+    S(z) = (w = inv(z * z); inv(12z) - w * inv(360z) + w * w * inv(1260z) -
+            w * w * w * inv(1680z))
+    return (x + n - 1 // 2) * log1p(n / x) - n + S(x + n) - S(x)
+end
+
 """
     betabinomial_logp(y, η, N, φ; link=LogitLink()) -> Float64
 
 Scalar beta-binomial conditional log-pmf log p(y|N,η,φ) for one trait, in the
 gllvm parameterisation `a = μφ`, `b = (1−μ)φ` with `μ = linkinv(link, η)` clamped
-to (1e-12, 1−1e-12). Uses `loggamma` (from SpecialFunctions, imported module-wide).
+to (1e-12, 1−1e-12). Written as `lchoose + y·log μ + (N−y)·log(1−μ) +
+shift(a, y) + shift(b, N−y) − shift(φ, N)` (see `_bb_shift`), which is smooth in
+φ and tends to the Binomial(N, μ) log-pmf as φ → ∞ with no switch (#872; the
+earlier hard switch at `_BB_PHI_STABLE` stepped the objective by the full
+limit gap, 0.079 per row at N = 1000). `_BB_PHI_STABLE` remains the boundary
+past which fitters flag φ as non-identified.
 """
 function betabinomial_logp(y, η, N, φ; link::Link = LogitLink())
     μ = clamp(linkinv(link, η), _BB_MU_LO, _BB_MU_HI)
     a = μ * φ
     b = (one(μ) - μ) * φ
-    return loggamma(a + b) + loggamma(a + y) + loggamma(b + N - y) -
-           loggamma(a) - loggamma(b) - loggamma(a + b + N) +
-           loggamma(N + 1) - loggamma(y + 1) - loggamma(N - y + 1)
+    return loggamma(N + 1) - loggamma(y + 1) - loggamma(N - y + 1) +
+           y * log(μ) + (N - y) * log(one(μ) - μ) +
+           _bb_shift(a, y) + _bb_shift(b, N - y) - _bb_shift(φ, N)
 end
 
 # Per-trait score s_t = ∂log p/∂η and weight W_t = −∂²log p/∂η², via ForwardDiff
@@ -93,14 +135,47 @@ end
 @inline _bb_phi_at(φ::Real, ::Integer) = φ
 @inline _bb_phi_at(φ::AbstractVector, t::Integer) = φ[t]
 
-# Inner Laplace mode-finder for one site (Newton on the negative second
-# derivative). Mirrors `_ordered_beta_mode`. `mask` (length-p Bool, or `nothing` =
-# all observed) drops missing responses: a masked entry contributes zero score and
-# zero Fisher weight, so it neither pulls the mode nor enters the Hessian. `φ` is
-# either a shared scalar or a length-p per-trait vector (grouped/+X extension).
-# `offset` (length-p, or `nothing`) is an optional site-covariate contribution
-# `(Xγ)[:, i]` added to the linear predictor before the link.
-function _beta_binomial_mode(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
+# Per-site log-posterior q(z) = Σ betabinomial_logp(...) − ½z'z, masked and offset
+# exactly as `_beta_binomial_mode_search` below. Used only by that search's step-
+# halving accept/reject test (mirrors `_grouped_laplace_mode_logpost` in
+# `grouped_dispersion.jl`).
+function _bb_mode_logpost(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
+        β::AbstractVector, φ::Union{Real, AbstractVector}, link::Link, z::AbstractVector;
+        mask = nothing, offset::Union{Nothing, AbstractVector} = nothing)
+    p = size(Λ, 1)
+    off = offset === nothing ? false : offset
+    η = β .+ off .+ Λ * z
+    q = -0.5 * dot(z, z)
+    @inbounds for t in 1:p
+        (mask === nothing || mask[t]) || continue
+        q += betabinomial_logp(y[t], η[t], N[t], _bb_phi_at(φ, t); link = link)
+    end
+    return q
+end
+
+# Inner Laplace mode-finder for one site (#503, the #479/#500/#507/#509 damped-
+# search pattern). Returns `(z, converged)`. Mirrors `_ordered_beta_mode` in its
+# score/weight but was, before this fix, an UNDAMPED Newton loop on the clamped
+# observed curvature (`_bb_score_weight` floors `W` to `≥ 1e-8`, which keeps
+# `Λ'WΛ + I` SPD by construction — same role as the expected-information floor
+# in the Gamma/NB1/NB2/Student-t grouped kernels — but does not keep any step a
+# DESCENT step) that returned whatever `z` it held at `maxiter`, converged or
+# not. The class audit (Λ scaled up to 3x, warm start perturbed ±50%) measured
+# 27/500 sites where the returned `z` was not stationary while a from-scratch
+# restart converged cleanly, some of them finite (able to escape the fitter's
+# 1e12 sentinel).
+#
+# Now a step that lowers the per-site log-posterior `q` is halved (the generic
+# core's rule, so small steps and accepted full steps are bit-identical to the
+# old loop), and `converged` requires the FULL proposed step to be below `tol`
+# (the old loop's own stopping test) — a heavily halved step does not count.
+# `mask` (length-p Bool, or `nothing` = all observed) drops missing responses:
+# a masked entry contributes zero score and zero weight, so it neither pulls
+# the mode nor enters the Hessian. `φ` is either a shared scalar or a length-p
+# per-trait vector (grouped/+X extension). `offset` (length-p, or `nothing`) is
+# an optional site-covariate contribution `(Xγ)[:, i]` added to the linear
+# predictor before the link.
+function _beta_binomial_mode_search(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
         β::AbstractVector, φ::Union{Real, AbstractVector}; link::Link = LogitLink(),
         mask = nothing, offset::Union{Nothing, AbstractVector} = nothing,
         maxiter::Integer = 100, tol::Real = 1e-9)
@@ -122,25 +197,74 @@ function _beta_binomial_mode(y::AbstractVector, N::AbstractVector, Λ::AbstractM
         end
         A = Symmetric(Λ' * (W .* Λ) + I)
         Δ = _safe_solve(A, Λ' * s .- z)
-        (Δ === nothing || !all(isfinite, Δ)) && break
-        z = z .+ Δ
-        maximum(abs, Δ) < tol && break
+        (Δ === nothing || !all(isfinite, Δ)) && return z, false
+        maximum(abs, Δ) < tol && return z .+ Δ, true
+        if norm(Δ) <= 1e-3 * (1 + norm(z))
+            z = z .+ Δ
+        else
+            q0 = _bb_mode_logpost(y, N, Λ, β, φ, link, z; mask = mask, offset = offset)
+            if isfinite(q0)
+                accepted = false
+                step = 1.0
+                for _half in 1:30
+                    ztrial = z .+ step .* Δ
+                    q1 = _bb_mode_logpost(y, N, Λ, β, φ, link, ztrial; mask = mask, offset = offset)
+                    if isfinite(q1) && q1 >= q0
+                        z = ztrial
+                        accepted = true
+                        break
+                    end
+                    step *= 0.5
+                end
+                accepted || return z, false
+            else
+                z = z .+ Δ
+            end
+        end
     end
+    return z, false
+end
+
+# Public per-site mode search, retained under its original name for `getLV`/
+# `predict` (which need only `z`, at the fitted parameters, not a convergence
+# flag). Retries with a 20x iteration budget before giving up (mirrors #507's
+# review fix for NB1 and #509's Student-t fallback: a genuinely healthy site
+# can still need more than the default `maxiter = 100` damped steps under
+# ill-conditioned curvature). `_beta_binomial_loglik_site` below calls
+# `_beta_binomial_mode_search` directly so it can act on the `converged` flag.
+function _beta_binomial_mode(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
+        β::AbstractVector, φ::Union{Real, AbstractVector}; link::Link = LogitLink(),
+        mask = nothing, offset::Union{Nothing, AbstractVector} = nothing,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    z, ok = _beta_binomial_mode_search(y, N, Λ, β, φ; link = link, mask = mask,
+                                       offset = offset, maxiter = maxiter, tol = tol)
+    ok || ((z, ok) = _beta_binomial_mode_search(y, N, Λ, β, φ; link = link, mask = mask,
+                                                offset = offset, maxiter = 20 * maxiter, tol = tol))
     return z
 end
 
 # Per-site Laplace log-marginal:
 #   log p(y_s) ≈ ℓ(ẑ) − ½ẑ'ẑ − ½logdet(Λ'WΛ + I).
-# `mask` drops the masked entries from the score/weight (via `_beta_binomial_mode`)
-# and from the conditional log-density sum. `φ`/`offset` as in `_beta_binomial_mode`.
+# `mask` drops the masked entries from the score/weight (via
+# `_beta_binomial_mode_search`) and from the conditional log-density sum.
+# `φ`/`offset` as in `_beta_binomial_mode_search`.
+#
+# Calls the search directly (not the public `_beta_binomial_mode` wrapper) so
+# it can act on the `converged` flag (#503): a search that cannot certify a
+# stationary point — even after the wrapper's own 20x-budget retry — must not
+# produce a finite value. -Inf makes the fitters' objective return its 1e12
+# sentinel instead of a garbage surface (the #479 precedent).
 function _beta_binomial_loglik_site(y::AbstractVector, N::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, φ::Union{Real, AbstractVector};
         link::Link = LogitLink(), mask = nothing, offset::Union{Nothing, AbstractVector} = nothing,
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    z = _beta_binomial_mode(y, N, Λ, β, φ; link = link, mask = mask, offset = offset,
-                            maxiter = maxiter, tol = tol)
+    z, ok = _beta_binomial_mode_search(y, N, Λ, β, φ; link = link, mask = mask, offset = offset,
+                                       maxiter = maxiter, tol = tol)
+    ok || ((z, ok) = _beta_binomial_mode_search(y, N, Λ, β, φ; link = link, mask = mask,
+                                                offset = offset, maxiter = 20 * maxiter, tol = tol))
+    ok || return -Inf
     η = β .+ off .+ Λ * z
     ℓ = 0.0
     W = Vector{Float64}(undef, p)
@@ -155,7 +279,7 @@ function _beta_binomial_loglik_site(y::AbstractVector, N::AbstractVector,
         W[t] = Wt
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -235,6 +359,74 @@ end
 # ---------------------------------------------------------------------------
 # Fit driver.
 # ---------------------------------------------------------------------------
+
+# Same sentinel this file's own `negll` closures already return on a failed
+# evaluation (`catch; return 1e12`, `isfinite(v) ? v : 1e12`); a legitimate
+# evaluation never lands there.
+const _BB_FAIL_PENALTY = 1e12
+
+# The Laplace log-marginal `betabinomial_marginal_loglik_laplace` sums, per
+# site, a discrete log-probability (≤0, a beta-binomial pmf value is never
+# above 1) plus the Laplace correction `−½ẑ'ẑ − ½logdet(Λ'WΛ + I)`, itself
+# ≤0 since `Λ'WΛ + I` is positive definite by construction (logdet ≥ 0). So a
+# genuine value never rises meaningfully above 0; the small positive margin
+# here is floating-point headroom, not a modelling tolerance.
+const _BB_LOGLIK_MAX = 1e-6
+
+"""
+    _beta_binomial_verdict(optim_converged, nll, φ) -> (converged, loglik, reason)
+
+Convergence contract for [`fit_beta_binomial_gllvm`](@ref) (#515, per the #502/
+#505 rule: a per-family verdict rather than a change to the shared
+`_fit_verdict`). `Optim`'s own flag is not enough here: it can fire at a point
+where the Beta precision `φ` has run to the numerical edge (the file header's
+φ→∞ reduction to Binomial) with intercepts and loadings correspondingly large
+— `φ ≈ 3.3e65`, reported loglik ≈ +7.18e54, every per-site latent score
+trivially at `z=0` (the #515 reproduction in `test/fixtures/`). Two
+checks gate the reported flag beyond `optim_converged`; an impossible value
+is reported as `loglik = -Inf`, never as a log-likelihood:
+
+- `:objective_impossible` — the objective is non-finite, still at
+  `_BB_FAIL_PENALTY` (never evaluated), or the resulting log-likelihood is
+  positive beyond floating-point rounding (`> _BB_LOGLIK_MAX`; see that
+  constant's own note for why a genuine value cannot be). +7e54 is not a large
+  log-likelihood — it is `betabinomial_logp`'s catastrophic cancellation at
+  extreme φ (see `_BB_PHI_STABLE`) read back as data.
+- `:phi_at_boundary` — `φ ≥ _BB_PHI_STABLE`, the same boundary
+  `_dispersion_group_boundary` (`grouped_dispersion.jl`) already uses for
+  NB1/NB2 group dispersion: at or beyond it the Beta has collapsed to a point
+  mass at μ and φ is not identifiable from a Binomial fit, whatever `Optim`
+  reports. This never fires for a healthy fit — this family's own tests fit
+  φ_true=12, orders of magnitude below the boundary.
+"""
+function _beta_binomial_verdict(optim_converged::Bool, nll::Real, φ::Real)
+    (isfinite(nll) && nll < _BB_FAIL_PENALTY) || return (false, -Inf, :objective_impossible)
+    ll = -Float64(nll)
+    ll <= _BB_LOGLIK_MAX || return (false, -Inf, :objective_impossible)
+    φ < _BB_PHI_STABLE || return (false, ll, :phi_at_boundary)
+    return (optim_converged, ll, :ok)
+end
+
+"""
+    _beta_binomial_grouped_verdict(nll, optim_converged, iterations, φg) -> (loglik, converged, iterations)
+
+Convergence contract for [`fit_beta_binomial_gllvm_grouped`](@ref) and
+[`fit_beta_binomial_gllvm_grouped_cov`](@ref) (#515 follow-up). The shared
+`_fit_verdict` screen runs first, so its plateau threshold still applies; its
+result then goes through [`_beta_binomial_verdict`](@ref) at the largest group
+precision `maximum(φg)`. One group at `φ ≥ _BB_PHI_STABLE` is enough: that
+group's Beta has collapsed to a point mass and its `φ` is not identifiable.
+Measured on origin/main 52ed4281b (Julia 1.10.12): a per-species grouped fit
+of genuine beta-binomial data (φ_true = 12, fixture `healthy_seed_9003`)
+reported `converged = true` with one species at `φ ≈ 7.6e15`. Returns the
+triple in `_fit_verdict`'s order, ready for the result constructors.
+"""
+function _beta_binomial_grouped_verdict(nll::Real, optim_converged::Bool,
+        iterations::Integer, φg::AbstractVector{<:Real})
+    ll0, conv0, iters = _fit_verdict(nll, optim_converged, iterations)
+    conv, ll, _reason = _beta_binomial_verdict(conv0, -ll0, maximum(φg))
+    return (ll, conv, iters)
+end
 
 """
     BetaBinomialFit
@@ -389,7 +581,8 @@ function fit_beta_binomial_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    return BetaBinomialFit(β̂, Λ̂, link, φ̂, _fit_verdict(res)...)
+    conv, loglik, _reason = _beta_binomial_verdict(Optim.converged(res), Optim.minimum(res), φ̂)
+    return BetaBinomialFit(β̂, Λ̂, link, φ̂, loglik, conv, Optim.iterations(res))
 end
 
 # ===========================================================================
@@ -556,7 +749,9 @@ function fit_beta_binomial_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    return BetaBinomialGroupedFit(β̂, Λ̂, φ̂g, gidx, link, _fit_verdict(res)...)
+    return BetaBinomialGroupedFit(β̂, Λ̂, φ̂g, gidx, link,
+                                  _beta_binomial_grouped_verdict(Optim.minimum(res), Optim.converged(res),
+                                                                 Optim.iterations(res), φ̂g)...)
 end
 
 # ===========================================================================
@@ -736,5 +931,7 @@ function fit_beta_binomial_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     φ̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
     return BetaBinomialGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
-                                     _fit_verdict(res)...)
+                                     _beta_binomial_grouped_verdict(Optim.minimum(res),
+                                                                    Optim.converged(res),
+                                                                    Optim.iterations(res), φ̂g)...)
 end

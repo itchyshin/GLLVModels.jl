@@ -16,6 +16,30 @@ struct AGHQGaussianData
     offset::Matrix{Float64}
     design::Array{Float64,3}
 end
+struct AGHQNB2Data
+    responses::Matrix{Float64}
+    mask::BitMatrix
+    offset::Matrix{Float64}
+    group::Vector{Int}
+end
+struct AGHQTweedieData
+    responses::Matrix{Float64}
+    mask::BitMatrix
+    offset::Matrix{Float64}
+    group::Vector{Int}
+end
+struct AGHQDeltaGammaData
+    responses::Matrix{Float64}
+    offset::Matrix{Float64}
+    predictor::Symbol
+    disp_group::Symbol
+end
+struct AGHQOrdinalData
+    responses::Matrix{Float64}
+    mask::BitMatrix
+    C::Vector{Int}
+    probit::Bool
+end
 struct AGHQFitInfo{C,B,R} <: AbstractIntegrationInfo
     requested::Union{Symbol,Int}
     actual::Symbol
@@ -29,7 +53,7 @@ struct AGHQFitInfo{C,B,R} <: AbstractIntegrationInfo
     base_controls::B
     result::R
     caches::Vector{AGHQAdaptation}
-    data::Union{Nothing,AGHQPoissonData,AGHQBinomialData,AGHQGaussianData}
+    data::Union{Nothing,AGHQPoissonData,AGHQBinomialData,AGHQGaussianData,AGHQNB2Data,AGHQOrdinalData,AGHQTweedieData,AGHQDeltaGammaData}
     input_digest::String
     mode_gradient_max::Float64
 end
@@ -79,3 +103,19 @@ _aghq_data_digest(d::AGHQBinomialData)=bytes2hex(SHA.sha256(
 _aghq_data_digest(d::AGHQGaussianData)=bytes2hex(SHA.sha256(
     string(size(d.responses))*"|"*join(vec(d.responses),",")*"|"*join(vec(d.mask),",")*
     "|"*join(vec(ifelse.(d.mask,d.offset,0.0)),",")*"|"*string(size(d.design))*"|"*join(vec(d.design),",")))
+
+_aghq_data_digest(d::AGHQNB2Data)=bytes2hex(SHA.sha256(
+    string(size(d.responses))*"|"*join(vec(d.responses),",")*"|"*join(vec(d.mask),",")*
+    "|"*join(vec(ifelse.(d.mask,d.offset,0.0)),",")*"|"*join(d.group,",")))
+
+_aghq_data_digest(d::AGHQOrdinalData)=bytes2hex(SHA.sha256(
+    string(size(d.responses))*"|"*join(vec(d.responses),",")*"|"*join(vec(d.mask),",")*
+    "|"*join(d.C,",")*"|"*(d.probit ? "probit" : "logit")))
+
+_aghq_data_digest(d::AGHQTweedieData)=bytes2hex(SHA.sha256(
+    string(size(d.responses))*"|"*join(vec(d.responses),",")*"|"*join(vec(d.mask),",")*
+    "|"*join(vec(ifelse.(d.mask,d.offset,0.0)),",")*"|"*join(d.group,",")))
+
+_aghq_data_digest(d::AGHQDeltaGammaData)=bytes2hex(SHA.sha256(
+    string(size(d.responses))*"|"*join(vec(d.responses),",")*"|"*join(vec(d.offset),",")*
+    "|"*string(d.predictor)*"|"*string(d.disp_group)))

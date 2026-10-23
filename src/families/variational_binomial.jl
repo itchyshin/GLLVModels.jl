@@ -10,10 +10,11 @@
 #   log p(y_t|η_t) = logbinom(N_t,y_t) + y_t η_t − N_t log(1+e^{η_t}),
 # so under q
 #   E_q[log p(y_t|η_t)] = logbinom(N_t,y_t) + y_t μ_t − N_t S(μ_t, σ²_t),
-# with the softplus expectation
-#   S(μ,σ²) = E_q[log(1+e^η)] ≈ Σ_{j=1}^G (w_j/√π) log1p(exp(μ + √(2σ²) x_j)),
-# (x_j,w_j) the G-point Gauss–Hermite nodes/weights (Σ w_j = √π). The η argument
-# is clamped via `_clamp_eta` for numerical safety.
+# evaluated by G-point Gauss–Hermite quadrature (x_j,w_j), Σ w_j = √π, at the nodes
+#   η_j = clamp(μ + √(2σ²) x_j, ±30)   (`_clamp_eta`, for numerical safety),
+#   E_q[y η − N log(1+e^η)] ≈ Σ_j (w_j/√π) (y η_j − N log1p(exp(η_j))).
+# The SAME clamped η_j enters the linear and the softplus term, so the per-cell value
+# is ≤ 0 (a genuine log-pmf) and the ELBO cannot run away past |η| = 30.
 #
 # Per site,
 #   ELBO_s = Σ_t E_q[log p(y_t|η_t)] − KL_s,
@@ -27,16 +28,18 @@
 # `_gauss_hermite(G)` is shared with the other VA families (defined in
 # families/variational.jl, included first).
 
-# E_q[log(1+e^η)] for η ~ N(μ,σ²) by Gauss–Hermite quadrature with precomputed
-# nodes/weights (xs,ws) where Σ ws = √π. The √π normaliser turns the GH weights
-# into the N(μ,σ²) expectation.
-@inline function _softplus_expect(μ::Real, σ2::Real, xs::AbstractVector,
-        ws::AbstractVector)
+# E_q[y·η − N·log(1+e^η)] for η ~ N(μ,σ²) by Gauss–Hermite quadrature with
+# precomputed nodes/weights (xs,ws) where Σ ws = √π. The √π normaliser turns the GH
+# weights into the N(μ,σ²) expectation. BOTH the linear and the softplus term use the
+# same clamped η at each node, so the per-node value is log P(y|η) − logbinom ≤ 0 for
+# y ≤ N and the ELBO stays a lower bound (and bounded above) for |η| > 30.
+@inline function _cond_loglik_expect(y::Real, N::Real, μ::Real, σ2::Real,
+        xs::AbstractVector, ws::AbstractVector)
     sd = sqrt(2 * max(σ2, 0.0))
     acc = 0.0
     @inbounds for j in eachindex(xs)
         η = _clamp_eta(μ + sd * xs[j])
-        acc += ws[j] * log1p(exp(η))
+        acc += ws[j] * (y * η - N * log1p(exp(η)))
     end
     return acc / sqrt(π)
 end
@@ -58,8 +61,7 @@ function _neg_elbo_site_binomial(φ::AbstractVector, y::AbstractVector,
     μ  = β .+ Λ * m
     ℓ = zero(eltype(φ))
     @inbounds for t in 1:p
-        S = _softplus_expect(μ[t], σ2[t], xs, ws)
-        ℓ += _logbinom(N[t], y[t]) + y[t] * μ[t] - N[t] * S
+        ℓ += _logbinom(N[t], y[t]) + _cond_loglik_expect(y[t], N[t], μ[t], σ2[t], xs, ws)
     end
     # KL(q‖prior) = ½ Σ_k (v_k + m_k² − 1 − log v_k); log v_k = lv_k.
     kl = zero(eltype(φ))
@@ -72,7 +74,7 @@ end
 
 # In-place gradient of the negative per-site Binomial ELBO at φ = [m (K); logv (K)].
 # Recomputes the GH nodes η_{tj} EXACTLY as _neg_elbo_site_binomial does (same
-# (xs,ws), same _clamp_eta). With ℓ(y,η) = y·η − N·log(1+e^η) the conditional-density
+# (xs,ws), same _clamp_eta; the clamp derivative is applied). With ℓ(y,η) = y·η − N·log(1+e^η) the conditional-density
 # η-derivative is ℓ'(y,η) = y − N·logistic(η), and the generic GH chain rule gives
 #   a_t = Σ_j (w_j/√π)·ℓ'(y_t,η_{tj}),  b_t = Σ_j (w_j/√π)·ℓ'(y_t,η_{tj})·x_j,
 #   ∂E_q_t/∂m_k  = Λ_tk·a_t,
@@ -80,8 +82,8 @@ end
 # so with KL = ½ Σ_k (v_k + m_k² − 1 − lv_k),
 #   ∂ELBO/∂m_k  = Σ_t Λ_tk·a_t − m_k,
 #   ∂ELBO/∂lv_k = Σ_t (Λ_tk²·v_k/√(2σ²_t))·b_t − ½(v_k − 1).
-# The objective is −ELBO, so G holds the negation. (_clamp_eta's derivative is treated
-# as 1; the clamp is inactive for benign data.)
+# The objective is −ELBO, so G holds the negation. (_clamp_eta's derivative is 1 inside
+# ±30 and 0 outside, matching the value path.)
 function _va_site_binomial_grad!(G::AbstractVector, φ::AbstractVector,
         y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
         β::AbstractVector, xs::AbstractVector, ws::AbstractVector)
@@ -98,8 +100,10 @@ function _va_site_binomial_grad!(G::AbstractVector, φ::AbstractVector,
         sd = sqrt(2.0 * max(σ2[t], 0.0))
         at = zero(eltype(φ)); bt = zero(eltype(φ))
         for j in eachindex(xs)
-            η = _clamp_eta(μ[t] + sd * xs[j])
+            ηu = μ[t] + sd * xs[j]
+            η = _clamp_eta(ηu)
             ℓp = y[t] - N[t] / (1.0 + exp(-η))     # ℓ'(y,η) = y − N·logistic(η)
+            abs(ηu) < _ETA_CLAMP || (ℓp = 0.0)     # d clamp/dη = 0 outside ±30
             at += ws[j] * ℓp
             bt += ws[j] * ℓp * xs[j]
         end
@@ -211,8 +215,10 @@ function _va_binomial_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
             sd = sqrt(2.0 * max(σ2t, 0.0))
             at = 0.0; bt = 0.0
             for j in eachindex(xs)
-                η = _clamp_eta(μ[t] + sd * xs[j])
+                ηu = μ[t] + sd * xs[j]
+                η = _clamp_eta(ηu)
                 ℓη = Y[t, s] - N[t, s] / (1.0 + exp(-η))   # y − N·logistic(η)
+                abs(ηu) < _ETA_CLAMP || (ℓη = 0.0)         # d clamp/dη = 0 outside ±30
                 wj = ws[j]
                 at += wj * ℓη
                 bt += wj * ℓη * xs[j]
@@ -282,16 +288,19 @@ driver (empirical link-scale intercepts + SVD loadings); the outer optimiser is
 driven by an exact envelope-theorem analytic gradient (one inner-solve pass per
 evaluation). The returned `BinomialFit`'s `loglik` field holds the maximised ELBO (a
 lower bound on the true log-marginal), so it is directly comparable across VA fits
-but sits slightly below the Laplace `loglik` for the same data.
+but sits slightly below the Laplace `loglik` for the same data. The ELBO is derived
+for the logit link only: any other `link` throws `ArgumentError`.
 """
 function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
         N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, K::Integer,
         link::Link = LogitLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
+    _va_require_canonical_link("fit_binomial_gllvm_va", link, LogitLink())
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
+    _check_response_support(:binomial, Y, nothing; caller = "fit_binomial_gllvm_va", N = Nm)
     rr = rr_theta_len(p, K)
 
     # warm start: empirical link-scale intercepts + SVD (PPCA-like) loadings

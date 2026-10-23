@@ -26,6 +26,17 @@ function _sim_phylo_unique_louis(tree, Λ_B, σ_phy, σ_eps, n; seed = 0)
     return y, Σ_phy
 end
 
+# Dense fit at the exact MLE. SEM equals the observed information only at a
+# fixed point. The default stopping rule (relative f_tol = 1e-10) halts these
+# fits after 21 to 29 LBFGS steps with a gradient near 3e-3, and at that point
+# the SEM-vs-Hessian gap on the weakly identified σ_phy terms is 8e-4 to 2e-3.
+# That is optimiser slack, not the round-off these gates bound; it also moved
+# with test order (1.056e-3 at p = 10 in the full suite, 9.2e-4 standalone).
+# Converged to a gradient near 5e-6, every gap below is under 1e-6.
+_louis_dense_fit(y, Σ) = fit_gaussian_gllvm(y; K = 1, has_phy_unique = true, Σ_phy = Σ,
+                                            f_tol = 0.0, x_tol = 0.0, g_tol = 1e-8,
+                                            iterations = 5_000)
+
 @testset "EM observed information (Louis / Supplemented EM)" begin
 
     # -- p = 6 fixture (K_B = 1, n = 400) --------------------------------------
@@ -44,7 +55,7 @@ end
 
     @testset "SE PRIMARY GATE: EM-SEM SEs match dense-Hessian SEs (p=6)" begin
         # Dense fit + its Wald SEs (ForwardDiff Hessian of the marginal NLL).
-        fit  = fit_gaussian_gllvm(y1; K = 1, has_phy_unique = true, Σ_phy = Σ1)
+        fit  = _louis_dense_fit(y1, Σ1)
         ci   = confint(fit; y = y1, Σ_phy = Σ1)
         @test ci.pd_hessian
 
@@ -80,10 +91,9 @@ end
 
     @testset "EM converged at its own MLE: SEs still match within 2e-3" begin
         # Independent of the same-point comparison above, the SEM SEs at the
-        # EM's own fixed point should agree with the dense Hessian SEs to the
-        # asymptotic rate. The relative gap is dominated by EM-vs-dense MLE
-        # drift on poorly-identified σ_phy components. Loosen to 2e-3 here.
-        fit = fit_gaussian_gllvm(y1; K = 1, has_phy_unique = true, Σ_phy = Σ1)
+        # EM's own fixed point should agree with the dense Hessian SEs. With
+        # both fits converged, the EM and dense optima coincide to round-off.
+        fit = _louis_dense_fit(y1, Σ1)
         ci  = confint(fit; y = y1, Σ_phy = Σ1)
         emf = em_fit_phylo(y1, 1, Σ1;
                            λ_init = fit.pars.Λ,
@@ -107,7 +117,7 @@ end
     y2, Σ2 = _sim_phylo_unique_louis(tree2, Λ_B2, σ_phy2, 0.5, n2; seed = 30)
 
     @testset "SE PRIMARY GATE: EM-SEM SEs match dense-Hessian SEs (p=10)" begin
-        fit = fit_gaussian_gllvm(y2; K = 1, has_phy_unique = true, Σ_phy = Σ2)
+        fit = _louis_dense_fit(y2, Σ2)
         ci  = confint(fit; y = y2, Σ_phy = Σ2)
         @test ci.pd_hessian
 
@@ -129,7 +139,7 @@ end
     end
 
     @testset "EM-converged SEs vs dense (p=10) within 2e-3" begin
-        fit = fit_gaussian_gllvm(y2; K = 1, has_phy_unique = true, Σ_phy = Σ2)
+        fit = _louis_dense_fit(y2, Σ2)
         ci  = confint(fit; y = y2, Σ_phy = Σ2)
         emf = em_fit_phylo(y2, 1, Σ2;
                            λ_init = fit.pars.Λ,
@@ -140,12 +150,10 @@ end
         for i in eachindex(ci.se)
             rel = abs(info.se[i] - ci.se[i]) / max(abs(ci.se[i]), eps())
             # Louis (EM-converged) observed information vs the dense ForwardDiff
-            # Hessian (LBFGS-converged): two distinct routes to the same quantity,
-            # evaluated at marginally different optima (EM vs LBFGS), so they agree
-            # to ~0.2% (CI saw 0.00219, identical to 3 digits across ubuntu/macOS/
-            # windows + Julia 1.10/1.12). Excellent agreement — a real error would
-            # be 10-100%; the prior 2e-3 gate simply had no cross-platform margin.
-            @test rel ≤ 1e-2
+            # Hessian. The 0.00219 gap CI once saw here came from the dense fit
+            # stopping early, not from EM-vs-LBFGS optima; with _louis_dense_fit
+            # both routes meet at the same MLE, so the titled 2e-3 gate holds.
+            @test rel ≤ 2e-3
         end
     end
 

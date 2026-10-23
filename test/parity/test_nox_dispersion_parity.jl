@@ -73,6 +73,8 @@ const _NOXD_SEED_BB    = 56
             jl_logL = jl_logL, r_logL = r.logLik, r_obj = r.objective,
         )
 
+        core070_record_values!("logLik"; julia = jl_logL, r = r.logLik, rtol = 1e-6, case = "NATIVE-05-GAMMA",
+                               test = "@test jl_logL ≈ r.logLik rtol = 1e-6")
         @testset "log-likelihood agreement (rtol=1e-6)" begin
             @test jl_logL ≈ r.logLik rtol = 1e-6
             @test r.logLik ≈ -r.objective rtol = 0 atol = 1e-10
@@ -119,6 +121,8 @@ const _NOXD_SEED_BB    = 56
         # `grouped_dispersion.jl` had documented "The fit/cov default hessian=:observed"
         # all along, so the code contradicted its own contract. Fix: give the no-X
         # route the same `hessian = :observed` default as its NB2 and Beta siblings.
+        core070_record_values!("logLik"; julia = jl_logL, r = r.logLik, rtol = 1e-6, case = "NATIVE-16-NB1",
+                               test = "@test jl_logL ≈ r.logLik rtol = 1e-6")
         @testset "log-likelihood agreement (rtol=1e-6)" begin
             @test jl_logL ≈ r.logLik rtol = 1e-6
             @test r.logLik ≈ -r.objective rtol = 0 atol = 1e-10
@@ -182,6 +186,8 @@ const _NOXD_SEED_BB    = 56
             jl_logL = jl_logL, r_logL = r.logLik, r_obj = r.objective,
         )
 
+        core070_record_values!("logLik"; julia = jl_logL, r = r.logLik, rtol = 1e-6, case = "NATIVE-09-BETABINOMIAL",
+                               test = "@test jl_logL ≈ r.logLik rtol = 1e-6")
         @testset "log-likelihood agreement (rtol=1e-6)" begin
             @test jl_logL ≈ r.logLik rtol = 1e-6
             @test r.logLik ≈ -r.objective rtol = 0 atol = 1e-10

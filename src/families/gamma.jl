@@ -73,6 +73,8 @@ gamma_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::Abstrac
 Result of [`fit_gamma_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated shape `α` (Var = μ²/α), the `link`, the maximised Laplace
 `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct GammaFit
     β::Vector{Float64}
@@ -85,7 +87,12 @@ struct GammaFit
     alpha_lv::Union{Nothing, Matrix{Float64}}
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+GammaFit(β, Λ, α, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
+    GammaFit(β, Λ, α, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -148,7 +155,7 @@ function gamma_lv_nll_packed(params::AbstractVector, Y::AbstractMatrix,
 
     lv_offset = _lv_mean_eta(Λ, X_lv, alpha_lv)
     off = offset === nothing ? lv_offset : offset .+ lv_offset
-    return -gamma_marginal_loglik_laplace(Y, Λ, β, α; mask = mask, offset = off,
+    return -gamma_marginal_loglik_laplace(Y, Λ, β, α; link = link, mask = mask, offset = off,
                                           maxiter = maxiter, tol = tol)
 end
 
@@ -158,9 +165,11 @@ end
 Fit a Gamma GLLVM by L-BFGS over `[β; vec(Λ); log α]` on the Laplace marginal
 (`gamma_marginal_loglik_laplace`), jointly estimating the shape `α`
 (`Var = μ²/α`). `Y` is a p×n matrix of positive reals; `K` the latent
-dimension. Analytic gradient on the no-mask/no-offset path with finite-difference
-fallback; warm start = log row-means as intercepts + SVD of row-centred log-Y as
-loadings + `logα₀ = log(2.0)`.
+dimension. Analytic gradient on the no-mask/no-offset path with the log link, with a
+finite-difference fallback (masked or offset fits, and any other `link`, use finite
+differences of the objective for that link); warm start = link-scale row-means as
+intercepts (log row-means for the default log link) + SVD of the row-centred
+link-scale Y as loadings + `logα₀ = log(2.0)`.
 
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
 `:observed` joint — TMB's choice); the inner mode search is always
@@ -177,6 +186,8 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_gamma_gllvm")
     rr = rr_theta_len(p, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_gamma_gllvm: hessian must be :fisher or :observed; got :$hessian"))
@@ -210,12 +221,16 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = _sanitize_missing(Y, 1.0)                   # positive placeholder
+    _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm")
+    Yc  = _sanitize_unobserved(Y, msk, 1.0)           # positive placeholder
 
-    Zemp = log.(max.(Yc, 1e-6))
+    # link-scale warm start (η = g(y)); for the default log link this is exactly `log.(max.(Yc, 1e-6))`
+    Zemp = [linkfun(link, max(Yc[t, i], 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_gamma_gllvm")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
@@ -250,9 +265,10 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         α = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
-            -gamma_marginal_loglik_laplace(Yc, Λ, β, α; mask = msk, offset = offset,
-                                           hessian = hessian,
+            -gamma_marginal_loglik_laplace(Yc, Λ, β, α; link = link, mask = msk,
+                                           offset = offset, hessian = hessian,
                                            maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -264,6 +280,12 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
     res = if X_lv_fit !== nothing
         θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0), logα0)
         negll_lv = θ -> begin
+            if _eta_cap_guarded(link)   # #869: the additive η term is offset + the X_lv mean
+                Λ_g = unpack_lambda(view(θ, (p + q_lv * K + 1):(p + q_lv * K + rr)), p, K)
+                lv_g = _lv_mean_eta(Λ_g, X_lv_fit, reshape(view(θ, (p + 1):(p + q_lv * K)), q_lv, K))
+                _eta_above_clamp(view(θ, 1:p), offset === nothing ? lv_g : offset .+ lv_g;
+                                 mask = msk) && return 1e12   # #869: η-clamp plateau
+            end
             v = try
                 gamma_lv_nll_packed(θ, Yc, p, K, link;
                                     X_lv = X_lv_fit, q_lv = q_lv,
@@ -275,8 +297,10 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
             return isfinite(v) ? v : 1e12
         end
         Optim.optimize(negll_lv, θ0_lv, ls, opts; autodiff = :finite)
-    elseif gradient === :analytic && offset === nothing &&
+    elseif gradient === :analytic && offset === nothing && link isa LogLink &&
            hessian === _default_hessian(Gamma(1.0, 1.0), link)
+        # `gamma_laplace_grad` is derived for the log link only; any other link takes the
+        # :finite path below, which differentiates the actual objective.
         ag = θ -> begin
             β = θ[1:p]; Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K); av = exp(θ[p + rr + 1])
             try -gamma_laplace_grad(Yc, Λ, β, av; mask = msk) catch; nothing end
@@ -295,12 +319,19 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
         cursor += rr
         α̂ = exp(θ̂[cursor + 1])
-        return GammaFit(β̂, Λ̂, α̂, link, _fit_verdict(res)...,
-                       alpha_hat, collect(Float64, θ̂), hessian)
+        loglik, conv, iters = _fit_verdict(res)
+        lv_hat = _lv_mean_eta(Λ̂, X_lv_fit, alpha_hat)
+        conv = _eta_cap_verdict(conv, link, β̂, offset === nothing ? lv_hat : offset .+ lv_hat;
+                                mask = msk, caller = "fit_gamma_gllvm")
+        return GammaFit(β̂, Λ̂, α̂, link, loglik, conv, iters,
+                       alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         α̂ = exp(θ̂[p + rr + 1])
-        return GammaFit(β̂, Λ̂, α̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        loglik, conv, iters = _fit_verdict(res)
+        conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_gamma_gllvm")
+        return GammaFit(β̂, Λ̂, α̂, link, loglik, conv, iters, nothing, Float64[], hessian,
+                        _stored_offset(offset))
     end
 end

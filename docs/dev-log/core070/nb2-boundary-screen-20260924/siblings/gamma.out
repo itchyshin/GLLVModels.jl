@@ -1,0 +1,71 @@
+fit_gamma_gllvm_grouped sibling screen (#477 class); p=5 K=2 n=80; group = 1:p
+julia 1.10.12; threads 1
+ds  1  α_true=   2.0  fit_ll=-530.998155  iters=51 conv=true  α̂=[2.114, 2.671, 1.912, 1.682, 3.081]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=-530.998155 α̂=[2.114, 2.671, 1.912, 1.682, 3.081] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=-530.998155 gain=-2.956e-12  STALL=false  (fit 4.8s, elapsed 11.6s)
+ds  2  α_true=   2.0  fit_ll=-610.224727  iters=2 conv=true  α̂=[2.019, 1.981, 2.019, 2.0, 2.0]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=-567.232613 α̂=[1.719, 1.658, 3.514, 2.125, 1.734] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=-567.232613 gain=4.299e+01  STALL=true  (fit 0.2s, elapsed 13.7s)
+ds  3  α_true=   2.0  fit_ll=-555.632866  iters=50 conv=true  α̂=[2.148, 1.973, 2.616, 2.317, 2.574]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=-555.632866 α̂=[2.148, 1.973, 2.616, 2.317, 2.574] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=-555.632866 gain=-1.467e-11  STALL=false  (fit 1.8s, elapsed 19.1s)
+ds  4  α_true=   2.0  fit_ll=-544.623101  iters=35 conv=true  α̂=[2.117, 1.986, 2.251, 2.161, 2.108]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=-544.623101 α̂=[2.117, 1.986, 2.251, 2.161, 2.108] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=-544.623101 gain=-6.366e-12  STALL=false  (fit 1.4s, elapsed 23.2s)
+ds  5  α_true=   2.0  fit_ll=-568.500038  iters=34 conv=true  α̂=[2.159, 2.01, 2.676, 2.227, 2.638]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=-568.500038 α̂=[2.159, 2.01, 2.676, 2.227, 2.638] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=-568.500038 gain=4.434e-12  STALL=false  (fit 1.4s, elapsed 27.7s)
+ds  6  α_true= 200.0  fit_ll=68.519955  iters=353 conv=true  α̂=[89.61, 624300.0, 252.3, 141.4, 255.5]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=68.519978 α̂=[89.58, 662200.0, 252.7, 141.4, 255.4] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=68.519978 gain=2.289e-05  STALL=false  (fit 9.1s, elapsed 53.8s)
+ds  7  α_true= 200.0  fit_ll=59.641107  iters=350 conv=true  α̂=[136.7, 270.0, 224.7, 188.5, 178.8]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=59.641107 α̂=[136.7, 270.0, 224.7, 188.5, 178.8] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=59.641107 gain=1.157e-09  STALL=false  (fit 9.1s, elapsed 81.5s)
+ds  8  α_true= 200.0  fit_ll=62.040282  iters=362 conv=true  α̂=[628000.0, 112.7, 170.0, 197.9, 179.2]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=62.040264 α̂=[591600.0, 112.7, 170.0, 197.8, 179.2] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=62.040264 gain=-1.792e-05  STALL=false  (fit 8.6s, elapsed 108.6s)
+ds  9  α_true= 200.0  fit_ll=61.869239  iters=381 conv=true  α̂=[128.0, 261.0, 223.2, 248.8, 182.2]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=61.869239 α̂=[128.0, 261.0, 223.2, 248.8, 182.2] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=61.869239 gain=6.290e-10  STALL=false  (fit 9.9s, elapsed 137.7s)
+ds 10  α_true= 200.0  fit_ll=82.764791  iters=368 conv=true  α̂=[77.3, 373.0, 309.1, 199.4, 207.7]  boundary=Int64[]
+       harness |negll(θ̂)+loglik|=0.000e+00  replicated-run |Δll|=0.000e+00
+       (a) ll=82.764791 α̂=[77.3, 373.0, 309.1, 199.4, 207.7] boundary=Int64[]
+       (b) ll=skipped (no boundary group) boundary=Int64[]
+       best alt=a_fresh_logalpha0 ll=82.764791 gain=-1.306e-10  STALL=false  (fit 9.1s, elapsed 167.4s)
+
+==== SUMMARY ====
+harness_valid (all |negll(θ̂) + fit.loglik| < 1e-6): true  max diff = 0.0
+optimizer replication max |Δll| (our run from θ0 vs public fit): 0.0
+n_datasets = 10
+n_with_boundary (fitter) = 0
+n_stalls (gain > 0.001) = 1
+max_gain = 42.99211436511632
+ds  1 α=    2 fit_ll=-530.9982 best_alt=-530.9982 (a_fresh_logalpha0) gain=-2.956e-12 bd_fit=Int64[] bd_a=Int64[] stall=false
+ds  2 α=    2 fit_ll=-610.2247 best_alt=-567.2326 (a_fresh_logalpha0) gain=+4.299e+01 bd_fit=Int64[] bd_a=Int64[] stall=true
+ds  3 α=    2 fit_ll=-555.6329 best_alt=-555.6329 (a_fresh_logalpha0) gain=-1.467e-11 bd_fit=Int64[] bd_a=Int64[] stall=false
+ds  4 α=    2 fit_ll=-544.6231 best_alt=-544.6231 (a_fresh_logalpha0) gain=-6.366e-12 bd_fit=Int64[] bd_a=Int64[] stall=false
+ds  5 α=    2 fit_ll=-568.5000 best_alt=-568.5000 (a_fresh_logalpha0) gain=+4.434e-12 bd_fit=Int64[] bd_a=Int64[] stall=false
+ds  6 α=  200 fit_ll=68.5200 best_alt=68.5200 (a_fresh_logalpha0) gain=+2.289e-05 bd_fit=Int64[] bd_a=Int64[] stall=false
+ds  7 α=  200 fit_ll=59.6411 best_alt=59.6411 (a_fresh_logalpha0) gain=+1.157e-09 bd_fit=Int64[] bd_a=Int64[] stall=false
+ds  8 α=  200 fit_ll=62.0403 best_alt=62.0403 (a_fresh_logalpha0) gain=-1.792e-05 bd_fit=Int64[] bd_a=Int64[] stall=false
+ds  9 α=  200 fit_ll=61.8692 best_alt=61.8692 (a_fresh_logalpha0) gain=+6.290e-10 bd_fit=Int64[] bd_a=Int64[] stall=false
+ds 10 α=  200 fit_ll=82.7648 best_alt=82.7648 (a_fresh_logalpha0) gain=-1.306e-10 bd_fit=Int64[] bd_a=Int64[] stall=false
+total elapsed 167.8 s

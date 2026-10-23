@@ -12,6 +12,8 @@
 # is used so the Newton mode-finder actually iterates (the reused buffers are
 # exercised) rather than terminating at z = 0.
 
+using Test, GLLVModels
+
 @testset "two-part buffer-reuse equivalence" begin
     # Small fixed problem; non-zero Λc so the shared-z Newton loop iterates.
     p, K, n = 4, 2, 5

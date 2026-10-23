@@ -1,0 +1,14 @@
+Likelihood-ratio comparison of gllvmTMB fits
+
+   model d npar  logLik deviance df   LRT         test   p.value
+ Model 1 1    9 -110.40    220.8 NA    NA         <NA>        NA
+ Model 2 2   12  -96.18    192.4  3 28.44 chibar (q=3) 6.550e-07
+ Model 3 3   14  -94.97    189.9  2  2.42 chibar (q=2) 1.344e-01
+
+Notes:
+  Model 2: Self-Liang chi-bar-square mixture with q = 3 independent boundary components (Self & Liang 1987). Independence of these q new loading parameters is a documented
+    APPROXIMATION for gllvmTMB's rank/dimension test, not a proven fact for this parameterisation -- see ?anova.gllvmTMB_multi and dev/gapclose/arcD/O5-report.md for the measured
+    empirical size.
+  Model 3: Self-Liang chi-bar-square mixture with q = 2 independent boundary components (Self & Liang 1987). Independence of these q new loading parameters is a documented
+    APPROXIMATION for gllvmTMB's rank/dimension test, not a proven fact for this parameterisation -- see ?anova.gllvmTMB_multi and dev/gapclose/arcD/O5-report.md for the measured
+    empirical size.

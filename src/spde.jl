@@ -147,8 +147,23 @@ function spde_precision(Cdiag::AbstractVector, G::SparseMatrixCSC,
     end
 end
 
+# Maximum edge length on a triangular mesh (for outside snap tolerance).
+# Comment only; a docstring would trip missing_docs.
+function _spde_max_edge_length(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer})
+    maxlen = 0.0
+    @inbounds for k in 1:size(tris, 1)
+        g1 = tris[k, 1]; g2 = tris[k, 2]; g3 = tris[k, 3]
+        for (ga, gb) in ((g1, g2), (g2, g3), (g3, g1))
+            dx = nodes[ga, 1] - nodes[gb, 1]
+            dy = nodes[ga, 2] - nodes[gb, 2]
+            maxlen = max(maxlen, hypot(dx, dy))
+        end
+    end
+    return maxlen
+end
+
 """
-    spde_projector(nodes, tris, locs::AbstractMatrix) -> SparseMatrixCSC
+    spde_projector(nodes, tris, locs::AbstractMatrix; outside_tol, nsnapped) -> SparseMatrixCSC
 
 Build the sparse M × N node → site projector `A` that interpolates the mesh-node
 field to arbitrary observation locations: if `u` is the field at the N mesh nodes,
@@ -158,19 +173,28 @@ For each location, the containing triangle is found (linear search over `tris`)
 and the row of `A` is filled with that triangle's three barycentric coordinates
 `(λ1, λ2, λ3)` at the corresponding node columns — exact linear interpolation
 consistent with the P1 finite-element basis. A point lying outside every triangle
-(e.g. just past the mesh boundary) is snapped to its nearest mesh vertex (weight
-1). Each row of `A` therefore sums to 1.
+but within `outside_tol` of the nearest mesh vertex is snapped to that vertex
+(weight 1). Locations farther away throw `ArgumentError`. Each row of `A`
+therefore sums to 1.
+
+Non-finite coordinates throw `ArgumentError` naming the row. Optional keyword
+`nsnapped` (`Ref{Int}`) receives the number of rows snapped to the nearest
+vertex.
 
 `locs` is M × 2. Returns an M × N sparse matrix.
 """
 function spde_projector(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer},
-                        locs::AbstractMatrix)
+                        locs::AbstractMatrix;
+                        outside_tol::Real = 2 * _spde_max_edge_length(nodes, tris),
+                        nsnapped::Union{Nothing, Ref{Int}} = nothing)
     N = size(nodes, 1)
     T = size(tris, 1)
     M = size(locs, 1)
     size(locs, 2) == 2 || throw(ArgumentError("locs must be M × 2; got $(size(locs))"))
+    outside_tol ≥ 0 || throw(ArgumentError("outside_tol must be non-negative; got $outside_tol"))
 
     tol = 1e-9
+    snap_count = 0
 
     I = Int[]
     J = Int[]
@@ -179,6 +203,10 @@ function spde_projector(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer},
 
     @inbounds for m in 1:M
         px = locs[m, 1]; py = locs[m, 2]
+        if !isfinite(px) || !isfinite(py)
+            throw(ArgumentError(
+                "location row $m has non-finite coordinates ($px, $py)"))
+        end
         found = false
 
         for k in 1:T
@@ -204,7 +232,7 @@ function spde_projector(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer},
         end
 
         if !found
-            # Outside every triangle: snap to nearest mesh vertex.
+            # Outside every triangle: snap only if within outside_tol of a vertex.
             best = 1
             bestd = Inf
             for n in 1:N
@@ -215,10 +243,20 @@ function spde_projector(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer},
                     best = n
                 end
             end
+            snap_dist = sqrt(bestd)
+            if snap_dist > outside_tol
+                throw(ArgumentError(
+                    "location row $m at ($px, $py) lies outside the mesh " *
+                    "(distance to nearest vertex is $snap_dist, exceeds outside_tol = $outside_tol)"))
+            end
+            snap_count += 1
             push!(I, m); push!(J, best); push!(V, 1.0)
         end
     end
 
+    if nsnapped !== nothing
+        nsnapped[] = snap_count
+    end
     return sparse(I, J, V, M, N)
 end
 

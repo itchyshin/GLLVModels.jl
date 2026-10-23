@@ -33,7 +33,7 @@ where:
 
 - `Λ_B` (p × K) are the unit-tier loadings estimated freely,
 - `η_s ~ N(0, I_K)` are independent site-level latent variables,
-- `Λ_phy` (p × K_phy) and/or per-trait SDs `σ_phy` (length p) capture structured dependence,
+- `Λ_phy` (p × K_phy) and/or per-trait signed scales `σ_phy` (length p) capture structured dependence,
 - `u ~ MVN(0, B)` is drawn once and shared across all columns,
 - `ε[t, s] ~ N(0, σ²_eps)` is the residual.
 
@@ -41,6 +41,14 @@ The marginal covariance of `vec(y)` is `I_n ⊗ A + J_n ⊗ B` where
 
 - `A = Λ_B Λ_B' + σ²_eps I_p` (site covariance),
 - `B = (Λ_phy_aug Λ_phy_aug') .* Σ_phy` (structured between-site block).
+
+Here `vec(y)` stacks the columns: all entities at the first occasion,
+then all entities at the next. `J_n` is the all-ones matrix, and
+`Λ_phy_aug` combines the structured loading columns with `σ_phy` when
+present. A single occasion has covariance `A + B`; two different occasions
+have cross-covariance `B` because they share the same `u`. The full
+covariance is therefore not block-diagonal across occasions when `B` is
+nonzero. `sigma_y_site(fit)` returns only `A`, including residual noise.
 
 Two p × p Cholesky factorisations handle this regardless of `n`.
 
@@ -55,12 +63,20 @@ Two p × p Cholesky factorisations handle this regardless of `n`.
 Build `Σ_phy` from a phylogenetic tree using `PhyloNetworks`, `Phylo`, or any
 package that returns a variance-covariance matrix on the tips.
 
-```julia
-using GLLVModels, PhyloNetworks     # PhyloNetworks not in GLLVModels.jl deps; install separately
+The block below is self-contained: `Σ_phy` is written out for the four-tip tree
+`((a:1,b:1):1,(c:1,d:1):1);` (covariance = shared root-to-ancestor path length).
+For a real tree, replace it with the `vcv` of the tree object from
+`PhyloNetworks` (not a GLLVModels.jl dependency; install separately).
 
-tree    = readTopology("my_tree.tre")
-Σ_phy   = vcv(tree)            # p × p tip covariance
-y       = ...                  # p × n trait matrix
+```julia
+using GLLVModels, Random
+Random.seed!(1)
+
+Σ_phy   = [2.0 1.0 0.0 0.0;
+           1.0 2.0 0.0 0.0;
+           0.0 0.0 2.0 1.0;
+           0.0 0.0 1.0 2.0]    # p × p tip covariance, p = 4
+y       = randn(4, 40)         # p × n trait matrix (illustrative noise)
 
 fit = fit_gaussian_gllvm(y;
     K              = 2,
@@ -84,8 +100,12 @@ using external tools (e.g. `kinship2`, `nadiv`, `rrBLUP`, PLINK `--make-grm`,
 ```julia
 using GLLVModels
 
-# A is a precomputed p × p relatedness / GRM matrix (from your pedigree tool)
-A      = ...
+# A is a precomputed p × p relatedness / GRM matrix (from your pedigree tool);
+# here a toy 4 × 4 matrix with two full-sib pairs. `y` is the matrix from section 1.
+A      = [1.0 0.5 0.0 0.0;
+          0.5 1.0 0.0 0.0;
+          0.0 0.0 1.0 0.5;
+          0.0 0.0 0.5 1.0]
 Σ_rel  = relatedness_cov(A)           # symmetrize + small jitter for SPD
 
 fit = fit_gaussian_gllvm(y;
@@ -103,8 +123,12 @@ After fitting, the per-trait phylogenetic signal (fraction of variance explained
 by the structured effect) is available via `phylo_signal`:
 
 ```julia
-fraction = phylo_signal(fit)   # length-p vector for this fitted model
+fraction = phylo_signal(fit; Σ_phy = Σ_rel)   # length-p vector
 ```
+
+Supply the covariance used for fitting: without it, `phylo_signal` assumes
+a unit diagonal. The fraction is `B[t,t] / (A[t,t] + B[t,t])`, so its
+denominator includes the residual noise as well as the structured variance.
 
 Interpreting this quantity as heritability requires a compatible genetic design
 and variance decomposition; a relatedness matrix alone does not establish that.
@@ -125,8 +149,8 @@ kernel families are supported:
 ```julia
 using GLLVModels
 
-# coords is a p × 2 (or p × d) matrix of spatial coordinates
-coords  = ...
+# coords is a p × 2 (or p × d) matrix of spatial coordinates; `y` is from section 1
+coords  = [0.0 0.0; 50.0 0.0; 0.0 50.0; 50.0 50.0]
 Σ_sp    = spatial_cov(coords;
               kernel     = :matern,
               range      = 100.0,   # in coordinate units
@@ -162,7 +186,7 @@ See [`spatial_cov`](@ref) and [`relatedness_cov`](@ref) for the full signatures.
 
 In these row-structured models, pass the result as `Σ_phy` to `fit_gaussian_gllvm`.
 The ordering and dimension must match the rows, not arbitrary observation groups. The
-`has_phy_unique = true` flag activates per-trait structured SDs (`σ_phy`);
+`has_phy_unique = true` flag activates per-trait structured signed scales (`σ_phy`);
 `K_phy` activates structured latent axes (`Λ_phy`). Both can be used together.
 
 ## [Fixed covariance among source groups](@id fixed-source-groups)

@@ -104,6 +104,8 @@ end
 Result of [`fit_exponential_gllvm`](@ref): intercepts `β` (length p), loadings `Λ`
 (p×K), the `link`, the maximised Laplace `loglik`, the optimiser `converged` flag,
 and `iterations`. (No dispersion — the Exponential has `Var = μ²` fixed.)
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct ExponentialFit
     β::Vector{Float64}
@@ -113,7 +115,12 @@ struct ExponentialFit
     converged::Bool
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (7 positional args): no stored training offset.
+ExponentialFit(β, Λ, link, loglik, converged, iterations, hessian) =
+    ExponentialFit(β, Λ, link, loglik, converged, iterations, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -153,6 +160,8 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_exponential_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_exponential_gllvm")
     rr = rr_theta_len(p, K)
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
@@ -161,7 +170,9 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     Zemp = log.(max.(Yc, 1e-6))
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_exponential_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
@@ -179,6 +190,7 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -exponential_marginal_loglik_laplace(Yc, Λ, β; link = link, mask = msk,
                                                  offset = offset, hessian = hessian,
@@ -194,5 +206,7 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
-    return ExponentialFit(β̂, Λ̂, link, _fit_verdict(res)..., hessian)
+    loglik, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_exponential_gllvm")
+    return ExponentialFit(β̂, Λ̂, link, loglik, conv, iters, hessian, _stored_offset(offset))
 end

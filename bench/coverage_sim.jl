@@ -37,12 +37,11 @@
 #
 # Scale convention (IMPORTANT)
 # ----------------------------
-# For SD-style estimands (σ_eps, σ_phy):
-#   - confint and profile_ci return bounds on the RAW (positive) scale.
-#   - bootstrap_ci returns percentiles of the packed θ, which stores log(σ) for
-#     SD parameters — i.e. bootstrap SD bounds come back on the LOG scale.
-# This script therefore exponentiates the bootstrap bounds for σ_eps / σ_phy
-# before checking coverage, so all three methods are compared on the raw scale.
+# For SD-style estimands (σ_eps, σ_phy) confint, profile_ci and bootstrap_ci all
+# return estimate and bounds on the scale the term name says (#156): σ_eps raw
+# (positive), σ_phy signed (identity link, never exponentiated). No transform is
+# applied here for any method. (Before #156 bootstrap_ci returned the packed log σ_eps
+# and this script exponentiated it, wrongly also for the signed σ_phy.)
 # β is linear in θ, so no transform is applied to it for any method.
 #
 # Run
@@ -174,9 +173,6 @@ truth_of(cell::Cell, sym::Symbol) =
     sym === :β     ? cell.β     :
     sym === :σ_phy ? cell.σ_phy : NaN
 
-# Is `sym` an SD-style (log-scale-in-θ) estimand? (governs bootstrap transform)
-is_sd(sym::Symbol) = (sym === :σ_eps) || (sym === :σ_phy)
-
 # -----------------------------------------------------------------------------
 # CI extraction for one fit. Returns, per method, (lower, upper) on the RAW
 # scale for the requested estimands, plus per-method "usable" flags. A bound
@@ -235,12 +231,8 @@ function cis_for_fit(cell::Cell, fx, fit, y; n_boot::Int, boot_seed::Int)
         for (sym, term) in syms_terms
             idx = findfirst(==(term), bt.term)
             if idx !== nothing && isfinite(bt.lower[idx]) && isfinite(bt.upper[idx])
-                lo, hi = bt.lower[idx], bt.upper[idx]
-                # SD estimands come back on the LOG scale → exponentiate.
-                if is_sd(sym)
-                    lo, hi = exp(lo), exp(hi)
-                end
-                out[:bootstrap][sym] = (lo, hi)
+                # Already on the scale the term name says (#156); no transform.
+                out[:bootstrap][sym] = (bt.lower[idx], bt.upper[idx])
             else
                 out[:bootstrap][sym] = (NaN, NaN)
             end

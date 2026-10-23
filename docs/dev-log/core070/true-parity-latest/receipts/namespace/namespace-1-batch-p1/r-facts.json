@@ -1,0 +1,386 @@
+{
+  "schema": "core070-namespace-1-r-facts/v1",
+  "status": "OK",
+  "facts": {
+    "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE": {
+      "case_id": "CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE",
+      "source_id": "namespace/S3method/coef,gllvmTMB_julia",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE": {
+      "case_id": "CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE",
+      "source_id": "namespace/S3method/confint,gllvmTMB_julia",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE": {
+      "case_id": "CORE070-NAMESPACE-FITTED-JULIA-BRIDGE-COMPARE",
+      "source_id": "namespace/S3method/fitted,gllvmTMB_julia",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE": {
+      "case_id": "CORE070-NAMESPACE-LOGLIK-JULIA-BRIDGE-COMPARE",
+      "source_id": "namespace/S3method/logLik,gllvmTMB_julia",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE": {
+      "case_id": "CORE070-NAMESPACE-PREDICT-JULIA-BRIDGE-COMPARE",
+      "source_id": "namespace/S3method/predict,gllvmTMB_julia",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE": {
+      "case_id": "CORE070-NAMESPACE-RESIDUALS-JULIA-BRIDGE-COMPARE",
+      "source_id": "namespace/S3method/residuals,gllvmTMB_julia",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE": {
+      "case_id": "CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE",
+      "source_id": "namespace/S3method/simulate,gllvmTMB_julia",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE": {
+      "case_id": "CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE",
+      "source_id": "namespace/S3method/summary,gllvmTMB_julia",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-COEF-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-COEF-MULTI-NATIVE",
+      "source_id": "namespace/S3method/coef,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-CONFINT-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-CONFINT-MULTI-NATIVE",
+      "source_id": "namespace/S3method/confint,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-FITTED-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-FITTED-MULTI-NATIVE",
+      "source_id": "namespace/S3method/fitted,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-LOGLIK-MULTI-NATIVE",
+      "source_id": "namespace/S3method/logLik,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-PREDICT-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-PREDICT-MULTI-NATIVE",
+      "source_id": "namespace/S3method/predict,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-RESIDUALS-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-RESIDUALS-MULTI-NATIVE",
+      "source_id": "namespace/S3method/residuals,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE",
+      "source_id": "namespace/S3method/simulate,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-SUMMARY-MULTI-NATIVE",
+      "source_id": "namespace/S3method/summary,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-VCOV-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-VCOV-MULTI-NATIVE",
+      "source_id": "namespace/S3method/vcov,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-NOBS-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-NOBS-MULTI-NATIVE",
+      "source_id": "namespace/S3method/stats::nobs,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES": {
+      "case_id": "CORE070-NAMESPACE-ORDIPLOT-MULTI-SCORES",
+      "source_id": "namespace/S3method/ordiplot,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR": {
+      "case_id": "CORE070-NAMESPACE-IMPUTED-MISSING-PREDICTOR",
+      "source_id": "namespace/S3method/imputed,gllvmTMB",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL": {
+      "case_id": "CORE070-NAMESPACE-BETA-FAMILY-NATIVE-MODEL",
+      "source_id": "namespace/export/Beta",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-ANIMAL-SCALAR-FIT": {
+      "case_id": "CORE070-NAMESPACE-ANIMAL-SCALAR-FIT",
+      "source_id": "namespace/export/animal_scalar",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE",
+      "source_id": "namespace/export/bootstrap_Sigma",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-GAMMA-BLOCK",
+      "source_id": "namespace/export/extract_Gamma",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-ICC-SITE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-ICC-SITE",
+      "source_id": "namespace/export/extract_ICC_site",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-OMEGA-SUM": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-OMEGA-SUM",
+      "source_id": "namespace/export/extract_Omega",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-SIGMA-NATIVE",
+      "source_id": "namespace/export/extract_Sigma",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-SIGMA-B-TWOLEVEL": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-SIGMA-B-TWOLEVEL",
+      "source_id": "namespace/export/extract_Sigma_B",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-SIGMA-W-TWOLEVEL": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-SIGMA-W-TWOLEVEL",
+      "source_id": "namespace/export/extract_Sigma_W",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-COEVOLUTION-MODULES-SVD",
+      "source_id": "namespace/export/extract_coevolution_modules",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-COMMUNALITY-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-COMMUNALITY-NATIVE",
+      "source_id": "namespace/export/extract_communality",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-CORRELATIONS-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-CORRELATIONS-NATIVE",
+      "source_id": "namespace/export/extract_correlations",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-CROSS-CORRELATIONS-NATIVE",
+      "source_id": "namespace/export/extract_cross_correlations",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-CUTPOINTS-ORDINAL": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-CUTPOINTS-ORDINAL",
+      "source_id": "namespace/export/extract_cutpoints",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-LOADINGS-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-LOADINGS-NATIVE",
+      "source_id": "namespace/export/extract_loadings",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-LV-EFFECTS-NATIVE",
+      "source_id": "namespace/export/extract_lv_effects",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-ORDINATION-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-ORDINATION-NATIVE",
+      "source_id": "namespace/export/extract_ordination",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE",
+      "source_id": "namespace/export/extract_phylo_signal",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-PROPORTIONS-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-PROPORTIONS-NATIVE",
+      "source_id": "namespace/export/extract_proportions",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-REPEATABILITY-TWOLEVEL": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-REPEATABILITY-TWOLEVEL",
+      "source_id": "namespace/export/extract_repeatability",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COR-NATIVE",
+      "source_id": "namespace/export/extract_residual_cor",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-RESIDUAL-COV-NATIVE",
+      "source_id": "namespace/export/extract_residual_cov",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-RESIDUAL-SPLIT-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-RESIDUAL-SPLIT-NATIVE",
+      "source_id": "namespace/export/extract_residual_split",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-EXTRACT-ROTATED-LOADINGS-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-EXTRACT-ROTATED-LOADINGS-NATIVE",
+      "source_id": "namespace/export/extract_rotated_loadings_table",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-FLAG-UNRELIABLE-LOADINGS-NATIVE",
+      "source_id": "namespace/export/flag_unreliable_loadings",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-GETLV-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-GETLV-NATIVE",
+      "source_id": "namespace/export/getLV",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-DEVIANCE-MULTI-NATIVE",
+      "source_id": "namespace/S3method/deviance,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-TIDY-MULTI-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-TIDY-MULTI-NATIVE",
+      "source_id": "namespace/S3method/tidy,gllvmTMB_multi",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC": {
+      "case_id": "CORE070-NAMESPACE-CHECK-GLLVMTMB-DIAGNOSTIC",
+      "source_id": "namespace/export/check_gllvmTMB",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE": {
+      "case_id": "CORE070-NAMESPACE-CONFINT-INSPECT-NATIVE",
+      "source_id": "namespace/export/confint_inspect",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT": {
+      "case_id": "CORE070-NAMESPACE-ANIMAL-SLOPE-FIT",
+      "source_id": "namespace/export/animal_slope",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD": {
+      "case_id": "CORE070-NAMESPACE-DEP-FORMULA-KEYWORD",
+      "source_id": "namespace/export/dep",
+      "registered": true,
+      "defined": true,
+      "ok": true
+    },
+    "CORE070-NAMESPACE-PROPORTIONS-BOOTSTRAP-CI": {
+      "case_id": "CORE070-NAMESPACE-PROPORTIONS-BOOTSTRAP-CI",
+      "source_id": "namespace/export/.proportions_bootstrap_ci",
+      "registered": false,
+      "defined": true,
+      "ok": false,
+      "retirement_confirmed": true
+    },
+    "CORE070-NAMESPACE-PROPORTIONS-WALD-CI": {
+      "case_id": "CORE070-NAMESPACE-PROPORTIONS-WALD-CI",
+      "source_id": "namespace/export/.proportions_wald_ci",
+      "registered": false,
+      "defined": true,
+      "ok": false,
+      "retirement_confirmed": true
+    }
+  }
+}

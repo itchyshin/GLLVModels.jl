@@ -4,7 +4,7 @@
 # The model is identical to the J3 path in `likelihood.jl` and to the
 # augmented-Q path in `likelihood_sparse_phy.jl`:
 #
-#     y[t, s] = (Λ_B η_s)[t] + sum_k Λ_W[t,k] η_W[k,t,s]
+#     y[t, s] = (Λ_B η_s)[t] + sum_k Λ_W[t,k] η_W[k,s]
 #             + s_B[t,s] + s_W[t,s] + z_phy[t]
 #             + X[t,s,:]' β + ε[t,s]
 #
@@ -12,7 +12,8 @@
 #
 #     Σ_y_full = I_n ⊗ A + J_n ⊗ B
 #
-# where A = Λ_B Λ_B' + diag(d_total) and B = (Λ_phy_aug Λ_phy_aug') ⊙ Σ_phy,
+# where A = Λ_B Λ_B' + Λ_W Λ_W' + diag(d_total) (W tier shared across traits
+# within a unit, issue #135) and B = (Λ_phy_aug Λ_phy_aug') ⊙ Σ_phy,
 # Λ_phy_aug = hcat(Λ_phy, σ_phy) (as in the dense path).
 #
 # What's different here is **how Σ_phy is produced**. The dense path takes
@@ -102,16 +103,17 @@ function gaussian_marginal_loglik_edge_phy(y::AbstractMatrix,
         throw(ArgumentError("y first dim ($p) must equal phy.n_leaves " *
                             "($(phy.n_leaves))"))
 
-    # Σ_phy is built from the tree topology + σ²_phy + branch lengths.
-    # AD-friendly: closed form, no sparse Cholesky on Duals.
-    Σ_phy = sigma_phy_dense_edge(phy, σ²_phy)
-
     # At least one phylogenetic-block component must be supplied — otherwise
     # the J3 path collapses and the dense routine would skip the phy block
-    # entirely, which is not what the user asked for.
+    # entirely, which is not what the user asked for. Checked before the
+    # O(p²) Σ_phy build below so the error path allocates nothing large.
     if Λ_phy === nothing && σ_phy === nothing
         throw(ArgumentError("phy specified but no Λ_phy or σ_phy supplied"))
     end
+
+    # Σ_phy is built from the tree topology + σ²_phy + branch lengths.
+    # AD-friendly: closed form, no sparse Cholesky on Duals.
+    Σ_phy = sigma_phy_dense_edge(phy, σ²_phy)
 
     # Delegate to the dense J3 implementation — it is already
     # Dual-compatible and tested. Reach into the GLLVModels module since this

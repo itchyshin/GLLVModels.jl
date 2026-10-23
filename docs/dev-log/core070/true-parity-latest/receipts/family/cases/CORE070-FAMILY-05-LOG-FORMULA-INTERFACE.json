@@ -1,0 +1,68 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-nb2-formula",
+  "harness_cell": "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE",
+  "fixture": "test/parity/test_nb2_formula_parity.jl",
+  "measures": "the NATIVE-06-NB2 data: the R-vs-Julia number is the native route against a fresh R fit; the wide and long formula routes are checked against the native route in Julia only (atol 1e-10); toy fixture, likelihood-level agreement only",
+  "cell_status": "success",
+  "cell_assertions": {
+    "passed": 19,
+    "broken": 0,
+    "failed": 0,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE"
+  ],
+  "run_status": "success",
+  "run_failure_reason": null,
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "PASS",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run.toml": "8e7016724c89dfd71131bf97bf0f8c7dc02fb2853250485ffd59a83f6e5fea4a",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "282b669266fa8ce12842fce380d76b45b6ca797b88f78913153bc159747a7afb",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt": "46741718c489dcccddb2e89b57e1110df3e577e2e6d30a612b9c0d582137edad",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "40dae31ceaa65db12af916969c34534adf02124c8633d8c1c55a34b2e4265160",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/formula-nb2-health.toml": "a528f32a3a127336fcff3dbcf2c2fda0a044af9a3d0aa954008b1e898033ebe7",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/nb2-formula.toml": "5a6007891cf2a16dfa722739c8341401fd0f8974252d15064e0911e6e63d4e08"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/formula-nb2-health.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/nb2-formula.toml"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE",
+        "quantity": "logLik, native route (the formula routes are checked against it)",
+        "max_abs_diff": 3.953276973334141e-06,
+        "tolerance": 0.000820548538160879,
+        "tolerance_rule": "the cell's own test, @test native.loglik\u2248r.logLik rtol=1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -820.548538160879,
+        "julia_value": -820.5485342076021,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

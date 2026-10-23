@@ -64,6 +64,78 @@ end
         end
     end
 
+    @testset "Profile refit rejects non-converged / sentinel objectives (#504)" begin
+        # A stubbed `_FamilyCI` isolates the constrained-refit gate from any real
+        # family: relations are asserted (converged / not), never one seed's fitted
+        # numbers, so this is stable across Julia versions and platforms.
+        target = [1.0, 2.0]
+
+        # Healthy case: a smooth, well-behaved objective — the refit genuinely
+        # converges, and the fix must not change that (pre-#504 code also accepts
+        # this case; this confirms no regression).
+        ad_ok = GLLVModels._FamilyCI(copy(target), θ -> sum((θ .- target) .^ 2),
+                                     ["a", "b"], [:linear, :linear], _ -> nothing, _ -> nothing)
+        ll, ok, sol = GLLVModels._family_profile_refit(ad_ok, 1, 1.0, [0.0])
+        @test ok
+        @test isfinite(ll)
+        @test isapprox(sol[1], 2.0; atol = 1e-4)
+
+        # Sentinel case: an objective that always returns the package's `1e12`
+        # failure sentinel. Its finite-difference gradient is exactly flat, so
+        # `Optim.converged` alone reports true at iteration 0 (the defect this
+        # guards against) — `nmin = 1e12` is finite, so the pre-#504 code
+        # (`isfinite(nmin) || return not-ok`) reports `ok = true` here. The fixed
+        # code must reject it regardless of what `Optim.converged` claims.
+        ad_sentinel = GLLVModels._FamilyCI(copy(target), θ -> 1e12,
+                                           ["a", "b"], [:linear, :linear], _ -> nothing, _ -> nothing)
+        ll_s, ok_s, _ = GLLVModels._family_profile_refit(ad_sentinel, 1, 1.0, [0.0])
+        @test !ok_s
+        @test !isfinite(ll_s)
+
+        # Genuine non-convergence, not the sentinel: a well-behaved objective given
+        # zero iterations to work with. `nmin` is a real (non-sentinel) value, so
+        # only the `Optim.converged` half of the gate can catch this.
+        ll_z, ok_z, _ = GLLVModels._family_profile_refit(ad_ok, 1, 1.0, [0.0]; iterations = 0)
+        @test !ok_z
+    end
+
+    @testset "Bootstrap refit rejects non-converged / sentinel replicates (#504)" begin
+        m = 2
+        # Legacy contract (a bare parameter vector): behaviour is unchanged —
+        # only finiteness and length are checked, matching pre-#504 code exactly.
+        θb, good = GLLVModels._bootstrap_refit_ok([1.0, 2.0], m)
+        @test good
+        @test θb == [1.0, 2.0]
+        @test !GLLVModels._bootstrap_refit_ok(nothing, m)[2]
+        @test !GLLVModels._bootstrap_refit_ok([1.0, NaN], m)[2]
+
+        # Richer contract: a per-family adapter's own verdict. A refit that
+        # reports non-convergence, or a sentinel-valued objective, is rejected
+        # even though its parameter vector is perfectly finite.
+        @test !GLLVModels._bootstrap_refit_ok(
+            (θ = [1.0, 2.0], converged = false, loglik = -5.0), m)[2]
+        @test !GLLVModels._bootstrap_refit_ok(
+            (θ = [1.0, 2.0], converged = true, loglik = -1e12), m)[2]
+        θb2, good2 = GLLVModels._bootstrap_refit_ok(
+            (θ = [1.0, 2.0], converged = true, loglik = -12.3), m)
+        @test good2
+        @test θb2 == [1.0, 2.0]
+
+        # End-to-end: a stubbed `_FamilyCI` whose refit alternates between a
+        # healthy replicate and a converged-looking sentinel replicate. Only the
+        # healthy half should be counted.
+        n_boot = 20
+        ad = GLLVModels._FamilyCI([1.0, 2.0], θ -> sum((θ .- [1.0, 2.0]) .^ 2),
+                                  ["a", "b"], [:linear, :linear],
+                                  rng -> rng,
+                                  b -> isodd(rand(b, Int)) ?
+                                       (θ = [1.0, 2.0], converged = true, loglik = -12.3) :
+                                       (θ = [1.0, 2.0], converged = true, loglik = -1e12))
+        result = GLLVModels._family_bootstrap(ad, [1, 2], 0.95, n_boot, 1, false)
+        @test result.n_converged < n_boot   # sentinel replicates were rejected
+        @test result.n_converged ≥ 1        # healthy replicates were still counted
+    end
+
     @testset "Bootstrap (Poisson) — single- vs multi-core identical" begin
         Y, _, _ = _sim_poisson(4, 1, 120; seed = 23)
         fit = fit_poisson_gllvm(Y; K = 1)
@@ -171,7 +243,10 @@ end
                 rand() < inv(1 + exp(-βz[t])) && (Y[t, s] = exp(ηc[t] + σ_true * randn()))
             end
         end
-        fit = fit_delta_lognormal_gllvm(Y; K = K)
+        # disp_group=:shared pinned: this test checks the singular "sigma" Wald
+        # term name, which only exists under :shared (:species names them
+        # "sigma[t]").
+        fit = fit_delta_lognormal_gllvm(Y; K = K, disp_group = :shared)
         ci = confint(fit, Y; method = :wald, parm = "sigma")
         @test ci.term == ["sigma"]
         @test ci.estimate[1] ≈ fit.σ atol = 1e-8
@@ -373,6 +448,27 @@ end
         Yo = (Yo .% 4) .+ 1                                   # fold counts into 4 ordered categories
         ford = fit_ordinal_gllvm(Yo; K = 1)
         @test_throws ArgumentError confint(ford, Yo; method = :wald, objective = :va)
+    end
+
+    @testset "Ordinal confint guards X_lv fits (#776)" begin
+        Random.seed!(776)
+        pc, nc, Kc = 3, 80, 1
+        Xc = reshape(collect(range(-1.0, 1.0; length = nc)), nc, 1)
+        Lc = reshape([0.5, -0.4, 0.3], pc, Kc)
+        τc = [-1.0, 0.0, 1.0]
+        zc = vec(Xc * [0.5]) .+ randn(nc)
+        Yc = Matrix{Int}(undef, pc, nc)
+        for s in 1:nc, t in 1:pc
+            pr = [GLLVModels._ord_prob(c, (Lc * reshape(zc, 1, nc))[t, s], τc, LogitLink()) for c in 1:4]
+            Yc[t, s] = rand(Categorical(pr ./ sum(pr)))
+        end
+        f_lv = fit_ordinal_gllvm(Yc; K = Kc, X_lv = Xc, iterations = 60)
+        @test f_lv.alpha_lv !== nothing
+        @test_throws ArgumentError confint(f_lv, Yc; method = :wald)
+        # control: the same data without X_lv still returns intervals
+        f0 = fit_ordinal_gllvm(Yc; K = Kc, iterations = 60)
+        @test f0.alpha_lv === nothing
+        @test !isempty(confint(f0, Yc; method = :wald).estimate)
     end
 
     @testset "Beta-binomial Wald + bootstrap (phi on natural scale, N as data)" begin

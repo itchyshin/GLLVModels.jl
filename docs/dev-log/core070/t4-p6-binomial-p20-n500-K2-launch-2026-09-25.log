@@ -1,0 +1,24 @@
+=== START 2026-09-25T05:17:01-06:00 ===
+julia: julia version 1.10.12
+R_LIBS=/home/snakagaw/gllvmodels-track-a-20260924/GLLVModels.jl/.unlazy/r-build/library
+PWD=/home/snakagaw/gllvmodels-a05-20260925
+HEAD=d9bc77412cc309339730e806c8192b7f6c7ca10f
+=== julia instantiate ===
+INSTANTIATE_EXIT=0 elapsed=1s
+=== julia cell (binomial p20 n500 K2 seed42) ===
+DONE binomial_p20_n500_K2
+family=binomial
+p=20 n=500 K=2 seed=42
+converged=true
+logLik=-6744.539486896926
+wall_fit_sec=11.072756052017212
+pd_hessian=true
+wall_confint_sec=47.557060956954956
+dispersion_boundary=NA (Binomial has no dispersion parameter)
+boundary_terms=
+cond_H=162.07104176417607
+JULIA_EXIT=0 elapsed=107s
+=== R cell ===
+DONE binomial_p20_n500_K2 
+R_EXIT=0 elapsed=5s
+=== DONE 2026-09-25T05:18:54-06:00 total_elapsed=113s ===

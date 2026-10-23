@@ -1,0 +1,112 @@
+[ Info: Loading RCall...
+[ Info: R_HOME in Julia: /usr/lib/R
+[ Info: RCall loaded successfully.
+┌ Warning: NB2 grouped-dispersion fit reached the per-group boundary (r_group outside [1e-6, 1e6]) for group(s) [1, 3]; those groups' overdispersion is not distinguishable from the Poisson/extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them.
+└ @ GLLVModels ~/gllvmodels-owed24-20260924/GLLVModels.jl/src/families/grouped_dispersion.jl:387
+┌ Warning: RCall.jl: Student-t degrees of freedom parameter fixed at 4. To estimate it, set `df =
+│ NULL`.
+└ @ RCall ~/.julia/packages/RCall/fTLHT/src/io.jl:166
+┌ Warning: RCall.jl: Student-t degrees of freedom parameter will be estimated. This used to be fixed
+│ at 3 by default. To fix it, supply a value to `df` (e.g., `df = 3`).
+└ @ RCall ~/.julia/packages/RCall/fTLHT/src/io.jl:166
+┌ Warning: RCall.jl: Student-t degrees of freedom parameter will be estimated. This used to be fixed
+│ at 3 by default. To fix it, supply a value to `df` (e.g., `df = 3`).
+└ @ RCall ~/.julia/packages/RCall/fTLHT/src/io.jl:166
+┌ Warning: RCall.jl: Student-t degrees of freedom parameter will be estimated. This used to be fixed
+│ at 3 by default. To fix it, supply a value to `df` (e.g., `df = 3`).
+└ @ RCall ~/.julia/packages/RCall/fTLHT/src/io.jl:166
+┌ Warning: Student-t estimated ν reached the flat Gaussian-limit boundary (ν > 1e6); the Student model is not distinguishable from Gaussian on this data, and optimizer convergence flags are unreliable at this boundary. Consider a fixed ν or the Gaussian family.
+└ @ GLLVModels ~/gllvmodels-owed24-20260924/GLLVModels.jl/src/families/studentt.jl:433
+ERROR: LoadError: Some tests did not pass: 49 passed, 2 failed, 0 errored, 0 broken.
+in expression starting at /home/snakagaw/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/runparity.jl:117
+========================================================================
+GLLVModels.jl ↔ R gllvmTMB parity suite (Phase 1.0 scaffold)
+========================================================================
+NB2 GLLVModels parity: GLLVModels.jl vs gllvmTMB: Test Failed at /home/snakagaw/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:75
+  Expression: jl_fit.converged
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:673 [inlined]
+ [2] macro expansion
+   @ ~/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:75 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+ [4] top-level scope
+   @ ~/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/test_negbin_parity.jl:53
+NB2_HEALTH_SHA256 a669ae0f872efcee579fe1f648b16480aa152b3faaf8ad2cbfe393b4c51b6685
+NB2_RAW_FITS_SHA256 2adae463bf821492b030f00c7979d4c7e5f84d40d84ce7178ce2615e3793f253
+
+── NB2 logLik oracle (seed=45, p=5, K=2, n=80, per-trait φ via fit_gllvm default) ──
+  Julia logLik          = -820.5485342075721
+  gllvmTMB logLik       = -820.548538160879
+  gllvmTMB -objective   = -820.548538160879
+  Δ logLik (jl − r)     = 3.9533069866593e-6
+
+
+── student logLik oracle, disp_group=:shared (seed=71, p=5, K=1, n=130, df fixed = 4.0 on both sides; twin fid 9) ──
+  Julia logLik          = -875.8638255351678
+  gllvmTMB logLik       = -874.7938200331472
+  gllvmTMB -objective   = -874.7938200331472
+  Δ logLik (jl − r)     = -1.0700055020206491
+
+  Julia β (shared σ=0.6858) = [0.20457, -0.016897, 0.366, -0.026253, -0.16855]
+  gllvmTMB b_fix (per-trait σ)  = [0.20614, -0.018998, 0.36531, -0.025489, -0.16904]
+  gllvmTMB per-trait σ vector   = [0.67301, 0.76384, 0.64126, 0.7116, 0.66022]
+
+
+── student logLik oracle, disp_group=:species (seed=71, p=5, K=1, n=130, df fixed = 4.0 on both sides; twin fid 9) ──
+  Julia logLik          = -874.7938200321828
+  gllvmTMB logLik       = -874.7938200331472
+  gllvmTMB -objective   = -874.7938200331472
+  Δ logLik (jl − r)     = 9.644054443924688e-10
+
+  Julia per-trait σ  = [0.67301, 0.76384, 0.64126, 0.7116, 0.66022]
+  gllvmTMB per-trait σ vector = [0.67301, 0.76384, 0.64126, 0.7116, 0.66022]
+
+
+── student logLik oracle, disp_group=:species, estimated ν (seed=71, p=5, K=1, n=130; twin fid 9) ──
+  Julia logLik          = -871.6960503768579
+  gllvmTMB logLik       = -871.6960503966714
+  gllvmTMB -objective   = -871.6960503966714
+  Δ logLik (jl − r)     = 1.9813455764960963e-8
+
+  Julia per-trait σ  = [0.76988, 0.77123, 0.64369, 0.70922, 0.80209]
+  gllvmTMB per-trait σ = [0.76988, 0.77123, 0.64369, 0.70922, 0.80209]
+  Julia per-trait ν  = [9.9552, 4.0541, 4.0766, 3.9419, 44.96]
+  gllvmTMB per-trait ν = [9.9548, 4.0541, 4.0765, 3.9421, 44.952]
+  gllvmTMB optimizer code/message/iterations = (0, "relative convergence (4)", 80)
+  gllvmTMB r_gradient_max = 0.0009147533881768005 (recorded, not a gate)
+  flat Gaussian-limit boundary diagnosed = false
+
+near-Gaussian estimated-ν diagnostic: Test Failed at /home/snakagaw/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/test_studentt_parity.jl:195
+  Expression: jl_diag.converged
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:673 [inlined]
+ [2] macro expansion
+   @ ~/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/test_studentt_parity.jl:195 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+ [4] macro expansion
+   @ ~/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/test_studentt_parity.jl:179 [inlined]
+ [5] macro expansion
+   @ ~/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Test/src/Test.jl:1582 [inlined]
+ [6] top-level scope
+   @ ~/gllvmodels-owed24-20260924/GLLVModels.jl/test/parity/test_studentt_parity.jl:45
+  near-Gaussian diagnostic Δ logLik (jl − r) = -5.387384408095386e-5
+  near-Gaussian diagnostic ν (Julia, R) = ([1.4422305477416224e10, 6.620850321285605e10, 1.2295439315436624e12], [3.976933778859298e6, 1.589424373478989e8, 567889.8781684702])
+Test Summary:                                                            | Pass  Fail  Total   Time
+CORE-070 required family smoke                                           |   49     2     51  57.6s
+  CORE-070 required cell: NATIVE-06-NB2                                  |   17     1     18  27.5s
+    NB2 GLLVModels parity: GLLVModels.jl vs gllvmTMB                     |   17     1     18  24.1s
+      original model and complete fit health                             |   10           10   0.1s
+      log-likelihood agreement (rtol=1e-6)                               |    2            2   0.1s
+  CORE-070 required cell: NATIVE-10-STUDENT                              |   32     1     33  29.9s
+    Student-t GLLVModels parity: GLLVModels.jl vs gllvmTMB (twin fid 9)  |   32     1     33  29.9s
+      shared σ (Julia default) — measured baseline mismatch              |    5            5   3.0s
+      per-trait σ (disp_group = :species) — closes the mismatch          |    5            5   1.0s
+      per-trait σ + per-trait estimated ν (twin default) — Parity Cell 9 |   10           10   9.5s
+      well-identified estimated-ν diagnostic                             |    5            5   8.5s
+      near-Gaussian estimated-ν diagnostic                               |    3     1      4   6.3s

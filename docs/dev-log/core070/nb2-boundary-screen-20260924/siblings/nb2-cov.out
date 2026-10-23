@@ -1,0 +1,92 @@
+┌ Warning: NB2 grouped-cov fit reached the per-group boundary (r_group outside [1e-6, 1e6]) for group(s) [1, 2, 3, 4, 5]; those groups' overdispersion is not distinguishable from the Poisson/extreme-overdispersion limit on this data, and optimizer convergence flags are unreliable for them.
+└ @ GLLVModels ~/local-scratch/gllvm-nb2-finite-20260924/src/families/grouped_dispersion.jl:565
+fit_nb_gllvm_grouped_cov sibling screen  (Julia 1.10.12, threads 1)
+p=5 K=2 n=80  β=[0.0, 0.5, 1.0, 1.5, 2.0]  γ=0.3  r levels: d1-5 r=50, d6-10 r=2
+
+[d= 1 r_true=50] fit: loglik=-783.081419 conv=false iters=95 time=3.7s
+   harness check: replicated -negll(θ̂)=-783.081418600 |diff|=0.00e+00 OK
+   fit r_group = [2.163e+10, 1.115e+12, 4.105e+14, 3.728e+31, 1.083e+44]  γ̂ = 0.3376  boundary groups = [1, 2, 3, 4, 5]
+   (b) restart boundary log r=0: loglik=-783.081419  Δ=-0.000000  boundary after=[1, 2, 3, 4, 5]
+   (a) fresh start log r=0:     loglik=-783.081419  Δ=-0.000000  conv=true  time=1.9s  r=[7.155e+09, 6.73e+11, 6.299e+13, 5.148e+17, 2.978e+19]  boundary=[1, 2, 3, 4, 5]
+   best alt (b) gain = -0.000000  -> no stall
+
+[d= 2 r_true=50] fit: loglik=-778.607195 conv=false iters=245 time=5.0s
+   harness check: replicated -negll(θ̂)=-778.607194542 |diff|=0.00e+00 OK
+   fit r_group = [5.142, 3.735e+13, 8.433e+10, 8.587e+09, 14.57]  γ̂ = 0.2987  boundary groups = [2, 3, 4]
+   (b) restart boundary log r=0: loglik=-778.607195  Δ=+0.000000  boundary after=[2, 3, 4]
+   (a) fresh start log r=0:     loglik=-778.607195  Δ=+0.000000  conv=true  time=5.7s  r=[5.142, 6.584e+12, 9.934e+10, 1.083e+10, 14.58]  boundary=[2, 3, 4]
+   best alt (b) gain = +0.000000  -> no stall
+
+[d= 3 r_true=50] fit: loglik=-746.406449 conv=false iters=100 time=1.9s
+   harness check: replicated -negll(θ̂)=-746.406448534 |diff|=0.00e+00 OK
+   fit r_group = [2.32e+10, 1.606e+08, 5.374e+16, 7.706e+39, 3.273e+59]  γ̂ = 0.3056  boundary groups = [1, 2, 3, 4, 5]
+   (b) restart boundary log r=0: loglik=-746.406449  Δ=+0.000000  boundary after=[1, 2, 3, 4, 5]
+   (a) fresh start log r=0:     loglik=-746.406449  Δ=+0.000000  conv=true  time=1.9s  r=[6.332e+09, 7.163e+11, 1.065e+15, 9.853e+19, 7.238e+22]  boundary=[1, 2, 3, 4, 5]
+   best alt (a) gain = +0.000000  -> no stall
+
+[d= 4 r_true=50] fit: loglik=-769.651479 conv=false iters=104 time=2.1s
+   harness check: replicated -negll(θ̂)=-769.651478664 |diff|=0.00e+00 OK
+   fit r_group = [1.414e+10, 1.239e+23, 1.879e+49, 3.762e+33, 1.989e+100]  γ̂ = 0.3363  boundary groups = [1, 2, 3, 4, 5]
+   (b) restart boundary log r=0: loglik=-769.651479  Δ=-0.000000  boundary after=[1, 2, 3, 4, 5]
+   (a) fresh start log r=0:     loglik=-769.651479  Δ=+0.000000  conv=true  time=1.7s  r=[2.538e+10, 7.934e+14, 7.267e+18, 1.212e+20, 1.549e+27]  boundary=[1, 2, 3, 4, 5]
+   best alt (a) gain = +0.000000  -> no stall
+
+[d= 5 r_true=50] fit: loglik=-786.229916 conv=false iters=147 time=3.2s
+   harness check: replicated -negll(θ̂)=-786.229916286 |diff|=0.00e+00 OK
+   fit r_group = [1.196e+16, 5.502, 5.094e+36, 7.632e+09, 8.801e+62]  γ̂ = 0.3583  boundary groups = [1, 3, 4, 5]
+   (b) restart boundary log r=0: loglik=-786.229916  Δ=+0.000000  boundary after=[1, 3, 4, 5]
+   (a) fresh start log r=0:     loglik=-786.229916  Δ=-0.000000  conv=true  time=3.2s  r=[1.707e+09, 5.502, 4.863e+10, 1.017e+10, 1.774e+13]  boundary=[1, 3, 4, 5]
+   best alt (b) gain = +0.000000  -> no stall
+
+[d= 6 r_true=2] fit: loglik=-848.018612 conv=false iters=158 time=4.7s
+   harness check: replicated -negll(θ̂)=-848.018612027 |diff|=0.00e+00 OK
+   fit r_group = [2.834e+09, 1.449, 5.499e+22, 4.539, 2.05]  γ̂ = 0.3265  boundary groups = [1, 3]
+   (b) restart boundary log r=0: loglik=-847.475409  Δ=+0.543203  boundary after=[1, 2]
+   (a) fresh start log r=0:     loglik=-847.475409  Δ=+0.543203  conv=true  time=5.7s  r=[1.029e+44, 4.231e+09, 1.353, 4.621, 2.136]  boundary=[1, 2]
+   best alt (a) gain = +0.543203  -> STALL
+
+[d= 7 r_true=2] fit: loglik=-853.078517 conv=false iters=251 time=7.6s
+   harness check: replicated -negll(θ̂)=-853.078516608 |diff|=0.00e+00 OK
+   fit r_group = [5.656, 4.616, 7.038e+09, 1.731e+09, 3.257]  γ̂ = 0.3115  boundary groups = [3, 4]
+   (b) restart boundary log r=0: loglik=-851.780905  Δ=+1.297611  boundary after=[2, 5]
+   (a) fresh start log r=0:     loglik=-851.780905  Δ=+1.297611  conv=true  time=6.5s  r=[6.668, 4.14e+10, 3.63, 1.77, 5.364e+09]  boundary=[2, 5]
+   best alt (b) gain = +1.297611  -> STALL
+
+[d= 8 r_true=2] fit: loglik=-846.207820 conv=false iters=189 time=5.6s
+   harness check: replicated -negll(θ̂)=-846.207819529 |diff|=0.00e+00 OK
+   fit r_group = [1.397e+95, 3.171, 5.553, 4.634, 5.074e+09]  γ̂ = 0.2959  boundary groups = [1, 5]
+   (b) restart boundary log r=0: loglik=-845.819330  Δ=+0.388489  boundary after=[1]
+   (a) fresh start log r=0:     loglik=-847.180956  Δ=-0.973137  conv=true  time=5.0s  r=[1.837, 1.596e+24, 1.61e+19, 3.406, 1.931]  boundary=[2, 3]
+   best alt (b) gain = +0.388489  -> STALL
+
+[d= 9 r_true=2] fit: loglik=-811.229312 conv=false iters=153 time=5.1s
+   harness check: replicated -negll(θ̂)=-811.229311996 |diff|=0.00e+00 OK
+   fit r_group = [3.396, 1.225e+10, 2.044, 3.536e+26, 2.155]  γ̂ = 0.2642  boundary groups = [2, 4]
+   (b) restart boundary log r=0: loglik=-811.229312  Δ=-0.000000  boundary after=[2, 4]
+   (a) fresh start log r=0:     loglik=-811.229312  Δ=-0.000000  conv=true  time=4.7s  r=[3.396, 9.677e+08, 2.044, 9.435e+09, 2.155]  boundary=[2, 4]
+   best alt (b) gain = -0.000000  -> no stall
+
+[d=10 r_true=2] fit: loglik=-854.858035 conv=false iters=153 time=5.0s
+   harness check: replicated -negll(θ̂)=-854.858035005 |diff|=0.00e+00 OK
+   fit r_group = [4.29e+09, 8.163e+25, 1.778, 3.612, 2.939]  γ̂ = 0.3709  boundary groups = [1, 2]
+   (b) restart boundary log r=0: loglik=-854.858035  Δ=-0.000000  boundary after=[1, 2]
+   (a) fresh start log r=0:     loglik=-854.858035  Δ=-0.000000  conv=true  time=4.4s  r=[5.716e+09, 5.865e+09, 1.778, 3.612, 2.939]  boundary=[1, 2]
+   best alt (a) gain = -0.000000  -> no stall
+
+==== SUMMARY ====
+harness_valid = true
+n_datasets = 10
+n_with_boundary = 10
+n_stalls = 3
+max_gain = 1.2976114257706968
+d | r_true | fit_ll | boundary | ll_b | ll_a | best(which) | gain | stall
+ 1 |   50 | -783.0814 | [1, 2, 3, 4, 5] | -783.0814 | -783.0814 | -783.0814(b) | -3.01e-10 | false
+ 2 |   50 | -778.6072 | [2, 3, 4] | -778.6072 | -778.6072 | -778.6072(b) | +9.70e-10 | false
+ 3 |   50 | -746.4064 | [1, 2, 3, 4, 5] | -746.4064 | -746.4064 | -746.4064(a) | +5.79e-10 | false
+ 4 |   50 | -769.6515 | [1, 2, 3, 4, 5] | -769.6515 | -769.6515 | -769.6515(a) | +2.11e-10 | false
+ 5 |   50 | -786.2299 | [1, 3, 4, 5] | -786.2299 | -786.2299 | -786.2299(b) | +9.95e-10 | false
+ 6 |    2 | -848.0186 | [1, 3] | -847.4754 | -847.4754 | -847.4754(a) | +5.43e-01 | true
+ 7 |    2 | -853.0785 | [3, 4] | -851.7809 | -851.7809 | -851.7809(b) | +1.30e+00 | true
+ 8 |    2 | -846.2078 | [1, 5] | -845.8193 | -847.1810 | -845.8193(b) | +3.88e-01 | true
+ 9 |    2 | -811.2293 | [2, 4] | -811.2293 | -811.2293 | -811.2293(b) | -2.74e-10 | false
+10 |    2 | -854.8580 | [1, 2] | -854.8580 | -854.8580 | -854.8580(a) | -8.58e-10 | false

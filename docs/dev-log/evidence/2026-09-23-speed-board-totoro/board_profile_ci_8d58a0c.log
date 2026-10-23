@@ -1,0 +1,43 @@
+[ Info: Benchmarking size 8x40x1 (p=8 species, n=40 sites, K=1 LVs)
+[ Info:   Poisson finite vs analytic
+[ Info:   NB finite vs analytic
+[ Info:   Binomial finite vs analytic
+[ Info:   Beta finite vs analytic
+[ Info:   Gamma finite vs analytic
+GLLVModels.jl speed benchmark — Base timing, no BenchmarkTools
+grid (p, n, K): [(8, 40, 1)]   reps: 3   iterations cap: 120
+Julia 1.12.6   threads: 4
+
+==================================================================================================
+RESULTS  (median of 3 timed reps; warm-up excluded)
+==================================================================================================
+size         family    variant         seconds   MB alloc       Δloglik  note
+--------------------------------------------------------------------------------------------------
+8x40x1       Gaussian  closed           0.0000       0.13             —  
+8x40x1       Poisson   :finite          0.1139     102.77             —  
+8x40x1       Poisson   :analytic        0.0058       6.80     0.000e+00  speedup 19.50x vs :finite
+8x40x1       NB        :finite          0.1861     174.95             —  
+8x40x1       NB        :analytic        0.0195      32.37     1.705e-13  speedup 9.55x vs :finite
+8x40x1       Binomial  :finite          0.1155      91.66             —  
+8x40x1       Binomial  :analytic        0.0106      19.43     1.137e-13  speedup 10.94x vs :finite
+8x40x1       Beta      :finite          0.2923     147.76             —  
+8x40x1       Beta      :analytic        0.0335      31.53    -2.558e-13  speedup 8.72x vs :finite
+8x40x1       Gamma     :finite          0.1484     152.94             —  
+8x40x1       Gamma     :analytic        0.0160      27.74     5.684e-14  speedup 9.27x vs :finite
+8x40x1       Poisson   profileCI        1.5809    1802.12             —  parm=beta[1]
+8x40x1       NB        profileCI        2.5044    2558.78             —  parm=beta[1]
+8x40x1       Binomial  profileCI        1.9279    1647.61             —  parm=beta[1]
+--------------------------------------------------------------------------------------------------
+Δloglik for GLM families = loglik(:analytic) − loglik(:finite) within a
+size×family cell; ~0 means :analytic reaches the same optimum.
+==================================================================================================
+
+DECISION GUIDE
+--------------
+Compare each family's :finite vs :analytic rows:
+  * speedup column = how much faster the analytic-gradient fit is;
+  * Δloglik column = accuracy gap (want ~0, i.e. same optimum).
+If :analytic is consistently faster AND Δloglik stays at noise level, it is
+safe to make that family's default `gradient = :analytic`. See
+bench/SPEED_NOTES.md for the current default decision and broader speed roadmap.
+

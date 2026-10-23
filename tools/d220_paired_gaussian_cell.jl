@@ -34,9 +34,9 @@ function run_d220_cell()
     r = r_fit_se(y, K; family = :gaussian)
     # first-order path uses se=FALSE equivalent — pull logLik/objective from r_fit_se's fit
     # For sigma/Sigma_y we need extractors; use inline R block matching test_gaussian_parity.jl
+    _require_gllvmtmb!()
     @rput y K p n
     R"""
-    suppressPackageStartupMessages(library(gllvmTMB))
     trait_names <- paste0("t", seq_len(p))
     df_long <- data.frame(
         site  = factor(rep(seq_len(n), each = p)),

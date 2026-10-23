@@ -1,0 +1,799 @@
+{
+ "schema": 1,
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "note": "P1 case-map rows for the +25 exports / +11 S3 methods / -2 removed exports since gllvmTMB 0.7.0 (D-295 Packet 1 row 3). Classes signed by the maintainer on PR #533 on 2026-09-30 (https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263), with the moves recorded there. Rows classified outside_boundary, semantic_divergence, excluded or retired carry that signature as their disposition; required_core rows keep disposition null until a numeric twin receipt binds them.",
+ "rows": [
+  {
+   "source_id": "temporal/temporal_dep",
+   "r_export": "temporal_dep",
+   "r_kind": "export",
+   "r_file_line": "R/temporal.R:65",
+   "classification": "required_core",
+   "reason": "AR1/OU process with unstructured per-trait covariance; native temporal source with no Julia twin yet.",
+   "arc": "A6",
+   "executable_case_ids": [
+    "P1-JULIA-TEMPORAL-DEP-NLL-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-NLL-AT-R-TIGHT-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-TEMPORAL-DEP-SIGMA-T-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-AIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-BIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-DEP-LOGLIK-AT-OPTIMA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/temporal_dep.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_fit_receipts.jl (itchyshin/GLLVModels.jl#563), against R-at-P1 values copied from test/fixtures/temporal_p1/fits.toml; each case within the tolerance asserted in test/test_temporal_fit_receipts.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "temporal/temporal_indep",
+   "r_export": "temporal_indep",
+   "r_kind": "export",
+   "r_file_line": "R/temporal.R:56",
+   "classification": "required_core",
+   "reason": "AR1/OU process with per-trait independent covariance; R's most-documented temporal source, no Julia twin yet.",
+   "arc": "A6",
+   "executable_case_ids": [
+    "P1-JULIA-TEMPORAL-INDEP-NLL-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-NLL-AT-R-TIGHT-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-TEMPORAL-INDEP-SIGMA-T-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-AIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-BIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-INDEP-LOGLIK-AT-OPTIMA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/temporal_indep.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_fit_receipts.jl (itchyshin/GLLVModels.jl#563), against R-at-P1 values copied from test/fixtures/temporal_p1/fits.toml; each case within the tolerance asserted in test/test_temporal_fit_receipts.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "temporal/temporal_latent",
+   "r_export": "temporal_latent",
+   "r_kind": "export",
+   "r_file_line": "R/temporal.R:93",
+   "classification": "required_core",
+   "reason": "AR1/OU rank-one latent-loading temporal family; no Julia twin yet.",
+   "arc": "A6",
+   "executable_case_ids": [
+    "P1-JULIA-TEMPORAL-LATENT-NLL-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-NLL-AT-R-TIGHT-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM",
+    "P1-JULIA-TEMPORAL-LATENT-SIGMA-T-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-AIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-BIC-AT-R-COORDINATES",
+    "P1-JULIA-TEMPORAL-LATENT-LOGLIK-AT-OPTIMA",
+    "P1-JULIA-TEMPORAL-LATENT-GETLV-SCORES",
+    "P1-JULIA-TEMPORAL-LATENT-LOADINGS-AT-R-COORDINATES"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/temporal_latent.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_fit_receipts.jl (itchyshin/GLLVModels.jl#563), against R-at-P1 values copied from test/fixtures/temporal_p1/fits.toml; each case within the tolerance asserted in test/test_temporal_fit_receipts.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "temporal/extract_temporal",
+   "r_export": "extract_temporal",
+   "r_kind": "export",
+   "r_file_line": "R/temporal.R:495",
+   "classification": "required_core",
+   "reason": "Extracts temporal covariance-provider state/parameters; depends on the temporal_* twins landing first.",
+   "arc": "A6",
+   "executable_case_ids": [
+    "P1-JULIA-EXTRACT-TEMPORAL-TIME-VALUE",
+    "P1-JULIA-EXTRACT-TEMPORAL-VARIANCE",
+    "P1-JULIA-EXTRACT-TEMPORAL-LOADINGS"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/extract_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_fit_receipts.jl (itchyshin/GLLVModels.jl#563), against R-at-P1 values copied from test/fixtures/temporal_p1/fits.toml; each case within the tolerance asserted in test/test_temporal_fit_receipts.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "temporal/forecast_temporal",
+   "r_export": "forecast_temporal",
+   "r_kind": "export",
+   "r_file_line": "R/temporal-forecast.R:35",
+   "classification": "required_core",
+   "reason": "Forecasts a native temporal covariance model; bounded contract (unreplicated Gaussian temporal_indep only).",
+   "arc": "A6",
+   "executable_case_ids": [
+    "P1-JULIA-FORECAST-TEMPORAL-AR1-EST",
+    "P1-JULIA-FORECAST-TEMPORAL-AR1-SE-FIT",
+    "P1-JULIA-FORECAST-TEMPORAL-AR1-NEGATIVE-EST",
+    "P1-JULIA-FORECAST-TEMPORAL-AR1-NEGATIVE-SE-FIT",
+    "P1-JULIA-FORECAST-TEMPORAL-OU-EST",
+    "P1-JULIA-FORECAST-TEMPORAL-OU-SE-FIT"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/forecast_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_helpers.jl (itchyshin/GLLVModels.jl#543), against R-at-P1 values copied from test/fixtures/temporal_p1/forecast.toml; each case within the tolerance asserted in test/test_temporal_helpers.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "temporal/bootstrap_temporal",
+   "r_export": "bootstrap_temporal",
+   "r_kind": "export",
+   "r_file_line": "R/temporal-bootstrap.R:21",
+   "classification": "required_core",
+   "reason": "Parametric bootstrap for the temporal persistence parameter; same bounded contract as forecast_temporal.",
+   "arc": "A6",
+   "executable_case_ids": [
+    "P1-JULIA-BOOTSTRAP-TEMPORAL-TIME-ESTIMATE-MEAN",
+    "P1-JULIA-BOOTSTRAP-TEMPORAL-TIME-ESTIMATE-LOG-SD"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/bootstrap_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_helpers.jl (itchyshin/GLLVModels.jl#543), against R-at-P1 values copied from test/fixtures/temporal_p1/bootstrap.toml; each case within the tolerance asserted in test/test_temporal_helpers.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "temporal/profile_temporal",
+   "r_export": "profile_temporal",
+   "r_kind": "export",
+   "r_file_line": "R/temporal-profile.R:14",
+   "classification": "required_core",
+   "reason": "Profiles the temporal persistence/decay parameter; depends on the temporal_* twins.",
+   "arc": "A6",
+   "executable_case_ids": [
+    "P1-JULIA-PROFILE-TEMPORAL-ESTIMATE",
+    "P1-JULIA-PROFILE-TEMPORAL-TRACE-THETA",
+    "P1-JULIA-PROFILE-TEMPORAL-TRACE-VALUE",
+    "P1-JULIA-PROFILE-TEMPORAL-FINITE-BOUNDS"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/profile_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_helpers.jl (itchyshin/GLLVModels.jl#543), against R-at-P1 values copied from test/fixtures/temporal_p1/profile.toml; each case within the tolerance asserted in test/test_temporal_helpers.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "temporal/compare_temporal",
+   "r_export": "compare_temporal",
+   "r_kind": "export",
+   "r_file_line": "R/temporal-selection.R:5",
+   "classification": "required_core",
+   "reason": "Compares supplied temporal model candidates (model-selection helper); depends on the temporal_* twins.",
+   "arc": "A6",
+   "executable_case_ids": [
+    "P1-JULIA-COMPARE-TEMPORAL-LOGLIK",
+    "P1-JULIA-COMPARE-TEMPORAL-AIC"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/temporal/compare_temporal.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_temporal_helpers.jl (itchyshin/GLLVModels.jl#543), against R-at-P1 values copied from test/fixtures/temporal_p1/compare.toml; each case within the tolerance asserted in test/test_temporal_helpers.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "ordinal/ordinal_logit",
+   "r_export": "ordinal_logit",
+   "r_kind": "export",
+   "r_file_line": "R/families.R:886",
+   "classification": "required_core",
+   "reason": "Cumulative-logit ordinal-threshold family for the multivariate engine, distinct from R's missing-predictor cumulative_logit; no Julia twin under this name yet.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "P1-JULIA-ORDINAL-LOGIT-LOGLIK-OPTIMUM",
+    "P1-JULIA-ORDINAL-LOGIT-CROSS-OBJECTIVE-AT-R-PARAMETERS",
+    "P1-JULIA-ORDINAL-LOGIT-CUTPOINT-2",
+    "P1-JULIA-ORDINAL-LOGIT-CUTPOINT-3",
+    "P1-JULIA-ORDINAL-LOGIT-LAMBDA-LAMBDA-T"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/ordinal/ordinal_logit.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_ordinal_logit_twin.jl (itchyshin/GLLVModels.jl#528), against R-at-P1 values copied from test/fixtures/ordinal_logit_p1.toml; each case within the tolerance asserted in test/test_ordinal_logit_twin.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "latent-scores/extract_latent_scores",
+   "r_export": "extract_latent_scores",
+   "r_kind": "export",
+   "r_file_line": "R/extract-latent-scores.R:42",
+   "classification": "required_core",
+   "reason": "Per-unit latent-variable score point extraction; Julia has latent-variable fits but no matching extractor API.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "P1-JULIA-ELS-GAUSSIAN-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-POISSON-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-NB2-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-GAUSSIAN-LAMBDA-Z-OWN-OPTIMUM",
+    "P1-JULIA-ELS-POISSON-LAMBDA-Z-OWN-OPTIMUM"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/latent-scores/extract_latent_scores.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_extract_latent_scores.jl (itchyshin/GLLVModels.jl#531), against R-at-P1 values copied from test/fixtures/extract_latent_scores_p1/; each case within the tolerance asserted in test/test_extract_latent_scores.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "latent-scores/extract_latent_scores.default",
+   "r_export": "extract_latent_scores.default",
+   "r_kind": "s3_method",
+   "r_file_line": "R/extract-latent-scores.R:73",
+   "classification": "required_core",
+   "reason": "Fallback S3 method (warns on an unrecognized class); twins the default-dispatch behaviour of extract_latent_scores.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "CORE070-C1-EXTRACT-LATENT-SCORES-DEFAULT-REFUSAL"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/latent-scores/extract_latent_scores.default.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, refusal): extract_latent_scores() at P1 and GLLVModels.extract_latent_scores() were each called on four objects with no method (R: character, integer, list, NULL; Julia: String, Vector{Int}, Dict, nothing). Both signal an error and return nothing, the message names the offending class, and it states the accepted inputs; the labels are derived from the raw records in test/fixtures/c1_behaviour_p1/ and from the fresh Julia run by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). The exception class names differ (R rlang_error, Julia ArgumentError) and are recorded, not equated"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
+  },
+  {
+   "source_id": "latent-scores/extract_latent_scores.gllvmTMB_multi",
+   "r_export": "extract_latent_scores.gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "r_file_line": "R/extract-latent-scores.R:47",
+   "classification": "required_core",
+   "reason": "Delegates to component fits' extract_latent_scores(); twins Julia's own multi-fit extraction once extract_latent_scores lands.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "P1-JULIA-ELS-GAUSSIAN-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-POISSON-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-NB2-Z-AT-R-PARAMETERS",
+    "P1-JULIA-ELS-GAUSSIAN-LAMBDA-Z-OWN-OPTIMUM",
+    "P1-JULIA-ELS-POISSON-LAMBDA-Z-OWN-OPTIMUM"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/latent-scores/extract_latent_scores.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_extract_latent_scores.jl (itchyshin/GLLVModels.jl#531), against R-at-P1 values copied from test/fixtures/extract_latent_scores_p1/; each case within the tolerance asserted in test/test_extract_latent_scores.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "latent-scores/extract_latent_scores.gllvmTMB_site_trait_sim",
+   "r_export": "extract_latent_scores.gllvmTMB_site_trait_sim",
+   "r_kind": "s3_method",
+   "r_file_line": "R/extract-latent-scores.R:62",
+   "classification": "excluded",
+   "reason": "Extracts scores from an R-only simulated site-trait object class; Julia has no matching simulation-result class to extract from. PROPOSED -- recon flagged this as possibly excluded, not yet decided.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "latent-scores/extract_latent_scores.gllvmTMB_va",
+   "r_export": "extract_latent_scores.gllvmTMB_va",
+   "r_kind": "s3_method",
+   "r_file_line": "R/extract-latent-scores.R:57",
+   "classification": "excluded",
+   "reason": "Extracts scores from R's variational-approximation fit class; Julia has no VA-fit class. PROPOSED -- recon flagged this as possibly excluded, not yet decided.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "ordination/ordination_uncertainty",
+   "r_export": "ordination_uncertainty",
+   "r_kind": "export",
+   "r_file_line": "R/ordination-uncertainty.R:171",
+   "classification": "semantic_divergence",
+   "reason": "Wald-form per-unit covariance of ordination (latent) scores; needs a Julia surface.",
+   "arc": "A2 (medium)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "ordination/print.gllvmTMB_ordination_uncertainty",
+   "r_export": "print.gllvmTMB_ordination_uncertainty",
+   "r_kind": "s3_method",
+   "r_file_line": "R/ordination-uncertainty.R:303",
+   "classification": "semantic_divergence",
+   "reason": "Printer for ordination_uncertainty's result table; twins its display once ordination_uncertainty lands.",
+   "arc": "A2 (medium)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "select-lv/select_lv",
+   "r_export": "select_lv",
+   "r_kind": "export",
+   "r_file_line": "R/select-lv.R:156",
+   "classification": "required_core",
+   "reason": "Rank-selection by AIC/BIC/AICc from a fitted sequence, paired with anova(test=\"chibar\"). Built by the auto-d lane (#518, gllvmTMB #1324); this ledger only records it -- Shinichi signs this row (D-295 Packet 1 row 6). Fence: R rejects fits with a non-positive-definite Hessian; Julia's select_lv does not currently reproduce that rejection.",
+   "arc": "auto-d lane (#518)",
+   "executable_case_ids": [
+    "P1-JULIA-SELECT-LV-LOGLIK",
+    "P1-JULIA-SELECT-LV-AIC",
+    "P1-JULIA-SELECT-LV-BIC"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/select-lv/select_lv.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_select_lv_p1_twin.jl, against R-at-P1 values copied from test/fixtures/select_lv_p1.toml (Gaussian rank sweep K = 1:3, criterion bic; R converged with a positive-definite Hessian at every rank); each case within the tolerance asserted in test/test_select_lv_p1_twin.jl. npar and the selected rank are asserted exactly in the test and match; the signed Hessian fence is not exercised by this fixture"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "signed_fence": "Julia does not yet reject fits with a non-positive-definite Hessian as R does (signed 2026-09-30, https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263)",
+   "evidence_tier": "numeric"
+  },
+  {
+   "source_id": "select-lv/print.gllvmTMB_select_lv",
+   "r_export": "print.gllvmTMB_select_lv",
+   "r_kind": "s3_method",
+   "r_file_line": "R/select-lv.R:349",
+   "classification": "required_core",
+   "reason": "Printer for select_lv's rank-selection output. Same auto-d-lane ownership and Shinichi-signs fence as select_lv (D-295 Packet 1 row 6).",
+   "arc": "auto-d lane (#518)",
+   "executable_case_ids": [
+    "CORE070-C1-PRINT-SELECT-LV-FIELDS",
+    "CORE070-C1-PRINT-SELECT-LV-MARKER"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/select-lv/print.select_lv.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, printed fields): print.gllvmTMB_select_lv at P1 and the Julia show method for the select_lv result were each run on the P1 select_lv fixture data (Gaussian rank sweep d = K = 1:3, criterion bic; Julia with pd_hessian = true so pdHess is filled). The eight printed column labels (d, npar, logLik, AIC, BIC, AICc, conv, pdHess, in order) and the marker convention (one row marked with *, the row with the smallest value of the criterion column) are identical, read from R's raw printed text (test/fixtures/c1_behaviour_p1/r_select_lv_print.txt) and from the fresh Julia output by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). The title line (R: gllvmTMB latent-rank selection, selected d; Julia: GLLVModels latent-dimension selection, best K) and the numbers are recorded, not compared; the numbers belong to the numeric select_lv twin. Recorded, not compared: R drops a rank that did not converge or has a confirmed non-positive-definite Hessian from the selection and Julia keeps it selectable (this sweep has no such rank), and Julia computes pdHess from confint's Wald flag, not TMB's sdreport()"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
+  },
+  {
+   "source_id": "zi/zi_poisson",
+   "r_export": "zi_poisson",
+   "r_kind": "export",
+   "r_file_line": "R/families.R:511",
+   "classification": "required_core",
+   "reason": "TRUE zero-inflation mixture (per-trait, intercept-only structural-zero probability); Julia's own zero-inflated/two-part family is a hurdle-style construction, not R's mixture semantics. A name match never counts (D-295 Packet 1 row 5); Julia's design stays a documented extra until a twin with R's semantics exists.",
+   "arc": "A2 (medium)",
+   "executable_case_ids": [
+    "P1-FIXTURE-ZI-POISSON-LOGLIK-OPTIMUM",
+    "P1-FIXTURE-ZI-POISSON-CROSS-OBJECTIVE-R-AT-JULIA-OPTIMUM",
+    "P1-FIXTURE-ZI-POISSON-BETA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fixture-twins/zi/zi_poisson.json"
+    ],
+    "tier": "numeric: recorded R-at-P1 vs Julia pairs copied mechanically from test/fixtures/zi_p1.toml (itchyshin/GLLVModels.jl#557) by tools/true_parity_fixture_receipts.py; each within the tolerance asserted in test/test_zi_twin.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "zi/zi_nbinom2",
+   "r_export": "zi_nbinom2",
+   "r_kind": "export",
+   "r_file_line": "R/families.R:517",
+   "classification": "required_core",
+   "reason": "TRUE zero-inflation mixture reusing ordinary per-trait NB2 dispersion; Julia's two-part ZI uses one scalar dispersion across species. Same D-295 row 5 divergence rule as zi_poisson.",
+   "arc": "A2 (medium)",
+   "executable_case_ids": [
+    "P1-FIXTURE-ZI-NBINOM2-LOGLIK-OPTIMUM",
+    "P1-FIXTURE-ZI-NBINOM2-CROSS-OBJECTIVE-R-AT-JULIA-OPTIMUM",
+    "P1-FIXTURE-ZI-NBINOM2-BETA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fixture-twins/zi/zi_nbinom2.json"
+    ],
+    "tier": "numeric: recorded R-at-P1 vs Julia pairs copied mechanically from test/fixtures/zi_p1.toml (itchyshin/GLLVModels.jl#557) by tools/true_parity_fixture_receipts.py; each within the tolerance asserted in test/test_zi_twin.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "zi/zi_binomial",
+   "r_export": "zi_binomial",
+   "r_kind": "export",
+   "r_file_line": "R/families.R:523",
+   "classification": "required_core",
+   "reason": "TRUE zero-inflation mixture over multi-trial (binomial) data. Same D-295 row 5 divergence rule as zi_poisson.",
+   "arc": "A2 (medium)",
+   "executable_case_ids": [
+    "P1-FIXTURE-ZI-BINOMIAL-LOGLIK-OPTIMUM",
+    "P1-FIXTURE-ZI-BINOMIAL-CROSS-OBJECTIVE-R-AT-JULIA-OPTIMUM",
+    "P1-FIXTURE-ZI-BINOMIAL-BETA"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/fixture-twins/zi/zi_binomial.json"
+    ],
+    "tier": "numeric: recorded R-at-P1 vs Julia pairs copied mechanically from test/fixtures/zi_p1.toml (itchyshin/GLLVModels.jl#557) by tools/true_parity_fixture_receipts.py; each within the tolerance asserted in test/test_zi_twin.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "boundary-inference/chibar2_pvalue",
+   "r_export": "chibar2_pvalue",
+   "r_kind": "export",
+   "r_file_line": "R/chibar.R:93",
+   "classification": "required_core",
+   "reason": "Self-Liang chi-bar-square p-value for a boundary LRT. Julia has both `chibar2_pvalue` and `variance_lrt` names in src/boundary_inference.jl, but a name match never counts (D-295 Packet 1 row 5) -- semantic equality is unchecked until a twin test shows equal outputs.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "P1-JULIA-CHIBAR2-PVALUE"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/boundary-inference/chibar2_pvalue.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_chibar2_variance_lrt_p1_twin.jl (itchyshin/GLLVModels.jl#548), against R-at-P1 values copied from test/parity/fixtures/chibar2_p1_fixture.toml; each case within the tolerance asserted in test/test_chibar2_variance_lrt_p1_twin.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "boundary-inference/variance_lrt",
+   "r_export": "variance_lrt",
+   "r_kind": "export",
+   "r_file_line": "R/chibar.R:144",
+   "classification": "required_core",
+   "reason": "Self-Liang LRT wrapper for one or more variance-component boundaries, used by anova(). Same name-only-match caveat as chibar2_pvalue.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "P1-JULIA-VARIANCE-LRT-LRT",
+    "P1-JULIA-VARIANCE-LRT-PVALUE"
+   ],
+   "evidence_tier": "numeric",
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/boundary-inference/variance_lrt.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_chibar2_variance_lrt_p1_twin.jl (itchyshin/GLLVModels.jl#548), against R-at-P1 values copied from test/parity/fixtures/chibar2_p1_fixture.toml; each case within the tolerance asserted in test/test_chibar2_variance_lrt_p1_twin.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null
+  },
+  {
+   "source_id": "model-comparison/AIC.gllvmTMB_multi",
+   "r_export": "AIC.gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "r_file_line": "R/aghq-report.R:213",
+   "classification": "required_core",
+   "reason": "Wraps stats::AIC() with fit-compatibility checks (penalty k=2 default); Julia already has an `aic` extractor but no matching S3-dispatched twin surface for a multi-fit object.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "P1-JULIA-MODEL-COMPARISON-AIC-E2E"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/AIC.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_model_comparison.jl (itchyshin/GLLVModels.jl#556), against R-at-P1 values copied from test/fixtures/gllvmtmb_anova_fixture.toml; each case within the tolerance asserted in test/test_model_comparison.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "numeric"
+  },
+  {
+   "source_id": "model-comparison/BIC.gllvmTMB_multi",
+   "r_export": "BIC.gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "r_file_line": "R/aghq-report.R:222",
+   "classification": "required_core",
+   "reason": "Wraps stats::BIC() with fit-compatibility checks; same S3-twin gap as AIC.gllvmTMB_multi.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "P1-JULIA-MODEL-COMPARISON-BIC-E2E"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/BIC.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_model_comparison.jl (itchyshin/GLLVModels.jl#556), against R-at-P1 values copied from test/fixtures/gllvmtmb_anova_fixture.toml; each case within the tolerance asserted in test/test_model_comparison.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "numeric"
+  },
+  {
+   "source_id": "model-comparison/anova.gllvmTMB_multi",
+   "r_export": "anova.gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "r_file_line": "R/aghq-report.R:456",
+   "classification": "required_core",
+   "reason": "Sequential rank/fixed-effect LRT via chi-bar-square (approx) or chi-square, with a rank-step caveat; Julia has no anova-style model-comparison surface yet.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "P1-JULIA-ANOVA-CHIBAR-LRT",
+    "P1-JULIA-ANOVA-CHIBAR-PVALUE",
+    "P1-JULIA-ANOVA-CHISQ-LRT",
+    "P1-JULIA-ANOVA-CHISQ-PVALUE",
+    "P1-JULIA-ANOVA-E2E-LRT",
+    "P1-JULIA-ANOVA-E2E-PVALUE"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/anova.json"
+    ],
+    "tier": "numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as test/test_model_comparison.jl (itchyshin/GLLVModels.jl#556), against R-at-P1 values copied from test/fixtures/gllvmtmb_anova_fixture.toml; each case within the tolerance asserted in test/test_model_comparison.jl"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "numeric"
+  },
+  {
+   "source_id": "model-comparison/print.anova.gllvmTMB_multi",
+   "r_export": "print.anova.gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "r_file_line": "R/aghq-report.R:582",
+   "classification": "required_core",
+   "reason": "Printer for anova.gllvmTMB_multi's comparison table; twins its display once anova.gllvmTMB_multi lands.",
+   "arc": "A2 (small)",
+   "executable_case_ids": [
+    "CORE070-C1-PRINT-ANOVA-FIELDS",
+    "CORE070-C1-PRINT-ANOVA-SECTIONS"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/print.anova.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, printed fields): print.anova.gllvmTMB_multi at P1 and the Julia show method for the gllvm_anova table were each run on nested Gaussian fits of the same data (d = 1, 2, 3). The printed column labels (model, d, npar, logLik, deviance, df, LRT, test, p.value) and the section heading (Notes:) are identical, read from R's raw printed text (test/fixtures/c1_behaviour_p1/r_anova_print.txt) and from the fresh Julia output by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). Title text, note wording and numbers are not compared; the numbers belong to the numeric anova twin"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
+  },
+  {
+   "source_id": "model-comparison/update.gllvmTMB_multi",
+   "r_export": "update.gllvmTMB_multi",
+   "r_kind": "s3_method",
+   "r_file_line": "R/methods-gllvmTMB.R:14",
+   "classification": "required_core",
+   "reason": "Refit wrapper for a temporal-latent model; depends on the temporal_* twins (A6) landing first.",
+   "arc": "A2 (small); depends on A6",
+   "executable_case_ids": [
+    "CORE070-C1-UPDATE-REPLAY",
+    "CORE070-C1-UPDATE-DATA-OVERRIDE",
+    "CORE070-C1-UPDATE-UNNAMED-REFUSED",
+    "CORE070-C1-UPDATE-NO-CALL-REFUSED"
+   ],
+   "evidence": {
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/julia-twins/model-comparison/update.json"
+    ],
+    "tier": "behavioural (itchyshin/GLLVModels.jl#684 item 2, route and refusal): update() at P1 and GLLVModels.update() on a temporal fit were each run on the same 60-row temporal_indep panel. Replaying the saved call returns a refit with the original response and log-likelihood on both engines; update with data = changed refits on the supplied column on both; an unnamed override and an update on an ordinary fit that keeps no call each signal an error and return no model on both. The labels are derived from the raw records in test/fixtures/c1_behaviour_p1/ and from the fresh Julia run by tools/true_parity_julia_receipts.jl (test/test_c1_behaviour_p1.jl). The condition types differ (R rlang_error / simpleError, Julia MethodError) and are recorded, not equated. R's evaluate = FALSE, formula override and the no-saved-call refusal for a temporal fit are not compared"
+   },
+   "measured_against": "P1",
+   "disposition": null,
+   "evidence_tier": "behavioural"
+  },
+  {
+   "source_id": "column-coef/column_coef",
+   "r_export": "column_coef",
+   "r_kind": "export",
+   "r_file_line": "R/column-coef-foundation.R:32",
+   "classification": "outside_boundary",
+   "reason": "Design 131 IID response-column coefficients. Column-coefficient grammar is outside the P1 boundary by signed disposition (D-295: a Gaussian point model with no intervals in R, 109 R files, ~25,724 lines); revisit at P2.",
+   "arc": "A7 (P2)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "column-coef/animal_coef",
+   "r_export": "animal_coef",
+   "r_kind": "export",
+   "r_file_line": "R/column-coef-foundation.R:127",
+   "classification": "outside_boundary",
+   "reason": "Design 131 animal-pedigree/relmat response-column coefficients. Same column-grammar D-295 boundary exclusion as column_coef.",
+   "arc": "A7 (P2)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "column-coef/phylo_coef",
+   "r_export": "phylo_coef",
+   "r_kind": "export",
+   "r_file_line": "R/column-coef-foundation.R:81",
+   "classification": "outside_boundary",
+   "reason": "Design 131 phylogenetic (tree/vcv) response-column coefficients. Same column-grammar D-295 boundary exclusion as column_coef.",
+   "arc": "A7 (P2)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "column-coef/kernel_coef",
+   "r_export": "kernel_coef",
+   "r_kind": "export",
+   "r_file_line": "R/column-coef-foundation.R:171",
+   "classification": "outside_boundary",
+   "reason": "Design 131 dense-kernel response-column coefficients. Same column-grammar D-295 boundary exclusion as column_coef.",
+   "arc": "A7 (P2)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "column-coef/spatial_coef",
+   "r_export": "spatial_coef",
+   "r_kind": "export",
+   "r_file_line": "R/column-coef-foundation.R:222",
+   "classification": "outside_boundary",
+   "reason": "Design 131 SPDE/Matern-field response-column coefficients. Same column-grammar D-295 boundary exclusion as column_coef.",
+   "arc": "A7 (P2)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "column-coef/slope",
+   "r_export": "slope",
+   "r_kind": "export",
+   "r_file_line": "R/brms-sugar.R:880",
+   "classification": "outside_boundary",
+   "reason": "Formula-sugar desugar (brms-style) for ordinary response-column slopes; returns invisible(NULL), never evaluated. Corrected 2026-09-27: R's own capability-status groups slope with phylo_slope/animal_slope/kernel_slope/spatial_slope as the single 'Response-column slope family' row (scope-limited, Gaussian long-format, predictor-only) -- the model it desugars to is column-grammar, not a plain twin, so it is classified with the column-coefficient family under the same D-295 boundary exclusion.",
+   "arc": "A7 (P2)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "column-coef/kernel_slope",
+   "r_export": "kernel_slope",
+   "r_kind": "export",
+   "r_file_line": "R/brms-sugar.R:924",
+   "classification": "outside_boundary",
+   "reason": "Formula-sugar desugar for fixed-kernel response-column slopes; same 2026-09-27 column-grammar correction as `slope`.",
+   "arc": "A7 (P2)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "spatial/spatial_slope",
+   "r_export": "spatial_slope",
+   "r_kind": "export",
+   "r_file_line": "R/brms-sugar.R:996",
+   "classification": "outside_boundary",
+   "reason": "Formula-sugar desugar for spatial (normalized SPDE) response-column slopes. Spatial is outside the P1 boundary by signed disposition (D-295): Julia keeps its own SPDE/Matern stack as a documented extra, not a twin of R's spatial surface.",
+   "arc": "A8 (P2)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "retired/.proportions_wald_ci",
+   "r_export": ".proportions_wald_ci",
+   "r_kind": "removed_export",
+   "r_file_line": "removed from NAMESPACE at P1 (was R/proportions-ci.R:247 at P0; the function definition itself is still present in R/proportions-ci.R at P1, just no longer exported)",
+   "classification": "retired",
+   "reason": "Removed from gllvmTMB's public export surface between 0.7.0 (P0) and P1. Any 0.7.0 ledger row citing this export becomes retired at P1, not stale (Packet 1 row 1 note).",
+   "arc": "n/a (retired)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  },
+  {
+   "source_id": "retired/.proportions_bootstrap_ci",
+   "r_export": ".proportions_bootstrap_ci",
+   "r_kind": "removed_export",
+   "r_file_line": "removed from NAMESPACE at P1 (was R/proportions-ci.R:423 at P0; the function definition itself is still present in R/proportions-ci.R at P1, just no longer exported)",
+   "classification": "retired",
+   "reason": "Removed from gllvmTMB's public export surface between 0.7.0 (P0) and P1. Any 0.7.0 ledger row citing this export becomes retired at P1, not stale (Packet 1 row 1 note).",
+   "arc": "n/a (retired)",
+   "executable_case_ids": [],
+   "evidence": {},
+   "measured_against": null,
+   "disposition": "DISPOSITION-SIGNED",
+   "signed_by": "Shinichi Nakagawa",
+   "signed_on": "2026-09-30",
+   "signature_ref": "https://github.com/itchyshin/GLLVModels.jl/pull/533#issuecomment-5911928263"
+  }
+ ]
+}

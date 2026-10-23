@@ -42,8 +42,8 @@ R's `bootstrap_Sigma()` bootstraps `Sigma`, correlation, communality, ICC, and
 cross-correlation across separate unit/unit_obs/phy tiers in one call; this
 driver covers only the `Sigma` entries at GLLVModels.jl's single site-level tier.
 `level` is validated (only `:unit` accepted) rather than silently
-accepted-and-ignored. Cost is `O(p²)` bootstrap runs — fine for small
-fixtures, expensive at large `p`.
+accepted-and-ignored. Cost is `O(p²)` bootstrap runs — practical for a small
+number of responses, but expensive when many responses are modelled.
 
 ## `standard_errors` — an eager wrapper, not a deferred computation
 

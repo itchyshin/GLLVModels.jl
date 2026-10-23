@@ -1,0 +1,14 @@
+contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
+fixture = "test/parity/test_nb2_formula_parity.jl"
+status = "success"
+run_id = "f249970983d1a1e3c6335f0013c7303361216f062029d3973a6e5f4d65c8c6d5"
+fixture_sha256 = "f15fe1cc6e8e43fceaded4122d1ddd9e7d035e11a5561d3a699cae03c1b86e10"
+id = "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE"
+execution_manifest_sha256 = "56aeee619fd85141d6bd8415eef9f276666c7dc9ea463fffda3b97e6d54c946c"
+execution_case_ids = ["CORE070-FAMILY-05-LOG-FORMULA-INTERFACE"]
+
+[assertions]
+passed = 19
+broken = 0
+failed = 0
+errored = 0

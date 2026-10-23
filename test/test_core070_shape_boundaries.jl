@@ -2,6 +2,7 @@ using GLLVModels, Test, TOML
 @assert realpath(Base.pkgdir(GLLVModels)) == realpath(joinpath(@__DIR__, ".."))
 module Core070ShapeBoundaries
 using GLLVModels, Test, TOML
+import Distributions
 struct ResponseRead <: Exception end
 struct NoRead <: AbstractMatrix{Float64} end
 Base.size(::NoRead) = (2, 4)
@@ -47,7 +48,7 @@ end
     for location in (-2.0,0.0,3.0), scale in (0.1,1.0,4.0), residual in (-10.0,0.0,0.25,8.0)
         y=location+residual*scale
         actual=GLLVModels._glm_logpdf(StudentTFamily(1.0,scale),location,1,y)
-        expected=GLLVModels.logpdf(GLLVModels.Cauchy(location,scale),y)
+        expected=Distributions.logpdf(Distributions.Cauchy(location,scale),y)
         @test actual ≈ expected atol=1e-12 rtol=1e-12
     end
 end

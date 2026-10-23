@@ -1,0 +1,18 @@
+Julia 1.10.12
+seed=45 r=1.0 | old -807.2191 | new -807.2191 (gain +0.000, bd 1) | R -807.2191 (new-R +3.41e-07) | best push +0.111 (trait 2)
+seed=46 r=1.0 | old -836.9240 | new -835.3693 (gain +1.555, bd 0) | R -835.3693 (new-R +2.10e-08) | best push +0.317 (trait 3)
+seed=47 r=1.0 | old -832.1161 | new -832.1161 (gain +0.000, bd 2) | R -832.1161 (new-R +7.22e-06) | best push +0.000 (trait 3)
+seed=48 r=1.0 | old -803.3376 | new -803.3376 (gain +0.000, bd 2) | R -803.3376 (new-R +2.17e-06) | best push +0.000 (trait 1)
+seed=49 r=1.0 | old -822.8240 | new -822.3622 (gain +0.462, bd 0) | R -822.3622 (new-R +3.82e-08) | best push +0.357 (trait 5)
+seed=50 r=1.0 | old -864.8434 | new -863.6577 (gain +1.186, bd 0) | R -863.6577 (new-R +1.73e-08) | best push +0.685 (trait 4)
+seed=51 r=1.0 | old -859.3986 | new -859.3986 (gain +0.000, bd 1) | R -859.6989 (new-R +3.00e-01) | best push +0.000 (trait 2)
+seed=52 r=1.0 | old -835.7705 | new -833.1814 (gain +2.589, bd 1) | R -833.6085 (new-R +4.27e-01) | best push +0.096 (trait 1)
+seed=53 r=1.0 | old -882.1927 | new -882.1927 (gain +0.000, bd 1) | R -882.1927 (new-R +9.81e-08) | best push +0.000 (trait 3)
+seed=54 r=1.0 | old -854.8335 | new -854.8335 (gain +0.000, bd 2) | R -855.6761 (new-R +8.43e-01) | best push +0.000 (trait 4)
+seed=45 r=1.5 | old -859.3455 | new -858.6992 (gain +0.646, bd 1) | R -858.6992 (new-R -5.05e-10) | best push +0.144 (trait 5)
+seed=45 r=2.0 | old -835.5858 | new -834.7232 (gain +0.863, bd 0) | R -834.7232 (new-R +1.88e-08) | best push +0.543 (trait 3)
+seed=46 r=1.5 | old -830.8328 | new -830.0137 (gain +0.819, bd 2) | R -831.1640 (new-R +1.15e+00) | best push -0.000 (trait 4)
+seed=46 r=2.0 | old -811.2024 | new -811.2024 (gain +0.000, bd 2) | R -811.6606 (new-R +4.58e-01) | best push +0.000 (trait 2)
+seed=47 r=1.5 | old -840.4768 | new -840.4768 (gain +0.000, bd 2) | R -840.7635 (new-R +2.87e-01) | best push +0.000 (trait 2)
+seed=47 r=2.0 | old -796.2321 | new -796.2321 (gain +0.000, bd 3) | R -796.2321 (new-R +2.81e-07) | best push +0.000 (trait 1)
+julia +1.10.12 --startup-file=no --project=test/parity  2>&1  295.11s user 2.36s system 96% cpu 5:08.44 total

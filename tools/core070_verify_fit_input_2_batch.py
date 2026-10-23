@@ -22,7 +22,13 @@ from copy import deepcopy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = ROOT / "docs/dev-log/core070/fit-input-2-batch-contract.json"
+sys.path.insert(0, str(ROOT / "tools"))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (library pin + version, shared with postfit / inference)
+# P0 keeps the frozen contract; P1 reads the twin written by tools/core070_data_p1_contract.py.
+CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/fit-input-2-batch-contract-p1.json"
+                        if SELECTED_PIN == "P1" else "docs/dev-log/core070/fit-input-2-batch-contract.json")
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 
 EXPECTED_EXECUTABLE_CASE_IDS = [
     "CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL",
@@ -109,6 +115,7 @@ def recompute_from_raw(results_dir, contract):
     need(receipt.get("kernel_two_auto_matches_kernel_two") is True,
          "the KERNEL-TWO-AUTO internal consistency guard did not hold on this run")
     need(receipt.get("julia_exit_code") == 0, "Julia child exited nonzero")
+    core070_source_pin_check.check_source_pin(receipt, SELECTED_PIN, need)
 
     for name, digest in (contract.get("source_pins") or {}).items():
         got = receipt.get("source_pins", {}).get(name)
@@ -165,7 +172,7 @@ def check_contract_shape(contract):
     (including under --self-test with no results dir), so a corrupted
     contract fails even before any results exist."""
     need(contract.get("status") == "FROZEN_FIT_INPUT_2_BATCH_CONTRACT", "wrong contract status")
-    need(contract.get("reference_commit") == "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+    need(contract.get("reference_commit") == REFERENCE_COMMIT,
          "wrong reference_commit in contract")
     need(contract.get("expected_executable_case_count") == 13, "contract executable count != 13")
     need(contract.get("expected_needs_surface_case_count") == 5, "contract needs-surface count != 5")
@@ -260,8 +267,10 @@ def verify(results_dir=None, self_test=False):
                     continue
                 raise AssertionError(f"self-test result mutation was NOT rejected: {label}")
 
+        n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
+        print("CORE070_FIT_INPUT_2_BATCH_SOURCE_PIN_NEGATIVES_PASS", n_pin)
         print("CORE070_FIT_INPUT_2_BATCH_NEGATIVES_PASS",
-              len(contract_mutations) + (len(result_mutations) if receipt is not None else 0))
+              len(contract_mutations) + (len(result_mutations) if receipt is not None else 0) + n_pin)
 
     print("CORE070_FIT_INPUT_2_BATCH_VERIFIED")
     return {

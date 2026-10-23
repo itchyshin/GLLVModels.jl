@@ -21,6 +21,53 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test s.gradient_norm < 1e-3
     end
 
+    @testset "sanity_multi: lambda_constraint pins are not parameters (refs #794)" begin
+        # R's sanity_multi reads the gradient at opt$par and pdHess from
+        # sdreport, both over the mapped-free parameter vector; a pinned
+        # loading is mapped off. The pinned entry's own gradient component is
+        # far from 0 at the constrained optimum and must not raise an alarm.
+        rng = MersenneTwister(7)
+        p, n = 5, 200
+        Λ_true = reshape([0.8, 0.3, 0.6, -0.4, 0.5], p, 1)
+        y = Λ_true * randn(rng, 1, n) + 0.5 * randn(rng, p, n)
+        M = fill(NaN, p, 1)
+        M[2, 1] = 0.3
+        fit = fit_gaussian_gllvm(y; K = 1, lambda_constraint = M)
+        pins = GLLVModels._lambda_constraint_pinned_theta_indices(fit)
+        @test length(pins) == 1
+        θ̂ = fit.pars.θ_packed
+        nll = GLLVModels._confint_reconstruct_nll(fit, y, nothing, nothing)
+        g_full = GLLVModels.ForwardDiff.gradient(nll, θ̂)
+        free = setdiff(eachindex(θ̂), pins)
+        @test abs(g_full[only(pins)]) > 1     # the pin is not at a stationary point
+        s = GLLVModels.sanity_multi(fit; y = y)
+        @test s.max_gradient == maximum(abs, g_full[free])
+        @test s.max_gradient < 1e-5
+        @test s.gradient_norm == norm(g_full[free])
+        @test s.gradient_ok
+        @test s.pd_hessian === true
+        @test s.pass
+        @test isempty(s.messages)
+
+        # lambda_constraint fits carry no fixed effects (X = nothing only), so
+        # there is no fixed-effect SE for a pinned loading to leak into.
+        @test s.max_se === missing
+    end
+
+    @testset "sanity_multi: unpinned fit uses the full gradient" begin
+        Random.seed!(10)
+        p, K, n = 5, 1, 400
+        Λ_true = reshape([0.7, 0.5, 0.4, -0.3, 0.2], p, K)
+        y = Λ_true * randn(K, n) + 0.5 * randn(p, n)
+        fit = fit_gaussian_gllvm(y; K = K)
+        @test isempty(GLLVModels._lambda_constraint_pinned_theta_indices(fit))
+        nll = GLLVModels._confint_reconstruct_nll(fit, y, nothing, nothing)
+        g = GLLVModels.ForwardDiff.gradient(nll, fit.pars.θ_packed)
+        s = GLLVModels.sanity_multi(fit; y = y)
+        @test s.max_gradient == maximum(abs, g)
+        @test s.gradient_norm == norm(g)
+    end
+
     @testset "sanity_multi — non-finite loadings fail" begin
         Random.seed!(11)
         p, K, n = 4, 1, 100
@@ -33,6 +80,57 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         s = GLLVModels.sanity_multi(badfit)
         @test !s.pass
         @test !s.loadings_finite
+    end
+
+    @testset "sanity_multi: R's flags, names, order and report lines" begin
+        Random.seed!(13)
+        p, K, n = 5, 2, 300
+        Λ_true = [0.8 0.0; 0.5 0.6; -0.4 0.5; 0.3 -0.6; 0.6 0.2]
+        y = Λ_true * randn(K, n) .+ [0.5, -0.2, 0.1, 0.3, -0.4] .+ 0.5 * randn(p, n)
+        fit = fit_gllvm(y; family = GLLVModels.Distributions.Normal(), K = K)
+        io = IOBuffer()
+        s = GLLVModels.sanity_multi(fit; y = y, io = io)
+        # R's flags first, in R's order (methods-gllvmTMB.R:2362-2487), then the Julia verdict
+        @test collect(keys(s)) == [:converged, :max_gradient, :sdreport_ok, :pd_hessian, :max_se,
+                                   :rr_B_min_loading, :pass, :loadings_finite, :gradient_norm,
+                                   :gradient_ok, :messages]
+        @test s.sdreport_ok === true && s.pd_hessian === true
+        Λ = fit.pars.Λ
+        @test s.rr_B_min_loading == minimum(abs, diag(Λ[1:K, 1:K]))
+        @test s.max_gradient <= s.gradient_norm
+        ci = confint(fit, y; method = :wald, parm = "beta")
+        @test length(ci.se) == p
+        @test s.max_se == maximum(ci.se)
+        lines = split(String(take!(io)), '\n'; keepempty = false)
+        @test length(lines) == 5
+        @test lines[1] == rpad("Optimiser convergence (== 0):", 44) * " PASS"
+        @test startswith(lines[2], rpad("Max |gradient| < 1.0e-02:", 44) * " PASS (max |gr| = ")
+        @test lines[3] == rpad("Hessian positive-definite:", 44) * " PASS"
+        @test lines[4] == rpad("Max fixed-effect SE < 100:", 44) * " PASS (max SE = " *
+                          GLLVModels.Printf.@sprintf("%.3g", s.max_se) * ")"
+        @test startswith(lines[5], rpad("latent(unit, d=B) diag loadings non-zero:", 44) * " PASS")
+        # R's thresholds move only the report's PASS/WARN, not the Julia verdict
+        io2 = IOBuffer()
+        s2 = GLLVModels.sanity_multi(fit; y = y, se_thresh = 1e-6, io = io2)
+        @test occursin(rpad("Max fixed-effect SE < 1e-06:", 44) * " WARN", String(take!(io2)))
+        @test s2.pass == s.pass
+        # without y the objective-based checks are not computed
+        io3 = IOBuffer()
+        s3 = GLLVModels.sanity_multi(fit; io = io3)
+        @test s3.max_gradient === missing && s3.sdreport_ok === missing && s3.max_se === missing
+        @test count("NOT CHECKED", String(take!(io3))) == 3
+        # nothing is printed unless an io is given; the flags are the same
+        @test GLLVModels.sanity_multi(fit; y = y) == s
+    end
+
+    @testset "sanity_multi: within-unit loadings add rr_W_min_loading" begin
+        Random.seed!(14)
+        p, K, n = 5, 1, 300
+        y = reshape([0.7, 0.5, 0.4, -0.3, 0.2], p, 1) * randn(1, n) + 0.5 * randn(p, n)
+        fit = fit_gaussian_gllvm(y; K = K, K_W = 1)
+        s = GLLVModels.sanity_multi(fit)
+        @test collect(keys(s))[6:7] == [:rr_B_min_loading, :rr_W_min_loading]
+        @test s.rr_W_min_loading == abs(fit.pars.Λ_W[1, 1])
     end
 
     @testset "check_auto_residual — coherent for logit ordinal, flags probit" begin
@@ -103,17 +201,20 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
 
     @testset "gllvmTMB_diagnose — implied Σ uses ALL tiers (sigma_y_site), not just Λ_B + σ_eps" begin
         # Regression for the post-M2 review finding: the old implied-Σ was
-        # Λ*Λ' + σ_eps²*I, ignoring the W-tier (Λ_W) diagonal contribution
-        # entirely. A strong shared Λ_B factor with a tiny σ_eps but a LARGE
-        # Λ_W diagonal variance is a genuinely low-correlation fit once the
-        # W-tier is accounted for (sigma_y_site's own convention: Λ_W
-        # contributes to the diagonal only) — but the naive Λ_B-only Σ
-        # reports it as near-boundary correlated.
+        # Λ*Λ' + σ_eps²*I, ignoring the W-tier (Λ_W) contribution entirely.
+        # A strong shared Λ_B factor with a tiny σ_eps but a LARGE W-tier
+        # variance is a genuinely low-correlation fit once the W tier is
+        # accounted for, but the naive Λ_B-only Σ reports it as near-boundary
+        # correlated. Since #135, sigma_y_site adds the full Λ_W Λ_W' block
+        # (W-tier scores shared across traits, as in gllvmTMB), so Λ_W is
+        # chosen to pull traits 1 and 2 apart (opposite signs) and leave
+        # trait 3 alone: all-tier |r| <= 0.8, Λ_B-only r ≈ 1.
         Random.seed!(151)
         p, K, n = 3, 1, 100
         y = 0.5 * randn(p, n)
         fit0 = fit_gaussian_gllvm(y; K = K, K_W = 1)
-        pars = merge(fit0.pars, (Λ = fill(1.0, p, 1), Λ_W = fill(3.0, p, 1), σ_eps = 0.01))
+        pars = merge(fit0.pars, (Λ = fill(1.0, p, 1), Λ_W = reshape([3.0, -3.0, 0.0], p, 1),
+                                 σ_eps = 0.01))
         fit = GLLVModels.GllvmFit(fit0.model, pars, fit0.logLik, fit0.n_iter, fit0.converged,
                               fit0.optim_result, fit0.cputime)
 
@@ -223,6 +324,29 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test_throws ArgumentError GLLVModels.compare_fits_Sigma_table(fit1, fit_gaussian_gllvm(y1[1:3, :]; K = K))
     end
 
+    @testset "compare_loadings(Lambda_a, Lambda_b): R's Procrustes surface (rotate-loadings.R:428-449)" begin
+        rng = MersenneTwister(21)
+        B = randn(rng, 7, 3)
+        Q = Matrix(qr(randn(rng, 3, 3)).Q)
+        det(Q) > 0 && (Q[:, 1] .*= -1)            # a reflection: R's transform allows it
+        A = B * Q'
+        r = GLLVModels.compare_loadings(A, B)
+        @test collect(keys(r)) == [:R, :Lambda_a_rot, :frobenius, :cor_per_factor]
+        @test r.R ≈ Q atol = 1e-12                 # exact recovery of the transform
+        @test r.R' * r.R ≈ Matrix(I, 3, 3) atol = 1e-12
+        @test r.Lambda_a_rot ≈ A * r.R
+        @test r.frobenius < 1e-12
+        @test all(c -> isapprox(c, 1.0; atol = 1e-12), r.cor_per_factor)
+        # with noise: the residual is the Frobenius distance after alignment, columns stay correlated
+        An = A .+ 0.05 .* randn(rng, 7, 3)
+        rn = GLLVModels.compare_loadings(An, B)
+        @test rn.frobenius ≈ sqrt(sum(abs2, An * rn.R .- B))
+        @test rn.frobenius < GLLVModels.compare_loadings(B * Q', B .+ 1).frobenius
+        @test rn.cor_per_factor ≈ [cor((An * rn.R)[:, k], B[:, k]) for k in 1:3]
+        @test_throws ArgumentError GLLVModels.compare_loadings(A, B[:, 1:2])
+        @test_throws ArgumentError GLLVModels.compare_loadings(A, B[1:6, :])
+    end
+
     @testset "compare_fits_dep_vs_two_psi / compare_fits_indep_vs_two_psi — bridge shape and self-comparison" begin
         Random.seed!(18)
         p, K, n = 4, 1, 250
@@ -307,6 +431,8 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test_throws ArgumentError GLLVModels.predictive_check(fit, Y)
     end
 
+    include("test_predictive_check_binomial.jl")
+
     @testset "confint_inspect — Wald and profile roughly agree on a clean fixture" begin
         Random.seed!(21)
         p, K, n = 3, 1, 400
@@ -345,6 +471,16 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         y = 0.5 * randn(p, n)
         fit = fit_gaussian_gllvm(y; K = K, K_W = 1, has_diag = true)
         @test_throws ArgumentError GLLVModels.gllvmTMB_check_consistency(fit, y)
+
+        # A unique phylogenetic effect (has_phy_unique, K_phy = 0) is not
+        # re-simulated either, so the check must refuse it rather than score
+        # phylo-free replicates against the phylo likelihood.
+        phy = GLLVModels.random_balanced_tree(p; branch_length = 0.5)
+        Σ_phy = Matrix(Symmetric(GLLVModels.sigma_phy_dense(phy; σ²_phy = 1.0)))
+        fit_phy = fit_gaussian_gllvm(y; K = K, has_phy_unique = true, Σ_phy = Σ_phy)
+        @test fit_phy.model.K_phy == 0 && fit_phy.model.has_phy_unique
+        @test_throws ArgumentError GLLVModels.gllvmTMB_check_consistency(fit_phy, y;
+                                                                         Σ_phy = Σ_phy)
     end
 
     # ---------------------------------------------------------------------

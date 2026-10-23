@@ -62,8 +62,12 @@ function _validate_precision_fit_input(phy::PrecisionPhy)
     # Check the stored sparse matrix itself before any `Symmetric` wrapper.
     # The latter would otherwise select one triangle and hide a malformed
     # payload that could still yield a positive-definite downstream system.
-    issymmetric(Q) || _precision_fit_input_gate("GJL-GATE-PRECISION-FIT-SYMMETRY",
-        "Q must be explicitly symmetric")
+    try
+        _symmetric_sparse_admit(Q, "precision Q")
+    catch err
+        err isa ArgumentError || rethrow()
+        _precision_fit_input_gate("GJL-GATE-PRECISION-FIT-SYMMETRY", err.msg)
+    end
     factor = try
         cholesky(Symmetric(Q); check = false)
     catch err

@@ -8,15 +8,70 @@ permissions:
   contents: write      # let GITHUB_TOKEN push the gh-pages branch (Documenter deploy)
   statuses: write
 
+# Build and check per branch: a global group here made GitHub cancel every
+# older PENDING run whenever a newer one queued (one pending run per group,
+# whatever cancel-in-progress says), so most PRs lost their Documenter check.
+# Only the gh-pages push is serialised, in the deploy job below.
+# The same one-pending rule applies within a branch, so non-PR runs (main and
+# tag pushes) get one group per commit: a burst of merges otherwise cancelled
+# a queued main build before it started. PR runs keep one group per ref.
 concurrency:
-  group: documenter-gh-pages
-  # Every Documenter run pushes either the dev site or a PR preview to the
-  # shared gh-pages branch. Queue them so one run cannot stale another's fetch.
-  cancel-in-progress: false
+  group: documenter-${{ github.ref }}${{ github.event_name != 'pull_request' && format('-{0}', github.sha) || '' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   Documenter:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # This standard-library check reads the literal makedocs(pages = [...])
+      # navigation and README before Julia dependency installation or build.
+      - name: Check reader source surface
+        run: python3 tools/check_reader_surface.py --landing-contract
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Install dependencies
+        run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: Build documentation
+        env:
+          GLLVM_DOCS_DEPLOY: "false"
+          # DocumenterVitepress decides the deploy folder at BUILD time and
+          # records it in docs/build/bases.txt. Without a token here the
+          # decision is all_ok = false, bases.txt is blank and the deploy job
+          # has nothing to publish (#719). No push happens in this job.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: julia --project=docs docs/make.jl
+      # Generated HTML includes Documenter-expanded public docstrings, which a
+      # Markdown-only scan cannot see. Do this before publishing the site.
+      - name: Check rendered reader surface
+        run: python3 tools/check_reader_surface.py --rendered docs/build/1
+      - name: Hand the checked build to the deploy job
+        uses: actions/upload-artifact@v6
+        with:
+          name: docs-build
+          path: docs/build
+          include-hidden-files: true
+          retention-days: 1
+
+  deploy:
+    name: Documenter deploy
+    needs: Documenter
+    runs-on: ubuntu-latest
+    # Every deploy pushes the dev site or a PR preview to the shared gh-pages
+    # branch. One repo-wide concurrency group cannot serialise them: GitHub keeps
+    # ONE pending job per group, so each newly queued deploy (from any PR)
+    # cancelled the one already waiting, and most PRs showed "Documenter
+    # deploy: cancelled". So the group is per source: main/tag pushes share one
+    # (a newer dev-site deploy superseding a waiting older one is what we want),
+    # and each PR has its own. Races BETWEEN groups are handled by the retry in
+    # the deploy step: deploydocs clones gh-pages fresh and pushes without
+    # force, so a push that lost a race fails cleanly and the next attempt
+    # re-fetches and pushes on top.
+    concurrency:
+      group: documenter-gh-pages-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
@@ -25,8 +80,33 @@ jobs:
       - uses: julia-actions/cache@v2
       - name: Install dependencies
         run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Build and deploy
+      - uses: actions/download-artifact@v7
+        with:
+          name: docs-build
+          path: docs/build
+      - name: Deploy checked documentation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-        run: julia --project=docs docs/make.jl
+          # Pull requests from forks have no write token, so deploydocs
+          # legitimately skips them. Everything else must publish.
+          CAN_DEPLOY: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          set -o pipefail
+          if [ "$CAN_DEPLOY" = "true" ] && ! grep -q '[^[:space:]]' docs/build/bases.txt; then
+            echo "::error::docs/build/bases.txt is empty: the build job found no deployment base, so nothing would be published (#719)"
+            exit 1
+          fi
+          for attempt in 1 2 3 4 5; do
+            if julia --project=docs docs/deploy.jl 2>&1 | tee deploy.log; then
+              # deploydocs returns normally when it skips; that must not be green.
+              if [ "$CAN_DEPLOY" = "true" ] && grep -q "Found no bases" deploy.log; then
+                echo "::error::deploydocs found no bases suitable for deployment; nothing was published (#719)"
+                exit 1
+              fi
+              exit 0
+            fi
+            echo "deploy attempt $attempt failed (likely a gh-pages push race); retrying"
+            sleep $(( 10 + RANDOM % 30 ))
+          done
+          exit 1

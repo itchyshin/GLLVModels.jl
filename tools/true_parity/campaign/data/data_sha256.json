@@ -1,0 +1,12 @@
+{
+ "note": "The seven SYNTHETIC C3 data files exactly as gen_data.R wrote them on Totoro and both engines read them (sha256 of the uncompressed CSV). Committed so the same-literal-data pin can be verified on any host: re-running gen_data.R on another host gives different bytes (R's random streams differ), so use these files, not a regeneration. The real-data cells (crabs, spider, beetle, fungi, urbanisation) are GPL or local data and are not committed.",
+ "sha256": {
+  "gaussian": "13e011669a8ef05599ad94e698f64b08bb38a16e52fde95d383a5e82969e0bad",
+  "poisson": "56ca33ae08b9215445a1b8c6a9d7b477421e8d3bbc87e160064215460350391f",
+  "nb2": "9acd87115e9e1476970bf1eaa87f70cac2fa086d338843a7d524406d7f2373a7",
+  "binomial": "02960d57b29fa37afa45a1eef4272f97fff4e65ed66b0b3da2d42b45389a15d1",
+  "ordinal": "df6a45d4f51cabe50a394aad203fae7368fd2abb88729d067e7683d2d193c0c1",
+  "temporal": "f0ac0008345314a095dadd0f892b1709c772962ca9979ed15848cf568dcf2681",
+  "isdm": "48fb0c500f961ee1dd8808d64d72cd5d4fd5f5354ca13b416be24b6818c0dc10"
+ }
+}

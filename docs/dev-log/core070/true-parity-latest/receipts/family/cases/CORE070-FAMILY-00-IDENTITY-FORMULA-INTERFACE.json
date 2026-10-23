@@ -1,0 +1,84 @@
+{
+  "schema": "core070-family-p1-case-receipt/v1",
+  "case_id": "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
+  "verdict": "FAIL",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-gaussian",
+  "harness_cell": "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
+  "fixture": "test/parity/test_gaussian_original_required.jl",
+  "measures": "the same Gaussian data refit through gllvm(@formula) wide and long, each compared with the group's R fit; toy fixture, likelihood-level agreement only",
+  "cell_status": "failed",
+  "cell_assertions": {
+    "passed": 30,
+    "broken": 0,
+    "failed": 1,
+    "errored": 0
+  },
+  "cell_execution_case_ids": [
+    "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
+    "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL"
+  ],
+  "run_status": "failed",
+  "run_failure_reason": "one or more cells have failed, skipped, broken, or zero assertions",
+  "batch_verifier": {
+    "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
+    "status": "FAIL",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt"
+  },
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run.toml": "5e23ff98b92365a2ee6fba31c3ce724ffd89dce8900241d295175cca7c4fc986",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "cfcdca4a928b6dac7160c70ab0fca4a0724e89017c41a61eea99b9ec68c97ba3",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt": "b0c139dee33a36e0b1b8442cf21b3eed89daca63435911fac6726d4f48ccc966",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "20b56fa809c660e57565bf7331db96891ff789b0f0a43ae773a892632611852c",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-native.toml": "d639ae34ad33aeb6f069a79215dec1473e7cda02ef6be72739a0cd11e335849c",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-formula.toml": "40755b7943058389a1d18f441563699c72db9c97ce5d1976d3e36cb51b4d6bb2",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-long.toml": "0b1aa690c6d90692bba26e0c6bf237b84e1cb1d84383e15e04be1bc652a40b34"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-native.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-formula.toml",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-long.toml"
+  ],
+  "why_fail": "the cell's own assertions did not all pass at P1 (see cell_assertions; the failing assertion may be a health or structure check rather than the compared numbers); this fixture group records one shared count for all its cases, so a failure in any of them fails every case of the group",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_worktree_dirty": [],
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
+        "quantity": "logLik, wide formula",
+        "max_abs_diff": 6.821210263296962e-13,
+        "tolerance": 0.001,
+        "tolerance_rule": "the cell's own test, @test abs(formula_fit.loglik+rvalue)<=1e-3 (rtol=0, atol=0.001; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -576.284937193712,
+        "julia_value": -576.2849371937114,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
+        "quantity": "logLik, long formula",
+        "max_abs_diff": 6.821210263296962e-13,
+        "tolerance": 0.001,
+        "tolerance_rule": "the cell's own test, @test abs(longfit.loglik+rvalue)<=1e-3 (rtol=0, atol=0.001; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
+        "n_values": 1,
+        "r_value": -576.284937193712,
+        "julia_value": -576.2849371937114,
+        "diff_source": "recomputed from the saved R and Julia values",
+        "discriminating": true
+      }
+    ]
+  }
+}

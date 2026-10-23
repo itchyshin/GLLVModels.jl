@@ -31,7 +31,13 @@ import hashlib
 import json
 from pathlib import Path
 
-REFERENCE_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
+import core070_source_pin_check  # noqa: E402  (PR #569 review finding 2: library pin + version)
+
+# No contract file for this batch; the pin only changes the expected reference commit.
+REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 TOLERANCE = 1e-4
 
 CASE_META = {
@@ -63,6 +69,7 @@ def check_state(receipt, results_lines, julia_report):
     need(receipt["source_unchanged"] is True, "receipt does not assert source_unchanged")
     need(receipt["case_count"] == len(CASE_IDS), "receipt case_count drift")
     need(receipt["julia_exit_code"] == 0, "julia child exited nonzero")
+    core070_source_pin_check.check_source_pin(receipt, SELECTED_PIN, need)
     need(receipt.get("oracle_error_count", 0) == 0, "R oracle recorded at least one computation error")
     need(set(receipt["target_source_ids"]) == SOURCE_IDS, "receipt target_source_ids does not match CASE_META")
     need(set(receipt["expected_case_ids"]) == CASE_IDS, "receipt expected_case_ids does not match CASE_META")
@@ -113,6 +120,13 @@ def verify_state(state_dir: Path):
 # --self-test: build a SYNTHETIC valid state, confirm check_state() accepts
 # it, then mutate it >=3 ways and confirm check_state() rejects every one.
 # ---------------------------------------------------------------------------
+def _synthetic_source_pin():
+    pin = core070_source_pin_check.PINS[SELECTED_PIN]
+    return {"gllvmTMB_version": pin["version"],
+            "source_pin": {**{k: pin[k] for k in core070_source_pin_check.SOURCE_PIN_KEYS},
+                           "version": pin["version"]}}
+
+
 def _synthetic_state():
     results_lines = [f"{sid}\t{cid}\tPASS\testimand_rebind" for cid, sid in CASE_META.items()]
     julia_cases = {
@@ -128,7 +142,7 @@ def _synthetic_state():
         "status": "PASS", "scope": "CORE070_ESTIMAND_REBIND_BATCH",
         "reference_commit": REFERENCE_COMMIT, "source_unchanged": True,
         "target_source_ids": list(SOURCE_IDS), "case_count": len(CASE_IDS),
-        "expected_case_ids": list(CASE_IDS), "oracle_error_count": 0, "julia_exit_code": 0,
+        "expected_case_ids": list(CASE_IDS), "oracle_error_count": 0, "julia_exit_code": 0, **_synthetic_source_pin(),
     }
     return receipt, results_lines, julia_report
 
@@ -178,6 +192,9 @@ def run_self_test():
     expect_rejected("max_abs_diff blown past tolerance while pass stays true", mut_tolerance_blown)
     expect_rejected("receipt records a nonzero oracle_error_count", mut_oracle_error_present)
     expect_rejected("a case missing from julia-results.json cases", mut_missing_case)
+
+    n_pin = core070_source_pin_check.self_test(SELECTED_PIN)
+    rejected.extend(f"source pin mutation {i}" for i in range(n_pin))
 
     if len(rejected) < 3:
         raise AssertionError(f"only {len(rejected)} rejected mutations ran, need >=3")

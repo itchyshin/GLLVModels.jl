@@ -1,0 +1,2 @@
+CORE070_ESTIMAND_REBIND_VERIFY_SELF_TEST_OK rejected_mutations=10 cases=4
+CORE070_ESTIMAND_REBIND_STATE_OK /Users/z3437171/local-scratch/a3pf-runs-v2/estimand-rebind-p1

@@ -1,0 +1,12 @@
+$ GLLVM_PARITY_PIN=P1 julia --project=. tools/core070_a6_studentt_fixture.jl --self-test
+# exit code 0
+CORE070_A6_STUDENTT_SELF_TEST_OK rejected_mutations=10
+# ---- derived checks ----
+# a6 results checks (tools/core070_family_p1_receipts.py)
+PASS  fixture verdict PASS (gating fixed case)
+PASS  pinned at P1
+PASS  contract is the tracked P1 twin
+PASS  R readback is the tracked r-output.tsv
+PASS  R source-pin record matches tools/core070_oracle_pins.toml [P1]
+PASS  paired tolerance is the fixture's PAIRED_TOL
+# status PASS

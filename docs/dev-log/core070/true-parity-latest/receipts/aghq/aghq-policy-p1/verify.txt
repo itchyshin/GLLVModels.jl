@@ -1,0 +1,9 @@
+# aghq policy batch verifier (tools/core070_aghq_p1_receipts.py)
+PASS  receipt status PASS, 14 of 14 rows
+PASS  pinned at P1
+PASS  contract is the tracked P1 contract
+PASS  runner at run commit fd92b6551f7e is the one the contract names
+PASS  R source-pin record matches tools/core070_oracle_pins.toml [P1]
+PASS  row ids are the contract's 14
+PASS  every row recorded an observation
+# status PASS

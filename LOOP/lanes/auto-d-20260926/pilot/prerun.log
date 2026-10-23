@@ -1,0 +1,1 @@
+julia --project=. $P/pilot.jl $P/prerun.csv 2 pre  40.43s user 0.76s system 98% cpu 41.635 total
