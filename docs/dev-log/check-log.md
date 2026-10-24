@@ -21953,3 +21953,8 @@ After-task: `docs/dev-log/after-task/2026-09-13-destination-b-close-as-limit.md`
 - Revalidated the retained six-case R/Julia capture with first_seven_behaviour_derive.py; regenerated its derived sidecars and the five affected iSDM behavior receipt blocks from raw outputs. No R or Julia observation was rerun or edited.
 - Before/after SHA-256 comparison: all 46 files under the retained raw* evidence directories were unchanged.
 - Validation: behavior controls 37/37; postfit recount regression passed; postfit and behavior receipt checks passed; assembler check passed; the checkpoint mutation-control test passed independently. The positive checkpoint on committed HEAD remains pending until these refreshed hashes are committed.
+
+2026-10-21: Shinichi signed the polished species-distribution and fungi comparisons as the receipts for those two rows only.
+2026-10-21: ISDM-HEADLINE-RSZ and RD-FUNGI-BINOMIAL are recorded. Spider, beetle, ordinal, and the other left rows stay fail. C2, C3, C4, and X2 stay open.
+2026-10-21: Shinichi signed the polished ordinal logit comparison as the receipt for family-ORDINAL-LOGIT-RSZ only.
+2026-10-21: ORDINAL-LOGIT-RSZ is recorded. Spider, beetle, urbanisation, identity, and the six left rows stay fail. C3, C4, and X2 stay unticked.
