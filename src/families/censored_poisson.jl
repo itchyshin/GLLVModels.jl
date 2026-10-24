@@ -242,7 +242,7 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         Yraw, zeros(Int, p, n)
     end
 
-    msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
+    msk = _resolve_obs_mask(mask, Y)
 
     # Warm start: treat censored cells as observed-at-limit for the link-scale SVD.
     Zemp = [linkfun(link, max(Float64(Yc[t, i]) + 0.5, 1e-4)) for t in 1:p, i in 1:n]
