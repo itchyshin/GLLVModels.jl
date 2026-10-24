@@ -89,6 +89,7 @@ using GLLVModels
     @test all(!occursin("broader non-Gaussian X_lv routes remain separate", note)
               for note in caps.notes)
     @test caps.family[caps.missing_response] == [
+        "gaussian",
         "poisson",
         "binomial",
         "binomial_probit",
