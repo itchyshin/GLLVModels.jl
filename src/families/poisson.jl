@@ -238,7 +238,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
 
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized count matrix with a safe placeholder in the masked cells.
-    msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
+    msk = _resolve_obs_mask(mask, Y)
     # Observation weights (p×n, 0 at unobserved cells) multiply each cell's conditional
     # log-density, as gllvmTMB's `weights` do. Not threaded through the X_lv objective.
     if weights !== nothing

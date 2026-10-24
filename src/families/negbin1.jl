@@ -205,7 +205,7 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_nb1_gllvm: hessian must be :fisher or :observed; got :$hessian"))
 
-    msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
+    msk = _resolve_obs_mask(mask, Y)
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]

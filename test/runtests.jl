@@ -439,6 +439,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_grouped_wald_speed_552.jl")
     _shard_include("test_confint_family.jl")
     _shard_include("test_confint_offset.jl")
+    _shard_include("test_confint_mask_refused.jl")
     _shard_include("test_predict_offset.jl")
     _shard_include("test_predict_offset_grouped.jl")
     _shard_include("test_predict_offset_shared.jl")
@@ -648,7 +649,14 @@ println(_SHARD === nothing ?
     _shard_include("test_response_support_730_siblings.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
+    _shard_include("test_phylo_sparse_solvers.jl")
+    # #750: getLV / predict / residuals / simulate docstring signatures list mask and offset.
+    _shard_include("test_docstring_postfit_mask_offset_750.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
+    # #763: an explicit mask that marks a `missing` cell observed throws an ArgumentError.
+    _shard_include("test_mask_missing_763.jl")
     _shard_include("test_changelog_structure.jl")
+    # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
+    _shard_include("test_comparator_targets.jl")
 end
 include("test_readme_quickstart.jl")
