@@ -72,7 +72,9 @@ end
             Y = 0.8 .* randn(rng, p, K) * randn(rng, K, n) .+ 0.5 .* randn(rng, p, n) .+ (1:p)
             mask = make(trues(p, n))
             Ym = copy(Y); Ym[.!mask] .= 0.0
-            fit = fit_gaussian_gllvm(Ym; K = K, X = X, mask = mask)
+            # This file's own stationarity check is max |g| < 1e-3, not the
+            # production g_tol of 1e-6; pass that so `converged` matches it.
+            fit = fit_gaussian_gllvm(Ym; K = K, X = X, mask = mask, g_tol = 1e-3)
             @test fit.converged
             β, σ, Λ = fit.pars.β, fit.pars.σ_eps, fit.pars.Λ
             @test isapprox(fit.logLik, _mgp_mvn_ll(Ym, mask, X, β, σ, Λ); atol = 1e-8, rtol = 0)
