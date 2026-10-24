@@ -4,6 +4,8 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+- **`test/fixtures/comparator_targets.toml`: fixture index (#276).** Six existing fixtures indexed with target and claim boundary; index only, not comparator evidence, flips no covered row. `test/test_comparator_targets.jl` checks keys and paths.
+
 - **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
   After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
   whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose

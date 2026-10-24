@@ -650,5 +650,7 @@ println(_SHARD === nothing ?
     _shard_include("test_extractors_invariants.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
     _shard_include("test_changelog_structure.jl")
+    # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
+    _shard_include("test_comparator_targets.jl")
 end
 include("test_readme_quickstart.jl")
