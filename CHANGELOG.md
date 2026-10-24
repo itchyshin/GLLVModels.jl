@@ -5,6 +5,8 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 - **`bridge_fit` accepts a Gaussian `mask` on the plain no-X route (#912).** `"gaussian"` joins the mask families; trait means are taken over observed cells and `mask` is forwarded to `fit_gaussian_gllvm`, so `logLik` and `converged` match the direct masked fit. Masked Gaussian with CIs, REML, `X` or `X_lv` still raises `ArgumentError`. The offset half of the issue (a new `offset` argument) is not included.
+- **`test/fixtures/comparator_targets.toml`: fixture index (#276).** Six existing fixtures indexed with target and claim boundary; index only, not comparator evidence, flips no covered row. `test/test_comparator_targets.jl` checks keys and paths.
+- **An explicit `mask` that marks a `missing` cell as observed now throws an `ArgumentError` (#763).** The Laplace fitters replace `missing` by a placeholder (0 or 1), so `mask = trues(p, n)` on data with `missing` fitted the placeholders as observed values (beta shifted, `converged = true`, no message). `_resolve_obs_mask` now refuses it, naming the first offending cell and the count, and the poisson, NB, NB1, censored Poisson and truncated Poisson / NB2 fitters use it instead of their inline copy. **Behaviour change:** such calls used to return a wrong fit and now throw; masks that agree with `missing`, mark extra cells unobserved, or are absent give identical fits.
 
 - **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
   After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
