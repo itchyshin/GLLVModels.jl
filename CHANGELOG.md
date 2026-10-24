@@ -4,6 +4,8 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+- **`test/fixtures/comparator_targets.toml`: fixture index (#276).** Six existing fixtures indexed with target and claim boundary; index only, not comparator evidence, flips no covered row. `test/test_comparator_targets.jl` checks keys and paths.
+
 - **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
   After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
   whose Newton decrement `g' H^-1 g / 2` is at most `1000 * eps() * max(1, |nll|)`, and whose
@@ -28,6 +30,8 @@ All notable changes to GLLVModels.jl are documented here.
 - **Variational fitters and ordinal marginals reject out-of-support responses (part of #730).** `fit_exponential_gllvm_va`, `fit_gamma_gllvm_va`, `fit_beta_gllvm_va`, `fit_poisson_gllvm_va`, `fit_nb_gllvm_va` and `fit_binomial_gllvm_va` now throw an `ArgumentError` naming the fitter and the first bad cell before fitting; Exponential VA used to return `loglik = 3.7e12, converged = true` for a cell `y = -1` and accepted `y = 0`. `ordinal_marginal_loglik_laplace` and its per-trait form throw an `ArgumentError` for an observed code outside `1:C` (`C = length(τ) + 1`) instead of a `BoundsError`, and the ordinal fitters' level check now names the fitter and cell. Masked cells stay legal and categories with no observations are unchanged. Not covered: a stray high code in a fitter call (a typo `9` on a 4-level scale) still reads as a 9-level scale, because the fitters infer `C` from the data.
 
 - **Test coverage: temporal likelihood internals.** `test/test_temporal_likelihood_internals.jl` checks the low-rank block nll, tier and trait blocks, parameter names, cov pieces and series rows against dense linear algebra (no `src/` change).
+
+- **`fit_animal_dep_gllvm` and `fit_kernel_dep_gllvm` docstrings name the right twin (#823).** `fit_animal_dep_gllvm` is a Hadamard row-relatedness model `(Λ_phy Λ_phy') .* A`, not gllvmTMB's `Σ_trait ⊗ A` `animal_dep`; its docstring now says so and points to `fit_kernel_dep_gllvm(Y, A, groups)` as the Kronecker twin. `fit_kernel_dep_gllvm` is documented as a true Kronecker model, not equivalent to `fit_phylo_dep_gllvm`. Docstring-only; no behaviour change.
 
 - **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 

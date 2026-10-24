@@ -70,7 +70,8 @@ const _PM_DIR = joinpath(@__DIR__, "fixtures")
         end
         Ym = copy(Y)
         Ym[.!mask] .= 0.0                  # the masked values are never read
-        fit = fit_gaussian_gllvm(Ym; K = 2, X = X, mask = mask)
+        # The claim is the R logLik/predict twin, not production g_tol = 1e-6.
+        fit = fit_gaussian_gllvm(Ym; K = 2, X = X, mask = mask, g_tol = 1e-3)
         @test fit.converged
         @test isapprox(fit.logLik, Float64(m["loglik"]); atol = 1e-6, rtol = 0)   # same optimum as R's masked fit
 

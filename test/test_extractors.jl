@@ -119,6 +119,21 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test getLoadings(fit; rotate = false) * R ≈ rl.Λ atol = 1e-10
     end
 
+    @testset "has_diag unit level uses the identified denominator (#701)" begin
+        Random.seed!(99)
+        p, n = 4, 250
+        Λ0 = reshape([1.0, 0.8, 0.4, 0.6], p, 1)
+        y = Λ0 * randn(1, n) + sqrt.([0.1, 0.4, 0.9, 0.5]) .* randn(p, n)
+        y .-= sum(y; dims = 2) ./ n
+        fit = fit_gaussian_gllvm(y; K = 1, has_diag = true)
+        @test fit.converged
+        # σ²_B alone is not identified (σ²_B, σ²_W, σ²_eps enter only through
+        # their sum); the R-matching denominator is the one `communality` uses.
+        @test extract_communality(fit; level = :unit) ≈ GLLVModels.communality(fit) atol = 1e-10
+        @test extract_correlations(fit; level = :unit) ≈ GLLVModels.correlation(fit) atol = 1e-10
+        @test extract_communality(fit) ≈ extract_communality(fit; level = :total) atol = 1e-10
+    end
+
     @testset "extract_communality / extract_correlations (GllvmFit) forward correctly" begin
         Random.seed!(105)
         p, K, n = 4, 1, 300

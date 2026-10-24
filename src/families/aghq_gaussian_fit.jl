@@ -1,3 +1,8 @@
+# Masked/offset Gaussian refit: `converged` needs the (exact, ForwardDiff) gradient at the stop
+# to meet `g_tol` outright; an x/f-only stop does not count (#735).
+const _MASKED_GAUSSIAN_POLISH_RESTARTS=5
+_masked_gaussian_g_met(res,g_tol)=(g=Optim.g_residual(res);isfinite(g)&&g<=g_tol)
+
 """
     fit_gaussian_gllvm(Y; K, aghq=false, aghq_control=(;), mask=nothing,
                        offset=nothing, hessian=:observed,
@@ -32,6 +37,9 @@ outer optimizer used by the Poisson and binomial candidates.
 Masks/missing responses and offsets are admitted for the ordinary Gaussian block.
 The masked exact marginal is used for baseline fitting; omitted entries are never
 included in the target likelihood. Structured masked/offset routes remain separate.
+On a masked or offset fit, `converged` is `true` only if the final gradient meets `g_tol`
+(`Optim.g_residual(fit.optim_result) <= g_tol`); an `x_tol` or `f_tol` stop alone does not
+count, and the optimiser continues on the gradient test (up to 5 restarts) before giving up.
 A masked fit with `X = nothing` is still a zero-mean model; pass a one-hot trait design
 (`X[t, :, t] .= 1`) for per-trait intercepts. [`predict_missing`](@ref) needs the same
 `mask` passed again (`predict_missing(fit, Y; mask = mask)`).
@@ -180,18 +188,38 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         start=base.pars.θ_packed
         default_outer=Optim.LBFGS(linesearch=Optim.LineSearches.BackTracking(order=3))
         outer=_optimizer_method(requested_optimizer,default_outer;route="fit_gaussian_gllvm mask/offset refit")
-        opts=Optim.Options(iterations=get(kwargs,:iterations,500),g_tol=get(kwargs,:g_tol,1e-6),
+        g_tol=get(kwargs,:g_tol,1e-6);iters=get(kwargs,:iterations,500)
+        opts=Optim.Options(iterations=iters,g_tol=g_tol,
             x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,0.0))
-        res=Optim.optimize(nll,start,outer,opts;autodiff=:forward)
-        t=Optim.minimizer(res)
         stages=base.optimizer_info===nothing ? OptimizerStage[] : OptimizerStage[base.optimizer_info.stages...]
-        refit_controls=(iterations=get(kwargs,:iterations,500),g_tol=get(kwargs,:g_tol,1e-6),
+        refit_controls=(iterations=iters,g_tol=g_tol,
             x_abstol=get(kwargs,:x_tol,1e-8),f_reltol=get(kwargs,:f_tol,0.0),optim_options=opts)
+        res=Optim.optimize(nll,start,outer,opts;autodiff=:forward)
         _optimizer_stage!(stages,:mask_offset_refit,outer,:forwarddiff,refit_controls,res)
+        # An x or f stop is not a stationary point (#735): continue on the gradient test alone,
+        # restarting the selected outer optimizer from the stop with a fresh iteration budget
+        # each time. Sharing the leftover count skipped the polish whenever the first run used
+        # the full `iterations` cap, which is how existing masked tests reported converged = false.
+        # Every solve is recorded as its own optimizer stage; a polish that does not lower the
+        # objective is recorded with accepted = false and discarded.
+        total_iters=Optim.iterations(res)
+        polish_opts=Optim.Options(iterations=iters,g_tol=g_tol,x_abstol=0.0,f_reltol=0.0)
+        polish_controls=merge(refit_controls,(x_abstol=0.0,f_reltol=0.0,optim_options=polish_opts))
+        for _ in 1:_MASKED_GAUSSIAN_POLISH_RESTARTS
+            _masked_gaussian_g_met(res,g_tol) && break
+            nxt=Optim.optimize(nll,Optim.minimizer(res),outer,polish_opts;autodiff=:forward)
+            total_iters+=Optim.iterations(nxt)
+            better=Optim.minimum(nxt)<=Optim.minimum(res)
+            _optimizer_stage!(stages,:mask_offset_polish,outer,:forwarddiff,polish_controls,nxt;accepted=better)
+            better || break
+            res=nxt
+        end
+        t=Optim.minimizer(res)
         info=_optimizer_record(requested_optimizer,stages;
             controls=(warmstart=base.optimizer_info===nothing ? (;) : base.optimizer_info.controls,
                       mask_offset_refit=refit_controls),derivative=:forwarddiff,actual=outer)
-        base=_gaussian_update(base,t,-nll(t),Optim.iterations(res),_fit_verdict(res)[2],res,time()-t0,fixed;
+        base=_gaussian_update(base,t,-nll(t),total_iters,
+            _fit_verdict(res)[2] && _masked_gaussian_g_met(res,g_tol),res,time()-t0,fixed;
             optimizer_info=info)
     end
     problem=aghq_gaussian_problem(Y,K;k=reason===:eligible ? k : 1,X=Xfree,

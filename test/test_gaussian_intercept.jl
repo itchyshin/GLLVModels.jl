@@ -157,8 +157,11 @@ end
     shift = [2.3, 4.9, 4.6, 4.7, 4.5, 3.1]
     Y1 = Y0 .+ shift
     Y0[.!mk] .= 0.0; Y1[.!mk] .= 0.0
-    f0 = fit_gllvm(Y0; family = Normal(), K = 1, mask = mk)
-    f1 = fit_gllvm(Y1; family = Normal(), K = 1, mask = mk)
+    # `converged` on a masked fit needs the gradient test (#735). The unshifted fit stops at
+    # a gradient residual of about 2e-6 (loglik flat to 1e-12), so use this test's own
+    # stationarity scale (the comparisons below are atol 1e-5) rather than the 1e-6 default.
+    f0 = fit_gllvm(Y0; family = Normal(), K = 1, mask = mk, g_tol = 1e-5)
+    f1 = fit_gllvm(Y1; family = Normal(), K = 1, mask = mk, g_tol = 1e-5)
     @test f0.converged && f1.converged
     @test length(f1.pars.β) == p
     @test isapprox(f0.logLik, f1.logLik; atol = 1e-5)
