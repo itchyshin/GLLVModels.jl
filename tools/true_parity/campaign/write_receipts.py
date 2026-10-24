@@ -503,7 +503,9 @@ def data_meta(raw, cell):
     return None
 
 
-def process(raw, out_root, apply, quiet=False):
+def process(raw, out_root, apply, quiet=False, *, pending_raw_writes=None):
+    if apply and pending_raw_writes is None:
+        raise ValueError("--apply requires deferred raw writes so signed guards run before persistence")
     results = []   # (row spec, receipt path, binds, receipt)
     camp = out_root / LEDGER / "receipts"
     # --- C3 / C4 executable cells
@@ -527,7 +529,7 @@ def process(raw, out_root, apply, quiet=False):
             hashes["docs/dev-log/core070/phylo-latent-p1/a15-fixture.json"] = sha_file(PHY / "a15-fixture.json")
             hashes["docs/dev-log/core070/phylo-latent-p1/cov_phylo_latent_rsz/r-receipt.json"] = sha_file(PHY / "cov_phylo_latent_rsz/r-receipt.json")
             jgz = rdir / "raw" / "phylo_J.json.gz"
-            if apply: gz_write(jgz, Path(raw) / "phylo_J.json")
+            if apply: pending_raw_writes.append((jgz, Path(raw) / "phylo_J.json"))
             hashes[str(jgz.relative_to(out_root)) + " (uncompressed sha256)"] = sha_file(Path(raw) / "phylo_J.json")
             extra = OrderedDict(
                 cell=OrderedDict(shape="100 species (ape::rcoal, seed 20260928) x 5 replicates x 20 traits, rank 2", fixture="docs/dev-log/core070/phylo-latent-p1/a15-fixture.json",
@@ -577,7 +579,7 @@ def process(raw, out_root, apply, quiet=False):
             if off:   # recorded, never committed: the sha256 lets the maintainer's retained copy be verified
                 hashes[str(dst.relative_to(out_root)) + " (uncompressed sha256; this raw file is NOT in the repo)"] = sha_file(src)
                 continue
-            if apply: gz_write(dst, src)
+            if apply: pending_raw_writes.append((dst, src))
             hashes[str(dst.relative_to(out_root)) + " (uncompressed sha256)"] = sha_file(src)
         extra = OrderedDict(
             cell=OrderedDict((k, R.get(k)) for k in ("formula",)) | OrderedDict(data_sha256=R["data_sha256"], data_file=J.get("data_file"),
@@ -619,7 +621,7 @@ def process(raw, out_root, apply, quiet=False):
         hashes[d["fixture"]["path"]] = sha_file(ROOT / d["fixture"]["path"])
         if rep is not None:
             dst = rdir / "raw" / f"c5_replay_{level}.json.gz"
-            if apply: gz_write(dst, replay)
+            if apply: pending_raw_writes.append((dst, replay))
             hashes[str(dst.relative_to(out_root)) + " (uncompressed sha256)"] = sha_file(replay)
         extra = OrderedDict(
             level=level, source_receipt=str(src.relative_to(ROOT)), source_receipt_sha256=sha_file(src), name_parity=d["name_parity"]["verdict"],
@@ -689,6 +691,28 @@ def disposition_row(sid, d):
     return row
 
 
+SIGNED_FAIL_ROWS = frozenset({
+    "family/ORDINAL-LOGIT-RSZ",
+    "data/RD-FUNGI-BINOMIAL",
+    "isdm/ISDM-HEADLINE-RSZ",
+})
+
+
+def enforce_signed_fail_rows(results):
+    """Refuse receipt regeneration that omits or promotes a row held FAIL by the signed stop rule."""
+    by_id = {sid: (rc, binds) for sid, _fam, _clause, rc, binds, _path in results}
+    problems = []
+    for sid in sorted(SIGNED_FAIL_ROWS):
+        if sid not in by_id:
+            problems.append(f"{sid}: required held row is absent from regenerated inputs")
+            continue
+        rc, binds = by_id[sid]
+        if binds or rc.get("verdict") != "FAIL":
+            problems.append(f"{sid}: regeneration would change signed FAIL to {rc.get('verdict')} (binds={binds})")
+    if problems:
+        raise ValueError("signed stop rule blocks receipt regeneration: " + "; ".join(problems))
+
+
 def update_map(out_root, fam, rows_new):
     p = out_root / LEDGER / f"case-map-{fam}.json"
     t = p.read_text(); d = json.loads(t)
@@ -709,7 +733,15 @@ def main():
     if a.check:
         return check(out_root, a.local_raw)
     if not a.raw: ap.error("--raw is required")
-    res = process(a.raw, out_root, a.apply)
+    pending_raw_writes = []
+    res = process(a.raw, out_root, a.apply, pending_raw_writes=pending_raw_writes)
+    try:
+        enforce_signed_fail_rows(res)
+    except ValueError as exc:
+        print(f"CAMPAIGN_RECEIPTS_BLOCKED {exc}")
+        return 1
+    for dst, src in pending_raw_writes:
+        gz_write(dst, src)
     rows_by_fam = {}
     for sid, fam, clause, rc, binds, path in res:
         rel = str(path.relative_to(out_root))
@@ -796,6 +828,10 @@ def check(out_root, local_raw=None):
             rf = Path(tmp) / f"{cell}_R.json"
             if rf.exists() and json.loads(rf.read_text()).get("data_sha256") != h: print(f"DATA PIN DRIFT {cell}: the receipt's data sha256 is not the committed file's"); bad += 1
         res = process(tmp, out_root, False, quiet=True)
+        try:
+            enforce_signed_fail_rows(res)
+        except ValueError as exc:
+            print(f"SIGNED STOP RULE VIOLATION {exc}"); bad += 1
         want = {str(path.relative_to(out_root)) for _, _, _, _, _, path in res}
         have = {str(p.relative_to(out_root)) for p in recdir.glob("*/campaign/*.json")}
         off_paths = {}

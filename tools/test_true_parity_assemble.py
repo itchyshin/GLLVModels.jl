@@ -305,6 +305,84 @@ def main():
     expect("check_extra_map_with_out_dir_ok", c == 0 and "ASSEMBLE_OK" in o, o)
     shutil.rmtree(tmp)
 
+    # The three rows covered by the signed 2026-10-21 stop rule stay held during receipt regeneration.
+    writer_path = HERE / "true_parity" / "campaign" / "write_receipts.py"
+    writer_spec = importlib.util.spec_from_file_location("true_parity_campaign_writer", writer_path)
+    writer = importlib.util.module_from_spec(writer_spec)
+    writer_spec.loader.exec_module(writer)
+    held = [
+        "family/ORDINAL-LOGIT-RSZ",
+        "data/RD-FUNGI-BINOMIAL",
+        "isdm/ISDM-HEADLINE-RSZ",
+    ]
+    synthetic_passes = [(sid, "family", "C3", {"verdict": "PASS"}, True, Path(sid + ".json")) for sid in held]
+    guard = getattr(writer, "enforce_signed_fail_rows", None)
+    expect("signed_stop_rows_have_regeneration_guard", callable(guard), "writer lacks enforce_signed_fail_rows")
+    if callable(guard):
+        try:
+            guard(synthetic_passes)
+            guarded = False
+        except ValueError as exc:
+            guarded = "signed stop rule" in str(exc).lower() and all(sid in str(exc) for sid in held)
+        expect("signed_stop_guard_rejects_all_three_passes", guarded, "a held PASS was not refused with row-specific context")
+        failed_receipts = [(sid, "family", "C3", {"verdict": "FAIL"}, False, Path(sid + ".json")) for sid in held]
+        try:
+            guard(failed_receipts[:2])
+            missing_refused = False
+        except ValueError as exc:
+            missing_refused = held[2] in str(exc) and "absent" in str(exc)
+        expect("signed_stop_guard_rejects_missing_held_row", missing_refused, "a missing held row was not refused")
+
+        # --apply must validate the signed stop rule before persisting any raw
+        # inputs. Stub only the campaign computation so this exercises main's
+        # real validation/write ordering without touching committed evidence.
+        with tempfile.TemporaryDirectory() as blocked_tmp:
+            blocked_root = Path(blocked_tmp) / "root"
+            blocked_root.mkdir()
+            raw_dir = Path(blocked_tmp) / "raw"
+            raw_dir.mkdir()
+            source = raw_dir / "source.json"
+            source.write_text("candidate raw evidence\n")
+            destination = blocked_root / "receipts" / "raw.json.gz"
+            pending = [(destination, source)]
+
+            def blocked_process(_raw, _out_root, _apply, quiet=False, *, pending_raw_writes=None):
+                if pending_raw_writes is not None:
+                    pending_raw_writes.extend(pending)
+                else:
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(b"premature write")
+                return synthetic_passes
+
+            old_process, old_argv = writer.process, sys.argv
+            try:
+                writer.process = blocked_process
+                sys.argv = [str(writer_path), "--raw", str(raw_dir), "--apply", "--root", str(blocked_root)]
+                with redirect_stdout(io.StringIO()):
+                    exit_code = writer.main()
+            except Exception as exc:
+                exit_code = f"raised {type(exc).__name__}: {exc}"
+            finally:
+                writer.process, sys.argv = old_process, old_argv
+            expect("signed_stop_apply_refuses_before_raw_writes",
+                   exit_code == 1 and not destination.exists(),
+                   f"exit={exit_code}, destination_exists={destination.exists()}")
+
+    held_receipts = {
+        "family/ORDINAL-LOGIT-RSZ": "family/campaign/ORDINAL-LOGIT-RSZ.json",
+        "data/RD-FUNGI-BINOMIAL": "data/campaign/RD-FUNGI-BINOMIAL.json",
+        "isdm/ISDM-HEADLINE-RSZ": "isdm/campaign/ISDM-HEADLINE-RSZ.json",
+    }
+    for sid, rel in held_receipts.items():
+        rc = json.loads((A.ROOT / A.LEDGER / "receipts" / rel).read_text())
+        expect(f"{sid}_remains_signed_fail", rc["verdict"] == "FAIL" and not rc["pass_rule"]["legs"]["every_quantity_within_tolerance"], rc["row_status"])
+        q_by_name = {c["quantity"]: c["tolerance"] for c in rc["comparison"]["cases"]}
+        required_tols = {"LLt": 1e-4} if sid != "isdm/ISDM-HEADLINE-RSZ" else {
+            "predict_link": 1e-6, "predict_response": 1e-6,
+            "predict_newdata_offset0_link": 1e-6, "predict_newdata_offset0_response": 1e-6,
+        }
+        expect(f"{sid}_keeps_signed_tolerances", all(q_by_name.get(k) == v for k, v in required_tols.items()), str(q_by_name))
+
     # Campaign receipts (itchyshin/GLLVModels.jl#684 item 4): every comparison block re-derives from the committed raw files.
     wr = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check"],
                         capture_output=True, text=True)
