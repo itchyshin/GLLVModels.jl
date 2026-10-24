@@ -71,6 +71,7 @@ println(_SHARD === nothing ?
     _shard_include("test_reml.jl")
     _shard_include("test_lv_predictor.jl")
     _shard_include("test_W_and_diag.jl")
+    _shard_include("test_unidentified_tier_warning.jl")
     _shard_include("test_phy.jl")
     _shard_include("test_signed_sigma_phy.jl")
     _shard_include("test_sparse_phy.jl")
