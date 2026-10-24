@@ -4,6 +4,7 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+- **`cv_gllvm` Dunn-Smyth cell residuals no longer stop at 7.034 (#767).** `_cv_cell_eval` (Poisson, Binomial, NB2, Beta, Gamma, Exponential) now uses the tail-safe `_ds_z` instead of `clamp(u, 1e-12, 1 - 1e-12)`, so a count of 40 and a count of 100000 give different, finite residuals. Central cells are unchanged. The Tweedie cap in `postfit.jl` is untouched.
 - **`test/fixtures/comparator_targets.toml`: fixture index (#276).** Six existing fixtures indexed with target and claim boundary; index only, not comparator evidence, flips no covered row. `test/test_comparator_targets.jl` checks keys and paths.
 - **An explicit `mask` that marks a `missing` cell as observed now throws an `ArgumentError` (#763).** The Laplace fitters replace `missing` by a placeholder (0 or 1), so `mask = trues(p, n)` on data with `missing` fitted the placeholders as observed values (beta shifted, `converged = true`, no message). `_resolve_obs_mask` now refuses it, naming the first offending cell and the count, and the poisson, NB, NB1, censored Poisson and truncated Poisson / NB2 fitters use it instead of their inline copy. **Behaviour change:** such calls used to return a wrong fit and now throw; masks that agree with `missing`, mark extra cells unobserved, or are absent give identical fits.
 

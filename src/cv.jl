@@ -165,6 +165,17 @@ end
 # Out-of-sample cell-level evaluation (log-likelihood + Dunn–Smyth residual)
 # -----------------------------------------------------------------------------
 
+# Continuous cell: u = F(y), no jitter (lo = hi). The log tail goes to `_ds_z` so an upper (or lower)
+# tail below floatmin, where `ccdf` underflows to 0, still gives a finite residual that keeps growing
+# with y (#767). `v` is 1 on the lower side and 0 on the upper side so that `lmass` is used unscaled.
+function _cv_ds_z_continuous(d, y)
+    F = cdf(d, y)
+    S = ccdf(d, y)
+    lower = F <= 0.5
+    return _ds_z(F, F, S, S, lower ? 1.0 : 0.0;
+                 lmass = lower ? logcdf(d, y) : Distributions.logccdf(d, y))
+end
+
 function _cv_cell_eval(fit, family::Normal, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
     σ = if fit isa GllvmFit
         fit.pars.σ_eps
@@ -186,10 +197,7 @@ function _cv_cell_eval(fit, family::Poisson, y::Real, μ::Real, t::Int, s::Int, 
     d = Poisson(μ_c)
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
@@ -199,10 +207,7 @@ function _cv_cell_eval(fit, family::Binomial, y::Real, μ::Real, t::Int, s::Int,
     d = Binomial(N, μ_c)
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
@@ -220,10 +225,7 @@ function _cv_cell_eval(fit, family::NegativeBinomial, y::Real, μ::Real, t::Int,
     d = NegativeBinomial(r_disp, clamp(prob, 1e-12, 1.0 - 1e-12))
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
@@ -240,8 +242,7 @@ function _cv_cell_eval(fit, family::Beta, y::Real, μ::Real, t::Int, s::Int, N_m
     d = Beta(μ_c * φ, (1.0 - μ_c) * φ)
     yc = clamp(Float64(y), 1e-6, 1.0 - 1e-6)
     ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
@@ -259,8 +260,7 @@ function _cv_cell_eval(fit, family::Gamma, y::Real, μ::Real, t::Int, s::Int, N_
     d = Gamma(α, θ)
     yc = max(Float64(y), 1e-12)
     ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
@@ -269,8 +269,7 @@ function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::I
     d = Exponential(μ_c)
     yc = max(Float64(y), 1e-12)
     ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
