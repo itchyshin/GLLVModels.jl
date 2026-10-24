@@ -217,7 +217,7 @@ end
 
 """
     getLV(fit::GllvmFit, y; X=nothing, X_lv=nothing,
-          component=:total, rotate=true) -> n×K matrix
+          component=:total, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores (site ordination): the Gaussian posterior
 mean `mₛ = (I + Λᵀ Ψ⁻¹ Λ)⁻¹ Λᵀ Ψ⁻¹ (yₛ − μₛ)`, with residual covariance
@@ -236,6 +236,15 @@ observed once, so the data do not identify how the covariance splits
 between `Λ` and `Λ_W` (#135), and these scores depend on the starting
 values. A single-tier fit with `K + K_W` axes has the same likelihood and
 gives scores for the whole identified block.
+
+`mask` (a p×n Bool matrix, `true` = observed cell) and `offset` (a known additive
+term in `η`: a p×n matrix, a scalar or a length-p vector) are accepted only by
+Gaussian fits that retained their integration data; on any other `GllvmFit` they
+throw an `ArgumentError` ("mask/offset postfit requires retained Gaussian
+integration data"). On a retained fit, `Y` of the training size reuses the stored
+mask and offset, while new units from a fit made with a non-zero offset need an
+explicit `offset` (`ArgumentError`: "new-data Gaussian prediction requires explicit
+offset"). `X_lv` is refused on such a fit (`ArgumentError`).
 """
 function getLV(fit::GllvmFit, y::AbstractMatrix;
                X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
@@ -268,7 +277,7 @@ end
 
 """
     getLV(fit::BinomialFit, Y; N=nothing, X_lv=nothing,
-          component=:total, rotate=true, offset=nothing) -> n×K matrix
+          component=:total, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores: the per-site Laplace mode `ẑₛ` (the inner
 Fisher-scoring solve of the marginal). `Y` is the p×n integer response matrix;
@@ -283,7 +292,11 @@ On a fit made with an `offset` the mode search uses it (η = β + offset + Λz):
 stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
 `offset` you pass (as at fit time: a p×n matrix, a scalar or a length-p vector).
 New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
-`newdata` that lacks the offset variable.
+`newdata` that lacks the offset variable (`ArgumentError`).
+
+`mask` is the p×n Bool matrix of observed cells (`true` = observed); unobserved
+cells are left out of the mode search. A supplied `offset` must be finite at every
+observed cell (`ArgumentError` otherwise).
 """
 function getLV(fit::BinomialFit, Y::AbstractMatrix;
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
@@ -323,13 +336,19 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
 end
 
 """
-    predict(fit::GllvmFit, y; type=:response, X=nothing, X_lv=nothing) -> p×n matrix
+    predict(fit::GllvmFit, y; type=:response, X=nothing, X_lv=nothing,
+            mask=nothing, offset=nothing) -> p×n matrix
 
 In-sample fitted values at the conditional latent scores `ẑ` (see [`getLV`](@ref)):
 `type=:link` returns the linear predictor `η = μ + Λ ẑ` (`μ` the fixed-effect
 mean, `0` when the fit has no fixed effects); `type=:response` applies the inverse
 link (identity for the Gaussian family, so both types coincide). No `newdata` — `y`
 (and `X`) must match the fit; a fit that estimated `β` throws when `X` is omitted.
+
+`mask` and `offset` follow the same rules as in [`getLV`](@ref): only Gaussian fits
+that retained their integration data accept them, and any other `GllvmFit` throws an
+`ArgumentError`; new units from a fit made with a non-zero offset need an explicit
+`offset`.
 """
 function predict(fit::GllvmFit, y::AbstractMatrix;
                  type::Symbol = :response,
@@ -348,7 +367,8 @@ function predict(fit::GllvmFit, y::AbstractMatrix;
 end
 
 """
-    predict(fit::BinomialFit, Y; type=:response, N=nothing, X_lv=nothing, offset=nothing) -> p×n matrix
+    predict(fit::BinomialFit, Y; type=:response, N=nothing, X_lv=nothing,
+            mask=nothing, offset=nothing, modes=:refit) -> p×n matrix
 
 In-sample fitted values at the Laplace conditional mode `ẑ` (see [`getLV`](@ref)):
 `type=:link` returns `η = β + Λ ẑ`; `type=:response` returns the inverse-link
@@ -361,6 +381,11 @@ New units from an offset fit without an `offset` are refused (see [`getLV`](@ref
 (`η = β + O_new + Λ ẑ_train`, gllvmTMB's `predict(newdata)` on the training units); `Y` must
 be the training response. The default `modes = :refit` re-solves the modes (see the
 `PoissonFit` method).
+
+`mask` and `offset` follow the rules in [`getLV`](@ref): `mask` marks the observed
+cells, and an `offset` is required for new units from an offset fit (`ArgumentError`
+otherwise). `modes` other than `:refit` or `:training` throws an `ArgumentError`, and
+`modes = :training` is refused on AGHQ fits.
 """
 function predict(fit::BinomialFit, Y::AbstractMatrix;
                  type::Symbol = :response,
@@ -450,12 +475,19 @@ _ds_z_discrete(d, y, v) =
 _ds_z_continuous(d, y) = _ds_z(0.0, cdf(d, y), 1.0, ccdf(d, y), 1.0)
 
 """
-    residuals(fit::GllvmFit, y; type=:dunnsmyth, X=nothing, X_lv=nothing) -> p×n matrix
+    residuals(fit::GllvmFit, y; type=:dunnsmyth, X=nothing, X_lv=nothing,
+              mask=nothing, offset=nothing) -> p×n matrix
 
 Conditional residuals at the predicted latent scores. For the Gaussian family the
 Dunn–Smyth randomized quantile residual reduces (continuous CDF) to the
 standardized residual `(y − μ) / σ_eps`, which also equals the `:pearson`
-residual. `μ` is the conditional fitted mean (see [`predict`](@ref)).
+residual. `μ` is the conditional fitted mean (see [`predict`](@ref)). Unobserved
+(masked) cells come back as `NaN`.
+
+`mask` and `offset` follow the same rules as in [`getLV`](@ref): only Gaussian fits
+that retained their integration data accept them, and any other `GllvmFit` throws an
+`ArgumentError`; new units from a fit made with a non-zero offset need an explicit
+`offset`.
 """
 function residuals(fit::GllvmFit, y::AbstractMatrix;
                    type::Symbol = :dunnsmyth,
@@ -579,13 +611,17 @@ end
 lv_effects(fit::OrdinalFit; kwargs...) = extract_lv_effects(fit; kwargs...)
 
 """
-    residuals(fit::BinomialFit, Y; type=:dunnsmyth, N=nothing, rng=Random.default_rng())
-        -> p×n matrix
+    residuals(fit::BinomialFit, Y; type=:dunnsmyth, N=nothing, X_lv=nothing,
+              rng=Random.default_rng(), mask=nothing, offset=nothing) -> p×n matrix
 
 Conditional residuals at the predicted latent mode. `:dunnsmyth` returns Dunn–
 Smyth randomized quantile residuals — `Φ⁻¹(u)`, `u` uniform on `[F(y−1), F(y)]`
 under `Binomial(N, μ)` — ≈ N(0,1) under a correct model (pass a fixed `rng` for
 reproducibility). `:pearson` returns `(Y − Nμ) / √(Nμ(1−μ))`.
+
+`mask` and `offset` are passed to [`predict`](@ref) and follow the rules in
+[`getLV`](@ref): new units from an offset fit without an `offset` throw an
+`ArgumentError`. On AGHQ fits, unobserved cells come back as `NaN`.
 """
 function residuals(fit::BinomialFit, Y::AbstractMatrix;
                    type::Symbol = :dunnsmyth,
@@ -994,7 +1030,7 @@ end
 
 """
     getLV(fit::PoissonFit, Y; N=nothing, X_lv=nothing,
-          component=:total, rotate=true, offset=nothing) -> n×K matrix
+          component=:total, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a Poisson fit: the per-site Laplace mode
 `ẑₛ`. `Y` is the p×n integer count matrix; `rotate=true` applies the canonical
@@ -1008,7 +1044,11 @@ On a fit made with an `offset` the mode search uses it (η = β + offset + Λz):
 stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
 `offset` you pass (as at fit time: a p×n matrix, a scalar or a length-p vector).
 New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
-`newdata` that lacks the offset variable.
+`newdata` that lacks the offset variable (`ArgumentError`).
+
+`mask` is the p×n Bool matrix of observed cells (`true` = observed); unobserved
+cells are left out of the mode search. A supplied `offset` must be finite at every
+observed cell (`ArgumentError` otherwise).
 """
 function getLV(fit::PoissonFit, Y::AbstractMatrix;
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
@@ -1057,7 +1097,8 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
 end
 
 """
-    predict(fit::PoissonFit, Y; type=:response, N=nothing, X_lv=nothing, offset=nothing) -> p×n matrix
+    predict(fit::PoissonFit, Y; type=:response, N=nothing, X_lv=nothing,
+            mask=nothing, offset=nothing, modes=:refit) -> p×n matrix
 
 In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
 `type=:response` the inverse-link fitted rates `linkinv(link, η) = exp(η)`. For
@@ -1072,6 +1113,11 @@ New units from an offset fit without an `offset` are refused (see [`getLV`](@ref
 units, which re-evaluates the stored offset expression on `newdata` and keeps the fitted modes.
 `Y` must be the training response. The default `modes = :refit` re-solves the modes at the
 prediction offset (unchanged behaviour); without a new `offset` the two agree.
+
+`mask` and `offset` follow the rules in [`getLV`](@ref): `mask` marks the observed
+cells, and an `offset` is required for new units from an offset fit (`ArgumentError`
+otherwise). `modes` other than `:refit` or `:training` throws an `ArgumentError`, and
+`modes = :training` is refused on AGHQ fits.
 """
 function predict(fit::PoissonFit, Y::AbstractMatrix;
                  type::Symbol = :response,
@@ -1099,12 +1145,17 @@ function predict(fit::PoissonFit, Y::AbstractMatrix;
 end
 
 """
-    residuals(fit::PoissonFit, Y; type=:dunnsmyth, rng=Random.default_rng()) -> p×n matrix
+    residuals(fit::PoissonFit, Y; type=:dunnsmyth, X_lv=nothing,
+              rng=Random.default_rng(), mask=nothing, offset=nothing) -> p×n matrix
 
 Conditional residuals for a Poisson fit. `:dunnsmyth` returns Dunn–Smyth
 randomized quantile residuals — `Φ⁻¹(u)`, `u` uniform on `[F(y−1), F(y)]` under
 `Poisson(μ)` — ≈ N(0,1) under a correct model (pass a fixed `rng` to reproduce).
 `:pearson` returns `(Y − μ) / √μ`.
+
+`mask` and `offset` are passed to [`predict`](@ref) and follow the rules in
+[`getLV`](@ref): new units from an offset fit without an `offset` throw an
+`ArgumentError`. On AGHQ fits, unobserved cells come back as `NaN`.
 """
 function residuals(fit::PoissonFit, Y::AbstractMatrix;
                    type::Symbol = :dunnsmyth,

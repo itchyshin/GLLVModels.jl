@@ -5,6 +5,8 @@ All notable changes to GLLVModels.jl are documented here.
 ## Unreleased
 
 - **Gaussian `profile_ci`: a constrained refit that did not converge is no longer used (#762).** An iteration-capped refit gave a shifted interval still labelled `:profile`; it now returns `NaN` for that bound, so `method` is `:partial` or `:failed`, as in the family profile since #504. The derived-quantity, confirmatory-loading and `B_lv` profiles are not changed.
+- **`test/fixtures/comparator_targets.toml`: fixture index (#276).** Six existing fixtures indexed with target and claim boundary; index only, not comparator evidence, flips no covered row. `test/test_comparator_targets.jl` checks keys and paths.
+- **An explicit `mask` that marks a `missing` cell as observed now throws an `ArgumentError` (#763).** The Laplace fitters replace `missing` by a placeholder (0 or 1), so `mask = trues(p, n)` on data with `missing` fitted the placeholders as observed values (beta shifted, `converged = true`, no message). `_resolve_obs_mask` now refuses it, naming the first offending cell and the count, and the poisson, NB, NB1, censored Poisson and truncated Poisson / NB2 fitters use it instead of their inline copy. **Behaviour change:** such calls used to return a wrong fit and now throw; masks that agree with `missing`, mark extra cells unobserved, or are absent give identical fits.
 
 - **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
   After Newton polish, a still-unconverged fit whose finite-difference Hessian is positive definite,
