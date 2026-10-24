@@ -369,12 +369,12 @@ function simulate(fit::TemporalGaussianFit; nsim::Integer=1, condition_on_RE::Bo
 end
 
 """
-    predict(fit::TemporalGaussianFit)
+    predict(fit::TemporalGaussianFit; newdata=nothing)
 
 In-sample fitted predictor of a temporal fit (training rows only), returned
 with the series, time, replicate (when present) and trait columns plus `est`.
-`est` includes the conditional temporal states. New-data prediction is not
-available for temporal fits; use [`forecast_temporal`](@ref) for future
+`est` includes the conditional temporal states. Passing `newdata`
+throws (new-data prediction is not available for temporal fits); use [`forecast_temporal`](@ref) for future
 occasions.
 """
 function predict(fit::TemporalGaussianFit; newdata=nothing)
