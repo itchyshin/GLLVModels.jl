@@ -305,7 +305,7 @@ def main():
     expect("check_extra_map_with_out_dir_ok", c == 0 and "ASSEMBLE_OK" in o, o)
     shutil.rmtree(tmp)
 
-    # The three rows covered by the signed 2026-10-21 stop rule stay held during receipt regeneration.
+    # The three rows covered by the signed 2026-10-21 stop rule plus the signed spider failure stay held during regeneration.
     writer_path = HERE / "true_parity" / "campaign" / "write_receipts.py"
     writer_spec = importlib.util.spec_from_file_location("true_parity_campaign_writer", writer_path)
     writer = importlib.util.module_from_spec(writer_spec)
@@ -314,8 +314,15 @@ def main():
         "family/ORDINAL-LOGIT-RSZ",
         "data/RD-FUNGI-BINOMIAL",
         "isdm/ISDM-HEADLINE-RSZ",
+        "data/RD-SPIDER-NB2",
     ]
-    synthetic_passes = [(sid, "family", "C3", {"verdict": "PASS"}, True, Path(sid + ".json")) for sid in held]
+    held_specs = {
+        "family/ORDINAL-LOGIT-RSZ": ("family", "C3"),
+        "data/RD-FUNGI-BINOMIAL": ("data", "C4"),
+        "isdm/ISDM-HEADLINE-RSZ": ("isdm", "C3"),
+        "data/RD-SPIDER-NB2": ("data", "C4"),
+    }
+    synthetic_passes = [(sid, *held_specs[sid], {"verdict": "PASS"}, True, Path(sid + ".json")) for sid in held]
     guard = getattr(writer, "enforce_signed_fail_rows", None)
     expect("signed_stop_rows_have_regeneration_guard", callable(guard), "writer lacks enforce_signed_fail_rows")
     if callable(guard):
@@ -324,14 +331,14 @@ def main():
             guarded = False
         except ValueError as exc:
             guarded = "signed stop rule" in str(exc).lower() and all(sid in str(exc) for sid in held)
-        expect("signed_stop_guard_rejects_all_three_passes", guarded, "a held PASS was not refused with row-specific context")
-        failed_receipts = [(sid, "family", "C3", {"verdict": "FAIL"}, False, Path(sid + ".json")) for sid in held]
+        expect("signed_stop_guard_rejects_all_four_passes", guarded, "a held PASS was not refused with row-specific context")
+        failed_receipts = [(sid, *held_specs[sid], {"verdict": "FAIL"}, False, Path(sid + ".json")) for sid in held]
         try:
-            guard(failed_receipts[:2])
+            guard(failed_receipts[:-1])
             missing_refused = False
         except ValueError as exc:
-            missing_refused = held[2] in str(exc) and "absent" in str(exc)
-        expect("signed_stop_guard_rejects_missing_held_row", missing_refused, "a missing held row was not refused")
+            missing_refused = held[-1] in str(exc) and "absent" in str(exc)
+        expect("signed_stop_guard_rejects_missing_spider_row", missing_refused, "a missing signed spider row was not refused")
 
         # --apply must validate the signed stop rule before persisting any raw
         # inputs. Stub only the campaign computation so this exercises main's
@@ -372,15 +379,24 @@ def main():
         "family/ORDINAL-LOGIT-RSZ": "family/campaign/ORDINAL-LOGIT-RSZ.json",
         "data/RD-FUNGI-BINOMIAL": "data/campaign/RD-FUNGI-BINOMIAL.json",
         "isdm/ISDM-HEADLINE-RSZ": "isdm/campaign/ISDM-HEADLINE-RSZ.json",
+        "data/RD-SPIDER-NB2": "data/campaign/RD-SPIDER-NB2.json",
     }
     for sid, rel in held_receipts.items():
         rc = json.loads((A.ROOT / A.LEDGER / "receipts" / rel).read_text())
         expect(f"{sid}_remains_signed_fail", rc["verdict"] == "FAIL" and not rc["pass_rule"]["legs"]["every_quantity_within_tolerance"], rc["row_status"])
         q_by_name = {c["quantity"]: c["tolerance"] for c in rc["comparison"]["cases"]}
-        required_tols = {"LLt": 1e-4} if sid != "isdm/ISDM-HEADLINE-RSZ" else {
-            "predict_link": 1e-6, "predict_response": 1e-6,
-            "predict_newdata_offset0_link": 1e-6, "predict_newdata_offset0_response": 1e-6,
-        }
+        if sid == "isdm/ISDM-HEADLINE-RSZ":
+            required_tols = {
+                "predict_link": 1e-6, "predict_response": 1e-6,
+                "predict_newdata_offset0_link": 1e-6, "predict_newdata_offset0_response": 1e-6,
+            }
+        elif sid == "data/RD-SPIDER-NB2":
+            required_tols = {
+                "logLik": 1e-6, "beta": 1e-4, "LLt": 1e-4,
+                "linear predictor on the training data (link scale)": 1e-6,
+            }
+        else:
+            required_tols = {"LLt": 1e-4}
         expect(f"{sid}_keeps_signed_tolerances", all(q_by_name.get(k) == v for k, v in required_tols.items()), str(q_by_name))
 
     # Campaign receipts (itchyshin/GLLVModels.jl#684 item 4): every comparison block re-derives from the committed raw files.

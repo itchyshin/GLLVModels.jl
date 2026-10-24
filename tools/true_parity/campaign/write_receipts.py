@@ -695,6 +695,7 @@ SIGNED_FAIL_ROWS = frozenset({
     "family/ORDINAL-LOGIT-RSZ",
     "data/RD-FUNGI-BINOMIAL",
     "isdm/ISDM-HEADLINE-RSZ",
+    "data/RD-SPIDER-NB2",
 })
 
 
