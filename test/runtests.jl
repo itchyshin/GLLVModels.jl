@@ -58,6 +58,7 @@ println(_SHARD === nothing ?
     _shard_include("test_none_dep.jl")
     _shard_include("test_phylo_dep.jl")
     _shard_include("test_animal_dep.jl")
+    _shard_include("test_docstring_animal_dep_twin.jl")
     _shard_include("test_animal_latent.jl")
     _shard_include("test_docstring_animal_latent_twin.jl")
     _shard_include("test_spatial_dep.jl")
@@ -392,6 +393,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_latent_binomial_trials.jl")
     _shard_include("test_spde_latent_mode_flag_747.jl")
     _shard_include("test_phylo_glm.jl")
+    _shard_include("test_phylo_glm_families.jl")
     _shard_include("test_phylo_poisson_xlv.jl")
     _shard_include("test_phylo_binomial_xlv_mode.jl")
     _shard_include("test_xlv_refit_converged.jl")
@@ -421,6 +423,7 @@ println(_SHARD === nothing ?
     _shard_include("test_missing_response.jl")
     _shard_include("test_missing_response_extra.jl")
     _shard_include("test_masked_gaussian_posdef.jl")   # #716
+    _shard_include("test_masked_gaussian_converged_735.jl")   # #735
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")
     _shard_include("test_missing_predictor_z.jl")
@@ -617,6 +620,7 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
+    _shard_include("test_isdm_cloglog_internals.jl")
     _shard_include("test_convergence_sweep.jl")
     # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
     _shard_include("test_zip_zinb_stall.jl")
@@ -640,6 +644,9 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_projector_validation.jl")
     # #794 / #764: Wald routes on lambda_constraint fits (gllvmTMB's pdHess gate; lognormal refuses pins).
     _shard_include("test_lambda_constraint_wald_794.jl")
+    _shard_include("test_random_slope_internals.jl")
+    # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
+    _shard_include("test_extractors_invariants.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
     _shard_include("test_changelog_structure.jl")
 end
