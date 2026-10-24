@@ -43,11 +43,17 @@ end
 
 """
     simulate(fit::BinomialFit, n; N=nothing, X_lv=nothing,
-             rng=Random.default_rng()) -> p×n matrix
+             rng=Random.default_rng(), offset=nothing) -> p×n matrix
 
 Binomial simulation with trial counts `N` (default all-ones / Bernoulli). For
 fits that used `X_lv`, pass the matching n×q_lv predictor matrix; the simulator
 draws `z_total = X_lv * alpha_lv + z` with `z ~ N(0, I_K)`.
+
+`offset` is a known additive term in `η` (p×n). Only AGHQ fits accept it; on a
+Laplace fit an explicit `offset` throws an `ArgumentError`. On an AGHQ fit with a
+non-zero stored offset, simulating a different number of sites than the fit needs an
+explicit `offset` (`ArgumentError`), and a non-finite or wrongly shaped `offset` is
+refused.
 """
 function simulate(fit::BinomialFit, n::Integer;
                   N::Union{Nothing, AbstractMatrix} = nothing,
@@ -85,12 +91,19 @@ function simulate(fit::BinomialFit, n::Integer;
 end
 
 """
-    simulate(fit::PoissonFit, n; X_lv=nothing, rng=Random.default_rng()) -> p×n matrix
+    simulate(fit::PoissonFit, n; X_lv=nothing, rng=Random.default_rng(),
+             offset=nothing) -> p×n matrix
 
 Poisson simulation. For fits that used `X_lv`, pass the matching n×q_lv predictor
 matrix; the simulator draws `z_total = X_lv * alpha_lv + z` with `z ~ N(0, I_K)`.
 Without `X_lv` this reduces to the ordinary scalar-μ Poisson draw (identical RNG
 stream).
+
+`offset` is a known additive term in `η` (p×n). Only AGHQ fits accept it; on a
+Laplace fit an explicit `offset` throws an `ArgumentError`. On an AGHQ fit with a
+non-zero stored offset, simulating a different number of sites than the fit needs an
+explicit `offset` (`ArgumentError`), and a non-finite or wrongly shaped `offset` is
+refused.
 """
 function simulate(fit::PoissonFit, n::Integer;
                   X_lv::Union{Nothing, AbstractMatrix} = nothing,
