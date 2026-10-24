@@ -649,6 +649,7 @@ println(_SHARD === nothing ?
     _shard_include("test_random_slope_internals.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
+    _shard_include("test_phylo_sparse_solvers.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
