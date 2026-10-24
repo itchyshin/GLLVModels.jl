@@ -589,7 +589,7 @@ end
 # --- one-part dispatch -----------------------------------------------------
 
 const _BRIDGE_MASK_FAMILIES = (
-    "poisson", "binomial", "binomial_probit", "binomial_cloglog",
+    "gaussian", "poisson", "binomial", "binomial_probit", "binomial_cloglog",
     "negbinomial", "nb1", "beta", "gamma", "betabinomial", "ordinal", "ordinal_probit",
 )
 
@@ -863,7 +863,7 @@ function bridge_capabilities()
                 f in _BRIDGE_MASK_CI_FAMILIES ?
                     "one-part reduced-rank bridge family; no-X, masked no-X, and complete-response fixed-effect-X Wald/profile/bootstrap CI payloads are routed; route support is narrower than full R-user parity" :
                 f == "gaussian" ?
-                    "one-part reduced-rank bridge family; fixed-effect-X and predictor-informed latent-score X_lv routes are wired for complete-response point fits; X_lv Wald B_lv CI payloads are routed; profile/bootstrap X_lv CIs, mixed-family X_lv, and source-specific X_lv remain follow-ups; route support is narrower than full R-user parity" :
+                    "one-part reduced-rank bridge family; missing-response masks are wired for the plain no-X point fit (trait means over observed cells; masked CIs, masked REML, masked X and masked X_lv remain follow-ups); fixed-effect-X and predictor-informed latent-score X_lv routes are wired for complete-response point fits; X_lv Wald B_lv CI payloads are routed; profile/bootstrap X_lv CIs, mixed-family X_lv, and source-specific X_lv remain follow-ups; route support is narrower than full R-user parity" :
                     "one-part reduced-rank bridge family; route support is narrower than full R-user parity"
                 for f in onepart
             ],
@@ -1031,6 +1031,9 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                                 mean_coef_status = _fixed_status(coef_fixed)))
         end
         reml = _bridge_truthy(_bridge_get(options, "reml", false))
+        reml && M !== nothing && throw(ArgumentError(
+            "bridge_fit: missing-response masks are not wired for the Gaussian " *
+            "REML route; use reml=false or a complete response table."))
         if reml
             # Restricted ML: per-trait intercepts enter as the GLS fixed effects X
             # (q = p, Xₜₛₜ = 1), so the trait means are REML-adjusted rather than
@@ -1069,9 +1072,24 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                 # Same empty-θ_packed guard as the CI skip above: NaN, not fabricated.
                 gradient_max = _bridge_gradient_max_gaussian(fit, Yc, nothing, nothing))
         end
-        alpha = vec(Statistics.mean(Yf; dims = 2))
-        Yc = Yf .- alpha
-        fit = fit_gaussian_gllvm(Yc; K = K)
+        # With a mask, trait means are taken over OBSERVED cells only and masked
+        # cells are zeroed after centring, so no masked value reaches the fit.
+        if M === nothing
+            alpha = vec(Statistics.mean(Yf; dims = 2))
+            Yc = Yf .- alpha
+        else
+            all(t -> any(@view M[t, :]), 1:p) || throw(ArgumentError(
+                "bridge_fit: every trait needs at least one observed response " *
+                "to fit a masked Gaussian model."))
+            alpha = [sum(Yf[t, s] for s in 1:n if M[t, s]) / count(@view M[t, :])
+                     for t in 1:p]
+            Yc = Yf .- alpha
+            Yc[.!M] .= 0.0
+        end
+        M !== nothing && ci_method != "none" && throw(ArgumentError(
+            "bridge_fit: confidence intervals are not wired for masked Gaussian " *
+            "fits yet; use ci_method=\"none\" or a complete response table."))
+        fit = fit_gaussian_gllvm(Yc; K = K, mask = M)
         Sigma = Matrix{Float64}(sigma_y_site(fit))
         corr  = Matrix{Float64}(correlation(fit))
         comm  = Vector{Float64}(communality(fit))
@@ -1083,7 +1101,11 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             alpha = alpha, dispersion = fill(NaN, p), sigma_eps = fit.pars.σ_eps,
             link = fill("IdentityLink", p), Sigma = Sigma, corr = corr, comm = comm,
             scores = scores, df = df, loglik = fit.logLik,
-            converged = fit.converged, iterations = fit.n_iter, note = "", ci = ci,
+            converged = fit.converged, iterations = fit.n_iter,
+            note = M === nothing ? "" :
+                   "masked Gaussian fit: alpha are trait means over observed cells; " *
+                   "masked cells are excluded from the likelihood.",
+            ci = ci, nobs = M === nothing ? nothing : count(M),
             gradient_max = _bridge_gradient_max_gaussian(fit, Yc, nothing, nothing))
     end
 
