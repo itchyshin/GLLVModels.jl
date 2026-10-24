@@ -64,3 +64,27 @@ using GLLVModels, Test, Random, LinearAlgebra
         end
     end
 end
+
+# Issue #762: the constrained refit used to count as ok for any finite minimum,
+# so an iteration-capped LBFGS run gave a shifted interval still labelled
+# :profile. A refit now counts only if Optim converged (`_fit_verdict`).
+@testset "profile_ci: a refit that hit the iteration cap is not :profile (#762)" begin
+    Random.seed!(9)
+    p, n, K = 8, 40, 2
+    Λ = randn(p, K)
+    Y = Λ * randn(K, n) .+ 0.8 .* randn(p, n)
+    fit = fit_gaussian_gllvm(Y; K = K)
+    for i in (10, 13, 16)
+        capped = GLLVModels.profile_ci(fit, i; y = Y, profile_iterations = 1)
+        # One LBFGS iteration cannot reach the constrained optimum, so the refit
+        # is reported as failed: a NaN bound, and a method that is not :profile.
+        @test capped.method in (:partial, :failed)
+        @test isnan(capped.lower) || isnan(capped.upper)
+        # Default iterations still converge and give a finite :profile interval
+        # that brackets the estimate.
+        full = GLLVModels.profile_ci(fit, i; y = Y)
+        @test full.method === :profile
+        @test isfinite(full.lower) && isfinite(full.upper)
+        @info "profile_ci default (#762)" i lower=full.lower upper=full.upper
+    end
+end
