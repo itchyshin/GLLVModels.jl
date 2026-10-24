@@ -239,7 +239,7 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     # NA handling: observation mask + sanitized counts (see fit_poisson_gllvm).
-    msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
+    msk = _resolve_obs_mask(mask, Y)
     Yc = Integer.(_sanitize_missing(Y, 0))
 
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
