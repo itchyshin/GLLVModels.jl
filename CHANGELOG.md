@@ -4,6 +4,7 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+- **`test/fixtures/comparator_targets.toml`: fixture index (#276).** Six existing fixtures indexed with target and claim boundary; index only, not comparator evidence, flips no covered row. `test/test_comparator_targets.jl` checks keys and paths.
 - **`confint` rebuilds the curvature of a `hessian = :fisher` Delta-Gamma or truncated NB2 fit (#778).** `DeltaGammaFit`, `TruncatedNegBin2Fit` and `TruncatedNegBin2PerTraitFit` now record `hessian`, and their `confint` adapters (Wald, profile, bootstrap refits) default to it instead of `:observed`; the objective at the estimate equals the fit's log-likelihood. `:observed` fits are unchanged.
 
 - **`fit_phylo_latent_gllvm`: rounding-floor tag, without flipping `converged` above `g_tol` (refs #822).**
