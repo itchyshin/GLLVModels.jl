@@ -423,6 +423,7 @@ println(_SHARD === nothing ?
     _shard_include("test_missing_response.jl")
     _shard_include("test_missing_response_extra.jl")
     _shard_include("test_masked_gaussian_posdef.jl")   # #716
+    _shard_include("test_masked_gaussian_converged_735.jl")   # #735
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")
     _shard_include("test_missing_predictor_z.jl")
@@ -644,6 +645,8 @@ println(_SHARD === nothing ?
     # #794 / #764: Wald routes on lambda_constraint fits (gllvmTMB's pdHess gate; lognormal refuses pins).
     _shard_include("test_lambda_constraint_wald_794.jl")
     _shard_include("test_random_slope_internals.jl")
+    # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
+    _shard_include("test_extractors_invariants.jl")
     # #750: getLV / predict / residuals / simulate docstring signatures list mask and offset.
     _shard_include("test_docstring_postfit_mask_offset_750.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
