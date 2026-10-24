@@ -3750,21 +3750,34 @@ end
 # ---------------------------------------------------------------------------
 """
     confint_spde_latent(fit::SPDELatentFit, Y, locs; level=0.95, parm=nothing,
-                        α=2, newton_maxiter=50, newton_tol=1e-9) -> NamedTuple
+                        α=2, N=nothing, newton_maxiter=50, newton_tol=1e-9) -> NamedTuple
 
 Wald confidence intervals for the SPDE-latent GLLVM. `Y` (p×M) and `locs` (M×2) must
-match the fit. β and Λ are reported on their natural scale; κ, τ, and any dispersion
+match the fit. `N` is the p×M trial-count matrix (as in `fit_spde_latent_gllvm`); when
+omitted the trials stored in the fit are used, and a Binomial fit with no recorded
+trials and any `Y > 1` throws an `ArgumentError`. β and Λ are reported on their natural scale; κ, τ, and any dispersion
 on the positive scale. SEs come from the observed information (finite-difference
 Hessian of the θ-marginal, which rebuilds the Matérn precision each evaluation).
 """
 function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::AbstractMatrix;
                              level::Real = 0.95, parm = nothing, α::Integer = 2,
+                             N::Union{Nothing, AbstractMatrix} = nothing,
                              newton_maxiter::Integer = 50, newton_tol::Real = 1e-9)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     p, K = size(fit.Λ); rr = rr_theta_len(p, K)
     Cdiag, G = spde_fem(fit.nodes, fit.tris)
     A = spde_projector(fit.nodes, fit.tris, locs)
-    Ntr = ones(eltype(Y), size(Y))
+    if N !== nothing
+        size(N) == size(Y) ||
+            throw(ArgumentError("N must be $(size(Y, 1))×$(size(Y, 2)) like Y; got $(size(N))"))
+        Ntr = N
+    elseif size(fit.N) == size(Y)
+        Ntr = fit.N
+    else
+        fit.family isa Binomial && any(>(1), Y) &&
+            throw(ArgumentError("Binomial SPDE-latent fit with Y > 1 needs the trial counts: pass N (p×M) to confint_spde_latent"))
+        Ntr = ones(eltype(Y), size(Y))
+    end
     nd = _spde_disp_len(fit.family)
     dbase = p + rr + 2
     θ = vcat(fit.β, pack_lambda(fit.Λ), log(fit.κ), log(fit.τ),
