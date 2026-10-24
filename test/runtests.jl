@@ -646,6 +646,8 @@ println(_SHARD === nothing ?
     # #794 / #764: Wald routes on lambda_constraint fits (gllvmTMB's pdHess gate; lognormal refuses pins).
     _shard_include("test_lambda_constraint_wald_794.jl")
     _shard_include("test_random_slope_internals.jl")
+    # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
+    _shard_include("test_extractors_invariants.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
     _shard_include("test_changelog_structure.jl")
 end
