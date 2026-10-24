@@ -4,6 +4,7 @@ All notable changes to GLLVModels.jl are documented here.
 
 ## Unreleased
 
+- **`test/fixtures/comparator_targets.toml`: fixture index (#276).** Six existing fixtures indexed with target and claim boundary; index only, not comparator evidence, flips no covered row. `test/test_comparator_targets.jl` checks keys and paths.
 - **Delta `predictor = :shared` post-fit uses the shared loadings; `predict` for the other grouped fits (refs #820, #832, #788).**
   `getLV`, `predict(...; type = :occurrence)` and `residuals` on `DeltaLogNormalFit` / `DeltaGammaFit`
   made with `predictor = :shared` now use the shared loadings, so the occurrence probability varies by
