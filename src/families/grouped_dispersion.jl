@@ -524,6 +524,31 @@ function _nb_poisson_ridge_polish(negll, res, ls, opts, first_log_r::Integer;
     return (θ, f0, conv, iters)
 end
 
+# Second start for `fit_nb_gllvm_grouped` (#784). Finite-difference L-BFGS from the default
+# start can stop at a clearly worse local maximum of the grouped NB2 Laplace objective
+# (ade4::mollusc, 15 taxa x 163 sites, K = 2: -3129.5314, with `converged = true`; the exact-
+# gradient dense-BFGS route of `fit_nb_gllvm_grouped_cov` reaches -3121.1644 from the same
+# start, which is gllvmTMB's optimum). Neither route dominates (a 15 x 81 subsample of the
+# same data ends 1.99 higher on the finite-difference route), so the caller runs both and
+# keeps the better. This is the same route, boundary restart and ridge polish as the
+# covariate fitter's `_fit_from`, with no covariates (q = 0, so θ is `[β; pack(Λ); log r]`).
+# `Yc` is the integer response, `msk` the observation mask, `θ0` the default start.
+# Returns `(θ, nll, converged, iterations)`.
+# `stage_callback` (optional) receives each outer attempt for the fit's optimizer record.
+function _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx, link, msk, hessian,
+                                 newton_maxiter, newton_tol, opts; stage_callback = nothing)
+    X0 = zeros(p, size(Yc, 2), 0)
+    grad = θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
+                                           hessian, newton_maxiter, newton_tol)
+    alg = _COV_BFGS()
+    r = _optimize_with_analytic(negll, grad, copy(θ0), alg, opts)
+    stage_callback === nothing || stage_callback(:initial, alg, r; accepted = true)
+    r = _nb_boundary_restart(negll, r, alg, opts, p + rr + 1; grad = grad,
+                             stage_callback = stage_callback)
+    return _nb_poisson_ridge_polish(negll, r, alg, opts, p + rr + 1; grad = grad,
+                                    stage_callback = stage_callback)
+end
+
 """
     NBGroupedFit
 
@@ -650,7 +675,7 @@ end
 """
     fit_nb_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
                          hessian=:observed, β_init=nothing, Λ_init=nothing,
-                         optimizer=nothing, …) -> NBGroupedFit
+                         routes=:both, optimizer=nothing, …) -> NBGroupedFit
 
 Fit a negative-binomial GLLVM with grouped / species-specific dispersion (gllvm's
 `disp.group`): species `t` shares dispersion `r_group[group[t]]`. `group` is a
@@ -662,9 +687,21 @@ point with the boundary groups at `r = 1` (together, and each on its own when th
 are several) and keeps the best restart only if its log-likelihood is higher by
 more than `1e-6`; otherwise the boundary fit stands and is flagged in
 `dispersion_boundary` (which flags both ends; only `r < 1e-6` also makes `converged`
-false, `r > 1e6` warns). `iterations` then counts the kept run only. On small data the
-likelihood can have several maxima, so this improves the local search but does not
-guarantee the global maximum. The per-site mode search is damped and falls back to
+false, `r > 1e6` warns). `iterations` then counts the kept run only. `routes` picks the
+optimiser route. With the default `:both`, for the log link without an `offset`, the fit
+also runs a second start from the same initial point on the exact-gradient dense-BFGS route
+that [`fit_nb_gllvm_grouped_cov`](@ref) uses (with its own boundary restart and polish), and
+keeps whichever of the two ends higher by more than `1e-6`; a tie keeps the L-BFGS fit
+(#784: on `ade4::mollusc`, 15 taxa × 163 sites, K = 2, L-BFGS alone stopped 8.37 below
+gllvmTMB's optimum). `:lbfgs` runs only the L-BFGS route (exact gradient on the log link,
+finite-difference otherwise) and `:exact` only the dense-BFGS exact-gradient route
+(log link, no `offset`; a different local search). `:both` costs the L-BFGS fit plus the
+exact-route fit and keeps the better; a tie keeps L-BFGS. With another link or an
+`offset`, `:both` is the L-BFGS route alone and `:exact` raises an `ArgumentError`. An explicit
+`optimizer` also makes `:both` run only the selected method (no second start), and `:exact`
+with an explicit `optimizer` raises an `ArgumentError`.
+On small data the likelihood can have several maxima, so this improves the local search
+but does not guarantee the global maximum. The per-site mode search is damped and falls back to
 an exact observed-curvature Newton search where Fisher scoring does not converge; a
 site that still fails makes the objective return its failure sentinel. With one group this
 matches [`fit_nb_gllvm`](@ref) when `hessian=:fisher`. `hessian=:observed` (the
@@ -681,11 +718,19 @@ executed stage. [`optimizer_info`](@ref) retains the per-attempt results.
 function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
-        optimizer = nothing, g_tol::Real = 1e-5, iterations::Integer = 500,
+        routes::Symbol = :both, optimizer = nothing,
+        g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    routes in (:both, :lbfgs, :exact) ||
+        throw(ArgumentError("routes must be :both, :lbfgs or :exact; got :$routes"))
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_nb_gllvm_grouped")
+    exact_ok = link isa LogLink && offset === nothing   # the exact gradient needs both
+    routes === :exact && !exact_ok && throw(ArgumentError(
+        "routes = :exact needs the log link and no offset"))
+    routes === :exact && optimizer !== nothing && throw(ArgumentError(
+        "routes = :exact runs its own dense-BFGS route and cannot take an explicit optimizer"))
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
     rr = rr_theta_len(p, K)
     # relabel groups to 1..G, build species→group index
@@ -727,34 +772,67 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     derivative = link isa LogLink ? :analytic : :finite_difference
     callback(name, method, result; accepted = false) =
         _optimizer_stage!(stages, name, method, derivative, stage_controls, result; accepted)
-    # Exact gradient under LogLink: the covariate fitter's (`_nb_grouped_cov_negll_grad`)
-    # with no covariates (q = 0) and this fit's offset; θ has the same layout. The
-    # finite-difference gradient cost 2·(p + rr + G) Laplace passes per step and made
-    # per-species fits take minutes at p = 30 (#552: 494 s against tmb's 7 s). Only the
-    # gradient changes: the optimisers stay as they were (L-BFGS, then the restart and
-    # the BFGS ridge polish). Dense BFGS from the start, as the covariate fitter uses,
-    # picks a different local maximum on test/fixtures/nb2_restart_seed52.toml
-    # (-833.6085 against -833.1814). Other links keep the finite-difference gradient.
-    X0 = zeros(p, n, 0)
-    grad = link isa LogLink ?
-        (θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
-                                         hessian, newton_maxiter, newton_tol;
-                                         offset = offset)) : nothing
-    res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
-                             _optimize_with_analytic(negll, grad, θ0, ls, opts)
-    callback(:initial, ls, res; accepted = true)
-    res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad,
-                               stage_callback = callback)
-    explicit = optimizer !== nothing
-    if !explicit || ls isa Optim.BFGS
-        θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
-            grad = grad, alg = explicit ? ls : Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
-            stage_callback = callback)
+    # The exact-gradient dense-BFGS route (#784) always has the analytic gradient. Its stages
+    # carry an `exact_` prefix in the optimizer record.
+    function exact_callback(into)
+        return (name, method, result; accepted = false) ->
+            _optimizer_stage!(into, Symbol(:exact_, name), method, :analytic, stage_controls,
+                              result; accepted)
+    end
+    if routes === :exact
+        θ̂, nll, conv0, iters0 = _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx, link,
+                                                        msk, hessian, newton_maxiter,
+                                                        newton_tol, opts;
+                                                        stage_callback = exact_callback(stages))
     else
-        θ̂ = Optim.minimizer(res)
-        nll = Optim.minimum(res)
-        conv0 = Optim.converged(res)
-        iters0 = Optim.iterations(res)
+        # Exact gradient under LogLink: the covariate fitter's (`_nb_grouped_cov_negll_grad`)
+        # with no covariates (q = 0) and this fit's offset; θ has the same layout. The
+        # finite-difference gradient cost 2·(p + rr + G) Laplace passes per step and made
+        # per-species fits take minutes at p = 30 (#552: 494 s against tmb's 7 s). Only the
+        # gradient changes: the optimisers stay as they were (L-BFGS, then the restart and
+        # the BFGS ridge polish). Dense BFGS from the start (the #784 `:exact` route) is a
+        # different local search and is the second start under `:both`. Other links keep the
+        # finite-difference gradient.
+        X0 = zeros(p, n, 0)
+        grad = link isa LogLink ?
+            (θ -> _nb_grouped_cov_negll_grad(Yc, X0, θ, p, 0, K, rr, G, gidx, link, msk,
+                                             hessian, newton_maxiter, newton_tol;
+                                             offset = offset)) : nothing
+        res = grad === nothing ? Optim.optimize(negll, θ0, ls, opts; autodiff = :finite) :
+                                 _optimize_with_analytic(negll, grad, θ0, ls, opts)
+        callback(:initial, ls, res; accepted = true)
+        res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad,
+                                   stage_callback = callback)
+        explicit = optimizer !== nothing
+        if !explicit || ls isa Optim.BFGS
+            θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
+                grad = grad, alg = explicit ? ls : Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
+                stage_callback = callback)
+        else
+            θ̂ = Optim.minimizer(res)
+            nll = Optim.minimum(res)
+            conv0 = Optim.converged(res)
+            iters0 = Optim.iterations(res)
+        end
+        if routes === :both && exact_ok && !explicit
+            # #784: second start on the dense-BFGS exact-gradient route; keep it only if
+            # better by more than 1e-6 (a tie keeps the L-BFGS fit above). Skipped under an
+            # explicit `optimizer`: the caller chose the one method to run.
+            stages2 = OptimizerStage[]
+            θ̂2, nll2, conv2, iters2 = _nb_grouped_exact_route(negll, Yc, θ0, p, K, rr, G, gidx,
+                                                              link, msk, hessian,
+                                                              newton_maxiter, newton_tol, opts;
+                                                              stage_callback = exact_callback(stages2))
+            second_wins = !_nll_failed(nll2) && (_nll_failed(nll) || nll2 < nll - 1e-6)
+            # Every attempt stays in the record; only a winning second start keeps accepted stages.
+            for s in stages2
+                push!(stages, OptimizerStage(s.name, s.method, s.derivative, s.controls,
+                                             s.result, second_wins && s.accepted))
+            end
+            if second_wins
+                θ̂, nll, conv0, iters0 = θ̂2, nll2, conv2, iters2
+            end
+        end
     end
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)

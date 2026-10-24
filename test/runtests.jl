@@ -653,5 +653,7 @@ println(_SHARD === nothing ?
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")
+    _shard_include("test_nb_grouped_second_route_784.jl")
+    _shard_include("test_nb_grouped_mollusc_default_784.jl")
 end
 include("test_readme_quickstart.jl")

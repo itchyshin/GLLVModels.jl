@@ -55,6 +55,14 @@ All notable changes to GLLVModels.jl are documented here.
   example identity-link Gamma) are unchanged, and the check uses the offset only, not the `X_lv`
   mean term. The covariate (`fit_gllvm_cov`) and two-part routes take no `β_init` and are unchanged.
 
+- **NB2 per-species dispersion: a second start on the exact-gradient route (refs #784).**
+  `fit_nb_gllvm_grouped` (the `fit_gllvm(Y; family = NegativeBinomial(), disp_group = :species)`
+  route) now also fits from the same start with the exact-gradient dense-BFGS route used by
+  `fit_nb_gllvm_grouped_cov` and keeps the better of the two (a tie keeps the L-BFGS fit), for
+  the log link without an `offset`. On `ade4::mollusc` (15 taxa × 163 sites, K = 2) the L-BFGS
+  fit stopped at logLik −3129.5314 with `converged = true`, 8.37 below gllvmTMB; the fit now
+  reaches −3121.1644, gllvmTMB's optimum. Fits where L-BFGS already ends higher are unchanged.
+
 - **η-clamp plateau and K = 0 on Julia 1.12 (#869 items 1-3).** Log-link count and positive fitters
   (Poisson, NB, NB1, COM-Poisson, GP1, truncated, censored, Tweedie, Gamma, Exponential, ZIP/ZINB,
   hurdle, delta, `fit_gllvm_cov`, grouped Gamma/NB1/Tweedie) now return the failure sentinel when an
