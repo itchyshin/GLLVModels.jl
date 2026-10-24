@@ -68,7 +68,10 @@ jobs:
         # GLLVM_TEST_SHARD (see test/runtests.jl) so 2 versions x 1 os x 4
         # shards = 8 Julia jobs, each covering ~1/4 of the ~13k tests instead
         # of one multi-hour job.
-        version: ['1.10', '1']     # LTS + current stable
+        # Pull requests run the current stable Julia only; LTS (1.10) still runs
+        # on every push to main and on manual dispatch. This halves the runner
+        # queue that held PRs for hours (Shinichi, 24 Oct 2026).
+        version: ${{ fromJSON(github.event_name == 'pull_request' && '["1"]' || '["1.10", "1"]') }}
         os: [ubuntu-latest]
         shard: [1, 2, 3, 4]
         include: ${{ (github.event_name == 'workflow_dispatch' && inputs.full_matrix) && fromJSON('[{"version":"1","os":"macOS-latest"},{"version":"1","os":"windows-latest"}]') || fromJSON('[]') }}
