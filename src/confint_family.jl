@@ -95,6 +95,18 @@ function _ci_mask(mask, Y::AbstractMatrix)
     return M
 end
 
+# Fit types whose `_family_ci` adapter builds its objective, simulator and refit from the
+# full `Y` and has no mask route. Silently ignoring a mask would return intervals for an
+# objective other than the one that produced the masked fit (#775), so refuse it. An
+# all-observed mask is the unmasked fit (`_ci_mask` returns `nothing`) and passes.
+function _ci_refuse_mask(fit, mask, Y::AbstractMatrix)
+    _ci_mask(mask, Y) === nothing && return nothing
+    throw(ArgumentError(
+        "confint: mask is not supported for $(nameof(typeof(fit))): its confidence-interval " *
+        "adapter uses every cell of Y, so the intervals would not be those of the masked fit. " *
+        "Drop the mask keyword; intervals for a fit made with a mask are not available for this fit type."))
+end
+
 # ---------------------------------------------------------------------------
 # Offsets (known additive term in η = β + offset + Λz, e.g. log-exposure).
 #
@@ -1450,7 +1462,9 @@ end
 # is held fixed at its fitted value `fit.p` throughout the Hessian / profile /
 # bootstrap, so the working vector is [β; pack_lambda(Λ); log φ].
 function _family_ci(fit::TweedieFit, Y::AbstractMatrix;
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _ci_refuse_mask(fit, mask, Y)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
     pw = fit.p
     θ = vcat(fit.β, pack_lambda(fit.Λ), log(fit.φ))
@@ -1648,7 +1662,9 @@ end
 # refit exactly as families/binomial.jl threads them.
 function _family_ci(fit::BetaBinomialFit, Y::AbstractMatrix;
                     N::Union{Nothing, AbstractMatrix} = nothing,
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _ci_refuse_mask(fit, mask, Y)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
     Nm = N === nothing ? fill(1, p, n) : Matrix{Int}(N)
     θ = vcat(fit.β, pack_lambda(fit.Λ), log(fit.φ))
@@ -2054,7 +2070,9 @@ end
 
 # --- Ordered-beta (proportions with point masses at 0 and 1) ---------------
 function _family_ci(fit::OrderedBetaFit, Y::AbstractMatrix;
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _ci_refuse_mask(fit, mask, Y)
     p, K = size(fit.Λ); rr = rr_theta_len(p, K)
     θ = vcat(fit.β, pack_lambda(fit.Λ), fit.c0, fit.c1, log(fit.φ))
     nll = function (θv)
@@ -2141,7 +2159,9 @@ end
 
 function _family_ci(fit::RowEffectFit, Y::AbstractMatrix;
                     N::Union{Nothing, AbstractMatrix} = nothing,
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _ci_refuse_mask(fit, mask, Y)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); nfree = n - 1
     lk = fit.link; fam0 = fit.family; hasd = _cov_has_disp(fam0)
     Nm = N === nothing ? fill(1, p, n) : N
@@ -2618,7 +2638,9 @@ end
 # 1e-12, so the small perturbations used by the Hessian / refits stay finite even
 # if a τ momentarily loses ordering.
 function _family_ci(fit::OrdinalFit, Y::AbstractMatrix;
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _ci_refuse_mask(fit, mask, Y)
     fit.alpha_lv === nothing || throw(ArgumentError(
         "confint for fit_ordinal_gllvm(...; X_lv=...) is not carried by confint(fit, Y); " *
         "use confint_lv_effects(fit, Y, X_lv) for Wald intervals on B_lv, " *
@@ -2706,7 +2728,9 @@ end
 
 # Working vector [β; pack_lambda(Λ); free τ] — τ₁ fixed at 0 per trait.
 function _family_ci(fit::OrdinalPerTraitFit, Y::AbstractMatrix;
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _ci_refuse_mask(fit, mask, Y)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); C = fit.C
     ncut = sum(C .- 2)
     τ_free = _pack_free_tau_pertrait(fit.τ, C)
@@ -2758,7 +2782,9 @@ end
 # Working vector [β; γ_free; pack_lambda(Λ); free τ]. Needs design `X`.
 function _family_ci(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix;
                     X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _ci_refuse_mask(fit, mask, Y)
     X === nothing && throw(ArgumentError(
         "confint on an OrdinalPerTraitCovFit needs the design `X` " *
         "(the same array passed to fit_ordinal_gllvm_pertrait_cov): " *
@@ -2925,7 +2951,9 @@ end
 function _family_ci(fit::GllvmCovFit, Y::AbstractMatrix;
                     X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                     N::Union{Nothing, AbstractMatrix} = nothing,
+                    mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    _ci_refuse_mask(fit, mask, Y)
     X === nothing && throw(ArgumentError("confint on a GllvmCovFit needs the design `X` (the same array passed to fit_gllvm_cov): confint(fit, Y; method=…, X=X)"))
     p, K = size(fit.Λ); n = size(Y, 2); q_full = length(fit.γ); rr = rr_theta_len(p, K)
     length(fit.γ_fixed) == q_full || throw(ArgumentError(
@@ -3535,7 +3563,11 @@ likelihood. For `BinomialFit` / `BetaBinomialFit` (and a `Binomial`-family
 `MultinomialFit` with covariates, `X` is the same n×p matrix passed to the fitter
 (not the 3-array `GllvmCovFit` layout). For
 response-mask fits, pass the same Boolean `mask` matrix used by the fitter;
-masked cells are ignored by the likelihood and by bootstrap refits.
+masked cells are ignored by the likelihood and by bootstrap refits. A mask is refused
+with an `ArgumentError` for the fit types whose adapter has no mask route (`TweedieFit`,
+`BetaBinomialFit`, `OrderedBetaFit`, `RowEffectFit`, `GllvmCovFit`, `OrdinalFit`,
+`OrdinalPerTraitFit`, `OrdinalPerTraitCovFit`), rather than ignored; an all-`true` mask
+is the unmasked call.
 `StudentTFit` admits Wald only when `ν` was pinned at fit time
 (`estimated_nu == false`); free / estimated ν remains a contract §6 holdout.
 
