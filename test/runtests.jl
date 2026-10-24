@@ -649,6 +649,8 @@ println(_SHARD === nothing ?
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
     _shard_include("test_phylo_sparse_solvers.jl")
+    # #750: getLV / predict / residuals / simulate docstring signatures list mask and offset.
+    _shard_include("test_docstring_postfit_mask_offset_750.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
