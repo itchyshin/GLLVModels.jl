@@ -96,6 +96,8 @@ All notable changes to GLLVModels.jl are documented here.
   upper tail, so a larger |z| would be noise; the cap is now documented in the source) and
   the `cv_gllvm` residuals in `src/cv.jl`.
 
+- **`bridge_fit` rejects arguments it would silently drop (#741).** The phylo-precision diagnostic hook now throws `ArgumentError` for `d != 1`, `X`, `X_lv`, `mask`, `N`, `trait_names`, `unit_names`, `ci_method != "none"`, `reml = true` and `coef_fixed`-style options, as the multivariate branch already did. `reml = true` throws on every route except one-part Gaussian without `X`/`X_lv`/`sources` (it used to return an ML fit). A non-`Dict` `options` (e.g. a NamedTuple) throws instead of being ignored whole. Forcing test: `test/test_bridge_ignored_args.jl`. A per-route allow-list for unknown option keys is not included.
+
 - **Phylogenetic xlv point fitters (binomial, NB2, Gamma): `converged` now requires a small
   gradient (refs #505).** `_fit_phylo_binomial_xlv`, `_fit_phylo_nb_xlv` and `_fit_phylo_gamma_xlv`
   took `converged` from `Optim.converged`, which also fires on a zero-length line-search step, and
