@@ -33,6 +33,8 @@ All notable changes to GLLVModels.jl are documented here.
 
 - **`fit_animal_dep_gllvm` and `fit_kernel_dep_gllvm` docstrings name the right twin (#823).** `fit_animal_dep_gllvm` is a Hadamard row-relatedness model `(Λ_phy Λ_phy') .* A`, not gllvmTMB's `Σ_trait ⊗ A` `animal_dep`; its docstring now says so and points to `fit_kernel_dep_gllvm(Y, A, groups)` as the Kronecker twin. `fit_kernel_dep_gllvm` is documented as a true Kronecker model, not equivalent to `fit_phylo_dep_gllvm`. Docstring-only; no behaviour change.
 
+- **`fit_nb1_gllvm_grouped_cov` no longer trusts `Optim.converged` after a zero-length step (#505).** The covariate route now judges `converged` with the same scale-aware gradient test (`_nb1_grouped_g_met`) that `fit_nb1_gllvm_grouped` already uses, including inside the Poisson-ridge polish; before, a stall with a large gradient (0.35 measured) was reported as `converged = true`. Estimates are unchanged; only the `converged` flag can turn false. Scalar `fit_nb1_gllvm` and the other sites named in #505 remain separate per-family PRs.
+
 - **Phylo xlv NB2 and binomial fitters no longer abort on an overshooting line-search step (#944).** `_fit_phylo_nb_xlv` and `_fit_phylo_binomial_xlv` now pass Optim a guarded objective that returns the 1e12 sentinel on an exception or non-finite value, as `_fit_phylo_gamma_xlv` does; before, a step that overflowed `r = exp(log_r)` threw `ArgumentError` and aborted the NB2 fit. **Behaviour change:** invalid data (negative counts, `Y > N`) now ends at `stop_reason = :objective_failure` instead of throwing, as it already did for Gamma.
 
 - **Direct outer-optimizer selection.** Ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,

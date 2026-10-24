@@ -2623,7 +2623,8 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     # NB1's Poisson limit is φ → 0: a non-converged fit crawling there is refit with those
     # groups fixed at φ = 1e-10 (the NB2 polish mirrored; #615 NB1 follow-up).
     θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + q + rr + 1;
-        at_limit = <(1e-3), limit_log = log(1e-10))
+        at_limit = <(1e-3), limit_log = log(1e-10),
+        conv_test = r -> Optim.converged(r) && _nb1_grouped_g_met(r, g_tol))
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
@@ -2636,7 +2637,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     lowb = φ̂g .> 1e6
     any(lowb) && @warn "NB1 grouped-cov fit has φ above 1e6 for group(s) $(findall(lowb)); that overdispersion is numerically flat and not identified from this data; converged is false for this fit." maxlog=1
     any(<(1e-6), φ̂g) && @warn "NB1 grouped-cov fit has φ below 1e-6 for group(s) $(findall(<(1e-6), φ̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
-    loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
+    loglik, conv, iters = _fit_verdict(nll, conv0, iters0)   # conv0 includes the #485 gradient test (#505)
     conv = _eta_cap_verdict(conv, link, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
                             caller = "fit_nb1_gllvm_grouped_cov")
     return NB1GroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
