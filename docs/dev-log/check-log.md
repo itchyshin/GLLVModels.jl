@@ -1,3 +1,9 @@
+2026-10-25: Family CI bootstrap and profile-refit rethrow
+InterruptException. A "not supported" simulate stub is now
+ArgumentError before the replicate loop. Focused
+test_interrupt_rethrow.jl: 9 passed / 0 failed. Refs #774.
+See after-task/2026-10-25-confint-family-interrupt-774.md.
+
 2026-10-21: Offline checker reported C0_MET, C1_MET, C5_MET, C6_MET, and C8_MET. Those boxes are ticked. C2, C3, C4, and X2 stay open. The parity goal stays open.
 
 2026-10-21: Shinichi signed the P1 optimizer stopping rule. Receipts stay fail and the numeric bars stay unchanged.

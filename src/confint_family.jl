@@ -81,6 +81,17 @@ _FamilyCI(θ, nll, names, kinds, simulate, refit) =
 _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary) =
     _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary, nothing)
 
+# Bare `catch` swallows InterruptException (Ctrl-C) and turns a deliberate
+# "not supported" error into a silent NaN interval (#774 leftover).
+@inline function _family_catch_or(barrier, f)
+    try
+        return f()
+    catch e
+        e isa InterruptException && rethrow()
+        return barrier
+    end
+end
+
 # Shared GLM term names: β[t] for t in 1:p, then Λ[i,k] in pack_lambda order.
 _glm_lin_names(p::Integer, K::Integer) =
     vcat(["beta[$t]" for t in 1:p], _confint_lambda_term_names("Lambda", p, K))
@@ -3271,7 +3282,8 @@ function _family_profile_refit(ad::_FamilyCI, i::Integer, c::Real, θ_red_warm::
         Optim.optimize(nll_red, collect(Float64, θ_red_warm),
                        Optim.LBFGS(), Optim.Options(g_tol = g_tol, iterations = iterations);
                        autodiff = :finite)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return (NaN, false, collect(Float64, θ_red_warm))
     end
     ll, converged, _ = _fit_verdict(res)
@@ -3410,16 +3422,23 @@ end
 
 function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
                            n_boot::Integer, seed::Integer, parallel::Bool; retain_replicates::Bool=false)
+    # Surface a deliberate "not supported" error before the replicate loop.
+    # A stub simulate used to become n_converged = 0 and all-NaN intervals.
+    try
+        ad.simulate(MersenneTwister(seed))
+    catch e
+        e isa InterruptException && rethrow()
+        msg = sprint(showerror, e)
+        occursin("not supported", msg) && throw(ArgumentError(msg))
+    end
     m = length(ad.θ)
     reps = fill(NaN, n_boot, m)
     ok = fill(false, n_boot)   # Vector{Bool} (one byte/elt) — safe for concurrent distinct-index writes (a BitVector is not)
     bnd = fill(false, n_boot, m)   # per-replicate `upper_boundary` flags (Matrix{Bool}, same reason)
     work = function (b)
         rng = MersenneTwister(seed + b)
-        raw = try
+        raw = _family_catch_or(nothing) do
             ad.refit(ad.simulate(rng))     # guard both sim + refit so one bad replicate can't crash the run
-        catch
-            nothing
         end
         θb, good = _bootstrap_refit_ok(raw, m)
         ub = _bootstrap_upper_boundary(raw, m)
