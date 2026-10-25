@@ -83,7 +83,7 @@ _FamilyCI(θ, nll, names, kinds, simulate, refit, boundary) =
 
 # Bare `catch` swallows InterruptException (Ctrl-C) and turns a deliberate
 # "not supported" error into a silent NaN interval (#774 leftover).
-@inline function _family_catch_or(barrier, f)
+@inline function _family_catch_or(f, barrier)
     try
         return f()
     catch e
