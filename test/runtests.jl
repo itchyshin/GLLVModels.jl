@@ -649,6 +649,7 @@ println(_SHARD === nothing ?
     _shard_include("test_random_slope_internals.jl")
     # Unit tests for the branch-RE statistics / tree helpers (welch_t, rank_sum_z, clade_edges, ...).
     _shard_include("test_branch_re_helpers.jl")
+    _shard_include("test_interrupt_rethrow.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
     _shard_include("test_phylo_sparse_solvers.jl")
