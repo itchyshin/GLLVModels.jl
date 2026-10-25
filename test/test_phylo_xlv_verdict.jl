@@ -144,6 +144,23 @@ end
     @test vp.reason === :objective_failure
 end
 
+@testset "phylo xlv Gamma and NB2 mode search flags a maxiter exit (#747)" for family in (:gamma, :nb)
+    # A Newton search that runs out of iterations has not found the mode, so it must report
+    # a failed search (marginal = -Inf), not a Laplace value that depends on `maxiter`.
+    # Relation, not seed outcome: maxiter = 1 cannot reach tol = 1e-9 from the zero start.
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    d = _xlv_v_data(family, MersenneTwister(1000), 30)
+    p = phy.n_leaves
+    Lam = reshape(fill(0.4, p), p, 1)
+    alpha = reshape([0.5], 1, 1)
+    marg(; kw...) = family === :gamma ?
+        GLLVModels._phylo_gamma_xlv_marginal_loglik(d.Y, d.beta, Lam, alpha, 2.5, 0.5, phy, d.X; kw...) :
+        GLLVModels._phylo_nb_xlv_marginal_loglik(d.Y, d.beta, Lam, alpha, 2.0, 0.5, phy, d.X; kw...)
+    @test marg() > -Inf
+    @test isfinite(marg())
+    @test marg(maxiter = 1) == -Inf
+end
+
 # A matrix whose element access throws InterruptException, to check the guards rethrow it.
 struct _XlvInterruptY <: AbstractMatrix{Int}
     sz::Tuple{Int,Int}
