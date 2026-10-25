@@ -411,6 +411,74 @@ the chosen fit with a one-line message.
     sample size, so read it as the dimensions the data support at this sample
     size, not as the number of true gradients.
 
+### Comparing nested fits with `gllvm_anova`
+
+`gllvm_anova` compares two or more fits of the same family, fitted to the same data,
+one adjacent pair at a time. The fits are sorted by parameter count, and each step
+gets a likelihood-ratio statistic, a degrees-of-freedom change and a status in the
+`test` column. It is the Julia twin of gllvmTMB's `anova()` for a fitted model.
+
+```julia
+fits = [fit_gaussian_gllvm(Y; K = k) for k in 1:3]
+tab = gllvm_anova(fits...)      # test = :chibar by default
+tab.test, tab.pvalue            # status and p-value for each step
+```
+
+For Gaussian data with true rank 2 (6 traits, 150 sites):
+
+```
+Likelihood-ratio comparison of GLLVModels.jl fits
+
+     model          d       npar     logLik   deviance         df        LRT       test    p.value
+   Model 1          1          7 -1437.0197  2874.0394         NA         NA                    NA
+   Model 2          2         12 -1108.0374  2216.0748        5.0   657.9646 chibar (q=5)        0.0
+   Model 3          3         16 -1107.6783  2215.3566        4.0     0.7182 chibar (q=4)     0.6376
+```
+
+The `test` column says which reference distribution was used, and the printed `Notes:`
+section (the `note` field) says why. The statuses are:
+
+| `test` | Meaning |
+|---|---|
+| `chisq` | Latent rank unchanged and the parameter count grew: a plain chi-square test with `df` degrees of freedom. |
+| `chibar (q=…)` | Latent rank grew by exactly one and the parameter count grew by exactly the `q = p − K` new loadings (`K` the smaller rank): a chi-bar-square p-value (see the warning below). |
+| `chisq (requested)` | You passed `test = :chisq` at a rank step. The p-value is too large, so it understates the evidence. |
+| `none` | You passed `test = :none`: the table is reported with no p-values. |
+| `refused` | The step could not be classified; `pvalue` is `missing` and `note` gives the reason. |
+
+A step is `refused`, not guessed, when the rank went up by one but the parameter count
+did not change by the expected `p − K`, because something else (for example a
+covariate effect) also changed. The call as a whole throws an `ArgumentError` for fewer
+than two fits, fits of different types or families, fits with different numbers of
+traits, two fits with the same parameter count, a `GaussianREMLFit` (REML
+likelihoods are not comparable across fixed effects), and an unknown `test`.
+
+!!! warning "What `gllvm_anova` does and does not check"
+    - **Same data and nesting are assumed, not checked.** A fit does not store its
+      response or design, so `gllvm_anova` cannot see whether two fits used the same
+      data or whether the smaller model's covariates are a subset of the larger's.
+      Comparing fits to different data gives a meaningless statistic with no warning.
+    - **It classifies a step from the parameter count and the latent rank only.** Two fits
+      of the same type with the same rank are labelled `chisq` whatever differs between
+      them. That is valid for ordinary fixed effects. It is not valid when the extra
+      parameter is a variance component, a dispersion parameter or a zero-inflation
+      probability tested against its boundary value: there the null sits on the edge of
+      the parameter space and the plain chi-square p-value is too large. `gllvm_anova`
+      cannot tell these cases apart, so do not read a `chisq` row as a boundary test.
+      For a variance component use `variance_lrt`, which uses the chi-bar-square
+      mixture for variances on the boundary, or a parametric bootstrap.
+    - **The rank-step p-value is a rough guide, not a valid test.** When the latent rank
+      goes from `K` to `K + 1`, the extra loading column is zero under the null and its
+      direction is not identified, so Wilks' theorem fails and the null distribution is not
+      a chi-bar-square mixture (Hayashi, Bentler and Yuan 2007; Drton 2009). The
+      `chibar` row mirrors gllvmTMB's approximation of `q` independent boundary
+      variances and carries the same caveat. To choose `K`, prefer `select_lv`
+      (above) or a parametric bootstrap, and treat a small `chibar` p-value as
+      a hint that the larger model may be needed, not as a calibrated test.
+
+Information criteria do not need `gllvm_anova`: `aic(fit)` and `bic(fit, n)` work on
+each fit, and `select_lv` tabulates them across `K`.
+
 Finally, `simulate` draws a fresh response matrix from scalar-mean GLM-style,
 Tweedie, and covariate fits (useful for posterior-predictive checks):
 
