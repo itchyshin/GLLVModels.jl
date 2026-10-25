@@ -447,7 +447,7 @@ end
 # --- public entry point ----------------------------------------------------
 
 """
-    bridge_fit(; y, family, d=1, N=nothing, X=nothing, X_lv=nothing,
+    bridge_fit(; y, family, d=1, N=nothing, X=nothing, X_lv=nothing, offset=nothing,
                trait_names=nothing, unit_names=nothing, phylo=nothing,
                options=Dict())
 
@@ -469,6 +469,14 @@ rank `d`, and required one-based observation-to-tip `options["species_id"]`.
 `"none"` or `"wald"`. It returns a distinct flat candidate contract, not the
 legacy univariate diagnostic result. R `phylo_rr` admission remains separately
 gated. Missing responses, `N`, `X_lv`, and named-label overrides are unsupported.
+
+`offset` is a known additive term in the mean (a real scalar, a length-`p` vector,
+a `p x n` matrix, or a `p x 1` / `1 x n` matrix; see `fit_gaussian_gllvm`). It is
+wired only for `family = "gaussian"` on the plain no-X route and the fixed-effect `X`
+route, and is forwarded to `fit_gaussian_gllvm`; trait means (`alpha`) are taken after
+removing the offset. Any other family, the mixed-family, `sources` and `phylo` routes,
+`X_lv`, `reml = true`, and `ci_method` other than `"none"` raise `ArgumentError`
+rather than dropping the offset.
 
 `family = "zib"` reads `N` differently: the zero-inflated binomial carries ONE
 shared scalar trials count, so `N` is **required** (there is no safe default —
@@ -497,11 +505,21 @@ function bridge_fit(; y,
                     X = nothing,
                     X_lv = nothing,
                     mask = nothing,
+                    offset = nothing,
                     trait_names = nothing,
                     unit_names = nothing,
                     sources = nothing,
                     phylo = nothing,
                     options = Dict{String,Any}())
+    # An offset is wired only for the one-part Gaussian routes below; every other
+    # route refuses it loudly rather than fitting without it.
+    if offset !== nothing
+        (phylo === nothing && sources === nothing && !(family isa AbstractVector) &&
+         family !== nothing && _bridge_family_key(String(family)) == "gaussian") ||
+            throw(ArgumentError(
+                "bridge_fit: offset is wired only for the one-part family=\"gaussian\" " *
+                "route (no phylo, sources or mixed-family); use engine='tmb' otherwise."))
+    end
     # R numeric literals reach Julia as Float64: accept any integral Real.
     (isfinite(d) && d == round(d)) || throw(ArgumentError(
         "bridge_fit: d must be an integer (got $d)"))
@@ -583,7 +601,7 @@ function bridge_fit(; y,
     end
     return _bridge_fit_onepart(y, _bridge_family_key(String(family)), K, N,
                                trait_names, unit_names, options;
-                               X = X, X_lv = X_lv, mask = mask)
+                               X = X, X_lv = X_lv, mask = mask, offset = offset)
 end
 
 # --- one-part dispatch -----------------------------------------------------
@@ -863,7 +881,7 @@ function bridge_capabilities()
                 f in _BRIDGE_MASK_CI_FAMILIES ?
                     "one-part reduced-rank bridge family; no-X, masked no-X, and complete-response fixed-effect-X Wald/profile/bootstrap CI payloads are routed; route support is narrower than full R-user parity" :
                 f == "gaussian" ?
-                    "one-part reduced-rank bridge family; missing-response masks are wired for the plain no-X point fit (trait means over observed cells; masked CIs, masked REML, masked X and masked X_lv remain follow-ups); fixed-effect-X and predictor-informed latent-score X_lv routes are wired for complete-response point fits; X_lv Wald B_lv CI payloads are routed; profile/bootstrap X_lv CIs, mixed-family X_lv, and source-specific X_lv remain follow-ups; route support is narrower than full R-user parity" :
+                    "one-part reduced-rank bridge family; missing-response masks are wired for the plain no-X point fit (trait means over observed cells; masked CIs, masked REML, masked X and masked X_lv remain follow-ups); a known offset is wired for the no-X and fixed-effect-X point fits (offset with CIs, REML or X_lv remains a follow-up); fixed-effect-X and predictor-informed latent-score X_lv routes are wired for complete-response point fits; X_lv Wald B_lv CI payloads are routed; profile/bootstrap X_lv CIs, mixed-family X_lv, and source-specific X_lv remain follow-ups; route support is narrower than full R-user parity" :
                     "one-part reduced-rank bridge family; route support is narrower than full R-user parity"
                 for f in onepart
             ],
@@ -885,12 +903,27 @@ end
 
 function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                              trait_names, unit_names, options;
-                             X = nothing, X_lv = nothing, mask = nothing)
+                             X = nothing, X_lv = nothing, mask = nothing, offset = nothing)
     Yf = Matrix{Float64}(y)
     p, n = size(Yf)
     traits = _bridge_names(trait_names, p, "trait")
     units = _bridge_names(unit_names, n, "unit")
     M = _bridge_mask(mask, p, n)
+    O = nothing
+    if offset !== nothing
+        key == "gaussian" || throw(ArgumentError(
+            "bridge_fit: offset is wired only for family=\"gaussian\"; " *
+            "family=\"$key\" is not yet supported."))
+        O = _normalize_offset(offset, p, n; Y = Yf, mask = M, caller = "bridge_fit")
+        X_lv === nothing || throw(ArgumentError(
+            "bridge_fit: offset with X_lv is not wired yet; use engine='tmb'."))
+        _bridge_ci_method(options) == "none" || throw(ArgumentError(
+            "bridge_fit: confidence intervals are not wired for Gaussian fits " *
+            "with an offset yet; use ci_method=\"none\"."))
+        _bridge_truthy(_bridge_get(options, "reml", false)) && throw(ArgumentError(
+            "bridge_fit: offset is not wired for the Gaussian REML route; " *
+            "use reml=false."))
+    end
 
     # CI routing options (validated up-front so a bad ci_method errors before the
     # — potentially expensive — fit runs). ci_method="none" ⇒ ci stays nothing ⇒
@@ -1000,7 +1033,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                 "bridge_fit: X must be p×n×q ($(p)×$(n)×q); got $(size(Xarr))"))
             q = size(Xarr, 3)
             coef_fixed = _bridge_coef_fixed(options, q, "coef_fixed")
-            fit = fit_gaussian_gllvm(Yf; K = K, X = Xarr, β_fixed = coef_fixed)
+            fit = fit_gaussian_gllvm(Yf; K = K, X = Xarr, β_fixed = coef_fixed,
+                                     offset = O)
             β = collect(Float64, fit.pars.β)
             alpha = zeros(Float64, p)
             @inbounds for t in 1:p
@@ -1026,7 +1060,9 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                 note = "fixed-effect covariate fit: X carries the full mean structure " *
                        "(per-trait intercepts + covariates); alpha is the per-trait " *
                        "fitted mean. coef_fixed entries, if any, are fixed at zero.", ci = ci,
-                gradient_max = _bridge_gradient_max_gaussian(fit, Yf, Xarr, nothing))
+                # The gradient reconstruction has no offset term: NaN, not a wrong value.
+                gradient_max = O === nothing ?
+                    _bridge_gradient_max_gaussian(fit, Yf, Xarr, nothing) : NaN)
             return merge(base, (mean_coef = β,
                                 mean_coef_status = _fixed_status(coef_fixed)))
         end
@@ -1074,14 +1110,18 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
         end
         # With a mask, trait means are taken over OBSERVED cells only and masked
         # cells are zeroed after centring, so no masked value reaches the fit.
+        # With an offset the trait mean is that of the offset-removed response, so the
+        # fit sees Yc - O = (Y - O) - alpha, centred as in the no-offset case.
         if M === nothing
-            alpha = vec(Statistics.mean(Yf; dims = 2))
+            alpha = O === nothing ? vec(Statistics.mean(Yf; dims = 2)) :
+                    vec(Statistics.mean(Yf .- O; dims = 2))
             Yc = Yf .- alpha
         else
             all(t -> any(@view M[t, :]), 1:p) || throw(ArgumentError(
                 "bridge_fit: every trait needs at least one observed response " *
                 "to fit a masked Gaussian model."))
-            alpha = [sum(Yf[t, s] for s in 1:n if M[t, s]) / count(@view M[t, :])
+            alpha = [sum(Yf[t, s] - (O === nothing ? 0.0 : O[t, s])
+                         for s in 1:n if M[t, s]) / count(@view M[t, :])
                      for t in 1:p]
             Yc = Yf .- alpha
             Yc[.!M] .= 0.0
@@ -1089,7 +1129,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
         M !== nothing && ci_method != "none" && throw(ArgumentError(
             "bridge_fit: confidence intervals are not wired for masked Gaussian " *
             "fits yet; use ci_method=\"none\" or a complete response table."))
-        fit = fit_gaussian_gllvm(Yc; K = K, mask = M)
+        fit = fit_gaussian_gllvm(Yc; K = K, mask = M, offset = O)
         Sigma = Matrix{Float64}(sigma_y_site(fit))
         corr  = Matrix{Float64}(correlation(fit))
         comm  = Vector{Float64}(communality(fit))
@@ -1102,11 +1142,17 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             link = fill("IdentityLink", p), Sigma = Sigma, corr = corr, comm = comm,
             scores = scores, df = df, loglik = fit.logLik,
             converged = fit.converged, iterations = fit.n_iter,
-            note = M === nothing ? "" :
+            note = (M === nothing ? "" :
                    "masked Gaussian fit: alpha are trait means over observed cells; " *
-                   "masked cells are excluded from the likelihood.",
+                   "masked cells are excluded from the likelihood.") *
+                   (O === nothing ? "" :
+                   (M === nothing ? "" : " ") *
+                   "offset Gaussian fit: alpha are trait means of the offset-removed " *
+                   "response; the offset is added to the mean and is not part of alpha."),
             ci = ci, nobs = M === nothing ? nothing : count(M),
-            gradient_max = _bridge_gradient_max_gaussian(fit, Yc, nothing, nothing))
+            # The gradient reconstruction has no offset term: NaN, not a wrong value.
+            gradient_max = O === nothing ?
+                _bridge_gradient_max_gaussian(fit, Yc, nothing, nothing) : NaN)
     end
 
     # Non-Gaussian: fit, then build the latent-scale derived quantities. The six
