@@ -87,7 +87,8 @@ function _penalized_negloglik_fg!(F, G, value_grad, θ)
         G !== nothing && (G .= .-grad)
         F !== nothing && return -value
         return nothing
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return _penalty_negloglik_fg!(F, G, θ)
     end
 end

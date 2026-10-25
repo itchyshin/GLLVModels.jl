@@ -125,10 +125,10 @@ end
 # "The objective the fit was made with" is not always the one the adapter builds by default,
 # and the check compares like with like. A variational fit (`fit_<family>_gllvm_va`) stores
 # its ELBO in `loglik`, so it is compared with the variational objective (a variational
-# fitter takes no offset, so only an offset-free call can be one). A fit made with
-# `hessian = :fisher` on a type whose struct does not record the curvature (Delta-Gamma,
-# the two truncated NB2 fits) is compared with the `:fisher` objective as well. In both
-# cases the Wald / profile / bootstrap objective stays what it was before the check existed.
+# fitter takes no offset, so only an offset-free call can be one). The Laplace curvature
+# (`hessian = :observed` or `:fisher`) is part of the fit struct, so the adapter rebuilds the
+# one the fit used and needs no separate comparison (#778 closed the last three types that did
+# not record it).
 # ---------------------------------------------------------------------------
 
 # Fit types whose fitter takes an `offset` keyword (verified per fitter). For any other
@@ -196,10 +196,6 @@ const _CI_OBJECTIVE_RTOL = 1e-5
 # what `fit.loglik` holds, and the fitter takes no offset.
 const _VACIFit = Union{PoissonFit, NBFit, BinomialFit, BetaFit, GammaFit, ExponentialFit, DeltaGammaFit}
 
-# Fit types whose struct does not record the Laplace curvature (`hessian = :observed` or
-# `:fisher`): their adapters rebuild `:observed`.
-const _CurvatureUnrecordedCIFit = Union{DeltaGammaFit, TruncatedNegBin2Fit, TruncatedNegBin2PerTraitFit}
-
 _ci_reproduces(rebuilt::Real, ll::Real) =
     isfinite(rebuilt) && abs(rebuilt - ll) <= _CI_OBJECTIVE_RTOL * max(1.0, abs(ll))
 
@@ -211,7 +207,7 @@ _ci_nondefault_link(fit) = (fit isa BetaFit && !(fit.link isa LogitLink)) ||
                            (fit isa GammaFit && !(fit.link isa LogLink))
 
 # `alt(kind)` returns the log-likelihood of another objective at the fitted values:
-# `:fisher` (the adapter's objective with Fisher curvature) or `:va` (the variational one).
+# `:va` (the variational one).
 function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol, alt)
     objective === :va && return nothing
     fit isa _OffsetCIFit || return nothing
@@ -220,9 +216,6 @@ function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol, alt)
     isfinite(ll) || return nothing
     rebuilt = -ad.nll(ad.θ)
     _ci_reproduces(rebuilt, ll) && return nothing
-    # Same data, same offset, the other curvature: a `hessian = :fisher` fit of a type that does
-    # not record it. The interval objective stays the adapter's, as before the check.
-    fit isa _CurvatureUnrecordedCIFit && _ci_reproduces(alt(:fisher), ll) && return nothing
     # A variational fit: its `loglik` is the ELBO. It never had an offset, so only an
     # offset-free call can be one (a variational fit given an offset stays refused).
     offset === nothing && fit isa _VACIFit && _ci_reproduces(alt(:va), ll) && return nothing
@@ -243,8 +236,8 @@ function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol, alt)
         "model. Possible causes: the fit was made with an `offset` that was not passed " *
         "(confint(fit, Y; offset = O)), or with a different one; `N`, `X` or `mask` differ from " *
         "those used in the fit; the fit used another objective than the Laplace marginal rebuilt " *
-        "here (a variational fit, or `hessian = :fisher` on a family whose fit does not record " *
-        "it); the fit has a non-default `link` on a Beta or Gamma family (a known issue); or " *
+        "here (a variational fit, or a fit object built by hand with a `hessian` field that is " *
+        "not the curvature it was optimised with); the fit has a non-default `link` on a Beta or Gamma family (a known issue); or " *
         "`newton_maxiter` / `newton_tol` differ from the fit's."))
 end
 
@@ -746,8 +739,8 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
 end
 
-# Zero-truncated NB2 (shared r): packing [β; pack(Λ); log r]. Fit object does
-# not store hessian — NLL uses :observed (family default / twin TMB).
+# Zero-truncated NB2 (shared r): packing [β; pack(Λ); log r]. The curvature defaults to the
+# one the fit recorded (`fit.hessian`), so a `hessian = :fisher` fit is rebuilt as such (#778).
 # NOTE: this adapter has the same T14 F1 boundary gap as the per-trait one below
 # had before pr-493's review (uses the 6-arg `_FamilyCI(...)`, so `boundary` is
 # all-false): a shared `r` at the Poisson limit is not conditioned out of the
@@ -755,7 +748,7 @@ end
 function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
                     offset = nothing,
                     mask = nothing,
-                    hessian::Symbol = :observed,
+                    hessian::Symbol = fit.hessian,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
     M = _ci_mask(mask, Y)
@@ -809,7 +802,7 @@ end
 function _family_ci(fit::TruncatedNegBin2PerTraitFit, Y::AbstractMatrix;
                     offset = nothing,
                     mask = nothing,
-                    hessian::Symbol = :observed,
+                    hessian::Symbol = fit.hessian,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
     M = _ci_mask(mask, Y)
@@ -1919,7 +1912,7 @@ end
 function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
                     offset = nothing,
                     objective::Symbol = :laplace,
-                    hessian::Symbol = :observed,
+                    hessian::Symbol = fit.hessian,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λc); n = size(Y, 2); rr = rr_theta_len(p, K)
     shared = fit.disp_group === :shared
@@ -1973,7 +1966,7 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
         refit = function (Yb)
             fb = try
                 fit_delta_gamma_gllvm(Yb; K = K, predictor = :shared,
-                    disp_group = fit.disp_group, offset = offset)
+                    disp_group = fit.disp_group, offset = offset, hessian = hessian)
             catch
                 return nothing
             end
@@ -2016,7 +2009,7 @@ function _family_ci(fit::DeltaGammaFit, Y::AbstractMatrix;
     end
     refit = function (Yb)
         fb = try
-            fit_delta_gamma_gllvm(Yb; K = K, disp_group = fit.disp_group, offset = offset)
+            fit_delta_gamma_gllvm(Yb; K = K, disp_group = fit.disp_group, offset = offset, hessian = hessian)
         catch
             return nothing
         end
@@ -3512,15 +3505,11 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
                     mask = mask, offset = O,
                     newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     if !is_aghq
-        # Log-likelihood of an alternative objective at the fitted values, for the two fits
-        # that legitimately differ from the adapter's default (see `_check_ci_objective`).
+        # Log-likelihood of the variational objective at the fitted values, for the fits that
+        # legitimately differ from the adapter's default (see `_check_ci_objective`).
         alt = function (kind::Symbol)
             try
-                if kind === :fisher
-                    a = _family_ci(fit, Y; N = N, X = X, objective = objective, mask = mask, offset = O,
-                                   hessian = :fisher, newton_maxiter = newton_maxiter, newton_tol = newton_tol)
-                    return -a.nll(a.θ)
-                elseif fit isa ExponentialFit
+                if fit isa ExponentialFit
                     return exponential_marginal_loglik_va(Y, fit.Λ, fit.β; maxiter = newton_maxiter, tol = newton_tol)
                 else
                     a = _family_ci(fit, Y; N = N, X = X, objective = :va, mask = nothing, offset = nothing,
@@ -3584,9 +3573,9 @@ otherwise: a fit made with an offset and a call without it (or with a different 
 refused instead of returning the intervals of an offset-free model. On these fit types
 the same check also refuses a wrong `N` or a dropped `mask`. The check compares like with
 like: a variational fit (`fit_*_gllvm_va`, whose `loglik` is the ELBO) is compared with
-the variational objective and a `hessian = :fisher` fit of a family whose fit does not
-record the curvature (`DeltaGammaFit`, `TruncatedNegBin2Fit` and its per-trait form) with
-the Fisher one, so offset-free calls on those fits run as before. A Beta fit with a
+the variational objective, and every other fit is rebuilt with the Laplace curvature it
+recorded (`fit.hessian`), so a `hessian = :fisher` fit is differenced on the Fisher objective
+it was maximised on. A Beta fit with a
 link other than logit, or a Gamma fit with a link other than log, is refused with a
 message saying that the fit's own objective could not be reproduced (a known issue with
 non-default links: the fitter and `confint` do not build the same objective for them).
@@ -3750,27 +3739,36 @@ end
 # ---------------------------------------------------------------------------
 """
     confint_spde_latent(fit::SPDELatentFit, Y, locs; level=0.95, parm=nothing,
-                        α=2, N=nothing, newton_maxiter=50, newton_tol=1e-9) -> NamedTuple
+                        α=nothing, N=nothing, newton_maxiter=50, newton_tol=1e-9) -> NamedTuple
 
 Wald confidence intervals for the SPDE-latent GLLVM. `Y` (p×M) and `locs` (M×2) must
-match the fit. `N` is the p×M trial-count matrix (as in `fit_spde_latent_gllvm`); when
+match the fit. `α` is the SPDE order; it defaults to the one stored in the fit
+(`fit.α`). `N` is the p×M trial-count matrix (as in `fit_spde_latent_gllvm`); when
 omitted the trials stored in the fit are used, and a Binomial fit with no recorded
-trials and any `Y > 1` throws an `ArgumentError`. β and Λ are reported on their natural scale; κ, τ, and any dispersion
+trials and any `Y > 1` throws an `ArgumentError`. Before the Hessian is taken, the
+objective is evaluated at the fitted parameters and must reproduce `fit.loglik`
+(to a loose tolerance); otherwise an `ArgumentError` is thrown, which catches a `Y`
+or `locs` that differ from the fit. The check is skipped when an explicit `α` or
+`N` differs from the fit's own, since that asks for a different model. β and Λ are reported on their natural scale; κ, τ, and any dispersion
 on the positive scale. SEs come from the observed information (finite-difference
 Hessian of the θ-marginal, which rebuilds the Matérn precision each evaluation).
 """
 function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::AbstractMatrix;
-                             level::Real = 0.95, parm = nothing, α::Integer = 2,
+                             level::Real = 0.95, parm = nothing,
+                             α::Union{Nothing, Integer} = nothing,
                              N::Union{Nothing, AbstractMatrix} = nothing,
                              newton_maxiter::Integer = 50, newton_tol::Real = 1e-9)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     p, K = size(fit.Λ); rr = rr_theta_len(p, K)
     Cdiag, G = spde_fem(fit.nodes, fit.tris)
     A = spde_projector(fit.nodes, fit.tris, locs)
+    αv = α === nothing ? fit.α : Int(α)
+    other_model = αv != fit.α
     if N !== nothing
         size(N) == size(Y) ||
             throw(ArgumentError("N must be $(size(Y, 1))×$(size(Y, 2)) like Y; got $(size(N))"))
         Ntr = N
+        other_model |= size(fit.N) == size(N) && fit.N != N
     elseif size(fit.N) == size(Y)
         Ntr = fit.N
     else
@@ -3787,13 +3785,22 @@ function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::Abstra
         κ = exp(θv[p + rr + 1]); τ = exp(θv[p + rr + 2])
         fam = _spde_make_family(fit.family, view(θv, (dbase + 1):(dbase + nd)))
         v = try
-            Q = spde_precision(Cdiag, G, κ, τ; α = α)
+            Q = spde_precision(Cdiag, G, κ, τ; α = αv)
             -spde_latent_marginal_loglik(fam, Y, Ntr, Λ, β, fit.link, A, Q;
                                          maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
         return isfinite(v) ? v : 1e12
+    end
+    if !other_model
+        # Guard against a Y, locs (or trials) that are not the ones the fit saw:
+        # the Hessian would be taken at a point that is not this objective's optimum.
+        ll = -nll(θ)
+        isfinite(ll) && abs(ll - fit.loglik) ≤ 1e-4 * max(1.0, abs(fit.loglik)) ||
+            throw(ArgumentError("the SPDE-latent objective at the fitted parameters is " *
+                "$ll, not fit.loglik = $(fit.loglik): Y, locs (and N) must be the data " *
+                "the fit was made with"))
     end
     names = vcat(["beta[$t]" for t in 1:p],
                  _confint_lambda_term_names("Lambda", p, K), "kappa", "tau")
