@@ -233,6 +233,8 @@ shared dispersion `r` (`Var = μ + μ²/r` ≡ twin `φ`), link, loglik, converg
 `min_site_eigen` is the smallest eigenvalue of the per-site Laplace precision
 `I + Λ' diag(W) Λ` at the optimum; a fit within 10% of the breakdown guard
 (`GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR` = 0.1) is reported with `converged = false`.
+`hessian` is the Laplace curvature the fit was made with (`:observed` or `:fisher`);
+`confint` rebuilds the same objective from it.
 """
 struct TruncatedNegBin2Fit
     β::Vector{Float64}
@@ -244,7 +246,12 @@ struct TruncatedNegBin2Fit
     iterations::Int
     theta_packed::Vector{Float64}
     min_site_eigen::Float64
+    hessian::Symbol   # the Laplace curvature this fit's objective used
 end
+
+# Positional-compat constructor: a fit built without the curvature is a default-curvature fit.
+TruncatedNegBin2Fit(β, Λ, r, link, loglik, converged, iterations, theta_packed, min_site_eigen) =
+    TruncatedNegBin2Fit(β, Λ, r, link, loglik, converged, iterations, theta_packed, min_site_eigen, :observed)
 
 function Base.show(io::IO, f::TruncatedNegBin2Fit)
     p, K = size(f.Λ)
@@ -423,7 +430,7 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
     converged = _eta_cap_verdict(converged, link, f.β, offset; mask = msk,
                                  caller = "fit_truncated_nbinom2_gllvm")
     return TruncatedNegBin2Fit(f.β, f.Λ, f.r, link, f.loglik, converged, f.iters,
-                               f.θ, f.mineig)
+                               f.θ, f.mineig, hessian)
 end
 
 # log of a shared-r start for the breakdown retry: the geometric mean over traits of a
@@ -539,7 +546,8 @@ end
 
 Result of [`fit_truncated_nbinom2_gllvm_pertrait`](@ref): intercepts `β`,
 loadings `Λ`, per-trait dispersion `r` (length p; `Var_t = μ_t + μ_t²/r_t`
-≡ twin `φ_t`), link, loglik, convergence.
+≡ twin `φ_t`), link, loglik, convergence. `hessian` is the Laplace curvature the fit was
+made with (`:observed` or `:fisher`); `confint` rebuilds the same objective from it.
 """
 struct TruncatedNegBin2PerTraitFit
     β::Vector{Float64}
@@ -550,7 +558,12 @@ struct TruncatedNegBin2PerTraitFit
     converged::Bool
     iterations::Int
     theta_packed::Vector{Float64}
+    hessian::Symbol   # the Laplace curvature this fit's objective used
 end
+
+# Positional-compat constructor: a fit built without the curvature is a default-curvature fit.
+TruncatedNegBin2PerTraitFit(β, Λ, r, link, loglik, converged, iterations, theta_packed) =
+    TruncatedNegBin2PerTraitFit(β, Λ, r, link, loglik, converged, iterations, theta_packed, :observed)
 
 function Base.show(io::IO, f::TruncatedNegBin2PerTraitFit)
     p, K = size(f.Λ)
@@ -689,5 +702,5 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
     converged = _eta_cap_verdict(converged, link, β̂, offset; mask = msk,
                                  caller = "fit_truncated_nbinom2_gllvm_pertrait")
     return TruncatedNegBin2PerTraitFit(β̂, Λ̂, r̂, link, loglik, converged, iters,
-                                       collect(Float64, θ̂))
+                                       collect(Float64, θ̂), hessian)
 end

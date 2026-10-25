@@ -71,6 +71,7 @@ println(_SHARD === nothing ?
     _shard_include("test_reml.jl")
     _shard_include("test_lv_predictor.jl")
     _shard_include("test_W_and_diag.jl")
+    _shard_include("test_unidentified_tier_warning.jl")
     _shard_include("test_phy.jl")
     _shard_include("test_signed_sigma_phy.jl")
     _shard_include("test_sparse_phy.jl")
@@ -396,6 +397,8 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_glm_families.jl")
     _shard_include("test_phylo_poisson_xlv.jl")
     _shard_include("test_phylo_binomial_xlv_mode.jl")
+    _shard_include("test_phylo_beta_xlv_mode.jl")
+    _shard_include("test_phylo_ordinal_xlv_mode.jl")
     _shard_include("test_xlv_refit_converged.jl")
     _shard_include("test_phylo_xlv_verdict.jl")
     _shard_include("test_twopart_substrate.jl")
@@ -528,6 +531,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_missing_mask.jl")
     _shard_include("test_hessian_kwarg.jl")
     _shard_include("test_confint_hessian_consistency.jl")
+    _shard_include("test_confint_hessian_twopart_truncnb2.jl")
     _shard_include("test_grouped_hessian_consistency.jl")
     _shard_include("test_saturation_health.jl")
     _shard_include("test_known_sentinel_defects.jl")
@@ -649,6 +653,7 @@ println(_SHARD === nothing ?
     # Unit tests for the branch-RE statistics / tree helpers (welch_t, rank_sum_z, clade_edges, ...).
     _shard_include("test_branch_re_helpers.jl")
     _shard_include("test_response_support_730_siblings.jl")
+    _shard_include("test_interrupt_rethrow.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
     _shard_include("test_phylo_sparse_solvers.jl")
