@@ -3739,27 +3739,36 @@ end
 # ---------------------------------------------------------------------------
 """
     confint_spde_latent(fit::SPDELatentFit, Y, locs; level=0.95, parm=nothing,
-                        α=2, N=nothing, newton_maxiter=50, newton_tol=1e-9) -> NamedTuple
+                        α=nothing, N=nothing, newton_maxiter=50, newton_tol=1e-9) -> NamedTuple
 
 Wald confidence intervals for the SPDE-latent GLLVM. `Y` (p×M) and `locs` (M×2) must
-match the fit. `N` is the p×M trial-count matrix (as in `fit_spde_latent_gllvm`); when
+match the fit. `α` is the SPDE order; it defaults to the one stored in the fit
+(`fit.α`). `N` is the p×M trial-count matrix (as in `fit_spde_latent_gllvm`); when
 omitted the trials stored in the fit are used, and a Binomial fit with no recorded
-trials and any `Y > 1` throws an `ArgumentError`. β and Λ are reported on their natural scale; κ, τ, and any dispersion
+trials and any `Y > 1` throws an `ArgumentError`. Before the Hessian is taken, the
+objective is evaluated at the fitted parameters and must reproduce `fit.loglik`
+(to a loose tolerance); otherwise an `ArgumentError` is thrown, which catches a `Y`
+or `locs` that differ from the fit. The check is skipped when an explicit `α` or
+`N` differs from the fit's own, since that asks for a different model. β and Λ are reported on their natural scale; κ, τ, and any dispersion
 on the positive scale. SEs come from the observed information (finite-difference
 Hessian of the θ-marginal, which rebuilds the Matérn precision each evaluation).
 """
 function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::AbstractMatrix;
-                             level::Real = 0.95, parm = nothing, α::Integer = 2,
+                             level::Real = 0.95, parm = nothing,
+                             α::Union{Nothing, Integer} = nothing,
                              N::Union{Nothing, AbstractMatrix} = nothing,
                              newton_maxiter::Integer = 50, newton_tol::Real = 1e-9)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     p, K = size(fit.Λ); rr = rr_theta_len(p, K)
     Cdiag, G = spde_fem(fit.nodes, fit.tris)
     A = spde_projector(fit.nodes, fit.tris, locs)
+    αv = α === nothing ? fit.α : Int(α)
+    other_model = αv != fit.α
     if N !== nothing
         size(N) == size(Y) ||
             throw(ArgumentError("N must be $(size(Y, 1))×$(size(Y, 2)) like Y; got $(size(N))"))
         Ntr = N
+        other_model |= size(fit.N) == size(N) && fit.N != N
     elseif size(fit.N) == size(Y)
         Ntr = fit.N
     else
@@ -3776,13 +3785,22 @@ function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::Abstra
         κ = exp(θv[p + rr + 1]); τ = exp(θv[p + rr + 2])
         fam = _spde_make_family(fit.family, view(θv, (dbase + 1):(dbase + nd)))
         v = try
-            Q = spde_precision(Cdiag, G, κ, τ; α = α)
+            Q = spde_precision(Cdiag, G, κ, τ; α = αv)
             -spde_latent_marginal_loglik(fam, Y, Ntr, Λ, β, fit.link, A, Q;
                                          maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
         return isfinite(v) ? v : 1e12
+    end
+    if !other_model
+        # Guard against a Y, locs (or trials) that are not the ones the fit saw:
+        # the Hessian would be taken at a point that is not this objective's optimum.
+        ll = -nll(θ)
+        isfinite(ll) && abs(ll - fit.loglik) ≤ 1e-4 * max(1.0, abs(fit.loglik)) ||
+            throw(ArgumentError("the SPDE-latent objective at the fitted parameters is " *
+                "$ll, not fit.loglik = $(fit.loglik): Y, locs (and N) must be the data " *
+                "the fit was made with"))
     end
     names = vcat(["beta[$t]" for t in 1:p],
                  _confint_lambda_term_names("Lambda", p, K), "kappa", "tau")
