@@ -528,6 +528,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_missing_mask.jl")
     _shard_include("test_hessian_kwarg.jl")
     _shard_include("test_confint_hessian_consistency.jl")
+    _shard_include("test_confint_hessian_twopart_truncnb2.jl")
     _shard_include("test_grouped_hessian_consistency.jl")
     _shard_include("test_saturation_health.jl")
     _shard_include("test_known_sentinel_defects.jl")
