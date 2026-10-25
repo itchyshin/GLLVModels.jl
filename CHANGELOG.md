@@ -114,6 +114,13 @@ All notable changes to GLLVModels.jl are documented here.
   fits gain a `stop_reason` field (`:converged`, `:not_converged`, `:gradient_not_small`,
   `:gradient_at_failure_value`, `:objective_failure`).
 
+- **Warn when the unit / within-unit tier split is not identified (#792, #702).**
+  `fit_gaussian_gllvm` (and so `fit_gllvm(...; family = Normal())`) now warns, once per session,
+  on `has_diag = true` (each column of `Y` is one unit observed once, so `σ²_B` and `σ²_W` enter
+  only through `σ²_B + σ²_W + σ²_eps` and the Hessian is not positive definite) and on
+  `K_W > 0` (tier-scoped summaries depend on the starting values). Warnings only: estimates,
+  log-likelihood and `Σ_y` are unchanged. Test: `test/test_unidentified_tier_warning.jl`.
+
 - **`fit_zip_gllvm` Laplace log-determinant now uses the observed count curvature (refs #739).**
   The ZIP count weight was the expected Fisher information, so `hessian = :observed` (the
   default) and `:fisher` gave the identical objective and `fit_zip_gllvm` maximised a different
