@@ -24,6 +24,38 @@ using GLLVModels
         @test count("isa InterruptException && rethrow()", src) >= 4
     end
 
+    @testset "family CI bootstrap leftover (#774)" begin
+        ad_unsup = GLLVModels._FamilyCI(
+            [0.0], _ -> 0.0, ["beta[1]"], [:linear],
+            _ -> error("bootstrap not supported for quadratic CIs"),
+            _ -> nothing)
+        @test_throws ArgumentError GLLVModels._family_bootstrap(
+            ad_unsup, [1], 0.95, 12, 1, false)
+
+        ad_int = GLLVModels._FamilyCI(
+            [0.0], _ -> 0.0, ["beta[1]"], [:linear],
+            _ -> throw(InterruptException()),
+            _ -> nothing)
+        @test_throws InterruptException GLLVModels._family_bootstrap(
+            ad_int, [1], 0.95, 3, 1, false)
+
+        ad_prof = GLLVModels._FamilyCI(
+            [0.0, 0.0], _ -> throw(InterruptException()),
+            ["beta[1]", "beta[2]"], [:linear, :linear],
+            _ -> [0.0], _ -> nothing)
+        @test_throws InterruptException GLLVModels._family_profile_refit(
+            ad_prof, 1, 0.0, [0.0])
+
+        ad_ok_err = GLLVModels._FamilyCI(
+            [0.0, 0.0], _ -> error("objective failed"),
+            ["beta[1]", "beta[2]"], [:linear, :linear],
+            _ -> [0.0], _ -> nothing)
+        ll, ok, _ = GLLVModels._family_profile_refit(
+            ad_ok_err, 1, 0.0, [0.0])
+        @test isnan(ll)
+        @test ok === false
+    end
+
     @testset "phylo poisson xlv constrained refit (#747)" begin
         nll = _ -> throw(InterruptException())
         # p=6, K=1, q_lv=1: packed length is 6 + 1 + 6 + 1 = 14.
