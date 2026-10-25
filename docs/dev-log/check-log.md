@@ -1,3 +1,8 @@
+2026-10-25: Wired test_phylo_nb_xlv.jl and test_phylo_binomial_xlv.jl
+into runtests.jl (#948). Profile canaries stay behind GLLVM_XLV_CANARY.
+Focused run: 29 passed, 0 failed, 1 skip. See
+after-task/2026-10-25-wire-xlv-nb-binomial-948.md.
+
 2026-10-21: Offline checker reported C0_MET, C1_MET, C5_MET, C6_MET, and C8_MET. Those boxes are ticked. C2, C3, C4, and X2 stay open. The parity goal stays open.
 
 2026-10-21: Shinichi signed the P1 optimizer stopping rule. Receipts stay fail and the numeric bars stay unchanged.

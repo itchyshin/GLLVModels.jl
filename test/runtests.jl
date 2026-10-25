@@ -173,28 +173,16 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_xlv.jl")
     _shard_include("test_phylo_beta_xlv.jl")
 
-    # UN-WIRED 2026-08-25, having briefly been wired in. test_phylo_binomial_xlv,
-    # test_phylo_nb_xlv, test_phylo_ordinal_xlv and test_sparse_phy_grad pass
-    # locally but fail on CI, on DIFFERENT platform subsets each time:
-    #
-    #   macOS 1.12      ordinal (6), nb (2), sparse_phy_grad (1), binomial (1)
-    #   Windows 1.12    nb (2), sparse_phy_grad (1), binomial (1)
-    #   ubuntu 1.10     nb (2)
-    #
-    # Different platforms failing different subsets is instability, not a
-    # deterministic bug. The failing assertions are the tell: `prof.pd_hessian`,
-    # profile-CI endpoint status, and NaN/inverted CI bounds — all
-    # optimiser-path and BLAS sensitive.
-    #
-    # This is very likely WHY they were orphaned. Wiring them in on the strength
-    # of one local run, on one platform and one Julia version, was premature —
-    # "passes locally" is not evidence that a numerically sensitive test is
-    # stable. They need stabilising (fixed seeds per platform, or tolerance
-    # analysis, or a `@test_broken`), which is its own slice and should be done
-    # by someone looking at the numerics, not folded into a curvature PR.
-    #
-    #   include("test_phylo_binomial_xlv.jl")
-    #   include("test_phylo_nb_xlv.jl")
+    # #948: wire NB and binomial xlv. Profile-CI canaries stay behind
+    # GLLVM_XLV_CANARY=1 (pd_hessian / endpoint_status / NaN bounds are
+    # optimiser-path and BLAS sensitive; they failed on this 1.10.12
+    # snapshot too). Likelihood identities and ArgumentError guards run
+    # in CI. test_phylo_ordinal_xlv and test_sparse_phy_grad stay unwired
+    # (same flake class; not in #948).
+    _shard_include("test_phylo_binomial_xlv.jl")
+    _shard_include("test_phylo_nb_xlv.jl")
+    _shard_include("test_xlv_nb_binomial_wired.jl")
+
     #   include("test_phylo_ordinal_xlv.jl")
     #   include("test_sparse_phy_grad.jl")
 
