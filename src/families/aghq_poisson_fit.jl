@@ -1,5 +1,5 @@
 """
-    fit_poisson_gllvm(Y; K, aghq=false, aghq_control=(;), kwargs...) -> PoissonFit
+    fit_poisson_gllvm(Y; K, n_init=1, aghq=false, aghq_control=(;), kwargs...) -> PoissonFit
 
 Fit Poisson counts (responses × sites) with an ordinary loadings-only latent
 block. Default `aghq=false` preserves the existing Laplace fit and its controls
@@ -9,6 +9,17 @@ Set `aghq=5` for five nodes per latent axis or `aghq=true`/`:auto` for automatic
 selection. `aghq=1` uses the Laplace optimizer. Auto declines at 20 traits;
 quadrature requires log link, positive latent dimension ≤5 and no `X_lv`.
 Ineligible requests retain Laplace with a warning and recorded reason.
+
+`n_init` (default `1`, a single start) fits from `n_init` starts and returns the one with the
+highest log-likelihood, preferring converged fits. Start 1 is the usual warm start (or your
+`Λ_init`); starts `2:n_init` use lower-triangular `0.3 * randn` loadings from fixed seeds, so the
+result is reproducible and the global random stream is untouched. The Laplace likelihood can have
+several local optima, and a fit that reports `converged = true` is a local optimum only (issue
+#915: on `ade4::mafragh flo table`, `K = 2`, the default start stops 8.4 log-likelihood units below
+another converged start). Compare `loglik` across `n_init` values to check. Fit time is roughly
+`n_init` times the single-start time. A start that throws is skipped; if all of starts `2:n_init`
+fail, the first fit is returned. `n_init > 1` is not available with `aghq`
+(`aghq_control.multistart` is its own multistart).
 
 `aghq_control` is a named tuple of `n_adapt`, `iter_cap`, `continuation`,
 `escalate_patience`, `shift_tol`, `grad_tol`, `grad_tol_rel`, `f_tol`, `rho_min`,
@@ -25,14 +36,17 @@ surrogate gradient**, not the total derivative through changing adaptation.
 This function covers Poisson; the separate binomial candidate does not establish
 the full family or structured-model Stage1a contract.
 """
-function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),kwargs...)
+function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,n_init::Integer=1,aghq=false,aghq_control=(;),kwargs...)
+    n_init>=1 || throw(ArgumentError("fit_poisson_gllvm: n_init must be at least 1; got $n_init"))
     if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing &&
        _aghq_request(aghq) !== :off
         _refuse_optimizer(kwargs[:optimizer], "fit_poisson_gllvm", "an AGHQ request")
     end
     kwargs=_entry_offset_kwargs(kwargs,Y,"fit_poisson_gllvm")
     request=_aghq_request(aghq);c=_aghq_controls(aghq_control)
-    request===:off && return _fit_poisson_gllvm_laplace(Y;K=K,kwargs...)
+    n_init>1 && request!==:off && throw(ArgumentError(
+        "fit_poisson_gllvm: n_init > 1 is not available with aghq; use aghq_control=(multistart=true,)"))
+    request===:off && return _poisson_best_of_starts(Y,K,n_init,kwargs)
     get(kwargs,:weights,nothing)===nothing || _refuse_weights("fit_poisson_gllvm","AGHQ integration (aghq)")
     c=_aghq_controls(merge(c,(mode_maxiter=get(kwargs,:newton_maxiter,c.mode_maxiter),mode_tol=get(kwargs,:newton_tol,c.mode_tol))))
     base_controls=deepcopy((;kwargs...))
@@ -84,6 +98,28 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=
     selected.parameter_shift==0 && @warn "AGHQ returned its warm start without parameter movement" reason=selected.stop_reason
     return PoissonFit(copy(t[1:p]),unpack_lambda(t[p+1:end],p,K),link,-selected.objective,
         selected.converged,selected.passes,nothing,copy(t),:observed,info)
+end
+# Best of `n_init` Laplace fits (issue #915). Start 1 is the unchanged default call; the extra
+# starts replace `Λ_init` with a seeded lower-triangular draw. Converged fits rank before
+# unconverged ones, then higher `loglik`; ties keep the earlier start, so `n_init = 1` and any
+# case where start 1 wins are exactly the single-start fit.
+function _poisson_best_of_starts(Y,K,n_init,kwargs)
+    best=_fit_poisson_gllvm_laplace(Y;K=K,kwargs...)
+    n_init==1 && return best
+    p=size(Y,1)
+    better(a,b)=a.converged!=b.converged ? a.converged : a.loglik>b.loglik
+    for s in 2:n_init
+        L=0.3 .* randn(Random.Xoshiro(915+s),p,K)
+        for k in 1:K,i in 1:min(k-1,p);L[i,k]=0.0;end
+        cand=try
+            _fit_poisson_gllvm_laplace(Y;K=K,merge((;kwargs...),(Λ_init=L,))...)
+        catch e
+            e isa InterruptException && rethrow()
+            nothing
+        end
+        cand!==nothing && isfinite(cand.loglik) && better(cand,best) && (best=cand)
+    end
+    return best
 end
 _poisson_with_integration(f::PoissonFit,i)=PoissonFit(f.β,f.Λ,f.link,f.loglik,f.converged,
     f.iterations,f.alpha_lv,f.theta_packed,f.hessian,i,f.offset,f.weights)
