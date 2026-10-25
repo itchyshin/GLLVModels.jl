@@ -55,4 +55,18 @@ using GLLVModels
         @test isnan(ll)
         @test ok === false
     end
+
+    @testset "phylo poisson xlv constrained refit (#747)" begin
+        nll = _ -> throw(InterruptException())
+        # p=6, K=1, q_lv=1: packed length is 6 + 1 + 6 + 1 = 14.
+        theta = zeros(14)
+        @test_throws InterruptException GLLVModels._phylo_poisson_xlv_constrained_refit(
+            nll, theta, 6, 1, 1, 1, 0.0;
+            profile_iterations = 2, penalty_weights = (1.0,))
+        # An ordinary error still becomes the 1e12 barrier, then NaN nll.
+        out = GLLVModels._phylo_poisson_xlv_constrained_refit(
+            _ -> error("objective failed"), theta, 6, 1, 1, 1, 0.0;
+            profile_iterations = 2, penalty_weights = (1.0,))
+        @test isnan(out.nll)
+    end
 end

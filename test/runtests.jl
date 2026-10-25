@@ -397,6 +397,8 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_glm_families.jl")
     _shard_include("test_phylo_poisson_xlv.jl")
     _shard_include("test_phylo_binomial_xlv_mode.jl")
+    _shard_include("test_phylo_beta_xlv_mode.jl")
+    _shard_include("test_phylo_ordinal_xlv_mode.jl")
     _shard_include("test_xlv_refit_converged.jl")
     _shard_include("test_phylo_xlv_verdict.jl")
     _shard_include("test_twopart_substrate.jl")

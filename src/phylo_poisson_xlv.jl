@@ -339,7 +339,12 @@ function _phylo_poisson_xlv_constrained_refit(nll::Function, theta_start::Abstra
     last_res = nothing
     for weight in penalty_weights
         obj = function (theta)
-            val = try nll(theta) catch; return 1e12 end
+            val = try
+                nll(theta)
+            catch e
+                e isa InterruptException && rethrow()
+                return 1e12
+            end
             isfinite(val) || return 1e12
             b = _phylo_poisson_xlv_effects_from_packed(theta, p, K, q_lv)[entry]
             return val + 0.5 * weight * (b - target)^2
@@ -348,21 +353,29 @@ function _phylo_poisson_xlv_constrained_refit(nll::Function, theta_start::Abstra
             Optim.optimize(obj, theta_c, Optim.NelderMead(),
                            Optim.Options(iterations = profile_iterations,
                                          f_reltol = 1e-8, x_abstol = 1e-8))
-        catch
+        catch e
+            e isa InterruptException && rethrow()
             nothing
         end
         last_res === nothing && break
         theta_c = Optim.minimizer(last_res)
     end
-    val_c = try nll(theta_c) catch; NaN end
+    val_c = try
+        nll(theta_c)
+    catch e
+        e isa InterruptException && rethrow()
+        NaN
+    end
     b_c = try
         _phylo_poisson_xlv_effects_from_packed(theta_c, p, K, q_lv)[entry]
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         NaN
     end
     sigma2_c = try
         _phylo_poisson_xlv_unpack_packed(theta_c, p, K, q_lv)[4]
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         NaN
     end
     sigma2_boundary = isfinite(sigma2_c) && sigma2_c <= _PHYLO_POISSON_XLV_SIGMA2_BOUNDARY_TOL
