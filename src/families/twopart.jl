@@ -1120,6 +1120,8 @@ shared predictor" in that mode, `f.βz` is the identical array, not an
 independent estimate.)
 `offset` is the p×n training offset on the positive-part predictor `η^c` (`nothing` when
 the fit had none); [`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
+`hessian` is the Laplace log-det curvature the fit was made with (`:observed` or `:fisher`);
+`confint` rebuilds the same objective from it.
 """
 struct DeltaGammaFit
     βz::Vector{Float64}
@@ -1132,6 +1134,7 @@ struct DeltaGammaFit
     predictor::Symbol
     disp_group::Symbol
     offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
+    hessian::Symbol   # the Laplace log-det curvature this fit's objective used
 end
 
 # Positional-compat constructors (hessian::Symbol precedent, e.g. binomial.jl):
@@ -1143,6 +1146,9 @@ DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor) =
 # Pre-offset compat tier (9 positional args): no stored training offset.
 DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, disp_group) =
     DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, disp_group, nothing)
+# Pre-`hessian` compat tier (10 positional args): the default curvature.
+DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, disp_group, offset) =
+    DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, disp_group, offset, :observed)
 
 function Base.show(io::IO, f::DeltaGammaFit)
     p, K = size(f.Λc)
@@ -1310,7 +1316,7 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     ll, conv, iters = _fit_verdict(res)
     conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_delta_gamma_gllvm")
     return DeltaGammaFit(βz, βc, Λc, α, ll, conv, iters, predictor, disp_group,
-                         _stored_offset(offset))
+                         _stored_offset(offset), hessian)
 end
 
 # ===========================================================================

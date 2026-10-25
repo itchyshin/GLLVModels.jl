@@ -595,10 +595,21 @@ function _sanitize_missing(Y::AbstractMatrix, placeholder)
     return map(y -> ismissing(y) ? placeholder : y, Y)
 end
 
-# Resolve an observation mask: an explicit `mask` wins; otherwise derive it from
-# `missing` entries in `Y` (or `nothing` when `Y` is fully observed).
-_resolve_obs_mask(mask, Y) =
-    mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
+# Resolve an observation mask: derive it from `missing` entries in `Y` (or `nothing` when `Y` is
+# fully observed) when no `mask` is given. An explicit `mask` is returned untouched, but it must not
+# mark a `missing` cell as observed (#763): that cell is a placeholder (0 / 1) by the time it reaches
+# the likelihood, so it would be fitted as data. Such a mask throws an `ArgumentError` naming the
+# first offending cell (row, column) and the count. A mask that marks extra cells unobserved is fine.
+function _resolve_obs_mask(mask, Y)
+    mask === nothing && return any(ismissing, Y) ? observed_mask(Y) : nothing
+    (size(mask) == size(Y) && any(ismissing, Y)) || return mask
+    bad = [I for I in CartesianIndices(Y) if ismissing(Y[I]) && mask[I]]
+    isempty(bad) && return mask
+    throw(ArgumentError("`mask` marks $(length(bad)) cell(s) as observed where `Y` is `missing`; " *
+                        "first at (row, column) = ($(bad[1][1]), $(bad[1][2])). A `missing` cell " *
+                        "cannot be observed: set `mask` to false there, or pass `mask = observed_mask(Y)` " *
+                        "(or omit `mask`) to derive it from `missing`."))
+end
 
 # Mask-respecting warm start: overwrite the masked cells of a link-scale empirical
 # matrix `Zemp` with their row's observed mean, so the intercept and SVD loadings

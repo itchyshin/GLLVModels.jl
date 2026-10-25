@@ -1,0 +1,58 @@
+# Fixture index (#276). Index only: it names serialized fixtures already in this repo, the estimator
+# target each one records and what it does not prove. It is not comparator evidence and flips no
+# covered row. See README_comparator_targets.md. Checked by test/test_comparator_targets.jl.
+#
+# Keys per [[target]]: id, path (repo-relative), target, evidence_type, comparator_status,
+# claim_boundary. All are required non-empty strings.
+#   evidence_type      "julia_target": a recorded number the Julia side is checked against.
+#   comparator_status  "not asserted": this index makes no claim about R consumption or about any
+#                      external comparator; that cannot be verified from this repository.
+schema_version = 1
+
+[[target]]
+id = "bridge_readback_p1"
+path = "test/fixtures/bridge_readback_p1.toml"
+target = "gaussian_rr fit of value ~ 0 + trait + latent(0 + trait | unit, d = 2, unique = FALSE) read back through the bridge: coef, fitted, logLik, predict, residuals, summary"
+evidence_type = "julia_target"
+comparator_status = "not asserted"
+claim_boundary = "One Gaussian rank-2 fit on one 6-trait, 200-unit dataset recorded at the stated gllvmTMB commit. It does not show the bridge matches R for other families, ranks or data."
+
+[[target]]
+id = "diagnostics_p1"
+path = "test/fixtures/diagnostics_p1.toml"
+target = "sanity_multi flags and compare_loadings on Gaussian latent fits of the shared ns_gauss_p1 data"
+evidence_type = "julia_target"
+comparator_status = "not asserted"
+claim_boundary = "Recorded flags and loadings for the shared Gaussian dataset only. Optimiser artefacts such as max_gradient are recorded, not compared. It does not cover non-Gaussian fits."
+
+[[target]]
+id = "data_twins_p1"
+path = "test/fixtures/data_twins_p1.toml"
+target = "log-likelihood, fixed effects and Lambda Lambda' of core070 data rows: offset (none, scalar) and missing-response handling"
+evidence_type = "julia_target"
+comparator_status = "not asserted"
+claim_boundary = "Only the offset and missing-response cases written in the file, on the stated seeds. A K = 1 axis sign is not identified, so only Lambda Lambda' is a target."
+
+[[target]]
+id = "cov_phylo_twins_p1"
+path = "test/fixtures/cov_phylo_twins_p1.toml"
+target = "phylogenetic covariance fits for COV-PHYLO-DEP, COV-PHYLO-A-ALIAS and COV-PHYLO-FOLDED-UNIQUE on a 120-species tree"
+evidence_type = "julia_target"
+comparator_status = "not asserted"
+claim_boundary = "One simulated tree and one seed, Gaussian, ML (REML = FALSE). The relatedness matrix is checked from the stored Newick string, not stored in full. It does not cover other tree sizes or families."
+
+[[target]]
+id = "animal_scalar_p1"
+path = "test/fixtures/animal_scalar_p1.toml"
+target = "animal_scalar(id, A = A) shared additive variance with a dense pedigree relationship matrix, Gaussian, 3 traits"
+evidence_type = "julia_target"
+comparator_status = "not asserted"
+claim_boundary = "Dense A route only, Gaussian, one common variance. The pedigree route is checked in the generator and is not a Julia target. No loadings are involved."
+
+[[target]]
+id = "confint_inspect_p1"
+path = "test/fixtures/confint_inspect_p1.toml"
+target = "confint_inspect estimate, Wald and profile bounds on four direct targets (sigma_eps, b_fix[1], two packed loadings) of a Gaussian rank-2 fit"
+evidence_type = "julia_target"
+comparator_status = "not asserted"
+claim_boundary = "Four direct targets on one Gaussian fit at level 0.95. It does not cover derived quantities, other levels or other families."

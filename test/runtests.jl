@@ -58,6 +58,7 @@ println(_SHARD === nothing ?
     _shard_include("test_none_dep.jl")
     _shard_include("test_phylo_dep.jl")
     _shard_include("test_animal_dep.jl")
+    _shard_include("test_docstring_animal_dep_twin.jl")
     _shard_include("test_animal_latent.jl")
     _shard_include("test_docstring_animal_latent_twin.jl")
     _shard_include("test_spatial_dep.jl")
@@ -392,6 +393,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_latent_binomial_trials.jl")
     _shard_include("test_spde_latent_mode_flag_747.jl")
     _shard_include("test_phylo_glm.jl")
+    _shard_include("test_phylo_glm_families.jl")
     _shard_include("test_phylo_poisson_xlv.jl")
     _shard_include("test_phylo_binomial_xlv_mode.jl")
     _shard_include("test_xlv_refit_converged.jl")
@@ -421,6 +423,7 @@ println(_SHARD === nothing ?
     _shard_include("test_missing_response.jl")
     _shard_include("test_missing_response_extra.jl")
     _shard_include("test_masked_gaussian_posdef.jl")   # #716
+    _shard_include("test_masked_gaussian_converged_735.jl")   # #735
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")
     _shard_include("test_missing_predictor_z.jl")
@@ -436,6 +439,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_grouped_wald_speed_552.jl")
     _shard_include("test_confint_family.jl")
     _shard_include("test_confint_offset.jl")
+    _shard_include("test_confint_mask_refused.jl")
     _shard_include("test_predict_offset.jl")
     _shard_include("test_predict_offset_grouped.jl")
     _shard_include("test_predict_offset_shared.jl")
@@ -524,6 +528,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_missing_mask.jl")
     _shard_include("test_hessian_kwarg.jl")
     _shard_include("test_confint_hessian_consistency.jl")
+    _shard_include("test_confint_hessian_twopart_truncnb2.jl")
     _shard_include("test_grouped_hessian_consistency.jl")
     _shard_include("test_saturation_health.jl")
     _shard_include("test_known_sentinel_defects.jl")
@@ -617,6 +622,7 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
+    _shard_include("test_isdm_cloglog_internals.jl")
     _shard_include("test_convergence_sweep.jl")
     # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
     _shard_include("test_zip_zinb_stall.jl")
@@ -640,7 +646,20 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_projector_validation.jl")
     # #794 / #764: Wald routes on lambda_constraint fits (gllvmTMB's pdHess gate; lognormal refuses pins).
     _shard_include("test_lambda_constraint_wald_794.jl")
+    _shard_include("test_random_slope_internals.jl")
+    # Unit tests for the branch-RE statistics / tree helpers (welch_t, rank_sum_z, clade_edges, ...).
+    _shard_include("test_branch_re_helpers.jl")
+    _shard_include("test_interrupt_rethrow.jl")
+    # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
+    _shard_include("test_extractors_invariants.jl")
+    _shard_include("test_phylo_sparse_solvers.jl")
+    # #750: getLV / predict / residuals / simulate docstring signatures list mask and offset.
+    _shard_include("test_docstring_postfit_mask_offset_750.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
+    # #763: an explicit mask that marks a `missing` cell observed throws an ArgumentError.
+    _shard_include("test_mask_missing_763.jl")
     _shard_include("test_changelog_structure.jl")
+    # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
+    _shard_include("test_comparator_targets.jl")
 end
 include("test_readme_quickstart.jl")

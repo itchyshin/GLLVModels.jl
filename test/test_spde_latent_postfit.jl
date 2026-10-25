@@ -170,3 +170,42 @@ end
     end
 
 end
+
+@testset "confint_spde_latent uses the fit's α and checks the objective (#779)" begin
+    Random.seed!(7779)
+    m, L = 6, 5.0
+    nodes, tris = _grid_mesh_pf(m, L)
+    site_nodes = collect(1:2:(m * m))       # 18 sites
+    locs = nodes[site_nodes, :]
+    M = size(locs, 1); p = 3; K = 1
+    z = sin.(locs[:, 1]) .+ 0.5 .* cos.(locs[:, 2])
+    lam = [0.9, 0.6, -0.7]
+    Y = [rand(Poisson(exp(0.7 + lam[t] * z[s]))) for t in 1:p, s in 1:M]
+
+    fit1 = fit_spde_latent_gllvm(Y, nodes, tris, locs; family = Poisson(), K = K,
+                                 α = 1, iterations = 40, newton_maxiter = 40)
+    fit2 = fit_spde_latent_gllvm(Y, nodes, tris, locs; family = Poisson(), K = K,
+                                 α = 2, iterations = 40, newton_maxiter = 40)
+    @test fit1.α == 1
+    @test fit2.α == 2
+
+    # Default α is the fit's α: same table as the explicit α = 1, and not the α = 2 table.
+    # (NaN SEs can occur for a Λ term at a boundary; compare with nans = true.)
+    ci_def = confint_spde_latent(fit1, Y, locs)
+    ci_a1  = confint_spde_latent(fit1, Y, locs; α = 1)
+    keep = [i for (i, t) in enumerate(ci_def.term) if !startswith(t, "Lambda")]
+    @test all(isfinite, ci_def.se[keep])
+    @test isapprox(ci_def.se, ci_a1.se; nans = true)
+    # An explicit mismatching α is still allowed (a different model, no consistency check).
+    ci_a2 = confint_spde_latent(fit1, Y, locs; α = 2)
+    @test !isapprox(ci_a2.se[keep], ci_def.se[keep])
+    # The α = 2 fit is unchanged by the default.
+    @test isapprox(confint_spde_latent(fit2, Y, locs).se,
+                   confint_spde_latent(fit2, Y, locs; α = 2).se; nans = true)
+
+    # The objective at fit.θ reproduces fit.loglik, so a wrong locs (here the sites
+    # in reverse order) is refused.
+    wrong_locs = locs[end:-1:1, :]
+    @test_throws ArgumentError confint_spde_latent(fit1, Y, wrong_locs)
+    @test_throws ArgumentError confint_spde_latent(fit2, Y, wrong_locs)
+end
