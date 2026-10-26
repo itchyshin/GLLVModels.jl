@@ -504,6 +504,7 @@ two of them. Therefore at most one of `row_eff != :none`, effective
 ```julia
 fit_gllvm(Y; family = Normal(),   K = 2)                          # Gaussian
 fit_gllvm(Y; family = Binomial(), K = 2, link = LogitLink())      # binary
+fit_gllvm(Y; family = Poisson(),  K = 2, n_init = 5)               # best of 5 starts (Poisson Laplace route; default 1)
 fit_gllvm(Y; family = Poisson(),  K = 2, row_eff = :random)       # random row effect
 fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 2)          # shared r (default)
 fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)  # per-species r

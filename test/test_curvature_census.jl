@@ -238,14 +238,15 @@ const DEFERRED_BY_DECISION = Dict{Symbol,String}(
 
     # Genuinely open: measured worst-case relative gap between Fisher and observed, and
     # how many probe cells have NEGATIVE observed curvature (a PD-guard risk if flipped).
-    #   HurdleNB   361%, 0 negative      ZINB      1223%, 3 negative
-    #   ZIB        214%, 6 negative      BetaHurdle 127%, 2 negative
-    # (ZIPoisson left this list in #739: `_tp_observed_Wc_z(::ZIPoisson, …)` supplies the
-    # observed weight, with an eigenvalue floor for the negative-curvature cells.)
+    #   HurdleNB   361%, 0 negative      ZIB        214%, 6 negative
+    #   BetaHurdle 127%, 2 negative
+    # (ZIPoisson left this list in #739 and ZINB in #932: `_tp_observed_Wc_z(::ZIPoisson, …)` /
+    # `_tp_observed_Wc_z(::ZINB, …)` supply the observed weight, with an eigenvalue floor for the
+    # negative-curvature cells.)
     # HurdleNB re-measured for #500 (was 251%): the #484 chain-rule fix (a = r/(r+mu))
     # changed the Fisher Wc this gap is measured against, so the old figure was against
     # the pre-#484 wrong Fisher weight, not the current one.
-    TWOPART_KNOWN_OPEN = Set([:HurdleNB, :ZINB, :ZIB, :BetaHurdle])
+    TWOPART_KNOWN_OPEN = Set([:HurdleNB, :ZIB, :BetaHurdle])
 
     tp_observed = Set{Symbol}()
     for fn in (G._tp_observed_Wc, G._tp_observed_Wc_z), m in methods(fn)
