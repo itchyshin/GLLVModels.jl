@@ -234,6 +234,7 @@ println(_SHARD === nothing ?
     _shard_include("test_grouped_dispersion_beta_gamma.jl")
     _shard_include("test_gamma_beta_upper_boundary.jl")
     _shard_include("test_nb_grouped_upper_warn.jl")
+    _shard_include("test_gamma_shape_upper_warn.jl")
     _shard_include("test_nb_grouped_poisson_ridge.jl")
     _shard_include("test_nb_cov_ridge_polish_grad.jl")
     _shard_include("test_nb_cov_two_starts.jl")
