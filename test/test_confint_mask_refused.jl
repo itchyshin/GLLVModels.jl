@@ -57,6 +57,8 @@ using Distributions: Poisson
     end
 
     # fit types that do use the mask are unaffected
-    fe = fit_exponential_gllvm(Yc; K = K, mask = mk, iterations = 20)
-    @test length(confint(fe, Yc; method = :wald, mask = mk).term) > 0
+    # (the exponential family needs a strictly positive response, #730, so it gets its own Y)
+    Ye = max.(Yc, 0.1)
+    fe = fit_exponential_gllvm(Ye; K = K, mask = mk, iterations = 20)
+    @test length(confint(fe, Ye; method = :wald, mask = mk).term) > 0
 end

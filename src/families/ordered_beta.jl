@@ -381,13 +381,14 @@ function fit_ordered_beta_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:unit_closed, Y, _resolve_obs_mask(mask, Y); caller = "fit_ordered_beta_gllvm")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized response matrix with an in-(0,1) placeholder in masked cells.
     msk = _resolve_obs_mask(mask, Y)
-    Yc = _sanitize_missing(Y, 0.5)
+    Yc = _sanitize_unobserved(Y, msk, 0.5)
 
     # warm start: empirical logit-mean over interior values (fall back to clamp).
     Zemp = [log(clamp(float(Yc[t, i]), 1e-3, 1 - 1e-3) /

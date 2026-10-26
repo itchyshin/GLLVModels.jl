@@ -533,6 +533,7 @@ println(_SHARD === nothing ?
     _shard_include("test_lv_profile_pd_hessian.jl")
     _shard_include("test_phylo_eta_realized.jl")
     _shard_include("test_bridge_missing_mask.jl")
+    _shard_include("test_bridge_gaussian_offset.jl")
     _shard_include("test_hessian_kwarg.jl")
     _shard_include("test_confint_hessian_consistency.jl")
     _shard_include("test_confint_hessian_twopart_truncnb2.jl")
@@ -635,6 +636,7 @@ println(_SHARD === nothing ?
     # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
     _shard_include("test_zip_zinb_stall.jl")
     _shard_include("test_zip_observed_laplace.jl")
+    _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
@@ -657,6 +659,7 @@ println(_SHARD === nothing ?
     _shard_include("test_random_slope_internals.jl")
     # Unit tests for the branch-RE statistics / tree helpers (welch_t, rank_sum_z, clade_edges, ...).
     _shard_include("test_branch_re_helpers.jl")
+    _shard_include("test_response_support_730_siblings.jl")
     _shard_include("test_interrupt_rethrow.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
