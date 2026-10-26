@@ -101,12 +101,15 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     link isa LogLink || throw(ArgumentError(
         "fit_truncated_poisson_gllvm: only LogLink is supported (twin truncated_poisson)"))
+    # y = 0 is rejected by the dedicated zero check below (its message names the cell); this one
+    # catches negative, non-integer and non-finite cells before the Integer conversion.
+    _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_truncated_poisson_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_truncated_poisson_gllvm")
     rr = rr_theta_len(p, K)
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 1))   # placeholder 1 for masked (never enters ℓ)
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 1))   # placeholder 1 for masked (never enters ℓ)
     # Reject zeros in observed cells.
     @inbounds for t in 1:p, s in 1:n
         (msk !== nothing && !msk[t, s]) && continue
