@@ -239,6 +239,46 @@ function _weights_blocked_route(family; phylo = nothing, grouping = nothing,
     return nothing
 end
 
+# Per-response-column family (issue #98): `family` a length-p vector sends the fit to
+# `fit_mixed_gllvm` (one shared K-dimensional latent block, one family per row of Y).
+# Only the keywords that fitter takes are forwarded; every other structural or
+# dispersion route is refused here rather than silently ignored.
+const _PER_COLUMN_KWARGS = (:links, :N, :offset, :β_init, :Λ_init, :dispersion_init,
+                            :g_tol, :iterations, :newton_maxiter, :newton_tol)
+
+function _fit_gllvm_per_column(Y, family::AbstractVector; K, num_lv, row_eff, disp_group,
+        pervar, grouping, unit, unit_obs, cluster, cluster2, phylo, phylo_rank, phylo_mode,
+        species_id, Kmax, weights, kwargs)
+    unsupported = String[]
+    row_eff === :none || push!(unsupported, "row_eff")
+    disp_group === nothing || push!(unsupported, "disp_group")
+    pervar && push!(unsupported, "pervar")
+    grouping === nothing || push!(unsupported, "grouping")
+    phylo === nothing || push!(unsupported, "phylo")
+    all(isnothing, (unit, unit_obs, cluster, cluster2, phylo_rank, phylo_mode, species_id,
+                    Kmax)) || push!(unsupported, "unit/cluster/phylo/Kmax options")
+    weights === nothing || push!(unsupported, "weights")
+    for k in keys(kwargs)
+        k in _PER_COLUMN_KWARGS || push!(unsupported, String(k))
+    end
+    isempty(unsupported) || throw(ArgumentError(
+        "fit_gllvm: a per-column family vector (family = [one family per row of Y]) " *
+        "routes to fit_mixed_gllvm, which does not take: " * join(unsupported, ", ") *
+        ". Use links = [...] for per-row links; accepted keywords are K (or num_lv), " *
+        join(string.(_PER_COLUMN_KWARGS), ", ") * "."))
+    if num_lv !== nothing
+        K !== nothing && K != num_lv && throw(ArgumentError(
+            "fit_gllvm: K=$K and num_lv=$num_lv disagree; pass only one"))
+        K = num_lv
+    end
+    K === nothing && throw(ArgumentError("fit_gllvm: K (or num_lv) is required"))
+    kw = NamedTuple(kwargs)
+    # `offset = nothing` means no offset, as on the single-family routes.
+    haskey(kw, :offset) && kw.offset === nothing &&
+        (kw = Base.structdiff(kw, NamedTuple{(:offset,)}))
+    return fit_mixed_gllvm(Y; families = family, K = K, kw...)
+end
+
 """
     fit_gllvm(Y; family = Normal(), K = nothing, num_lv = nothing, Kmax = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
@@ -378,6 +418,16 @@ accepted there. Weights are supported on the Poisson Laplace route only
 `X_lv` or `aghq`); every other route throws an `ArgumentError` naming what blocks it. For
 `Binomial()` gllvmTMB reads `weights` as trial counts; pass those as `N` instead.
 
+# Per-column families
+
+`family` may be a length-`p` vector, one family per row of `Y` (`Normal()`, `Poisson()`,
+`Binomial()`, `NegativeBinomial()`, `Gamma()`, `Beta()`); the fit shares one `K`-dimensional
+latent block across the rows and is [`fit_mixed_gllvm`](@ref), which it returns
+(`MixedFamilyFit`). A homogeneous vector gives the single-family fit. Accepted keywords:
+`K` (or `num_lv`), `links`, `N`, `offset`, and the optimiser controls of `fit_mixed_gllvm`;
+`row_eff`, `disp_group`, `pervar`, `grouping`, `phylo`, `weights` and the like throw an
+`ArgumentError`.
+
 # Structural / dispersion variants (gllvm-style keyword routing)
 
 These keyword arguments route to the corresponding specialised fitter while keeping
@@ -476,6 +526,13 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
                    species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
+    if family isa AbstractVector
+        return _fit_gllvm_per_column(Y, family; K = K, num_lv = num_lv, row_eff = row_eff,
+            disp_group = disp_group, pervar = pervar, grouping = grouping, unit = unit,
+            unit_obs = unit_obs, cluster = cluster, cluster2 = cluster2, phylo = phylo,
+            phylo_rank = phylo_rank, phylo_mode = phylo_mode, species_id = species_id,
+            Kmax = Kmax, weights = weights, kwargs = kwargs)
+    end
     if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
         requested = kwargs[:optimizer]
         _optimizer_method(requested, Optim.LBFGS(); route = "fit_gllvm")
