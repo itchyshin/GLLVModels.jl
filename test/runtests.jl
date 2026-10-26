@@ -378,6 +378,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_source_bindings.jl")
     _shard_include("test_bridge_gradient_payload.jl")
     _shard_include("test_bridge_phylo_precision.jl")
+    _shard_include("test_bridge_ignored_args.jl")
     _shard_include("test_phylo_precision_animal.jl")
     _shard_include("test_bridge_sources.jl")
     _shard_include("test_coevolution_kronecker.jl")
