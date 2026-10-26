@@ -10,3 +10,5 @@
 - `git diff --check` passed. Prose style checks returned zero findings.
 
 **Scope:** Documentation and example import only. No engine change, deployment, parity claim, or interval calibration claim.
+
+**Repository state:** Local commit `8e7f704bc` is on `codex/gllvm-doc-remediation`. Push was rejected by the automatic approval review because the repo requires explicit maintainer push authorization. No remote branch or PR was created.

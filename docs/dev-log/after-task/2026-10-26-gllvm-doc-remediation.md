@@ -48,6 +48,7 @@ The closeout helper resolves its root to the brain repository rather than this p
 
 - D010 remains pending owner approval.
 - The brain-level closeout wrapper resolves its root to the brain repository and evaluates unrelated acceptance ledgers there. Its check fails on those unmet campaign gates; the direct after-task structure checker passes for this report.
+- The local change is committed as `8e7f704bc` on `codex/gllvm-doc-remediation`. No PR exists because the push was rejected by automatic review pending an explicit maintainer instruction.
 - No deployment or public parity or calibration claim was made.
 
 ## 11. Team Learning
