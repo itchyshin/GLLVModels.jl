@@ -573,6 +573,7 @@ println(_SHARD === nothing ?
     _shard_include("test_postfit_tables.jl")
     _shard_include("test_docs_snippets_734_738.jl")
     _shard_include("test_dunn_smyth_tail_767.jl")
+    _shard_include("test_predict_delta_shared_820.jl")
     # P1 numeric twins of six gllvmTMB namespace rows (loadings, rotated table, lv effects, communality, Sigma_B/W).
     _shard_include("test_namespace_numeric_p1_twin.jl")
     # P1 numeric twins of three more namespace rows (tidy fixed effects, Beta, nbinom2).

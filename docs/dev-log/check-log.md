@@ -1,3 +1,9 @@
+2026-10-25: Family CI bootstrap and profile-refit rethrow
+InterruptException. A "not supported" simulate stub is now
+ArgumentError before the replicate loop. Focused
+test_interrupt_rethrow.jl: 9 passed / 0 failed. Refs #774.
+See after-task/2026-10-25-confint-family-interrupt-774.md.
+
 2026-10-25: Phylo Beta and Ordinal xLV mode searches flag a maxiter exit
 and return nothing (same as Poisson/binomial/Gamma/NB2). Poisson xLV
 constrained-refit rethrows InterruptException. Focused tests 22 passed /
