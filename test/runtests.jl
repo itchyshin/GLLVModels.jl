@@ -634,6 +634,7 @@ println(_SHARD === nothing ?
     # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
     _shard_include("test_zip_zinb_stall.jl")
     _shard_include("test_zip_observed_laplace.jl")
+    _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")

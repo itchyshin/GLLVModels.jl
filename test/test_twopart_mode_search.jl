@@ -246,7 +246,7 @@ end
         # class-audit probe's own damped search gives -781.2303923161). The fit must land
         # there.
         Y3, _, K = _tp484_data("zinb_s103")
-        f3 = G.fit_zinb_gllvm(Y3; K = K)
+        f3 = G.fit_zinb_gllvm(Y3; K = K, hessian = :fisher)   # the Fisher surface these values were measured on (#932)
         @test abs(f3.loglik - (-781.2303923103)) < 1e-6
         @test f3.converged
         # ZIB: every old site search at the fitted point but one converged (that one to
