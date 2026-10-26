@@ -232,7 +232,9 @@ end
         # Before: -935.296 with converged = true. A restart reaches -920.603, and raising
         # the inner maxiter to 2000 alone moved the fit to -921.41.
         Y, _, K = _tp484_data("zip_base1")
-        fit = G.fit_zip_gllvm(Y; K = K)
+        # #1006: this optimum sits on the observed-Laplace guard; the warning names the remedy.
+        fit = @test_logs (:warn, r"hessian = :fisher") match_mode = :any G.fit_zip_gllvm(Y; K = K)
+        @test !fit.converged
         @test fit.loglik >= -920.7
     end
 

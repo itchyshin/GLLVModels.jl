@@ -1544,6 +1544,10 @@ Where the observed curvature goes negative the site precision can approach
 singularity, so a site whose smallest eigenvalue is below `ZI_LAPLACE_EIGMIN_FLOOR`
 is a failed evaluation (as on the `zi_poisson()` route), and an optimum within 10%
 of the floor is reported `converged = false`. `:fisher` is unchanged and unguarded.
+On such data the observed surface keeps rising as the site precision approaches
+singularity, so there is no interior maximum to report (gllvmTMB's `zi_poisson()`
+also fails there; #1006). `hessian = :fisher` gives a converged Fisher-weight Laplace
+fit, whose `loglik` is on that different surface.
 """
 function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         offset = nothing,
@@ -1608,7 +1612,10 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             conv = false
             @warn "fit_zip_gllvm: the optimum sits at the Laplace breakdown guard (smallest " *
                   "site precision eigenvalue $(round(me; sigdigits = 3)), floor " *
-                  "$(ZI_LAPLACE_EIGMIN_FLOOR)); reported as not converged."
+                  "$(ZI_LAPLACE_EIGMIN_FLOOR)); reported as not converged. The observed-curvature " *
+                  "Laplace likelihood still rises toward a singular site precision, so it has no " *
+                  "interior maximum on these data (gllvmTMB zi_poisson() shares this surface; #1006). " *
+                  "`hessian = :fisher` fits the Fisher-weight Laplace, which has no such wall."
         end
     end
     return ZIPFit(βz, βc, Λc, ll, conv, iters, _stored_offset(offset))
