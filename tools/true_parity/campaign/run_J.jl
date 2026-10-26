@@ -7,7 +7,8 @@
 #
 # Usage: julia --project=<GLLVModels.jl checkout> run_J.jl <cell>
 #   env: CAMPAIGN_DATA, CAMPAIGN_OUT, CAMPAIGN_SMALL=1 (development runs, never a receipt),
-#        GLLVM_JL_SHA (the commit the checkout is at, recorded), CAMPAIGN_COND=0 to skip cond(H).
+#        GLLVM_JL_SHA (the commit the checkout is at, recorded), CAMPAIGN_COND=0 to skip cond(H),
+#        CAMPAIGN_POLISH=1 (ordinal cell only) also writes <cell>_J_polish.toml via polish_J.jl, a separate file.
 # Julia wall times include first-call compilation (nothing is warmed up), as in the pre-run.
 using GLLVModels, LinearAlgebra, Printf, SHA, TOML, Distributions
 const GM = GLLVModels
@@ -117,6 +118,13 @@ if cell in ("gaussian", "poisson", "nb2", "binomial", "ordinal")
         put!("converged", fit.converged); put!("logLik", fit.loglik); put!("iterations", fit.iterations)
         put!("LLt", rows(fit.Λ * fit.Λ')); put!("tau_size", collect(size(fit.τ))); put!("C", fit.C)
         put!("tau", fit.τ isa AbstractMatrix ? rows(fit.τ) : collect(Float64, fit.τ)); ci_block!(fit, Y)
+        if !isempty(get(ENV, "CAMPAIGN_POLISH", "")) && fit isa GM.OrdinalPerTraitFit
+            include(joinpath(@__DIR__, "polish_J.jl"))
+            pol, tp = timeit(() -> polish_ordinal_pertrait(fit, Y)); pol["wall_polish_sec"] = tp
+            pol["note"] = "scratch convergence polish; never a receipt until N9 is signed"
+            open(joinpath(out_dir, cell * sfx * "_J_polish.toml"), "w") do io; TOML.print(io, pol); end
+            println("POLISH ", cell, " grad ", pol["grad_max_abs_before"], " -> ", pol["grad_max_abs_after"])
+        end
     end
 elseif cell == "temporal"
     path = csvpath("temporal"); put!("data_sha256", fsha(path)); hdr, cols = readcsv(path)
