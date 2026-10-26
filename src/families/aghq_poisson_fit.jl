@@ -14,8 +14,8 @@ Ineligible requests retain Laplace with a warning and recorded reason.
 highest log-likelihood, preferring converged fits. Start 1 is the usual warm start (or your
 `Λ_init`); starts `2:n_init` use lower-triangular `0.3 * randn` loadings from fixed seeds, so the
 result is reproducible and the global random stream is untouched. The Laplace likelihood can have
-several local optima, and a fit that reports `converged = true` is a local optimum only (issue
-#915: on `ade4::mafragh flo table`, `K = 2`, the default start stops 8.4 log-likelihood units below
+several local optima, and a fit that reports `converged = true` is a local optimum only
+(#915: on `ade4::mafragh flo table`, `K = 2`, the default start stops 8.4 log-likelihood units below
 another converged start). Compare `loglik` across `n_init` values to check. Fit time is roughly
 `n_init` times the single-start time. A start that throws is skipped; if all of starts `2:n_init`
 fail, the first fit is returned. `n_init > 1` is not available with `aghq`
@@ -99,7 +99,7 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,n_init::Integer=1,aghq=f
     return PoissonFit(copy(t[1:p]),unpack_lambda(t[p+1:end],p,K),link,-selected.objective,
         selected.converged,selected.passes,nothing,copy(t),:observed,info)
 end
-# Best of `n_init` Laplace fits (issue #915). Start 1 is the unchanged default call; the extra
+# Best of `n_init` Laplace fits (#915). Start 1 is the unchanged default call; the extra
 # starts replace `Λ_init` with a seeded lower-triangular draw. Converged fits rank before
 # unconverged ones, then higher `loglik`; ties keep the earlier start, so `n_init = 1` and any
 # case where start 1 wins are exactly the single-start fit.
