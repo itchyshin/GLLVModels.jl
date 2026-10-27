@@ -86,7 +86,8 @@ def numeric_root(receipt_extra=None, **row_kw):
     """A root with one numeric row family/N citing RP, whose receipt holds GOOD_CMP."""
     kw = dict(tier="numeric", executable_case_ids=["C"], evidence={"receipt": [RP]})
     kw.update(row_kw)
-    root, tmp = with_root({"case-map-family.json": [row("family/N", **kw)]})
+    sid = kw.pop("sid", "family/N")
+    root, tmp = with_root({"case-map-family.json": [row(sid, **kw)]})
     (root / RP).write_text(json.dumps({"comparison": GOOD_CMP, **(receipt_extra or {})}))
     return root, tmp
 
@@ -322,6 +323,57 @@ def main():
         "isdm/ISDM-HEADLINE-RSZ": ("isdm", "C3"),
         "data/RD-SPIDER-NB2": ("data", "C4"),
     }
+    def signed_snapshot_compatibility_controls():
+        ledger = A.ROOT / A.LEDGER
+        for sid in held:
+            fam = sid.split("/", 1)[0]
+            name = sid.rsplit("/", 1)[1]
+            old_receipt = json.loads((ledger / "receipts" / fam / "campaign" / f"{name}.json").read_text())
+            old_map_doc = json.loads((ledger / f"case-map-{fam}.json").read_text())
+            old_row = next(r for r in old_map_doc["rows"] if r["source_id"] == sid)
+            new_receipt = json.loads(json.dumps(old_receipt))
+            new_row = json.loads(json.dumps(old_row))
+            engines = new_receipt["engines"]
+            new_receipt["convergence_parity"] = writer.convergence_parity(
+                {"max_abs_gradient": engines["R"].get("max_abs_gradient"), "pdHess": engines["R"].get("pdHess")},
+                {"max_abs_gradient": engines["julia"].get("max_abs_gradient"), "pd_hessian": engines["julia"].get("pd_hessian")})
+            new_receipt["pass_rule"]["legs"][writer.N9_PASS_LEG] = False
+            new_receipt["row_status"] = "does not bind: " + writer.N9_PASS_LEG + "; " + old_receipt["row_status"][len("does not bind: "):]
+            new_row["evidence"]["tier"] = "measured, does not bind: " + writer.N9_PASS_LEG + "; " + old_row["evidence"]["tier"][len("measured, does not bind: "):]
+            if not writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, new_receipt, old_row, new_row):
+                return False, f"expected exact N9 annotation compatibility for {sid}"
+            altered = json.loads(json.dumps(new_receipt))
+            altered["comparison"]["cases"][0]["tolerance"] *= 2
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, altered, old_row, new_row):
+                return False, f"tolerance mutation accepted for {sid}"
+            promoted = json.loads(json.dumps(new_receipt))
+            promoted["verdict"] = "PASS"
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, promoted, old_row, new_row):
+                return False, f"FAIL promotion accepted for {sid}"
+            altered_gate = json.loads(json.dumps(new_receipt))
+            original_hessian = altered_gate["convergence_parity"]["engines"]["R"]["hessian_positive_definite"]
+            altered_gate["convergence_parity"]["engines"]["R"]["hessian_positive_definite"] = (
+                not original_hessian if isinstance(original_hessian, bool) else True)
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, altered_gate, old_row, new_row):
+                return False, f"fabricated N9 evidence accepted for {sid}"
+            numeric_hessian = json.loads(json.dumps(new_receipt))
+            hessian_value = numeric_hessian["convergence_parity"]["engines"]["R"]["hessian_positive_definite"]
+            numeric_hessian["convergence_parity"]["engines"]["R"]["hessian_positive_definite"] = int(hessian_value) if isinstance(hessian_value, bool) else 1
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, numeric_hessian, old_row, new_row):
+                return False, f"boolean Hessian replaced with an equal numeric value for {sid}"
+            numeric_leg = json.loads(json.dumps(new_receipt))
+            numeric_leg["pass_rule"]["legs"][writer.N9_PASS_LEG] = 0
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, numeric_leg, old_row, new_row):
+                return False, f"boolean pass-rule leg replaced with numeric zero for {sid}"
+            numeric_map = json.loads(json.dumps(new_row))
+            flags = numeric_map["measured_result"]["within_tolerance_by_case"]
+            case_id = next(iter(flags))
+            flags[case_id] = int(flags[case_id])
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, new_receipt, old_row, numeric_map):
+                return False, f"boolean case-map flag replaced with an equal numeric value for {sid}"
+        return True, ""
+    compat_ok, compat_detail = signed_snapshot_compatibility_controls()
+    expect("signed_fail_n9_snapshot_allows_only_narrow_annotation", compat_ok, compat_detail)
     synthetic_passes = [(sid, *held_specs[sid], {"verdict": "PASS"}, True, Path(sid + ".json")) for sid in held]
     guard = getattr(writer, "enforce_signed_fail_rows", None)
     expect("signed_stop_rows_have_regeneration_guard", callable(guard), "writer lacks enforce_signed_fail_rows")
@@ -1527,10 +1579,13 @@ def main():
     check("c4_only_r_engine_not_evidenced", c4_case({"engines": {"R": {"engine": "R gllvmTMB"}}}, "NUMERIC-UNVERIFIED"))
     check("c4_empty_engine_blocks_not_evidenced", c4_case({"engines": {"R": {}, "julia": {}}}, "NUMERIC-UNVERIFIED"))
 
-    # Maintainer ruling 2026-10-05 (D-319), N9: convergence parity; the checker gives the same verdict.
-    def cp_case(cp, want_status, contains=None):
+    # Signed P1 stopping rule (2026-10-21), N9: convergence parity; the checker gives the same verdict.
+    def cp_case(cp, want_status, contains=None, receipt_extra_override=None, **row_kw):
         def f():
-            root, tmp = numeric_root({"convergence_parity": cp})
+            receipt_extra = ({} if cp is None else {"convergence_parity": cp})
+            if receipt_extra_override is not None:
+                receipt_extra.update(receipt_extra_override)
+            root, tmp = numeric_root(receipt_extra, **row_kw)
             try:
                 c, o = run(root)
                 st = status_of(root)
@@ -1545,17 +1600,74 @@ def main():
         return f
     def cpb(rg, jg, **over):
         d = {"gradient_bound": 1e-5, "compared_point": "newton_polished",
-             "engines": {"R": {"max_abs_gradient": rg}, "julia": {"max_abs_gradient": jg}}}
+             "engines": {"R": {"max_abs_gradient": rg, "hessian_positive_definite": True},
+                         "julia": {"max_abs_gradient": jg, "hessian_positive_definite": True}}}
         d.update(over)
         return d
     check("convergence_parity_both_below_bound_evidenced", cp_case(cpb(4.709e-7, 2.365e-6), "EVIDENCED"))
-    check("convergence_parity_exactly_bound_evidenced", cp_case(cpb(1e-5, 1e-5), "EVIDENCED"))
-    check("convergence_parity_r_early_stop_unverified", cp_case(cpb(4.314e-4, 7.822e-6), "NUMERIC-UNVERIFIED", "R max_abs_gradient 0.0004314 > 1e-5"))
+    check("convergence_parity_exactly_bound_unverified",
+          cp_case(cpb(1e-5, 1e-5), "NUMERIC-UNVERIFIED", "R max_abs_gradient 1e-05 is not strictly below 1e-5"))
+    check("convergence_parity_r_early_stop_unverified",
+          cp_case(cpb(4.314e-4, 7.822e-6), "NUMERIC-UNVERIFIED", "R max_abs_gradient 0.0004314 is not strictly below 1e-5"))
     check("convergence_parity_looser_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=1e-4), "NUMERIC-UNVERIFIED", "is not 1e-5"))
     check("convergence_parity_bool_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=True), "NUMERIC-UNVERIFIED", "is not 1e-5"))
     check("convergence_parity_missing_julia_unverified",
-          cp_case({"gradient_bound": 1e-5, "compared_point": "returned", "engines": {"R": {"max_abs_gradient": 1e-7}}}, "NUMERIC-UNVERIFIED", "julia max_abs_gradient"))
+          cp_case({"gradient_bound": 1e-5, "compared_point": "returned", "engines": {"R": {"max_abs_gradient": 1e-7, "hessian_positive_definite": True}}}, "NUMERIC-UNVERIFIED", "julia Hessian"))
     check("convergence_parity_unknown_point_unverified", cp_case(cpb(1e-7, 1e-7, compared_point="best"), "NUMERIC-UNVERIFIED", "is not returned or newton_polished"))
+    check("convergence_parity_missing_r_hessian_unverified",
+          cp_case(cpb(1e-7, 1e-7, engines={"R": {"max_abs_gradient": 1e-7}, "julia": {"max_abs_gradient": 1e-7, "hessian_positive_definite": True}}), "NUMERIC-UNVERIFIED", "R Hessian"))
+    check("convergence_parity_non_pd_julia_hessian_unverified",
+          cp_case(cpb(1e-7, 1e-7, engines={"R": {"max_abs_gradient": 1e-7, "hessian_positive_definite": True}, "julia": {"max_abs_gradient": 1e-7, "hessian_positive_definite": False}}), "NUMERIC-UNVERIFIED", "julia Hessian"))
+    check("convergence_parity_required_fit_row_needs_gate",
+          lambda: (A.requires_convergence_parity({"source_id": "family/ORDINAL-LOGIT-RSZ"}, {"comparison": GOOD_CMP}),
+                   "required P1 fit row did not require convergence evidence"))
+    check("convergence_parity_does_not_expand_to_held_or_unlisted_rows",
+          lambda: (not any(A.requires_convergence_parity({"source_id": sid}, {"comparison": GOOD_CMP,
+                                                                               "compared_point": "newton_polished"})
+                           for sid in ("data/RD-URBANISATION-BINOMIAL", "data/RD-BEETLE-NB2", "family/OTHER-ROW")),
+                   "the signed four-row rule was extended beyond its named comparisons"))
+    expected_n9_rows = {"data/RD-SPIDER-NB2", "family/ORDINAL-LOGIT-RSZ",
+                        "isdm/ISDM-HEADLINE-RSZ", "data/RD-FUNGI-BINOMIAL"}
+    js_source = (HERE / "true_parity_check.mjs").read_text()
+    js_rows_block = re.search(r"const CONVERGENCE_REQUIRED_ROWS = new Set\(\[(.*?)\]\);", js_source, re.S)
+    js_n9_rows = set(re.findall(r"'([^']+)'", js_rows_block.group(1))) if js_rows_block else set()
+    check("convergence_parity_required_row_scope_matches_all_three_implementations",
+          lambda: (set(A.CONVERGENCE_REQUIRED_ROWS) == expected_n9_rows
+                   and set(writer.CONVERGENCE_REQUIRED_ROWS) == expected_n9_rows
+                   and js_n9_rows == expected_n9_rows,
+                   f"assembler={A.CONVERGENCE_REQUIRED_ROWS}, writer={writer.CONVERGENCE_REQUIRED_ROWS}, JS={js_n9_rows}"))
+    check("convergence_parity_polished_marker_outside_scope_keeps_legacy_behavior",
+          cp_case(None, "EVIDENCED", receipt_extra_override={"compared_point": "newton_polished"}))
+    check("convergence_parity_legacy_unmarked_row_keeps_current_rule", cp_case(None, "EVIDENCED"))
+    writer_cp = writer.convergence_parity(
+        {"max_abs_gradient": 1e-7, "pdHess": True},
+        {"max_abs_gradient": 2e-7, "pd_hessian": True})
+    check("convergence_parity_writer_records_both_pd_hessians",
+          lambda: (writer_cp["engines"]["R"]["hessian_positive_definite"] is True
+                   and writer_cp["engines"]["julia"]["hessian_positive_definite"] is True, str(writer_cp)))
+    check("convergence_parity_writer_requires_strict_gradients_and_both_hessians",
+          lambda: (writer.convergence_parity_within_bound(writer_cp)
+                   and not writer.convergence_parity_within_bound(writer.convergence_parity(
+                       {"max_abs_gradient": 1e-5, "pdHess": True},
+                       {"max_abs_gradient": 2e-7, "pd_hessian": True}))
+                   and not writer.convergence_parity_within_bound(writer.convergence_parity(
+                       {"max_abs_gradient": 1e-7},
+                       {"max_abs_gradient": 2e-7, "pd_hessian": True}))
+                   and not writer.convergence_parity_within_bound(None), "writer N9 leg accepted invalid evidence"))
+    writer_missing_cp = writer.convergence_parity({"pdHess": True}, {"pd_hessian": True})
+    check("convergence_parity_writer_records_missing_gradient_with_hessian_evidence",
+          lambda: (writer_missing_cp is not None
+                   and writer_missing_cp["engines"]["R"]["max_abs_gradient"] is None
+                   and writer_missing_cp["engines"]["julia"]["max_abs_gradient"] is None
+                   and writer_missing_cp["engines"]["R"]["hessian_positive_definite"] is True
+                   and writer_missing_cp["engines"]["julia"]["hessian_positive_definite"] is True
+                   and not writer.convergence_parity_within_bound(writer_missing_cp),
+                   "missing gradients were omitted or allowed to bind"))
+    check("signed_n9_snapshot_comparison_is_json_type_strict",
+          lambda: (not writer.json_exact_equal({"flag": True}, {"flag": 1})
+                   and not writer.json_exact_equal({"flag": False}, {"flag": 0})
+                   and writer.json_exact_equal({"flag": False}, {"flag": False}),
+                   "JSON equality collapsed booleans into integers"))
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")

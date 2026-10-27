@@ -33,12 +33,11 @@ non-binding with the reason and the row is left unbound; no tolerance is widened
 A row whose numbers are all inside tolerance and whose only failing leg is a required step that was not signed (the
 phylo qualification) reads partial_case_not_executed, never numeric_fail.
 
-Convergence parity (maintainer ruling 2026-10-05, D-319, N9; applied only to receipts that carry the block, as the
-maintainer chose). When both raw outputs record the gradient max-abs of their own objective at the returned point
-(R `max_abs_gradient`, Julia `max_abs_gradient`), the receipt gets a top-level `convergence_parity` block
-({gradient_bound 1e-5, compared_point "returned", engines.R / engines.julia max_abs_gradient}) and Julia's gradient in
-its engine block; the checker then binds the row only if both are <= 1e-5. No committed raw Julia output records that
-field yet, so no receipt carries the block (the polished harness of PR #715 is not merged).
+Convergence parity (N9). The signed 2026-10-21 P1 stopping rule names four campaign comparisons: ordinal, iSDM
+headline, spider and fungi. Those rows require the convergence block. A block records both engines' maximum absolute
+gradients and Hessian-positive-definite flags. It binds only when each Hessian flag is true and each gradient is
+strictly below 1e-5. The generator does not add other rows to the signed four-row scope. A block retains its historical
+D-319 provenance label.
 
 Signed C4 dispositions. RD-PHYLO-DISPOSITION, RD-TEMPORAL-DISPOSITION and RD-ISDM-DISPOSITION are written as
 DISPOSITION-SIGNED under item F of the rulings page, signed by the maintainer on 2026-10-05 (vault D-319); an agent
@@ -287,17 +286,46 @@ def engine_blocks(cell, R, J):
 
 
 CONVERGENCE_GRADIENT_BOUND = 1e-5
+CONVERGENCE_REQUIRED_ROWS = frozenset({
+    "data/RD-SPIDER-NB2", "family/ORDINAL-LOGIT-RSZ",
+    "isdm/ISDM-HEADLINE-RSZ", "data/RD-FUNGI-BINOMIAL",
+})
 
 
 def convergence_parity(R, J):
-    """The N9 block (maintainer ruling 2026-10-05, D-319), when both raw outputs record their own gradient max-abs at the
-    returned point; None otherwise (the receipt then carries no block and is judged as before)."""
+    """Record the signed P1 convergence gate at the point whose outputs are compared.
+
+    The block preserves missing or false Hessian evidence explicitly so the
+    assembler and checker can refuse to bind it. A qualifying point needs both
+    positive-definite Hessians and both max-absolute gradients strictly below
+    the signed 1e-5 bound.
+    """
     rg, jg = R.get("max_abs_gradient"), J.get("max_abs_gradient")
-    if not (fin(rg) and fin(jg)):
-        return None
+    rh, jh = R.get("pdHess"), J.get("pd_hessian", J.get("hessian_positive_definite"))
     return OrderedDict(gradient_bound=CONVERGENCE_GRADIENT_BOUND, compared_point="returned",
-                       engines=OrderedDict(R=OrderedDict(max_abs_gradient=rg), julia=OrderedDict(max_abs_gradient=jg)),
+                       engines=OrderedDict(
+                           R=OrderedDict(max_abs_gradient=rg if fin(rg) else None,
+                                          hessian_positive_definite=rh if isinstance(rh, bool) else None),
+                           julia=OrderedDict(max_abs_gradient=jg if fin(jg) else None,
+                                             hessian_positive_definite=jh if isinstance(jh, bool) else None)),
                        ruling="maintainer ruling 2026-10-05 (vault D-319), N9")
+
+
+def convergence_parity_within_bound(cp):
+    """True only when both Hessians are positive definite and both gradients are strictly below 1e-5."""
+    if not isinstance(cp, dict) or cp.get("gradient_bound") != CONVERGENCE_GRADIENT_BOUND:
+        return False
+    engines = cp.get("engines")
+    if not isinstance(engines, dict):
+        return False
+    for side in ("R", "julia"):
+        engine = engines.get(side)
+        if not isinstance(engine, dict) or engine.get("hessian_positive_definite") is not True:
+            return False
+        gradient = engine.get("max_abs_gradient")
+        if not fin(gradient) or gradient < 0 or gradient >= CONVERGENCE_GRADIENT_BOUND:
+            return False
+    return True
 
 
 def pass_rule(R, J, cases):
@@ -564,11 +592,10 @@ def process(raw, out_root, apply, quiet=False, *, pending_raw_writes=None):
             continue
         cases = cases_for(sid, cell, clause, quants, R, J)
         legs = pass_rule(R, J, cases)
-        cp = convergence_parity(R, J)
-        # N9: a receipt with the block binds only when both engines are at gradient max-abs <= 1e-5
-        if cp is not None:
-            legs["convergence_parity_both_gradients_within_1e-5"] = all(
-                e["max_abs_gradient"] <= CONVERGENCE_GRADIENT_BOUND for e in cp["engines"].values())
+        cp = convergence_parity(R, J) if sid in CONVERGENCE_REQUIRED_ROWS else None
+        # Every signed row gets an explicit leg, including when a gradient or Hessian is missing.
+        if sid in CONVERGENCE_REQUIRED_ROWS:
+            legs["convergence_parity_both_gradients_within_1e-5"] = convergence_parity_within_bound(cp)
         binds = all(legs.values())
         eng_r, eng_j = engine_blocks(cell, R, J)
         rdir = camp / fam / CAMPAIGN_DIR
@@ -697,6 +724,11 @@ SIGNED_FAIL_ROWS = frozenset({
     "isdm/ISDM-HEADLINE-RSZ",
     "data/RD-SPIDER-NB2",
 })
+N9_PASS_LEG = "convergence_parity_both_gradients_within_1e-5"
+DERIVED_RECEIPT_FIELDS = (
+    "schema", "source_id", "clause", "pin", "reference_commit", "ruling", "verdict",
+    "row_status", "pass_rule", "comparison", "engines", "convergence_parity",
+)
 
 
 def enforce_signed_fail_rows(results):
@@ -712,6 +744,47 @@ def enforce_signed_fail_rows(results):
             problems.append(f"{sid}: regeneration would change signed FAIL to {rc.get('verdict')} (binds={binds})")
     if problems:
         raise ValueError("signed stop rule blocks receipt regeneration: " + "; ".join(problems))
+
+
+def signed_fail_n9_snapshot_compatible(sid, receipt_old, receipt_new, row_old, row_new):
+    """Allow only the derived N9 block and failure annotation on pinned signed FAIL snapshots."""
+    if sid not in SIGNED_FAIL_ROWS:
+        return False
+    if receipt_old.get("verdict") != "FAIL" or receipt_new.get("verdict") != "FAIL":
+        return False
+    if row_old.get("measured_result", {}).get("verdict") != "FAIL":
+        return False
+    old_status = receipt_old.get("row_status", "")
+    old_tier = row_old.get("evidence", {}).get("tier", "")
+    if not old_status.startswith("does not bind: ") or not old_tier.startswith("measured, does not bind: "):
+        return False
+    if "convergence_parity" in receipt_old:
+        return False
+
+    expected_rule = norm(receipt_old.get("pass_rule", {}))
+    old_legs = expected_rule.get("legs", {})
+    if N9_PASS_LEG in old_legs:
+        return False
+    old_legs[N9_PASS_LEG] = False
+    expected_status = "does not bind: " + N9_PASS_LEG + "; " + old_status[len("does not bind: "):]
+    if not json_exact_equal(receipt_new.get("pass_rule"), expected_rule) or receipt_new.get("row_status") != expected_status:
+        return False
+    engines = receipt_new.get("engines", {})
+    expected_cp = convergence_parity(
+        {"max_abs_gradient": engines.get("R", {}).get("max_abs_gradient"),
+         "pdHess": engines.get("R", {}).get("pdHess")},
+        {"max_abs_gradient": engines.get("julia", {}).get("max_abs_gradient"),
+         "pd_hessian": engines.get("julia", {}).get("pd_hessian")},
+    )
+    if not json_exact_equal(receipt_new.get("convergence_parity"), expected_cp) or convergence_parity_within_bound(expected_cp):
+        return False
+    if any(not json_exact_equal(receipt_old.get(key), receipt_new.get(key))
+           for key in DERIVED_RECEIPT_FIELDS if key not in ("row_status", "pass_rule", "convergence_parity")):
+        return False
+
+    expected_row = norm(row_old)
+    expected_row["evidence"]["tier"] = "measured, does not bind: " + N9_PASS_LEG + "; " + old_tier[len("measured, does not bind: "):]
+    return json_exact_equal(row_new, expected_row)
 
 
 def update_map(out_root, fam, rows_new):
@@ -760,6 +833,15 @@ def main():
 def norm(x):
     """What a value looks like after a trip through the receipt/case-map JSON files."""
     return json.loads(json.dumps(clean(x), allow_nan=False))
+
+
+def json_exact_equal(left, right):
+    """Compare normalized JSON values without Python's bool/int equality coercion."""
+    try:
+        return (json.dumps(clean(left), sort_keys=True, separators=(",", ":"), allow_nan=False)
+                == json.dumps(clean(right), sort_keys=True, separators=(",", ":"), allow_nan=False))
+    except (TypeError, ValueError):
+        return False
 
 
 def summary_problems(rc, sid, clause):
@@ -850,11 +932,18 @@ def check(out_root, local_raw=None):
             rel = str(path.relative_to(out_root))
             if not path.exists(): continue
             rc_old = json.loads(path.read_text())
-            for k in ("schema", "source_id", "clause", "pin", "reference_commit", "ruling", "verdict", "row_status", "pass_rule", "comparison", "engines", "convergence_parity"):
-                if rc_old.get(k) != norm(rc_new.get(k)):
+            row_old = row_of(fam, sid)
+            row_new = norm(row_for(sid, clause, rc_new, binds, rel))
+            signed_n9_compat = signed_fail_n9_snapshot_compatible(sid, rc_old, rc_new, row_old or {}, row_new)
+            if signed_n9_compat:
+                print(f"NOTE {sid}: preserving its signed FAIL snapshot; only the regenerated N9 block and failure annotation differ.")
+            for k in DERIVED_RECEIPT_FIELDS:
+                if signed_n9_compat and k in ("row_status", "pass_rule", "convergence_parity"):
+                    continue
+                if not json_exact_equal(rc_old.get(k), rc_new.get(k)):
                     print(f"DERIVATION DRIFT {k} in {path.name}"); bad += 1
-            row_old = row_of(fam, sid); row_new = norm(row_for(sid, clause, rc_new, binds, rel))
-            if row_old != row_new: print(f"CASE-MAP ROW DRIFT {sid}"); bad += 1
+            if not json_exact_equal(row_old, row_new) and not signed_n9_compat:
+                print(f"CASE-MAP ROW DRIFT {sid}"); bad += 1
         for sid, (fam, path) in off_paths.items():
             print(f"NOTE {sid}: {NOTE_OFF_REPO}. Not re-derived here; checking the committed summary receipt for internal consistency only.")
             summary_only.append(sid)
