@@ -1,15 +1,16 @@
 ## 1. Goal
 
-Implement the approved GLLVM.jl side of the first-wave documentation audit, correcting D011, D012, and D036 while coordinating with the separate gllvmTMB changes. D010 requires its bridge/inference owner's approval and remains deferred.
+Complete the approved twin documentation remediation, correcting D011, D012, D036, and the paired R-side D010 bridge finding. Preserve the separate package branches and do not deploy or merge.
 
 ## 2. Implemented
 
 - D011/D012: clarified that latent score SDs condition on fitted fixed parameters, stated the joint negative-log-likelihood Hessian precision convention, and distinguished TMB's default parameter-uncertainty propagation from a conditional comparison using `ignore.parm.uncertainty = TRUE`.
 - D036: added `using Distributions: Poisson` to the documented Poisson cross-validation example.
+- D010 was resolved in the paired gllvmTMB branch: non-finite Wald bounds now report unavailable with a diagnostic note, and the replacement example returns 14 finite bounds. Shinichi authorized completion as package maintainer.
 
 ## 3a. Decisions and Rejected Alternatives
 
-- D010 remains deferred because no bridge/inference owner approval was received.
+- D010 was resolved on the companion R branch after maintainer authorization; its original source evidence remains preserved in the audit checkpoint.
 - Kept the work within documentation and example imports; made no engine or user API change.
 - Assumption: the cross-product work should be coordinated as one goal while retaining separate package PRs, as approved.
 
@@ -34,7 +35,7 @@ No package behavior changed and no test files were added. The exact documented C
 ## 7a. Issue Ledger
 
 - Fixed: D011, D012, D036.
-- Deferred: D010 pending bridge/inference owner approval.
+- Fixed: D010 on the companion gllvmTMB branch; exact negative-control and revised-example outcomes are recorded in the paired R after-task report.
 
 ## 8. Consistency Audit
 
@@ -46,9 +47,10 @@ The closeout helper resolves its root to the brain repository rather than this p
 
 ## 10. Known Residuals
 
-- D010 remains pending owner approval.
 - The brain-level closeout wrapper resolves its root to the brain repository and evaluates unrelated acceptance ledgers there. Its check fails on those unmet campaign gates; the direct after-task structure checker passes for this report.
-- The local change is committed as `8e7f704bc` on `codex/gllvm-doc-remediation`. No PR exists because the push was rejected by automatic review pending an explicit maintainer instruction.
+- GLLVModels.jl PR #1017 is open at `75fd1f80722cbefa26443e777e3bbb2eb80ff5f6`; Julia shards, twin tests, and Documenter passed. The separate Documenter deploy job was cancelled. No deployment was attempted.
+- The paired gllvmTMB PR #1704 is open at `f16c4d0151e340d57c9da8daebd1b36c7cd326e5`; all four R-CMD-check shards were in progress at 2026-10-27 01:31 UTC.
+- The app refused to archive the superseded audit worktree because it is protected by a pinned task or workspace; its clean checkpoint and evidence remain preserved. The planning conversation is archived.
 - No deployment or public parity or calibration claim was made.
 
 ## 11. Team Learning
@@ -59,6 +61,6 @@ Memory receipt: used the repo instructions and routed GLLVM/gllvmTMB dossier not
 
 ## 12. Cross-Product Coverage
 
-Covers: the named Julia documentation and Poisson CV example surfaces.
+Covers: the named Julia documentation and Poisson CV example surfaces, plus the linked R-side D010 remediation.
 
-Does NOT cover: D010, engine behavior, full R article-suite success, deployment, parity, or interval calibration.
+Does NOT cover: Julia/R numerical parity, interval calibration/coverage, complete R package checks, deployment, or merge.
