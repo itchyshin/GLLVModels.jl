@@ -48,10 +48,12 @@ The closeout helper resolves its root to the brain repository rather than this p
 ## 10. Known Residuals
 
 - The brain-level closeout wrapper resolves its root to the brain repository and evaluates unrelated acceptance ledgers there. Its check fails on those unmet campaign gates; the direct after-task structure checker passes for this report.
-- GLLVModels.jl PR #1017 is open at `75fd1f80722cbefa26443e777e3bbb2eb80ff5f6`; Julia shards, twin tests, and Documenter passed. The separate Documenter deploy job was cancelled. No deployment was attempted.
-- The paired gllvmTMB PR #1704 is open at `f16c4d0151e340d57c9da8daebd1b36c7cd326e5`; all four R-CMD-check shards were in progress at 2026-10-27 01:31 UTC.
+- At 2026-10-27 01:31 UTC, GLLVModels.jl PR #1017 was open at `75fd1f80722cbefa26443e777e3bbb2eb80ff5f6`; Julia shards, twin tests, and Documenter had passed. That head's separate Documenter deploy job was cancelled.
+- At 01:31 UTC, the paired gllvmTMB PR #1704 was open at `f16c4d0151e340d57c9da8daebd1b36c7cd326e5`; all four R-CMD-check shards were in progress.
+- At 03:08 UTC, PR #1017 head `c0440d9bc3f19feff7141602cffb505f6d3f812b` had passed all four Julia shards, both twin tests, Documenter, and the latest PR wording guard. CI also published a PR preview; this was not a production site deployment.
+- At 03:08 UTC, PR #1704 head `cb852bf7b9d34bcf08b59e87c75558c9a4e84153` had passed all four R-CMD-check shards. Both PRs were open and unmerged.
 - The app refused to archive the superseded audit worktree because it is protected by a pinned task or workspace; its clean checkpoint and evidence remain preserved. The planning conversation is archived.
-- No deployment or public parity or calibration claim was made.
+- No production deployment or public parity or calibration claim was made.
 
 ## 11. Team Learning
 
