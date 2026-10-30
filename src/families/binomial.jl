@@ -383,7 +383,9 @@ a probit fit never reaches the logit-specific analytic gradient regardless of
 use finite differences because the offset depends jointly on `Λ` and
 `alpha_lv`. Warm start: empirical link-scale intercepts + an SVD (PPCA-style)
 loadings init; `alpha_lv` starts from a least-squares regression of the
-initial latent scores on `X_lv`.
+initial latent scores on `X_lv`. `λ_init` is accepted as an alias of `Λ_init`
+(the Gaussian start name); passing both with different values throws. Omitting
+both keeps the existing warm start.
 
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
 `:observed` joint — TMB's choice); the inner mode search is always
@@ -411,12 +413,13 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, mask = nothing,
         offset = nothing, gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Binomial(), link),
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, Λ_init = nothing, λ_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         loading_ridge::Real = Inf,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    Λ_init = _resolve_loading_init(Λ_init, λ_init; caller = "_fit_binomial_gllvm_laplace")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "_fit_binomial_gllvm_laplace")

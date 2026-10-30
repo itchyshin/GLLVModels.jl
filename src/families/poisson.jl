@@ -195,12 +195,13 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing, weights = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Poisson(), link),
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, Λ_init = nothing, λ_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
         optimizer = nothing)
+    Λ_init = _resolve_loading_init(Λ_init, λ_init; caller = "_fit_poisson_gllvm_laplace")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "_fit_poisson_gllvm_laplace")

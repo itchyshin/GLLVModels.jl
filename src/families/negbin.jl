@@ -197,12 +197,13 @@ function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(NegativeBinomial(1.0, 0.5), link),
-        β_init = nothing, Λ_init = nothing, r_init = nothing,
+        β_init = nothing, Λ_init = nothing, λ_init = nothing, r_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
         optimizer = nothing)
+    Λ_init = _resolve_loading_init(Λ_init, λ_init; caller = "fit_nb_gllvm")
     _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_nb_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,

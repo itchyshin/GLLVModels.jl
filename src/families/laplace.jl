@@ -25,6 +25,20 @@ _clamp_eta(η) = clamp(η, -_ETA_CLAMP, _ETA_CLAMP)
 # 0.0); the fitters' `catch` then turned every K = 0 evaluation into the failure sentinel.
 _laplace_logdet(A::AbstractMatrix) = size(A, 1) == 0 ? zero(eltype(A)) : logdet(A)
 
+# Gaussian `fit_gaussian_gllvm` takes `λ_init`; the Laplace family fitters take `Λ_init`.
+# Accept the Gaussian name as an alias so `fit_gllvm(Y; family = Binomial(), λ_init = L)`
+# does not MethodError. `nothing` keeps the existing warm start. Passing both with
+# different values throws; defaults are unchanged.
+function _resolve_loading_init(Λ_init, λ_init; caller::AbstractString)
+    if λ_init === nothing
+        return Λ_init
+    elseif Λ_init === nothing || Λ_init == λ_init
+        return λ_init
+    else
+        throw(ArgumentError("$caller: λ_init and Λ_init disagree; pass only one"))
+    end
+end
+
 # η-clamp plateau (#553, #869). Once β_t plus its additive η term is above `_ETA_CLAMP`, a
 # log-link objective is exactly flat in β_t (μ is capped at e^30), so a gradient test can
 # fire there and report `converged = true` far below the optimum. Two tools, used together:

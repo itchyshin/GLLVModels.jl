@@ -87,6 +87,16 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   by decision (e.g. GP-1).
 
 ### Fixed
+- **FIX:** the README Poisson optimizer example defines the count matrix `Y`
+  (#1007). The `:bfgs` / `:lbfgs` block used an undefined `Y` and raised
+  `UndefVarError` in a fresh session. The confidence-interval block is also
+  self-contained. No fitter change.
+- **FIX:** `fit_gllvm` accepts `λ_init` on Binomial and other Laplace family
+  routes (#1008). Gaussian already used `λ_init`; the Laplace fitters take
+  `Λ_init`, so `fit_gllvm(Y; family = Binomial(), λ_init = L)` raised
+  `MethodError`. `λ_init` is now an alias of `Λ_init` on non-Gaussian routes
+  that already take `Λ_init`. Passing both with different values throws.
+  Omitting both keeps the existing warm start.
 - **FIX:** three fitters no longer report `converged = true` off an optimum
   (refs #754, #753, #781). `fit_branch_re` requires a small Nelder–Mead
   simplex in parameter space and records `sigma2_boundary` when `σ²` or
