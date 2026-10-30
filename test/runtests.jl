@@ -177,9 +177,11 @@ println(_SHARD === nothing ?
     # #948: wire NB and binomial xlv. Profile-CI canaries stay behind
     # GLLVM_XLV_CANARY=1 (pd_hessian / endpoint_status / NaN bounds are
     # optimiser-path and BLAS sensitive; they failed on this 1.10.12
-    # snapshot too). Likelihood identities and ArgumentError guards run
-    # in CI. test_phylo_ordinal_xlv and test_sparse_phy_grad stay unwired
-    # (same flake class; not in #948).
+    # snapshot too). Likelihood identities, likelihood ArgumentError
+    # guards, and the cheap profile ArgumentError guards run in CI.
+    # The NB sparse-vs-dense-leaf identity is `@test_broken` (1.3e-2
+    # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv
+    # and test_sparse_phy_grad stay unwired (same flake class; not in #948).
     _shard_include("test_phylo_binomial_xlv.jl")
     _shard_include("test_phylo_nb_xlv.jl")
     _shard_include("test_xlv_nb_binomial_wired.jl")

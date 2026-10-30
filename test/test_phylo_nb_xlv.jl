@@ -120,14 +120,15 @@ end
         maxiter = 120, tol = 1e-10)
     ll_dense_leaf = _dense_leaf_phylo_nb_xlv_loglik(
         Y, beta, Lambda, alpha_lv, r, sigma2, phy, X_lv)
-    # Sparse vs this test's dense-leaf oracle is 1.3e-2 on Julia 1.10.12
-    # here (ll_sparse = -112.424, ll_dense = -112.412). Do not widen 1e-6;
-    # the identity stays the contract. Skip until a numerics slice owns it.
-    if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
-        @test isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
-    else
-        @test_skip isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
-    end
+    # Deterministic identity at the same parameters: sparse-augmented
+    # `_phylo_nb_xlv_marginal_loglik` vs this file's dense-leaf oracle
+    # `_dense_leaf_phylo_nb_xlv_loglik`. On Julia 1.10.12 the gap is
+    # 1.3e-2 (ll_sparse = -112.424, ll_dense = -112.412), about 10^4
+    # times atol = 1e-6. That is a path bug, not optimiser or BLAS
+    # noise. Do not widen the contract. Draft issue:
+    # docs/dev-log/owed/2026-10-30-nb-xlv-sparse-dense-gap.md.
+    # `@test_broken` so CI flags the cell once the gap is closed.
+    @test_broken isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
     @test isfinite(ll_sparse_aug)
 
     @test GLLVModels._phylo_nb_xlv_marginal_loglik(
@@ -150,6 +151,34 @@ end
         Y, beta, Lambda, ones(2, K), r, sigma2, phy, X_lv)
     @test_throws ArgumentError GLLVModels._phylo_nb_xlv_marginal_loglik(
         Y, beta, Lambda, alpha_lv, r, sigma2, phy, X_lv; link = IdentityLink())
+end
+
+# Profile ArgumentError guards do not call a fit. A dummy NamedTuple
+# with Lambda is enough for the size check; CI must run these.
+@testset "Phylo x NB2 profile ArgumentError guards" begin
+    phy = GLLVModels.augmented_phy("(((A:0.3,B:0.3):0.2,(C:0.3,D:0.3):0.2):0.2,(E:0.4,F:0.4):0.2);")
+    p = phy.n_leaves
+    n = 3
+    K = 1
+    q_lv = 1
+    Y = zeros(Int, p, n)
+    X_lv = ones(n, q_lv)
+    eta_target = zeros(p * q_lv)
+    fit = (Lambda = zeros(p, K),)
+    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
+        fit, Y, phy, X_lv, Int[], eta_target)
+    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
+        fit, Y, phy, X_lv, [1, 1], eta_target)
+    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
+        fit, Y, phy, X_lv, [p + 1], eta_target)
+    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
+        fit, Y, phy, X_lv, [1], eta_target[1:(end - 1)])
+    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
+        fit, Y, phy, X_lv, [1], eta_target; profile_iterations = 0)
+    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
+        fit, Y, phy, X_lv, [1], eta_target; endpoint_step = -0.1)
+    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
+        fit, Y, phy, X_lv, [1], eta_target; r_bounds = (1.0, 0.5))
 end
 
 if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
@@ -201,20 +230,5 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
     @test prof.covered == [true]
     @test prof.r_ok
     @test prof.pd_hessian
-
-    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
-        fit, Y, phy, X_lv, Int[], eta_target)
-    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
-        fit, Y, phy, X_lv, [1, 1], eta_target)
-    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
-        fit, Y, phy, X_lv, [p + 1], eta_target)
-    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
-        fit, Y, phy, X_lv, [1], eta_target[1:(end - 1)])
-    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
-        fit, Y, phy, X_lv, [1], eta_target; profile_iterations = 0)
-    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
-        fit, Y, phy, X_lv, [1], eta_target; endpoint_step = -0.1)
-    @test_throws ArgumentError GLLVModels._phylo_nb_xlv_profile_eta_realized(
-        fit, Y, phy, X_lv, [1], eta_target; r_bounds = (1.0, 0.5))
 end
 end
