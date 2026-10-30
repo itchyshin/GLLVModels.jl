@@ -348,7 +348,7 @@ function twopart_loglik_site(family, y::AbstractVector,
     end
     A = Symmetric(Amat)
     floor_ = hessian === :observed ? _tp_eigmin_floor(family) : 0.0
-    floor_ > 0 && eigmin(A) < floor_ && return -Inf
+    floor_ > 0 && K > 0 && eigmin(A) < floor_ && return -Inf   # eigmin throws on 0x0 (K = 0)
     return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * _laplace_logdet(A)
 end
 
@@ -1544,6 +1544,10 @@ Where the observed curvature goes negative the site precision can approach
 singularity, so a site whose smallest eigenvalue is below `ZI_LAPLACE_EIGMIN_FLOOR`
 is a failed evaluation (as on the `zi_poisson()` route), and an optimum within 10%
 of the floor is reported `converged = false`. `:fisher` is unchanged and unguarded.
+On such data the observed surface keeps rising as the site precision approaches
+singularity, so there is no interior maximum to report (gllvmTMB's `zi_poisson()`
+also fails there; #1006). `hessian = :fisher` gives a converged Fisher-weight Laplace
+fit, whose `loglik` is on that different surface.
 """
 function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         offset = nothing,
@@ -1608,29 +1612,35 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             conv = false
             @warn "fit_zip_gllvm: the optimum sits at the Laplace breakdown guard (smallest " *
                   "site precision eigenvalue $(round(me; sigdigits = 3)), floor " *
-                  "$(ZI_LAPLACE_EIGMIN_FLOOR)); reported as not converged."
+                  "$(ZI_LAPLACE_EIGMIN_FLOOR)); reported as not converged. The observed-curvature " *
+                  "Laplace likelihood still rises toward a singular site precision, so it has no " *
+                  "interior maximum on these data (gllvmTMB zi_poisson() shares this surface; #1006). " *
+                  "`hessian = :fisher` fits the Fisher-weight Laplace, which has no such wall."
         end
     end
     return ZIPFit(βz, βc, Λc, ll, conv, iters, _stored_offset(offset))
 end
 
 # Smallest per-site Laplace precision eigenvalue I + Λc'(W_obs .* Λc) at given parameters
-# (-Inf if a site's mode search fails).
-function _zip_min_site_eigen(Y, Λc, βz, βc, offset, maxiter, tol)
+# (-Inf if a site's mode search fails). `fam` is `ZIPoisson()` or `ZINB(r)`.
+function _zi_min_site_eigen(fam, Y, Λc, βz, βc, offset, maxiter, tol)
     p, n = size(Y); Λz = zeros(p, size(Λc, 2))
     m = Inf
+    size(Λc, 2) == 0 && return m               # K = 0: no latent precision to guard (eigmin throws on 0x0)
     for s in 1:n
         oc = offset === nothing ? nothing : view(offset, :, s)
         y = view(Y, :, s)
-        ẑ, ok = _twopart_mode_search(ZIPoisson(), y, Λz, Λc, βz, βc;
+        ẑ, ok = _twopart_mode_search(fam, y, Λz, Λc, βz, βc;
                                      offsetc = oc, maxiter = maxiter, tol = tol)
         ok || return -Inf
         ηc = _clamp_eta.(βc .+ (oc === nothing ? 0.0 : oc) .+ Λc * ẑ)
-        W = [_tp_observed_Wc_z(ZIPoisson(), y[t], βz[t], ηc[t], NaN) for t in 1:p]
+        W = [_tp_observed_Wc_z(fam, y[t], βz[t], ηc[t], NaN) for t in 1:p]
         m = min(m, eigmin(Symmetric(Λc' * (W .* Λc) + I)))
     end
     return m
 end
+_zip_min_site_eigen(Y, Λc, βz, βc, offset, maxiter, tol) =
+    _zi_min_site_eigen(ZIPoisson(), Y, Λc, βz, βc, offset, maxiter, tol)
 
 """
     ZIPCovFit
@@ -1770,6 +1780,23 @@ function _tp_pieces(f::ZINB, y, ηz, ηc)
     end
 end
 
+# Observed count curvature -∂² log f / ∂(η^c)² for the zero-inflated NB2 (#932). A positive
+# count is NB2, so it is rμ(r+y)/(r+μ)². At y = 0, log f = log(π + (1-π)p0) with p0 = (r/(r+μ))^r;
+# with u = rμ/(r+μ) (so ∂log p0/∂η^c = -u, ∂u/∂η^c = r²μ/(r+μ)²) and g = (1-π)p0/P0 the posterior
+# share of count-process zeros, ∂g/∂η^c = -g(1-g)u, so the curvature is g(u' - (1-g)u²): negative
+# for moderate μ, hence the eigenvalue floor. As r → ∞ it is the ZIP weight gμ(1 - μ(1-g)).
+function _tp_observed_Wc_z(f::ZINB, y, ηz, ηc, Wc)
+    μ = exp(ηc); r = f.r
+    y > 0 && return r * μ * (r + y) / (r + μ)^2
+    π = inv(one(ηz) + exp(-ηz))
+    p0 = (r / (r + μ))^r
+    g = (one(π) - π) * p0 / (π + (one(π) - π) * p0)
+    u = r * μ / (r + μ)
+    du = r^2 * μ / (r + μ)^2
+    return g * (du - (one(g) - g) * u^2)
+end
+_tp_eigmin_floor(::ZINB) = ZI_LAPLACE_EIGMIN_FLOOR
+
 """
     zinb_marginal_loglik_laplace(Y, Λc, βz, βc, r; Λz=nothing, kwargs...) -> Float64
 
@@ -1819,11 +1846,14 @@ end
 Fit a zero-inflated NB2 GLLVM by L-BFGS over `[βz; βc; vec(Λc); log r]` (Λz=0).
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
-family the observed count-part weight is not yet specialised, so both selectors
-currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
-DeltaGamma is the only two-part family whose observed weight is implemented).
-Exposing the kwarg is the measurement prerequisite for closing that gap.
+`:fisher`); the mode search does not depend on it. `:observed` is the exact
+second derivative of the ZINB log-density, as gllvmTMB's Laplace uses (#932); before that
+fix both selectors gave the Fisher-weight objective, whose maximiser over-estimates the
+zero-inflation logit by about +0.16 at π = 0.2, and does not move with `n`. Where the
+observed curvature goes negative the site precision can approach singularity, so a site whose
+smallest eigenvalue is below `ZI_LAPLACE_EIGMIN_FLOOR` is a failed evaluation (as on the
+`zi_nbinom2()` route), and an optimum within 10% of the floor is reported
+`converged = false`. `:fisher` is unchanged and unguarded.
 """
 function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         offset = nothing,
@@ -1867,6 +1897,21 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     r = exp(θ̂[2p + rr + 1])
     ll, conv, iters = _fit_verdict(res)
     conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_zinb_gllvm")
+    # #932: as for ZIP (#739), an optimum at the Laplace breakdown guard is not a usable
+    # log-likelihood, and Optim reports it converged (a line search into the 1e12 sentinel is a
+    # zero step).
+    if conv && hessian === :observed
+        me = _zi_min_site_eigen(ZINB(r), Y, Λc, βz, βc, offset, newton_maxiter, newton_tol)
+        if me < 1.1 * ZI_LAPLACE_EIGMIN_FLOOR
+            conv = false
+            @warn "fit_zinb_gllvm: the optimum sits at the Laplace breakdown guard (smallest " *
+                  "site precision eigenvalue $(round(me; sigdigits = 3)), floor " *
+                  "$(ZI_LAPLACE_EIGMIN_FLOOR)); reported as not converged. The observed-curvature " *
+                  "Laplace likelihood still rises toward a singular site precision, so it has no " *
+                  "interior maximum on these data. `hessian = :fisher` fits the Fisher-weight " *
+                  "Laplace, which has no such wall."
+        end
+    end
     return ZINBFit(βz, βc, Λc, r, ll, conv, iters, _stored_offset(offset))
 end
 
@@ -1938,9 +1983,8 @@ runs and no gradient is tested.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
 `:fisher`); the mode search does not depend on it. As for the no-covariate
-fitter, the observed count-part weight is not yet specialised for this family,
-so both selectors currently produce the identical objective (the
-`TWOPART_KNOWN_OPEN` census gap).
+fitter, `:observed` is the exact ZINB curvature with the eigenvalue floor (#932); unlike
+`fit_zinb_gllvm`, this fitter does not flag an optimum at the floor as not converged.
 """
 function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3},
         K::Integer, γ_fixed = nothing, θ_init = nothing, hessian::Symbol = :observed,

@@ -3,6 +3,18 @@ into runtests.jl (#948). Profile canaries stay behind GLLVM_XLV_CANARY.
 Focused run: 29 passed, 0 failed, 1 skip. See
 after-task/2026-10-25-wire-xlv-nb-binomial-948.md.
 
+2026-10-25: Family CI bootstrap and profile-refit rethrow
+InterruptException. A "not supported" simulate stub is now
+ArgumentError before the replicate loop. Focused
+test_interrupt_rethrow.jl: 9 passed / 0 failed. Refs #774.
+See after-task/2026-10-25-confint-family-interrupt-774.md.
+
+2026-10-25: Phylo Beta and Ordinal xLV mode searches flag a maxiter exit
+and return nothing (same as Poisson/binomial/Gamma/NB2). Poisson xLV
+constrained-refit rethrows InterruptException. Focused tests 22 passed /
+0 failed (beta mode 6, ordinal mode 6, interrupt 6, binomial mode 4).
+See after-task/2026-10-25-phylo-xlv-maxiter-747.md. Refs #747.
+
 2026-10-21: Offline checker reported C0_MET, C1_MET, C5_MET, C6_MET, and C8_MET. Those boxes are ticked. C2, C3, C4, and X2 stay open. The parity goal stays open.
 
 2026-10-21: Shinichi signed the P1 optimizer stopping rule. Receipts stay fail and the numeric bars stay unchanged.

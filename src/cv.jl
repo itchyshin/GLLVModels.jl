@@ -26,19 +26,19 @@ using Printf
 Summary container holding out-of-sample cross-validation evaluation results.
 
 Fields:
-- `k_folds::Int` — number of folds ($K$)
-- `split::Symbol` — split strategy (`:random`, `:site`, or `:species`)
-- `loglik::Float64` — total out-of-sample log-likelihood summed across all test cells
-- `mse::Float64` — overall out-of-sample Mean Squared Error
-- `residual_mean::Float64` — sample mean of out-of-sample Dunn–Smyth randomized quantile residuals (target ≈ 0)
-- `residual_std::Float64` — sample standard deviation of out-of-sample randomized quantile residuals (target ≈ 1)
-- `fold_logliks::Vector{Float64}` — out-of-sample log-likelihood for each fold
-- `fold_mses::Vector{Float64}` — out-of-sample MSE for each fold
-- `fold_residual_means::Vector{Float64}` — mean of quantile residuals per fold
-- `fold_residual_stds::Vector{Float64}` — standard deviation of quantile residuals per fold
-- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$ (for `Binomial` with trial counts `N`, the expected count $N\hat{\mu}$, on the scale of `Y`)
-- `residuals::Matrix{Float64}` — $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
-- `fits::Vector{Any}` — fitted model objects from each training fold
+- `k_folds::Int`: number of folds ($K$)
+- `split::Symbol`: split strategy (`:random`, `:site`, or `:species`)
+- `loglik::Float64`: total out-of-sample log-likelihood summed across all test cells
+- `mse::Float64`: overall out-of-sample Mean Squared Error
+- `residual_mean::Float64`: sample mean of out-of-sample Dunn–Smyth randomized quantile residuals (target ≈ 0)
+- `residual_std::Float64`: sample standard deviation of out-of-sample randomized quantile residuals (target ≈ 1)
+- `fold_logliks::Vector{Float64}`: out-of-sample log-likelihood for each fold
+- `fold_mses::Vector{Float64}`: out-of-sample MSE for each fold
+- `fold_residual_means::Vector{Float64}`: mean of quantile residuals per fold
+- `fold_residual_stds::Vector{Float64}`: standard deviation of quantile residuals per fold
+- `predictions::Matrix{Float64}`: $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$ (for `Binomial` with trial counts `N`, the expected count $N\hat{\mu}$, on the scale of `Y`)
+- `residuals::Matrix{Float64}`: $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
+- `fits::Vector{Any}`: fitted model objects from each training fold
 """
 struct CVResult
     k_folds::Int
@@ -165,6 +165,17 @@ end
 # Out-of-sample cell-level evaluation (log-likelihood + Dunn–Smyth residual)
 # -----------------------------------------------------------------------------
 
+# Continuous cell: u = F(y), no jitter (lo = hi). The log tail goes to `_ds_z` so an upper (or lower)
+# tail below floatmin, where `ccdf` underflows to 0, still gives a finite residual that keeps growing
+# with y (#767). `v` is 1 on the lower side and 0 on the upper side so that `lmass` is used unscaled.
+function _cv_ds_z_continuous(d, y)
+    F = cdf(d, y)
+    S = ccdf(d, y)
+    lower = F <= 0.5
+    return _ds_z(F, F, S, S, lower ? 1.0 : 0.0;
+                 lmass = lower ? logcdf(d, y) : Distributions.logccdf(d, y))
+end
+
 function _cv_cell_eval(fit, family::Normal, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
     σ = if fit isa GllvmFit
         fit.pars.σ_eps
@@ -186,10 +197,7 @@ function _cv_cell_eval(fit, family::Poisson, y::Real, μ::Real, t::Int, s::Int, 
     d = Poisson(μ_c)
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
@@ -199,10 +207,7 @@ function _cv_cell_eval(fit, family::Binomial, y::Real, μ::Real, t::Int, s::Int,
     d = Binomial(N, μ_c)
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
@@ -220,10 +225,7 @@ function _cv_cell_eval(fit, family::NegativeBinomial, y::Real, μ::Real, t::Int,
     d = NegativeBinomial(r_disp, clamp(prob, 1e-12, 1.0 - 1e-12))
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
@@ -240,8 +242,7 @@ function _cv_cell_eval(fit, family::Beta, y::Real, μ::Real, t::Int, s::Int, N_m
     d = Beta(μ_c * φ, (1.0 - μ_c) * φ)
     yc = clamp(Float64(y), 1e-6, 1.0 - 1e-6)
     ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
@@ -259,8 +260,7 @@ function _cv_cell_eval(fit, family::Gamma, y::Real, μ::Real, t::Int, s::Int, N_
     d = Gamma(α, θ)
     yc = max(Float64(y), 1e-12)
     ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
@@ -269,8 +269,7 @@ function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::I
     d = Exponential(μ_c)
     yc = max(Float64(y), 1e-12)
     ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
@@ -294,9 +293,9 @@ Run $K$-fold cross-validation on community response matrix `Y` ($p \times n$,
 species/traits $\times$ sites/observations).
 
 Supported `split` strategies:
-- `:random` (or `:cell`, `:entry`) — Random entry-wise split across all observed cells.
-- `:site` (or `:site_block`, `:site_level`, `:column`) — Site-level block cross-validation holding out entire site columns.
-- `:species` (or `:species_block`, `:species_level`, `:row`) — Species-level block cross-validation holding out entire species rows.
+- `:random` (or `:cell`, `:entry`): random entry-wise split across all observed cells.
+- `:site` (or `:site_block`, `:site_level`, `:column`): site-level block cross-validation holding out entire site columns.
+- `:species` (or `:species_block`, `:species_level`, `:row`): species-level block cross-validation holding out entire species rows.
 
 For the Gaussian family, a fixed-effect design `X` (a `p×n×q` array, as for
 [`fit_gaussian_gllvm`](@ref)) may be passed as `X = X`; it is subset with each
@@ -312,6 +311,7 @@ Dunn–Smyth randomized quantile residuals, predictions, and per-fold metrics.
 # Examples
 ```julia
 using GLLVModels, Random
+using Distributions: Poisson
 
 # 5-fold random cell-level CV on count data
 Y = rand(0:10, 6, 40)
