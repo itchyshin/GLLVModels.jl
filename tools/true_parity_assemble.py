@@ -702,6 +702,11 @@ def boundary_context(row, root):
             return set(), f"boundary context case {cid}: a {kind} case must be a {suffix} case"
         if "comparison" in j:
             return set(), f"boundary context case {cid}: its receipt carries a comparison block, so it is compared, not context ({p})"
+        # Hardening (issue #829), as in the checker: P1 pin; source_ids, when listed, must name this row.
+        if j.get("pin") != "P1":
+            return set(), f"boundary context case {cid}: its receipt pin {json.dumps(j.get('pin'))} is not P1 ({p})"
+        if "source_ids" in j and not (isinstance(j["source_ids"], list) and row.get("source_id") in j["source_ids"]):
+            return set(), f"boundary context case {cid}: its receipt source_ids {json.dumps(j['source_ids'])} does not name {row.get('source_id')} ({p})"
     return set(ctx), None
 
 
@@ -734,6 +739,11 @@ def convergence_parity_problem(cp, p):
     return None
 
 
+def declares_polished_point(j):
+    """The checker's declaresPolishedPoint: compared_point newton_polished at the top level or in comparison."""
+    return any(isinstance(o, dict) and o.get("compared_point") == "newton_polished" for o in (j, j.get("comparison")))
+
+
 def numeric_receipt_problem(row, root, waive_status=False):
     """None when the row binds numerically, else why not. waive_status=True skips only the
     receipt status fields (what a valid receipt_status_exception waives in the checker)."""
@@ -756,6 +766,9 @@ def numeric_receipt_problem(row, root, waive_status=False):
             cp = convergence_parity_problem(j["convergence_parity"], p)
             if cp:
                 return cp
+        elif declares_polished_point(j):
+            return ("convergence parity (maintainer ruling 2026-10-05 (D-319), N9): the receipt declares "
+                    f"compared_point newton_polished but has no convergence_parity block in {p}")
         if not_passed is None:
             for obj, pre in ((j, ""), (j.get("comparison") if isinstance(j.get("comparison"), dict) else None, "comparison.")):
                 if obj is None:
