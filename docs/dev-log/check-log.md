@@ -1,3 +1,11 @@
+2026-10-30: README optimizer example defines `Y` (#1007).
+`fit_gllvm` accepts `λ_init` on Binomial and sibling Laplace
+routes (#1008). `Pkg.test()`: 37776 passed / 107 broken / 0
+failed in the root testset, plus 13 README passes. Combined
+37789 passed / 107 broken / 0 failed / 0 errored (249m54.9s,
+Julia 1.10.12). See
+after-task/2026-10-30-readme-lambda-init-1007-1008.md.
+
 2026-10-25: Family CI bootstrap and profile-refit rethrow
 InterruptException. A "not supported" simulate stub is now
 ArgumentError before the replicate loop. Focused
