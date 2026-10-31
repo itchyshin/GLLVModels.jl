@@ -34,3 +34,31 @@ using GLLVModels, Test, Random, Distributions, LinearAlgebra, StableRNGs
     ll = gaussian_pervar_marginal_loglik(Yc, fit.Λ, fit.φ²)
     @test isapprox(ll, fit.loglik; atol = 1e-6)
 end
+
+# Real-data Heywood cases from #736. References: gllvmTMB `latent(..., unique = TRUE)` logLik
+# quoted in the issue (urine, OBrienKaiser) and the direct ML factor-analysis value for
+# USJudgeRatings K = 3 (12.275397; gllvmTMB 12.275310). Fixtures are the issue's prepared data
+# (urine standardised, OBrienKaiser centred) and raw datasets::USJudgeRatings; the per-species
+# intercepts are profiled, so centring does not change the logLik.
+function _read_736_fixture(name)
+    lines = readlines(joinpath(@__DIR__, "fixtures", "pervar_heywood_736_$name.csv"))
+    rows = [split(l, ",") for l in lines[2:end]]
+    m = length(split(lines[1], ",")) - 1
+    [parse(Float64, r[j + 1]) for j in 1:m, r in rows]   # p × n
+end
+
+@testset "pervar Heywood real data reaches the reference optimum (#736)" begin
+    cases = (("urine", 1, -495.581931), ("urine", 2, -464.752746),
+             ("obrienkaiser", 2, -370.288228), ("usjudgeratings", 3, 12.275397))
+    for (name, K, ref) in cases, method in (:em, :lbfgs)
+        Y = _read_736_fixture(name)
+        fit = fit_gllvm(Y; family = Normal(), K = K, pervar = true, method = method)
+        @testset "$name K=$K method=$method" begin
+            @test fit.converged
+            @test fit.loglik >= ref - 1e-5
+            Yc = Y .- sum(Y, dims = 2) ./ size(Y, 2)
+            @test isapprox(gaussian_pervar_marginal_loglik(Yc, fit.Λ, fit.φ²), fit.loglik;
+                           atol = 1e-6)
+        end
+    end
+end
