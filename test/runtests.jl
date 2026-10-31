@@ -659,6 +659,8 @@ println(_SHARD === nothing ?
     _shard_include("test_branch_re_helpers.jl")
     _shard_include("test_response_support_730_siblings.jl")
     _shard_include("test_interrupt_rethrow.jl")
+    # #1020: parity and CI docs say the confint default differs from gllvmTMB.
+    _shard_include("test_docs_confint_default_1020.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
     _shard_include("test_phylo_sparse_solvers.jl")

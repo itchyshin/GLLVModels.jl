@@ -179,7 +179,10 @@ confint(fit, y; parm = "phylo_signal[1]", method = :profile)
 A call either runs the method it names or throws an `ArgumentError` that lists
 the methods available for that fit and `parm`; it never hands back a Wald
 interval for a profile or bootstrap request, and a keyword the route does not use
-is refused by name. The default is still `method = :wald`.
+is refused by name. The default is still `method = :wald`. gllvmTMB's `confint()`
+defaults to `method = "profile"` for most `parm` values, so pass `method`
+explicitly when comparing intervals across the two packages (see
+the "R bridge" table on [the parity page](gllvmtmb-parity.md)).
 
 | `parm` | quantity | `:wald` | `:profile` | `:bootstrap` |
 |--------|----------|---------|------------|--------------|
