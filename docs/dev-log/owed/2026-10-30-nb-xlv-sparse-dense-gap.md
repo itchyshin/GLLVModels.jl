@@ -1,7 +1,8 @@
-# GitHub issue (not filed)
+# GitHub issue #1018 (filed)
 
-Paste the block below as a new issue. Do not use closing keywords.
-Do not try to fix the NB path in the #948 wiring PR.
+Opened as https://github.com/itchyshin/GLLVModels.jl/issues/1018.
+The text below is the filed body. Do not try to fix the NB path in
+the #948 wiring PR.
 
 **Title:** NB phylo xlv sparse-augmented loglik disagrees with the dense-leaf oracle by 1.3e-2
 

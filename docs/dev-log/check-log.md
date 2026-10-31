@@ -1,3 +1,7 @@
+2026-10-31: #1005 body restores Closes #948 plus intended-closes so
+the wrong-close guard accepts commit 1cde1b673. The `@test_broken`
+comment cites #1018; the owed draft points at the filed issue.
+
 2026-10-31: Reviewer-2 follow-up on #1005 (Refs #948). Merged origin/main
 (63 commits; check-log.md conflict kept both 2026-10-25 entries). NB
 sparse-vs-dense identity is `@test_broken` (gap 1.3e-2 at equal

@@ -125,8 +125,7 @@ end
     # `_dense_leaf_phylo_nb_xlv_loglik`. On Julia 1.10.12 the gap is
     # 1.3e-2 (ll_sparse = -112.424, ll_dense = -112.412), about 10^4
     # times atol = 1e-6. That is a path bug, not optimiser or BLAS
-    # noise. Do not widen the contract. Draft issue:
-    # docs/dev-log/owed/2026-10-30-nb-xlv-sparse-dense-gap.md.
+    # noise. Do not widen the contract. Tracked as #1018.
     # `@test_broken` so CI flags the cell once the gap is closed.
     @test_broken isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
     @test isfinite(ll_sparse_aug)
