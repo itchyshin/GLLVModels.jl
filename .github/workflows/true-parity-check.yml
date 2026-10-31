@@ -21,6 +21,16 @@ on:
       - 'tools/true_parity/campaign/**'
       - 'docs/dev-log/core070/true-parity-latest/**'
       - '.github/workflows/true-parity-check.yml'
+      # C6 classifier --check (job c6-classifier below): its inputs are the export list and docstrings
+      # (src/), the @docs pages (docs/src/), README mentions, the ledger tables and the project deps.
+      - 'tools/true_parity_c6_classify.jl'
+      - 'tools/test_true_parity_c6_classify.jl'
+      - 'tools/true_parity_c6_ledger_classes.py'
+      - 'tools/parity_ledger.py'
+      - 'src/**'
+      - 'docs/src/**'
+      - 'README.md'
+      - 'Project.toml'
   workflow_dispatch:
 jobs:
   negative-controls:
@@ -70,3 +80,25 @@ jobs:
             echo "::endgroup::"
           done
           exit $fail
+  # The C6 classifier loads GLLVModels in Julia, so the Node/Python job above cannot run it. Without this
+  # job a stale reverse-gap-decisions.json (or reverse-gap-inputs.json) can merge unnoticed (#819/#821).
+  c6-classifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # tools/true_parity_c6_ledger_classes.py reads tools/parity_ledger.py --ref 9539352f6 from git history.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: C6 classifier --check
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          JULIA_NUM_THREADS: '4'
+        run: julia --project=. tools/true_parity_c6_classify.jl --check
