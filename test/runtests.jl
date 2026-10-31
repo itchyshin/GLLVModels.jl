@@ -587,6 +587,8 @@ println(_SHARD === nothing ?
     _shard_include("test_mc_simulate_p1.jl")
     # P1 numeric twins of gllvmTMB extract_proportions (one-tier and two-level) and extract_residual_split (two-level Gaussian).
     _shard_include("test_variance_decomp_p1.jl")
+    # Post-fit parity vs gllvmTMB P1 fixtures: tier-local communality (refs #131) and confint default method (@test_broken, refs #1020).
+    _shard_include("test_postfit_communality_confint_default_parity.jl")
     # P1 numeric twin of the gllvmTMB namespace row animal_scalar (one shared animal variance on a pedigree A, Gaussian).
     _shard_include("test_animal_scalar_p1.jl")
     # P1 numeric twins of the gllvmTMB namespace rows extract_Gamma and extract_coevolution_modules (cross-lineage kernel tier, Gaussian).
