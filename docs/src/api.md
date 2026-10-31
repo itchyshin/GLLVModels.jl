@@ -56,6 +56,7 @@ fit_kernel_latent_gllvm
 fit_mixed_gllvm
 fit_gaussian_gllvm
 fit_gaussian_pervar_gllvm
+pervar_boundary
 fit_gaussian_sources
 optimizer_info
 OptimizerRecord

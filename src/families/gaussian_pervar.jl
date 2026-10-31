@@ -187,7 +187,9 @@ end
 
 """
     fit_gaussian_pervar_gllvm(Y; K, X=nothing, fixed_residual_sd=0.0,
-                             aghq=false, aghq_control=(;), g_tol=1e-5, iterations=1000)
+                             aghq=false, aghq_control=(;), g_tol=1e-5, iterations=1000,
+                             Λ_init=nothing, ψ²_init=nothing, n_starts=1,
+                             rng=Random.default_rng())
         -> GaussianPerVarFit
 
 Fit a heteroscedastic (per-species variance) Gaussian GLLVM by EM or L-BFGS.
@@ -233,6 +235,23 @@ options; this does not establish R bridge or interval parity.
 
 Warm start: PPCA closed form (Tipping & Bishop 1999) for `Λ` and per-species
 residual variances initialised from the per-trait sample variances of `Y`.
+`Λ_init` (`p × K`) and `ψ²_init` (length `p`, positive unique variances) replace
+either part of that start. A supplied `Λ_init` is rotated to the lower-triangular
+parameterisation; `Λ_init * Λ_init'` is unchanged.
+
+Multi-start (opt-in): `n_starts > 1` refits from `n_starts - 1` additional random
+starts drawn from `rng`, after the first fit from the default (or supplied) start.
+The returned fit has the highest log-likelihood among converged fits, or among
+all fits if none converged. Heywood fits can reach different local optima from
+different starts (#736). The default `n_starts = 1` runs one fit and draws nothing
+from `rng`.
+
+Seeds: the default fit is deterministic. The PPCA start, EM and L-BFGS use no
+random numbers, so `Random.seed!` does not change it. Only `n_starts > 1` uses
+`rng`; pass e.g. `rng = StableRNG(1)` for a reproducible multi-start.
+
+Boundary: a fit can report `converged = true` with a unique variance at or near
+zero (a Heywood case). [`pervar_boundary`](@ref) lists those responses.
 
 The shared-σ `fit_gaussian_gllvm` is untouched; this is a parallel variant.
 """
@@ -245,7 +264,11 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
                                    method::Symbol = :em,
                                    g_tol::Real = 1e-5,
                                    em_tol::Real = 1e-8,
-                                   iterations::Integer = 1000)
+                                   iterations::Integer = 1000,
+                                   Λ_init::Union{Nothing, AbstractMatrix{<:Real}} = nothing,
+                                   ψ²_init::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                                   n_starts::Integer = 1,
+                                   rng::AbstractRNG = Random.default_rng())
     p, n = size(Y)
     @assert K ≥ 1
     _ledermann_pervar_k_admissible(p, K) || throw(ArgumentError(
@@ -260,6 +283,27 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         throw(ArgumentError("fixed_residual_sd must be finite and nonnegative with a representable square"))
     request = _aghq_request(aghq)
     integration_controls = _aghq_controls(aghq_control)
+    Λ_init === nothing || (size(Λ_init) == (p, K) && all(isfinite, Λ_init)) ||
+        throw(ArgumentError("Λ_init must be a finite p × K = $p × $K matrix"))
+    ψ²_init === nothing || (length(ψ²_init) == p && all(v -> isfinite(v) && v > 0, ψ²_init)) ||
+        throw(ArgumentError("ψ²_init must be a length-$p vector of finite positive variances"))
+    n_starts >= 1 || throw(ArgumentError("n_starts must be at least 1"))
+    if n_starts > 1
+        kw = (K = K, X = X, fixed_residual_sd = fixed_residual_sd, method = method,
+              g_tol = g_tol, em_tol = em_tol, iterations = iterations)
+        fits = [fit_gaussian_pervar_gllvm(Y; kw..., Λ_init = Λ_init, ψ²_init = ψ²_init)]
+        # Random starts on the scale of each response's variance.
+        v = vec(var(Matrix{Float64}(Y); dims = 2))
+        v = ifelse.(v .> 0, v, 1.0)
+        for _ in 2:n_starts
+            Λs = sqrt.(v ./ K) .* randn(rng, p, K)
+            ψ²s = max.(v .* exp.(randn(rng, p) .- log(2)) .- c², 1e-3)
+            push!(fits, fit_gaussian_pervar_gllvm(Y; kw..., Λ_init = Λs, ψ²_init = ψ²s))
+        end
+        pool = any(f -> f.converged, fits) ? filter(f -> f.converged, fits) : fits
+        best = pool[argmax([isnan(f.loglik) ? -Inf : f.loglik for f in pool])]
+        return _pervar_with_fallback(best, request, integration_controls)
+    end
 
     Yf = Matrix{Float64}(Y)
     all(isfinite, Yf) || throw(ArgumentError("Y must contain only finite responses"))
@@ -290,7 +334,9 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
     # ----- Warm starts.
     # Λ via PPCA on the centred data (requires K < p); otherwise fall back to
     # the default lower-triangular init.
-    Λ0 = if K < p
+    Λ0 = if Λ_init !== nothing
+        Matrix{Float64}(qr(Matrix{Float64}(Λ_init)').R')
+    elseif K < p
         Λp, _ = ppca_init(Yc, K)
         Λp
     else
@@ -302,7 +348,8 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
     # Per-species variance init: per-species sample variance of the centred data,
     # floored away from zero. Use a fraction so it does not absorb the loadings.
     col_var = vec(sum(abs2, Yc, dims = 2)) ./ max(n - 1, 1)   # length p
-    φ²_0 = max.(0.5 .* col_var .- c², 1e-3)
+    φ²_0 = ψ²_init === nothing ? max.(0.5 .* col_var .- c², 1e-3) :
+           collect(Float64, ψ²_init)
     logφ²_0 = log.(φ²_0)
 
     params0 = vcat(θ_Λ0, logφ²_0)
@@ -318,6 +365,11 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         Λ_em, φ²_em, ll_em, nit_em, conv_em =
             em_fa(Yc, K; λ_init = Λ0, ψ_init = φ²_0, tol = em_tol,
                   max_iter = max(Int(iterations), 2000))
+        if Λ_init !== nothing || ψ²_init !== nothing
+            # em_fa's Woodbury log-likelihood loses accuracy when a supplied start
+            # puts a ψ² near zero; report the exact value at the returned point.
+            ll_em = gaussian_pervar_marginal_loglik(Yc, Λ_em, φ²_em)
+        end
         fit = GaussianPerVarFit(
             collect(Float64, μ0),
             Matrix{Float64}(Λ_em),
@@ -416,4 +468,18 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         c,
     )
     return _pervar_with_fallback(fit, request, integration_controls)
+end
+
+"""
+    pervar_boundary(fit::GaussianPerVarFit; rtol=1e-6) -> Vector{Int}
+
+Indices of responses whose unique variance is at a Heywood boundary:
+`fit.ψ²[j] < rtol * Σ̂[j, j]`, with `Σ̂ = Λ Λ' + Diagonal(φ²)` the fitted
+covariance. A fit can report `converged = true` with such a variance; its
+standard errors and likelihood-ratio tests then need boundary care (#736).
+This is a post-fit check and does not change the fit.
+"""
+function pervar_boundary(fit::GaussianPerVarFit; rtol::Real = 1e-6)
+    total = fit.φ² .+ vec(sum(abs2, fit.Λ; dims = 2))
+    return findall(fit.ψ² .< rtol .* total)
 end
