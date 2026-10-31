@@ -66,6 +66,12 @@ to ±∞ (complete separation). `fit_binomial_gllvm` clamps the linear predictor
 for numerical safety, but a non-convergence flag or an extreme intercept is a
 sign to inspect that response.
 
+The Binomial Laplace path bounds `μ` to `[1e-12, 1 − 1e-12]` and `η` to `±30`. Beyond
+`|η| = 30` the objective is flat, and each saturated misfit cell contributes at
+least `log(1e-12) ≈ −27.6` to the log-likelihood instead of its true, more negative
+value. A fit that sits on these bounds therefore reports an optimistic
+log-likelihood; check `fit.saturation` and `converged`.
+
 See also: [Get started](quickstart.md) · [Response families](response-families.md) · [Reference](api.md).
 
 ## Loading StatsBase or MixedModels alongside GLLVModels breaks six verbs

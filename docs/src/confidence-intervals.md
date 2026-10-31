@@ -159,6 +159,12 @@ signed `sigma_phy[t]`, `beta` and `Lambda_*` terms are reported as they are.
 percentiles, and returns `n_used` and `n_dropped` (it warns when more than half of
 the refits are dropped).
 
+The dropped refits are not removed from the output: `replicates` keeps one row per
+refit (finite rows for refits that did not converge, `NaN` rows for refits that
+errored) and `converged` flags each row, so filter on `converged` before using
+`replicates` directly. Only the percentile bounds, `n_used` and `n_dropped` apply
+the exclusion.
+
 and derived-quantity CIs (Σ_y entries, communality, correlation, phylogenetic
 signal H²) via [`confint_derived`-family helpers](covariance-correlation.md).
 

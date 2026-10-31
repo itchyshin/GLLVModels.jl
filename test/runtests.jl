@@ -647,6 +647,7 @@ println(_SHARD === nothing ?
     _shard_include("test_response_support_730.jl")
     _shard_include("test_response_support_730_va_ordinal.jl")
     _shard_include("test_bootstrap_decisions.jl")
+    _shard_include("test_clamp_and_replicate_retention_docs.jl")
     _shard_include("test_truncpois_boot_782.jl")
     _shard_include("test_derived_decisions.jl")
     _shard_include("test_n_lt_p.jl")
