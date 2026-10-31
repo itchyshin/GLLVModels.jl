@@ -120,12 +120,7 @@ end
         maxiter = 120, tol = 1e-10)
     ll_dense_leaf = _dense_leaf_phylo_nb_xlv_loglik(
         Y, beta, Lambda, alpha_lv, r, sigma2, phy, X_lv)
-    # KNOWN BUG (#1018): sparse-augmented vs dense-leaf NB loglik differ by
-    # ~1.3e-2 at fixed theta (-112.4244 vs -112.4116), ~1e4x this tolerance.
-    # The binomial sibling holds at 1e-6. Either the NB sparse path or this
-    # oracle is wrong; atol must NOT be widened. When fixed, @test_broken will
-    # report "unexpected pass" -- flip it to @test then.
-    @test_broken isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
+    @test isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
     @test isfinite(ll_sparse_aug)
 
     @test GLLVModels._phylo_nb_xlv_marginal_loglik(
