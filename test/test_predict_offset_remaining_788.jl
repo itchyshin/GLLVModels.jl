@@ -30,7 +30,6 @@ const GM = GLLVModels
 
     # Intended: the fit keeps the offset it was trained with ...
     @test_broken hasproperty(f, :offset) && f.offset == O
-    # ... so predicting on the training Y without `offset` equals predicting with it.
-    @test_broken isapprox(GM.predict(f, Y; type = :link),
-                          GM.predict(f, Y; type = :link, offset = O); atol = 1e-6)
+    # A predict-on-training-Y check is not pinned here: predict(::TruncatedPoissonFit)
+    # has no method yet, so it would raise a MethodError rather than exercise the offset.
 end
