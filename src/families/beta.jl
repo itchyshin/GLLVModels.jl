@@ -172,12 +172,11 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogitLink(), mask = nothing, offset = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Beta(1.0, 1.0), link),
-        β_init = nothing, Λ_init = nothing, λ_init = nothing, φ_init = nothing,
+        β_init = nothing, Λ_init = nothing, φ_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
-    Λ_init = _resolve_loading_init(Λ_init, λ_init; caller = "fit_beta_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_beta_gllvm")
