@@ -19,6 +19,8 @@ GLLVModels.jl is a Julia implementation of the Generalised Linear Latent Variabl
 - **Full suite (canonical)**: `julia --project=. -e 'using Pkg; Pkg.test()'` — verified working on macOS + all CI runners (the earlier `can not merge projects` problem is resolved; root `Project.toml` carries no conflicting `[extras]`/`[targets]`). This is what CI runs, and the only invocation that loads the test-only quality tools (Aqua, JET) declared in `test/Project.toml`.
 - **Quick core run**: `julia --project=. test/runtests.jl` runs the core suite directly — faster, no test-env setup, but skips the quality tools (they live in the test environment).
 
+- **Known sandbox-only failures (#875)**: on a non-standard local build (Julia 1.10.4 from conda-forge with SuiteSparse 7.2.1 swapped in), shard 2/4 shows 3 failures that pass on CI's standard Julia binaries: `test/test_phylo_latent_paired_p1.jl:135-136` (A15 live refit `converged` / `gradient_norm <= 1e-5`) and `test/test_phylo_precision_animal.jl:218` (animal `negll` vs dense, 1e-8). They reproduce identically on unmodified `main` in that environment. Treat them as an environment exception, not a package regression, unless they also fail on CI's standard binaries. Whether this is SuiteSparse/BLAS ordering noise or a real numerical-path difference has not been confirmed; do not loosen the tests to hide it.
+
 ### Design discipline (apply throughout)
 
 - **Surgical changes**: touch only what the task requires. Don't refactor adjacent code. Match existing style.
