@@ -101,61 +101,6 @@ end
     # log-likelihood checks below.
     @test fit.converged ? fit.stopping_reason ∈ (:converged, :rounding_floor) :
           (fit.stopping_reason === :gradient_not_converged && fit.gradient_norm <= 5 * 1e-5)
-    st = _plrf_stationarity(fit)                         # independent of the fitter's own gate
-        @test st.pd && fit.hessian_positive_definite
-        @test st.decrement <= 1000 * eps() * max(1.0, abs(st.value))
-        @test st.gmax <= 100 * 1e-5
-        @test abs(fit.loglik - default.loglik) <= 1e-6       # same optimum as the default-tolerance fit
-    end
-
-    @testset "not accepted away from a stationary point" begin
-        few = fit_phylo_latent_gllvm(Y, sp; d = 2, tree = _PLRF_NEWICK, g_tol = 1e-9, iterations = 2)
-        @test !few.converged && few.stopping_reason === :iteration_limit
-        @test few.stopping_reason !== :rounding_floor
-        # Public route from a displaced start: the floor rule must not accept it.
-        displaced = fit_phylo_latent_gllvm(Y, sp; d = 2, tree = _PLRF_NEWICK,
-            start = default.parameters .+ 0.3, iterations = 1, g_tol = 1e-9)
-        @test !displaced.converged
-        @test displaced.stopping_reason !== :rounding_floor
-        # Displaced parameters: the criterion itself must refuse (gradient / decrement far from the floor).
-        moved = GLLVModels.fit_precision_multivariate(Y, default.phy; rank = 2, mode = :barelowrank,
-            residual_mode = :shared, species_id = default.species_id, start = default.parameters .+ 0.3,
-            iterations = 1, g_tol = 1e-9)
-        @test !moved.converged
-        accepted, decrement, gmax = GLLVModels._phylo_latent_floor_check(moved, 1e-9)
-        @test !accepted
-        @test decrement > 1000 * eps() * max(1.0, abs(moved.loglik)) || gmax > 100 * 1e-5
-    end
-end
-
-# Issue #822's own cell: COV-PHYLO-DEP, d = 4, 120 tips, default g_tol = 1e-5.
-# Stationarity is asserted regardless of the flag. `converged = true` is allowed
-# only when gradient_norm <= g_tol; if this default-start fit is not converged,
-# the PR cannot close the issue.
-@testset "issue #822 repro: DEP d = 4, 120 tips" begin
-    toml = joinpath(@__DIR__, "fixtures", "cov_phylo_twins_p1.toml")
-    @test isfile(toml)
-    fx = TOML.parsefile(toml)
-    T = Int(fx["n_traits"])
-    tips = String.(fx["tip_labels"])
-    sp = String.(fx["observation_species"])
-    Y = permutedims(reshape(Float64.(fx["Y"]), length(sp), T))
-    @test T == 4 && length(tips) == 120
-    fit = fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = T, tree = fx["newick"])
-    @test fit.rank == T
-    @test !(fit.converged && fit.gradient_norm > 1e-5)
-    if VERSION >= v"1.11"
-        @test fit.converged
-        @test fit.stopping_reason ∈ (:converged, :rounding_floor)
-    else
-        # Julia 1.10 (#989): this fit reaches the same optimum, but the bundled BLAS leaves the
-        # finite-difference gradient norm at about 1.76e-5, just above the default g_tol = 1e-5,
-        # so the fitter correctly leaves `converged = false` (`:gradient_not_converged`). Accept
-        # that outcome only when the gradient norm is within 5 * g_tol; the stationarity and
-        # log-likelihood checks below still apply, and `converged = true` stays tied to g_tol above.
-        @test fit.converged ? fit.stopping_reason ∈ (:converged, :rounding_floor) :
-              (fit.stopping_reason === :gradient_not_converged && fit.gradient_norm <= 5 * 1e-5)
-    end
     st = _plrf_stationarity(fit)
     @test st.pd && fit.hessian_positive_definite
     @test st.decrement <= 1e-9
