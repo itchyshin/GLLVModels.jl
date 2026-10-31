@@ -670,5 +670,7 @@ println(_SHARD === nothing ?
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")
+    # #784: NB2 per-species fit on ade4::mollusc stalled 8.37 logLik below gllvmTMB.
+    _shard_include("test_nb_grouped_mollusc_784.jl")
 end
 include("test_readme_quickstart.jl")
