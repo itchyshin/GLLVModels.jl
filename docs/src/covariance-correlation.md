@@ -77,6 +77,20 @@ observation noise remains. Use `communality(fit)` or
 `extract_communality(fit; level = :total)` for the fraction including that
 noise. [Post-fit extractors](postfit-extractors.md) explains the denominators.
 
+!!! note "Denominator differs from R's `profile_ci_communality()`"
+    `communality(fit)` divides `(Λ_B Λ_B')[t,t]` by the *full* per-site variance
+    `Σ_y_site[t,t]`, which includes the residual `σ²_eps`, the diagonal
+    components `σ²_B`, `σ²_W` and the W-tier block `Λ_W Λ_W'`. gllvmTMB's
+    `profile_ci_communality()` instead uses a *tier-local* denominator
+    (shared part plus that tier's unique variance only), the same convention as
+    its `extract_communality()` at a single tier. With non-trivial `σ²_eps` or an
+    active W tier the two values (and intervals built around them) therefore
+    differ, with R's larger. The same split applies to `correlation(fit)`, which
+    normalises by `Σ_y_site`, against R's tier-local `Σ`. This is a documented
+    convention difference, not a bug; for the R-style tier-local fraction use
+    `extract_communality(fit)`. Which convention both packages should adopt is
+    an open design question (issue #131).
+
 ## Uncertainty on derived quantities
 
 The extractors above are point estimates. For an interval on a *derived*

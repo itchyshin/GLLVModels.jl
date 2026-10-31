@@ -25,6 +25,11 @@ const MC_FX = TOML.parsefile(joinpath(@__DIR__, "fixtures", "mc_simulate_p1.toml
         @test any(diff_alt .> tol_alt)   # discrimination control: psi_B doubled must fail
     end
 
+    # SEED SENSITIVITY (issue #828): this block passes at the recorded Julia seed (Xoshiro(30_000), worst
+    # |diff|/tol = 0.962), but a review re-ran the identical rule with 40 other Julia seeds and 7 failed, against a
+    # nominal familywise alpha of 0.01. Either the stored R fixture is an unusual draw or R's default simulate()
+    # differs slightly from Julia's. The rule and seed are deliberately NOT changed (no loosening after the fact);
+    # the row stays held until a larger R sample is drawn and a new twin is pre-registered.
     @testset "simulate() default (latent scores redrawn)" begin
         fx = MC_FX["simulate_default"]
         z = fx["z"]
