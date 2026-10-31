@@ -1,3 +1,14 @@
+2026-10-31: Reviewer-2 follow-up on #1005 (Refs #948). Merged origin/main
+(63 commits; check-log.md conflict kept both 2026-10-25 entries). NB
+sparse-vs-dense identity is `@test_broken` (gap 1.3e-2 at equal
+parameters; draft issue in owed/2026-10-30-nb-xlv-sparse-dense-gap.md).
+Profile ArgumentError guards run in CI (dummy Lambda NamedTuple; no
+fit). Full Pkg.test: 37793 passed, 2 failed, 0 errored, 108 broken.
+The two failures are test_masked_gaussian_converged_735.jl on main
+(g_residual 1.16e-6 vs g_tol 1e-6), not this PR's xlv files. Focused
+xlv: 42 passed, 1 broken, 0 failed. See
+after-task/2026-10-31-wire-xlv-nb-binomial-948-review.md.
+
 2026-10-25: Wired test_phylo_nb_xlv.jl and test_phylo_binomial_xlv.jl
 into runtests.jl (#948). Profile canaries stay behind GLLVM_XLV_CANARY.
 Focused run: 29 passed, 0 failed, 1 skip. See
