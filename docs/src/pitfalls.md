@@ -77,8 +77,7 @@ degenerate solution but report it differently:
 | Convergence flag | `converged = false` | `convergence = 0` (converged) |
 | Diagnostic | none beyond the flag; inspect the largest row norm of `fit.Λ` | runaway-loading warning (`max_loading`, relative size) |
 
-In the case measured for [#498](https://github.com/itchyshin/GLLVModels.jl/issues/498)
-(seed 42, binomial traits) the log-likelihoods agree to 0.02 units
+In one measured case (seed 42, binomial traits) the log-likelihoods agree to 0.02 units
 (Julia −5292.804, R −5292.786), with a largest loading of about 42 on the Julia
 side and 44 on the R side. A Julia fit with `converged = false` and a very large
 loading is therefore a likely quasi-separation, not necessarily an optimiser
