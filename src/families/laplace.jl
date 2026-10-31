@@ -32,7 +32,7 @@ _laplace_logdet(A::AbstractMatrix) = size(A, 1) == 0 ? zero(eltype(A)) : logdet(
 function _resolve_loading_init(Λ_init, λ_init; caller::AbstractString)
     if λ_init === nothing
         return Λ_init
-    elseif Λ_init === nothing || Λ_init == λ_init
+    elseif Λ_init === nothing || isequal(Λ_init, λ_init)
         return λ_init
     else
         throw(ArgumentError("$caller: λ_init and Λ_init disagree; pass only one"))

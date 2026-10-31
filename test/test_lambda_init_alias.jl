@@ -81,3 +81,27 @@ end
     @test named.β == base.β
     @test named.Λ == base.Λ
 end
+
+@testset "two-part and ZI routes refuse λ_init by name (#1008)" begin
+    Y = [0 1 0 2; 1 0 3 1]
+    L = ones(2, 1)
+    for family in (ZIPoisson(), ZINegBin(), HurdlePoisson(), DeltaLogNormal())
+        err = try
+            fit_gllvm(Y; family = family, K = 1, λ_init = L)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("λ_init", sprint(showerror, err))
+        @test occursin("loading start", sprint(showerror, err))
+        @test !occursin("Λ_init", sprint(showerror, err))
+    end
+end
+
+@testset "λ_init and Λ_init compare with isequal (#1008)" begin
+    L = fill(NaN, 2, 1)
+    @test GLLVModels._resolve_loading_init(L, L; caller = "test") === L
+    @test_throws ArgumentError GLLVModels._resolve_loading_init(zeros(2, 1), L;
+                                                                caller = "test")
+end

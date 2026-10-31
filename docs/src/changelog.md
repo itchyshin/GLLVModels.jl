@@ -95,8 +95,9 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   routes (#1008). Gaussian already used `λ_init`; the Laplace fitters take
   `Λ_init`, so `fit_gllvm(Y; family = Binomial(), λ_init = L)` raised
   `MethodError`. `λ_init` is now an alias of `Λ_init` on non-Gaussian routes
-  that already take `Λ_init`. Passing both with different values throws.
-  Omitting both keeps the existing warm start.
+  that already take `Λ_init`. Passing both with different values throws
+  (`isequal`). Two-part and zero-inflated routes raise `ArgumentError`
+  naming `λ_init`. Omitting both keeps the existing warm start.
 - **FIX:** three fitters no longer report `converged = true` off an optimum
   (refs #754, #753, #781). `fit_branch_re` requires a small Nelder–Mead
   simplex in parameter space and records `sigma2_boundary` when `σ²` or

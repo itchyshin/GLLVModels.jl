@@ -61,6 +61,7 @@ const _ZiTwinFamily = Union{ZiPoisson, ZiNbinom2, ZiBinomial}
 # `fit_zi_gllvm` has no `offset` keyword: `fit_gllvm` refuses an offset on these families
 # with a clear ArgumentError instead of letting it reach a MethodError.
 _offset_unsupported(::_ZiTwinFamily) = true
+_no_loading_init(::_ZiTwinFamily) = true
 
 _zi_rname(::ZiPoisson) = "zi_poisson"
 _zi_rname(::ZiNbinom2) = "zi_nbinom2"

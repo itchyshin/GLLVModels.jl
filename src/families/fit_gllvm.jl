@@ -127,6 +127,18 @@ const _OFFSET_MASKLESS_FAMILIES = Union{Lognormal, DeltaLogNormal, DeltaGamma, H
                                         HurdleNB, ZIPoisson, ZINegBin, ZIB}
 _offset_maskless(family) = family isa _OFFSET_MASKLESS_FAMILIES
 
+# Two-part and zero-inflated routes have no loading-start keyword. Do not rewrite
+# `λ_init` to `Λ_init` here: that would MethodError on a name the caller never
+# typed. Refuse `λ_init` with ArgumentError. Twin ZI markers join via a method
+# in zi_twin.jl (same pattern as `_offset_unsupported`).
+const _NO_LOADING_INIT_FAMILIES = Union{DeltaLogNormal, DeltaGamma,
+                                        HurdlePoisson, HurdleNB, BetaHurdle,
+                                        ZIPoisson, ZINegBin, ZIB}
+_no_loading_init(family) = family isa _NO_LOADING_INIT_FAMILIES
+_refuse_loading_init(family; caller::AbstractString = "fit_gllvm") = throw(ArgumentError(
+    "$caller: λ_init is not supported for family $(nameof(typeof(family))); " *
+    "this route does not support a loading start"))
+
 _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentError(
     "$caller: offset is not supported for $what; remove the offset keyword. " *
     "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
@@ -331,9 +343,10 @@ and runaway fits are skipped) and returns the chosen fit. `Kmax` defaults to
 `K` is unavailable with `row_eff` or `pervar` (pass `K` or call `select_lv` directly).
 Family-specific keyword arguments (`link`, `N`, `Σ_phy`, …) pass through to the
 underlying fitter. On non-Gaussian routes that already take `Λ_init`, `λ_init`
-is accepted as an alias of `Λ_init` (the Gaussian start name). The Normal route
-keeps `λ_init`. Passing both with different values throws. Omitting both keeps
-each route's existing warm start.
+is accepted as an alias of `Λ_init` (the Gaussian start name). Two-part and
+zero-inflated routes have no loading start: `λ_init` raises `ArgumentError`
+naming `λ_init`. The Normal route keeps `λ_init`. Passing both with different
+values throws. Omitting both keeps each route's existing warm start.
 
 `offset` is the known additive term in `η = β + offset + Λz` (for example log-exposure);
 `β` is the offset-free intercept, so a constant offset is absorbed by the intercepts (same
@@ -525,9 +538,13 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         kwargs = merge(NamedTuple(kwargs), (weights = _normalize_weights(weights,
             size(Y, 1), size(Y, 2); Y = Y, mask = get(kwargs, :mask, nothing)),))
     end
-    # Non-Gaussian routes take `Λ_init`; accept `λ_init` as an alias. The Normal
-    # route keeps `λ_init` for `fit_gaussian_gllvm`. Omitting both is unchanged.
-    if !(family isa Normal)
+    # Non-Gaussian Laplace routes take `Λ_init`; accept `λ_init` as an alias.
+    # Two-part and ZI routes have no loading start: refuse `λ_init` by that name.
+    # The Normal route keeps `λ_init` for `fit_gaussian_gllvm`. Omitting both is
+    # unchanged.
+    if haskey(kwargs, :λ_init) && _no_loading_init(family)
+        _refuse_loading_init(family)
+    elseif !(family isa Normal) && !_no_loading_init(family)
         kwargs = _alias_loading_init_kwargs(kwargs)
     end
     if phylo !== nothing

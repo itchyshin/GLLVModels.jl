@@ -1,3 +1,9 @@
+2026-10-31: PR #1019 review: two-part and ZI routes raise
+ArgumentError naming `λ_init` instead of rewriting it to
+`Λ_init`. Disagreement uses `isequal`. README examples run on
+shard 1 only. Focused tests: 50 passed / 0 failed.
+See after-task/2026-10-30-readme-lambda-init-1007-1008.md.
+
 2026-10-30: README optimizer example defines `Y` (#1007).
 `fit_gllvm` accepts `λ_init` on Binomial and sibling Laplace
 routes (#1008). `Pkg.test()`: 37776 passed / 107 broken / 0
