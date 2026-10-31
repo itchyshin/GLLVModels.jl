@@ -634,6 +634,8 @@ println(_SHARD === nothing ?
     # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
     _shard_include("test_zip_zinb_stall.jl")
     _shard_include("test_zip_observed_laplace.jl")
+    # #926: ZIP betaz-hat matches the exact-likelihood betaz (Wald centre), not the Fisher-Laplace one.
+    _shard_include("test_zip_betaz_wald_926.jl")
     _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
     _shard_include("test_input_validation.jl")
