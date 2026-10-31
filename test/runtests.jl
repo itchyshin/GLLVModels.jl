@@ -671,4 +671,8 @@ println(_SHARD === nothing ?
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")
 end
-include("test_readme_quickstart.jl")
+# README examples: shard 1 only. The blocks include Poisson fits and a Gaussian
+# CI trio; they must not run on every CI shard.
+if _SHARD === nothing || _SHARD[1] == 1
+    include("test_readme_quickstart.jl")
+end
