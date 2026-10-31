@@ -94,7 +94,7 @@ STRUCTURAL SCOPE: refuses (with an honest `ArgumentError`) for fits this
 closed-form identity does not cover — a phylogenetic block (`K_phy > 0` or
 `has_phy_unique`; the phylo effect is shared across sites, breaking the
 per-site-independent conditioning this formula assumes), a `K_W` (within/
-unit_obs) tier, or a masked/offset/AGHQ Gaussian-record fit (`Σ_y_site` from
+`unit_obs`) tier, or a masked/offset/AGHQ Gaussian-record fit (`Σ_y_site` from
 [`sigma_y_site`](@ref) does not reconstruct the record objective's actual
 per-cell covariance for those fits).
 """

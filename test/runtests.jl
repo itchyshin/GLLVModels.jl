@@ -665,6 +665,8 @@ println(_SHARD === nothing ?
     # #750: getLV / predict / residuals / simulate docstring signatures list mask and offset.
     _shard_include("test_docstring_postfit_mask_offset_750.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
+    # #1021: no `](@ref)` survives Markdown parsing in a docstring or docs/src page (dead `./@ref` link).
+    _shard_include("test_docstring_ref_linebreaks.jl")
     # #763: an explicit mask that marks a `missing` cell observed throws an ArgumentError.
     _shard_include("test_mask_missing_763.jl")
     _shard_include("test_changelog_structure.jl")

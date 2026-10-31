@@ -135,7 +135,7 @@ GLLVModels._fit_gaussian_structured_sources
 
 ## Temporal source internals
 
-The state index, the ordinary unit / unit_obs composition, the coordinate
+The state index, the ordinary unit / `unit_obs` composition, the coordinate
 layout and exact marginal likelihood behind [`fit_temporal_gllvm`](@ref), and
 the port of `TMB::tmbprofile` used by
 [`profile_temporal`](@ref). Not exported; can change without notice.

@@ -14,7 +14,7 @@
 Standalone **row-relatedness** Gaussian fit: the `p` rows of `Y` are the
 individuals indexed by `A`, and the relatedness block of the row covariance is the
 Hadamard product `(Λ_phy Λ_phy') .* A` with rank-`d` loadings (`K_phy = d`, packed
-Λ_phy), a fixed p × p GRM / NRM passed as engine `Σ_phy`, and a minimal unit-tier
+`Λ_phy`), a fixed p × p GRM / NRM passed as engine `Σ_phy`, and a minimal unit-tier
 factor (`K = 1`). When `d == p` this is [`fit_animal_dep_gllvm`](@ref).
 
 This is **not** the estimand of gllvmTMB's `animal_latent(0 + trait | id, d = d,
