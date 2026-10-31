@@ -105,4 +105,11 @@ Base.getindex(M::_ArmedMatrix, i::Int, j::Int) =
             profile_iterations = 2, penalty_weights = (1.0,))
         @test isnan(out.nll)
     end
+    @testset "derived / derived-Wald / profile confint: no bare catch (source pin)" begin
+        for f in ("confint_derived.jl", "confint_derived_wald.jl", "confint_profile.jl")
+            src = read(joinpath(pkgdir(GLLVModels), "src", f), String)
+            @test count(r"^\s*catch\s*$"m, src) == 0
+            @test count(r"\bcatch\s*;", src) == 0
+        end
+    end
 end

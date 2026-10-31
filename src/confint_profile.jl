@@ -191,7 +191,8 @@ function _profile_wald_se(fit::GllvmFit, i::Integer,
     nll = θ -> gaussian_nll_packed(θ, y; spec = spec, X = X_free, Σ_phy = Σ_phy)
     H = try
         ForwardDiff.hessian(nll, θ̂)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return NaN
     end
     if !all(isfinite, H)
@@ -201,7 +202,8 @@ function _profile_wald_se(fit::GllvmFit, i::Integer,
     Σ_inv = try
         Hsym = (H .+ H') ./ 2
         isempty(pins) ? inv(Hsym) : _inv_free_block(Hsym, pins)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return NaN
     end
     insorted(i, pins) && return 0.0
@@ -269,7 +271,8 @@ function _profile_refit_with_fixed(fit::GllvmFit, i::Integer, c::Real,
 
     res = try
         Optim.optimize(nll_red, θ_red0, Optim.LBFGS(), opts; autodiff = :forward)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return (NaN, false, θ_red0)
     end
 
