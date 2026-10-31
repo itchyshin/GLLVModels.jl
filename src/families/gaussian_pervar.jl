@@ -185,66 +185,6 @@ function _nparams(fit::GaussianPerVarFit)
     return length(fit.β) + rr_theta_len(p, K) + p
 end
 
-# Concentrated ML for Σ = ΛΛ' + diag(ψ²) (Jöreskog 1967), used to finish an
-# intercept-only fit that stalled at a Heywood boundary (#736). For fixed ψ², Λ has
-# the closed form ψ ⊙ Ω (Θ_K - I)₊^{1/2} from the eigenpairs (Θ, Ω) of
-# diag(ψ)⁻¹ S diag(ψ)⁻¹, so L-BFGS runs over u = log ψ² alone. The joint (Λ, log ψ²)
-# problem becomes ill-conditioned as a ψ² → 0; the p-dimensional profile does not.
-# Returns (Λ, ψ², converged, iterations).
-function _pervar_concentrated_polish(Yc::AbstractMatrix, K::Integer, ψ²_start;
-                                     g_tol::Real, iterations::Integer)
-    p, n = size(Yc)
-    S = Symmetric(Yc * Yc' ./ n)
-    # F(u) = log|Σ̂| + tr(Σ̂⁻¹S) - log|S| - p, with Σ̂ the profiled covariance;
-    # n F / 2 is the negative log-likelihood up to a constant, so g_tol keeps the
-    # scale it has in the joint fit.
-    function loadings(u)
-        all(isfinite, u) || return nothing
-        s = exp.(-u ./ 2)
-        E = eigen(Symmetric(s .* S .* s'))
-        θ = E.values                                   # ascending
-        θ[1] > 0 || return nothing
-        F = sum(t -> t - log(t) - 1, θ[1:(p - K)]) +
-            sum(t -> t < 1 ? t - log(t) - 1 : zero(t), θ[(p - K + 1):p])
-        Λ = exp.(u ./ 2) .* E.vectors[:, (p - K + 1):p] .*
-            sqrt.(max.(θ[(p - K + 1):p] .- 1, 0))'
-        return F, Λ
-    end
-    function fg!(_, G, u)
-        r = loadings(u)
-        if r === nothing
-            G === nothing || fill!(G, NaN)
-            return Inf
-        end
-        F, Λ = r
-        if G !== nothing
-            # Envelope theorem: ∂F/∂ψ² = diag(Σ⁻¹(Σ - S)Σ⁻¹) at the profiled Λ.
-            Σ = Λ * Λ' + Diagonal(exp.(u))
-            C = cholesky(Symmetric(Σ); check = false)
-            if !issuccess(C)
-                fill!(G, NaN)
-                return Inf
-            end
-            A = C \ (C \ (Σ - S))'
-            G .= (n / 2) .* diag(A) .* exp.(u)
-        end
-        return (n / 2) * F
-    end
-    u0 = log.(max.(collect(Float64, ψ²_start), eps()))
-    res = Optim.optimize(Optim.only_fg!(fg!), u0,
-                         Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking()),
-                         Optim.Options(g_tol = g_tol, iterations = Int(iterations)))
-    u = Optim.minimizer(res)
-    r = loadings(u)
-    r === nothing && return nothing
-    Λ = Matrix{Float64}(qr(r[2]').R')               # lower-triangular rotation
-    # Require the gradient test: a failed line search can also end the run on
-    # Optim's x/f tolerances without reaching a stationary point.
-    _, _, iters = _fit_verdict(res)
-    conv = Optim.g_converged(res) && isfinite(Optim.minimum(res))
-    return Λ, exp.(u), conv, iters
-end
-
 """
     fit_gaussian_pervar_gllvm(Y; K, X=nothing, fixed_residual_sd=0.0,
                              aghq=false, aghq_control=(;), g_tol=1e-5, iterations=1000)
@@ -268,9 +208,7 @@ each covariance evaluation. A zero-column design specifies a zero mean.
 
 `method=:em` (default) uses EM only for the intercept-only `K < p` case;
 explicit designs use L-BFGS, as does `method=:lbfgs`. This is ML profiling,
-not REML. Rank-deficient or nonfinite designs are rejected. An intercept-only
-fit (`fixed_residual_sd = 0`) that stops short at a Heywood boundary is finished
-with the concentrated log-variance problem (Λ in closed form, Jöreskog 1967).
+not REML. Rank-deficient or nonfinite designs are rejected.
 
 With `fixed_residual_sd=c > 0`, the covariance is
 `Λ*Λ' + Diagonal(ψ² .+ c^2)`, where each unique variance `ψ²` is estimated
@@ -390,15 +328,14 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         )
         conv_em && return _pervar_with_fallback(fit, request, integration_controls)
         # EM converges only linearly as a unique variance tends to 0 (a Heywood
-        # case), so it can exhaust its budget short of the optimum (#736). First
-        # finish with the concentrated log-variance problem, which stays well
-        # conditioned there.
-        polished = _pervar_heywood_polish(fit, Yc, K, g_tol, iterations)
-        polished.converged && return _pervar_with_fallback(polished, request, integration_controls)
-        # Otherwise polish from the better point with L-BFGS on the log-variance
-        # scale, where the gradient vanishes at the ψ² → 0 boundary; keep that point
-        # if the polish cannot start or does not improve it.
-        em_polish = (fit = polished, iterations = polished.iterations, ll = polished.loglik)
+        # case), so it can exhaust its budget short of the optimum (#736). Polish
+        # from the EM point with L-BFGS on the log-variance scale, where the
+        # gradient vanishes at the ψ² → 0 boundary; keep the EM fit if the polish
+        # cannot start or does not improve it.
+        em_polish = (fit = fit, iterations = nit_em, ll = Float64(ll_em))
+        Q = qr(Matrix{Float64}(Λ_em)')
+        params0 = vcat(pack_lambda(Matrix{Float64}(Q.R') ),
+                       log.(max.(collect(Float64, φ²_em), eps())))
     end
 
     # Exact ML GLS, using the same direct covariance factorization as the
@@ -439,75 +376,44 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         end
     end
 
-    joint_start(f) = vcat(pack_lambda(Matrix{Float64}(qr(f.Λ').R')),
-                          log.(max.(f.ψ², eps())))
-    em_polish === nothing || (params0 = joint_start(em_polish.fit))
     if em_polish !== nothing && !isfinite(nll(params0))
         return _pervar_with_fallback(em_polish.fit, request, integration_controls)
     end
     opts = Optim.Options(g_tol = g_tol, iterations = Int(iterations),
                          show_trace = false)
-    function joint_fit(params0, prior_iterations)
-        res = Optim.optimize(nll, params0, Optim.LBFGS(), opts; autodiff = :forward)
+    res = Optim.optimize(nll, params0, Optim.LBFGS(), opts; autodiff = :forward)
 
-        params_hat = Optim.minimizer(res)
-        θ_Λ_hat   = params_hat[1:rrlen]
-        logφ²_hat = params_hat[(rrlen + 1):(rrlen + p)]
-        Λ_hat     = unpack_lambda(θ_Λ_hat, p, K)
-        ψ²_hat    = exp.(logφ²_hat)
-        φ²_hat    = ψ²_hat .+ c²
+    params_hat = Optim.minimizer(res)
+    θ_Λ_hat   = params_hat[1:rrlen]
+    logφ²_hat = params_hat[(rrlen + 1):(rrlen + p)]
+    Λ_hat     = unpack_lambda(θ_Λ_hat, p, K)
+    ψ²_hat    = exp.(logφ²_hat)
+    φ²_hat    = ψ²_hat .+ c²
 
-        β_hat = Xf === nothing ? μ0 : profile_coefficients(Λ_hat, φ²_hat)
+    β_hat = Xf === nothing ? μ0 : profile_coefficients(Λ_hat, φ²_hat)
 
-        _, conv, iters = _fit_verdict(res)
-        ll = -nll(params_hat)  # report the likelihood at the returned coordinates
-        conv = conv && isfinite(ll)
-        return GaussianPerVarFit(
-            collect(Float64, β_hat),
-            Matrix{Float64}(Λ_hat),
-            collect(Float64, φ²_hat),
-            Float64(ll),
-            conv,
-            iters + prior_iterations,
-            collect(Float64, ψ²_hat),
-            c,
-        )
-    end
-
-    fit = joint_fit(params0, em_polish === nothing ? 0 : em_polish.iterations)
-    # The joint L-BFGS can stall at a Heywood boundary in the same way (#736):
-    # finish with the concentrated problem, then retry the joint polish from there.
-    if em_polish === nothing && !fit.converged && Xf === nothing && c == 0
-        polished = _pervar_heywood_polish(fit, Yc, K, g_tol, iterations)
-        if polished.converged || polished === fit
-            fit = polished
-        else
-            em_polish = (fit = polished, iterations = polished.iterations, ll = polished.loglik)
-            fit = joint_fit(joint_start(polished), polished.iterations)
+    _, conv, iters = _fit_verdict(res)
+    ll = -nll(params_hat)  # report the likelihood at the returned coordinates
+    if em_polish !== nothing
+        iters += em_polish.iterations
+        if !(ll >= em_polish.ll)   # the polish must not lose ground (also catches NaN)
+            return _pervar_with_fallback(em_polish.fit, request, integration_controls)
         end
     end
-    if em_polish !== nothing && !(fit.loglik >= em_polish.ll)
-        # The polish must not lose ground (also catches NaN).
-        return _pervar_with_fallback(em_polish.fit, request, integration_controls)
-    end
+    conv = conv && isfinite(ll)
     if rejected_covariances[] > 0
         @warn "Rejected numerically unfactorizable covariance evaluations; no ridge was added" count=rejected_covariances[]
     end
-    return _pervar_with_fallback(fit, request, integration_controls)
-end
 
-# Finish a non-converged intercept-only fit with the concentrated problem, starting
-# from its ψ². Keep the original fit if the polish loses likelihood.
-function _pervar_heywood_polish(fit::GaussianPerVarFit, Yc, K, g_tol, iterations)
-    r = _pervar_concentrated_polish(Yc, K, fit.ψ²; g_tol = g_tol, iterations = iterations)
-    r === nothing && return fit
-    Λ, ψ², conv, iters = r
-    ll = try
-        gaussian_pervar_marginal_loglik(Yc, Λ, ψ²)
-    catch err
-        err isa Union{PosDefException, ArgumentError} || rethrow()
-        return fit
-    end
-    ll >= fit.loglik || return fit   # must not lose ground (also catches NaN)
-    return GaussianPerVarFit(fit.β, Λ, ψ², Float64(ll), conv, fit.iterations + iters)
+    fit = GaussianPerVarFit(
+        collect(Float64, β_hat),
+        Matrix{Float64}(Λ_hat),
+        collect(Float64, φ²_hat),
+        Float64(ll),
+        conv,
+        iters,
+        collect(Float64, ψ²_hat),
+        c,
+    )
+    return _pervar_with_fallback(fit, request, integration_controls)
 end
