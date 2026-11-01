@@ -4300,8 +4300,22 @@ through its own method; per-trait ordinal bridge CIs stay gated. Every other
 structure (masks, `X` + `X_lv`, mixed-family, W-tier,
 phylo/animal/spatial/kernel sources) stays gated.
 """
-confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit, BetaFit}, Y::AbstractMatrix, X_lv::AbstractMatrix; kwargs...) =
-    _ci_lv_effects(_confint_lv_effects, fit, Y, X_lv; kwargs...)
+confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit, BetaFit}, Y::AbstractMatrix, X_lv::AbstractMatrix;
+                            N::Union{Nothing, AbstractMatrix} = nothing, offset = nothing,
+                            level::Real = 0.95,
+                            method::Symbol = :wald, n_boot::Integer = 200,
+                            seed::Integer = 0,
+                            bootstrap_iterations::Union{Nothing, Integer} = nothing,
+                            profile_indices = nothing,
+                            profile_iterations::Union{Nothing, Integer} = nothing,
+                            profile_g_tol::Real = 1e-8,
+                            profile_max_expand::Union{Nothing, Integer} = nothing,
+                            profile_max_bisect::Integer = 40) =
+    _ci_lv_effects(_confint_lv_effects, fit, Y, X_lv; N = N, offset = offset, level = level, method = method,
+                   n_boot = n_boot, seed = seed, bootstrap_iterations = bootstrap_iterations,
+                   profile_indices = profile_indices, profile_iterations = profile_iterations,
+                   profile_g_tol = profile_g_tol, profile_max_expand = profile_max_expand,
+                   profile_max_bisect = profile_max_bisect)
 
 function _confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit, BetaFit},
                             Y::AbstractMatrix, X_lv::AbstractMatrix;
@@ -4370,8 +4384,21 @@ function _confint_lv_effects(fit::Union{PoissonFit, BinomialFit, NBFit, GammaFit
     return _lv_effect_wald(nll, fit.theta_packed, p, K, q_lv, level)
 end
 
-confint_lv_effects(fit::OrdinalFit, Y::AbstractMatrix, X_lv::AbstractMatrix; kwargs...) =
-    _ci_lv_effects(_confint_lv_effects, fit, Y, X_lv; kwargs...)
+confint_lv_effects(fit::OrdinalFit, Y::AbstractMatrix, X_lv::AbstractMatrix;
+                            N::Union{Nothing, AbstractMatrix} = nothing, level::Real = 0.95,
+                            method::Symbol = :wald, n_boot::Integer = 200,
+                            seed::Integer = 0,
+                            bootstrap_iterations::Union{Nothing, Integer} = nothing,
+                            profile_indices = nothing,
+                            profile_iterations::Union{Nothing, Integer} = nothing,
+                            profile_g_tol::Real = 1e-8,
+                            profile_max_expand::Union{Nothing, Integer} = nothing,
+                            profile_max_bisect::Integer = 40) =
+    _ci_lv_effects(_confint_lv_effects, fit, Y, X_lv; N = N, level = level, method = method,
+                   n_boot = n_boot, seed = seed, bootstrap_iterations = bootstrap_iterations,
+                   profile_indices = profile_indices, profile_iterations = profile_iterations,
+                   profile_g_tol = profile_g_tol, profile_max_expand = profile_max_expand,
+                   profile_max_bisect = profile_max_bisect)
 
 function _confint_lv_effects(fit::OrdinalFit, Y::AbstractMatrix, X_lv::AbstractMatrix;
                             N::Union{Nothing, AbstractMatrix} = nothing, level::Real = 0.95,
@@ -4447,8 +4474,21 @@ iteration cap unless `bootstrap_iterations` is supplied. `N` is accepted for
 signature parity with the other families and is unused for a Gaussian fit. `K ≥ 1` (`B_lv` rotation-invariant),
 complete responses, single unit-tier latent block, no fixed-effect `X`.
 """
-confint_lv_effects(fit::GllvmFit, Y::AbstractMatrix, X_lv::AbstractMatrix; kwargs...) =
-    _ci_lv_effects(_confint_lv_effects, fit, Y, X_lv; kwargs...)
+confint_lv_effects(fit::GllvmFit, Y::AbstractMatrix, X_lv::AbstractMatrix;
+                            N::Union{Nothing, AbstractMatrix} = nothing, level::Real = 0.95,
+                            method::Symbol = :wald, n_boot::Integer = 200,
+                            seed::Integer = 0,
+                            bootstrap_iterations::Union{Nothing, Integer} = nothing,
+                            profile_indices = nothing,
+                            profile_iterations::Union{Nothing, Integer} = nothing,
+                            profile_g_tol::Real = 1e-8,
+                            profile_max_expand::Union{Nothing, Integer} = nothing,
+                            profile_max_bisect::Integer = 40) =
+    _ci_lv_effects(_confint_lv_effects, fit, Y, X_lv; N = N, level = level, method = method,
+                   n_boot = n_boot, seed = seed, bootstrap_iterations = bootstrap_iterations,
+                   profile_indices = profile_indices, profile_iterations = profile_iterations,
+                   profile_g_tol = profile_g_tol, profile_max_expand = profile_max_expand,
+                   profile_max_bisect = profile_max_bisect)
 
 function _confint_lv_effects(fit::GllvmFit, Y::AbstractMatrix, X_lv::AbstractMatrix;
                             N::Union{Nothing, AbstractMatrix} = nothing, level::Real = 0.95,
