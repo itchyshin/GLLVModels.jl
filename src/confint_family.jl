@@ -146,8 +146,8 @@ end
 # `confint_lv_effects` methods: a thin public wrapper around `_confint_lv_effects` so the
 # whole body (Hessian, profile, bootstrap) runs under one error log.
 function _ci_lv_effects(impl, fit, Y, X_lv; kwargs...)
-    res, log = _ci_collect(() -> impl(fit, Y, X_lv; kwargs...))
-    return _ci_finish(res, log, "confint_lv_effects")
+    res, elog = _ci_collect(() -> impl(fit, Y, X_lv; kwargs...))
+    return _ci_finish(res, elog, "confint_lv_effects")
 end
 
 @inline function _family_catch_or(f, barrier)
@@ -2349,8 +2349,8 @@ function confint_speciescov(fit::GllvmSpeciesCovFit, Y::AbstractMatrix, X::Abstr
     ad = _FamilyCI(θ, nll, names, kinds, _ -> error("bootstrap unsupported"), _ -> nothing)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    res, log = _ci_collect(() -> _family_wald(ad, sel, level))
-    return _ci_finish(res, log, "confint_speciescov")
+    res, elog = _ci_collect(() -> _family_wald(ad, sel, level))
+    return _ci_finish(res, elog, "confint_speciescov")
 end
 
 """
@@ -2389,8 +2389,8 @@ function confint_fourthcorner(fit::FourthCornerFit, Y::AbstractMatrix,
     ad = _FamilyCI(θ, nll, names, kinds, _ -> error("bootstrap unsupported"), _ -> nothing)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    res, log = _ci_collect(() -> _family_wald(ad, sel, level))
-    return _ci_finish(res, log, "confint_fourthcorner")
+    res, elog = _ci_collect(() -> _family_wald(ad, sel, level))
+    return _ci_finish(res, elog, "confint_fourthcorner")
 end
 
 """
@@ -2423,8 +2423,8 @@ function confint_rrr(fit::RRRFit, Y::AbstractMatrix, X::AbstractMatrix;
     ad = _FamilyCI(θ, nll, names, kinds, _ -> error("bootstrap unsupported"), _ -> nothing)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    res, log = _ci_collect(() -> _family_wald(ad, sel, level))
-    return _ci_finish(res, log, "confint_rrr")
+    res, elog = _ci_collect(() -> _family_wald(ad, sel, level))
+    return _ci_finish(res, elog, "confint_rrr")
 end
 
 """
@@ -2460,8 +2460,8 @@ function confint_constrained(fit::ConstrainedOrdinationFit, Y::AbstractMatrix, X
     ad = _FamilyCI(θ, nll, names, kinds, _ -> error("bootstrap unsupported"), _ -> nothing)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    res, log = _ci_collect(() -> _family_wald(ad, sel, level))
-    return _ci_finish(res, log, "confint_constrained")
+    res, elog = _ci_collect(() -> _family_wald(ad, sel, level))
+    return _ci_finish(res, elog, "confint_constrained")
 end
 
 # --- Hurdle-Poisson --------------------------------------------------------
@@ -3851,7 +3851,7 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                                         newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    res, log = _ci_collect() do
+    res, elog = _ci_collect() do
         if method === :wald
             result=_family_wald(ad,sel,level;hessian=is_aghq ? ForwardDiff.hessian(ad.nll,ad.θ) : nothing)
             return is_aghq ? merge(result,(objective=:aghq,gradient_kind=:frozen_surrogate,)) : result
@@ -3869,7 +3869,7 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
             throw(ArgumentError("method must be :wald, :profile, or :bootstrap; got :$method"))
         end
     end
-    return _ci_finish(res, log, "confint")
+    return _ci_finish(res, elog, "confint")
 end
 
 # Same keyword surface and validation as `confint(fit::_CIFit, Y)`; only the
@@ -3898,11 +3898,11 @@ function StatsAPI.vcov(fit::_CIFit, Y::AbstractMatrix;
                                         newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    res, log = _ci_collect() do
+    res, elog = _ci_collect() do
         _family_wald(ad, sel, level; hessian = is_aghq ? ForwardDiff.hessian(ad.nll, ad.θ) : nothing,
                      covariance = true)
     end
-    _ci_warn_swallowed(log, "vcov")
+    _ci_warn_swallowed(elog, "vcov")
     return res.covariance
 end
 
@@ -3989,8 +3989,8 @@ function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::Abstra
     ad = _FamilyCI(θ, nll, names, kinds, sim, refit)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
-    res, log = _ci_collect(() -> _family_wald(ad, sel, level))
-    return _ci_finish(res, log, "confint_spde_latent")
+    res, elog = _ci_collect(() -> _family_wald(ad, sel, level))
+    return _ci_finish(res, elog, "confint_spde_latent")
 end
 
 # ---------------------------------------------------------------------------
