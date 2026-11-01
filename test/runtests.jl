@@ -670,5 +670,7 @@ println(_SHARD === nothing ?
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")
+    # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
+    _shard_include("test_bootstrap_sigma_r.jl")
 end
 include("test_readme_quickstart.jl")
