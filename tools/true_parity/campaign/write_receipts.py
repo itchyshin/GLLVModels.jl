@@ -718,11 +718,17 @@ def disposition_row(sid, d):
     return row
 
 
+# data/RD-BEETLE-NB2 and data/RD-URBANISATION-BINOMIAL are held FAIL for regeneration purposes only (beetle: 2026-10-21
+# note "Beetle stays blocked because R records pdHess false"; urbanisation: numeric FAIL on beta and LLt). Both are
+# deliberately NOT in CONVERGENCE_REQUIRED_ROWS: the N9 block covers only the four named rows (ordinal, iSDM, fungi,
+# spider); extending it to these two needs its own ruling.
 SIGNED_FAIL_ROWS = frozenset({
     "family/ORDINAL-LOGIT-RSZ",
     "data/RD-FUNGI-BINOMIAL",
     "isdm/ISDM-HEADLINE-RSZ",
     "data/RD-SPIDER-NB2",
+    "data/RD-BEETLE-NB2",
+    "data/RD-URBANISATION-BINOMIAL",
 })
 N9_PASS_LEG = "convergence_parity_both_gradients_within_1e-5"
 DERIVED_RECEIPT_FIELDS = (
@@ -731,12 +737,17 @@ DERIVED_RECEIPT_FIELDS = (
 )
 
 
-def enforce_signed_fail_rows(results):
-    """Refuse receipt regeneration that omits or promotes a row held FAIL by the signed stop rule."""
+def enforce_signed_fail_rows(results, summary_only=()):
+    """Refuse receipt regeneration that omits or promotes a row held FAIL by the signed stop rule.
+
+    summary_only names held rows whose raw outputs are off-repo and so cannot be in `results` (--check without
+    --local-raw); their committed receipt is held to FAIL by the caller instead of being required here."""
     by_id = {sid: (rc, binds) for sid, _fam, _clause, rc, binds, _path in results}
     problems = []
     for sid in sorted(SIGNED_FAIL_ROWS):
         if sid not in by_id:
+            if sid in summary_only:
+                continue
             problems.append(f"{sid}: required held row is absent from regenerated inputs")
             continue
         rc, binds = by_id[sid]
@@ -912,7 +923,7 @@ def check(out_root, local_raw=None):
             if rf.exists() and json.loads(rf.read_text()).get("data_sha256") != h: print(f"DATA PIN DRIFT {cell}: the receipt's data sha256 is not the committed file's"); bad += 1
         res = process(tmp, out_root, False, quiet=True)
         try:
-            enforce_signed_fail_rows(res)
+            enforce_signed_fail_rows(res, summary_only={sid for cell, sid in OFF_REPO.items() if cell not in local})
         except ValueError as exc:
             print(f"SIGNED STOP RULE VIOLATION {exc}"); bad += 1
         want = {str(path.relative_to(out_root)) for _, _, _, _, _, path in res}
@@ -951,6 +962,8 @@ def check(out_root, local_raw=None):
             rc_old = json.loads(path.read_text())
             probs, binds = summary_problems(rc_old, sid, rc_old.get("clause"))
             for q in probs: print(f"SUMMARY INCONSISTENT {sid}: {q}"); bad += 1
+            if sid in SIGNED_FAIL_ROWS and (binds or rc_old.get("verdict") != "FAIL"):
+                print(f"SIGNED STOP RULE VIOLATION {sid}: committed summary receipt is not a held FAIL"); bad += 1
             if row_of(fam, sid) != norm(row_for(sid, rc_old.get("clause"), rc_old, binds, str(path.relative_to(out_root)))):
                 print(f"CASE-MAP ROW DRIFT {sid}"); bad += 1
         for sid, d in DISPOSITIONS.items():

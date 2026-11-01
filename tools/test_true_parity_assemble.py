@@ -451,6 +451,71 @@ def main():
             required_tols = {"LLt": 1e-4}
         expect(f"{sid}_keeps_signed_tolerances", all(q_by_name.get(k) == v for k, v in required_tols.items()), str(q_by_name))
 
+    # data/RD-BEETLE-NB2: blocked by R pdHess false (2026-10-21 note); held FAIL on regeneration, outside the N9 four-row scope.
+    beetle_sid = "data/RD-BEETLE-NB2"
+    beetle_rc = json.loads((A.ROOT / A.LEDGER / "receipts/data/campaign/RD-BEETLE-NB2.json").read_text())
+    expect("data/RD-BEETLE-NB2_remains_fail_blocked_by_R_pdHess",
+           beetle_rc["verdict"] == "FAIL" and beetle_rc["pass_rule"]["legs"]["R_pdHess_true"] is False
+           and beetle_rc["engines"]["R"]["pdHess"] is False and "convergence_parity" not in beetle_rc, beetle_rc["row_status"])
+    beetle_tols = {c["quantity"]: c["tolerance"] for c in beetle_rc["comparison"]["cases"]}
+    expect("data/RD-BEETLE-NB2_keeps_tolerances",
+           beetle_tols == {"logLik": 1e-6, "beta": 1e-4, "LLt": 1e-4, "linear predictor on the training data (link scale)": 1e-6}, str(beetle_tols))
+    expect("data/RD-BEETLE-NB2_is_regeneration_held",
+           beetle_sid in writer.SIGNED_FAIL_ROWS and beetle_sid not in writer.CONVERGENCE_REQUIRED_ROWS,
+           "beetle must be in SIGNED_FAIL_ROWS and outside CONVERGENCE_REQUIRED_ROWS")
+    # data/RD-URBANISATION-BINOMIAL: numeric FAIL on beta and LLt; same regeneration-hold-only scope as beetle.
+    urban_sid = "data/RD-URBANISATION-BINOMIAL"
+    urban_rc = json.loads((A.ROOT / A.LEDGER / "receipts/data/campaign/RD-URBANISATION-BINOMIAL.json").read_text())
+    expect("data/RD-URBANISATION-BINOMIAL_remains_fail",
+           urban_rc["verdict"] == "FAIL" and not urban_rc["pass_rule"]["legs"]["every_quantity_within_tolerance"]
+           and "convergence_parity" not in urban_rc, urban_rc["row_status"])
+    urban_tols = {c["quantity"]: c["tolerance"] for c in urban_rc["comparison"]["cases"]}
+    expect("data/RD-URBANISATION-BINOMIAL_keeps_tolerances",
+           urban_tols == {"logLik": 1e-6, "beta": 1e-4, "LLt": 1e-4, "linear predictor on the training data (link scale)": 1e-6}, str(urban_tols))
+    expect("data/RD-URBANISATION-BINOMIAL_is_regeneration_held",
+           urban_sid in writer.SIGNED_FAIL_ROWS and urban_sid not in writer.CONVERGENCE_REQUIRED_ROWS,
+           "urbanisation must be in SIGNED_FAIL_ROWS and outside CONVERGENCE_REQUIRED_ROWS")
+    extra = [(beetle_sid, "data", "C4", Path("beetle.json")), (urban_sid, "data", "C4", Path("urban.json"))]
+    def six(pass_sid=None, drop_sid=None):
+        rows = [(sid, *held_specs[sid], {"verdict": "FAIL"}, False, Path(sid + ".json")) for sid in held]
+        for sid, fam, cell, path in extra:
+            if sid == drop_sid:
+                continue
+            ok = sid == pass_sid
+            rows.append((sid, fam, cell, {"verdict": "PASS" if ok else "FAIL"}, ok, path))
+        return rows
+    try:
+        writer.enforce_signed_fail_rows(six())
+        six_clean = True
+    except ValueError:
+        six_clean = False
+    expect("signed_stop_guard_accepts_six_held_fails", six_clean, "six held FAIL rows were refused")
+    try:
+        writer.enforce_signed_fail_rows(six(drop_sid=urban_sid), summary_only={urban_sid})
+        summary_ok = True
+    except ValueError:
+        summary_ok = False
+    expect("signed_stop_guard_allows_off_repo_urbanisation_summary_only", summary_ok, "--check without local raw was refused")
+    try:
+        writer.enforce_signed_fail_rows(six(drop_sid=beetle_sid), summary_only={urban_sid})
+        summary_leak = False
+    except ValueError as exc:
+        summary_leak = beetle_sid in str(exc) and "absent" in str(exc)
+    expect("signed_stop_guard_summary_only_does_not_excuse_other_rows", summary_leak, "summary_only excused a non-off-repo row")
+    for label, sid in (("beetle", beetle_sid), ("urbanisation", urban_sid)):
+        try:
+            writer.enforce_signed_fail_rows(six(pass_sid=sid))
+            refused = False
+        except ValueError as exc:
+            refused = sid in str(exc) and "signed stop rule" in str(exc).lower()
+        expect(f"signed_stop_guard_rejects_{label}_promotion", refused, f"a promoted {label} row was not refused")
+        try:
+            writer.enforce_signed_fail_rows(six(drop_sid=sid))
+            refused = False
+        except ValueError as exc:
+            refused = sid in str(exc) and "absent" in str(exc)
+        expect(f"signed_stop_guard_rejects_missing_{label}_row", refused, f"a missing {label} row was not refused")
+
     # Campaign receipts (itchyshin/GLLVModels.jl#684 item 4): every comparison block re-derives from the committed raw files.
     wr = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check"],
                         capture_output=True, text=True)
