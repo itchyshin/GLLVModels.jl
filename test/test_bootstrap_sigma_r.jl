@@ -868,7 +868,7 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
                                  _refit = (yb; kw...) -> _scaled(fit, 1.0; ok = (j[] += 1) % 2 == 0)))
         @test occursin("BootstrapSigmaR(level=", sprint(show, rsh)) && !occursin('\n', sprint(show, rsh))
         txt = sprint(show, MIME("text/plain"), rsh)
-        @test occursin("Sigma_B", txt) && occursin("communality_B", txt) && occursin("n_effective", txt)
+        @test occursin("Sigma_B", txt) && occursin("communality_B", txt) && occursin("n_effective = ", txt)
         @test occursin("replicates failed", txt) && occursin(" [", txt)
         @test occursin(string(round(rsh.point_est.Sigma_B[1, 1]; sigdigits = 4)), txt)
     end
