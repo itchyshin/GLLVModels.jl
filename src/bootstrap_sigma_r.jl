@@ -196,16 +196,20 @@ function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
         end
         return Ys
     end
-    # Boundary replicates (a zero unique variance, common when has_diag = true with one
-    # row per unit) creep along a flat ridge: LBFGS needs 10^3-10^4 iterations to reach
-    # g_tol = 1e-6 and the stock 500-iteration cap reports them as failed. R's nlminb
-    # stops on a RELATIVE objective change (rel.tol 1e-10), so mirror that here: a larger
-    # cap plus f_tol. Only for the built-in refit; a `_refit` test seam keeps its own kwargs.
+    # Built-in refit only (a user `_refit` keeps its own controls). A has_diag / K_W fit has a flat
+    # ridge (sigma2_B, sigma2_W and sigma_eps^2 enter only as a sum), and a Heywood draw runs along
+    # it: at the stock 500 iterations / f_tol = 0, LBFGS hits the cap in about 0.4% of fixture-c
+    # replicates (logLik 1e-3 to 2e-3 below the optimum, dropped as 'failed'). Needing ~600-1800
+    # iterations, they converge with a relative objective test, as R's nlminb does. Measured: 0 of
+    # 1998 refits fail, logLik within 1e-4 of R, and it is not slower than stock (mean 60 vs 77 ms).
+    # f_tol = 1e-10 stops too early (logLik up to 1.3e-3 low); do not loosen it. Never applied to
+    # phylo fits (a relative f_tol stopped those early); they are refused in v1 anyway.
     # DEVIATION from the pinned-R behaviour (optimizer settings), see the PR description.
-    extra = (_refit === nothing && m.has_diag) ? (; iterations = 2000, f_tol = 1e-10) : (;)
+    refit_opts = (_refit === nothing && (m.has_diag || m.K_W > 0)) ?
+        (iterations = 2000, f_tol = 1e-12) : NamedTuple()
     refit = Y -> refit_fn(Y; K = m.K, K_W = m.K_W, has_diag = m.has_diag,
                           K_phy = m.K_phy, has_phy_unique = m.has_phy_unique,
-                          Σ_phy = nothing, X = Xm, extra...)
+                          Σ_phy = nothing, X = Xm, refit_opts...)
     return simulate, refit
 end
 
@@ -314,9 +318,10 @@ do not compare them across `has_diag` settings.
   warning (not in `n_failed`), like an extraction error.
 - `n_sites` between 2 and p is accepted, but a fit with fewer sites than traits usually fails
   every refit: the result is then all-NaN, announced only by the "lost" warning.
-- For `has_diag = true` the built-in refit uses `iterations = 2000, f_tol = 1e-10` (R's nlminb
-  stops on a relative objective change); a deviation from the pinned R, and it moves even
-  already-converged replicates by about 3e-7 to 2e-5.
+- For `has_diag = true` the built-in refit (not a user `_refit`) uses `iterations = 2000,
+  f_tol = 1e-12` (R's nlminb stops on a relative objective change); a deviation from the pinned
+  R. It rescues the replicates that hit the stock 500-iteration cap and moves even
+  already-converged replicates slightly (bounds by about 1e-5 in the fixtures measured).
 - Entries whose point estimate is itself non-finite (for example a zero-variance trait) are
   not counted in the attrition warning.
 - `TwoLevelFit` does not store `center`; the refit assumes `center = true` unless the

@@ -914,7 +914,7 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         _quiet(() -> _bsig(fitd; y = y[:, 1:8], what = :Sigma, n_boot = 6, seed = 9, progress = false, _refit = (yb; kw...) -> (push!(ysd, copy(yb)); fitd)))
         rd = _quiet(() -> _bsig(fitd; y = y[:, 1:8], what = :Sigma, n_boot = 6, seed = 9, progress = false, keep_draws = true))
         for (b, yb) in enumerate(ysd)
-            d = fit_gaussian_gllvm(yb; K = 1, K_W = 0, has_diag = true, K_phy = 0, has_phy_unique = false, Σ_phy = nothing, X = nothing, iterations = 2000, f_tol = 1e-10)
+            d = fit_gaussian_gllvm(yb; K = 1, K_W = 0, has_diag = true, K_phy = 0, has_phy_unique = false, Σ_phy = nothing, X = nothing, iterations = 2000, f_tol = 1e-12)
             exp = d.converged ? sigma_y_site(d) : fill(NaN, p, p)
             @test isequal(rd.draws[b].Sigma_B, exp)
         end
@@ -966,5 +966,21 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         rn, lgn = _logged(() -> _bsig(fit; n_sites = 3, what = :Sigma, n_boot = 3, seed = 1, progress = false), min_level = Logging.Warn)
         @test size(rn.ci_lower.Sigma_B) == (p, p) && rn.n_boot == 3
         @test (rn.n_failed > 0) == any(occursin("were lost", m) for m in _warns(lgn))   # loss, if any, is announced
+    end
+    @testset "25. has_diag K=2 built-in refit reaches the optimum, not the 500-iteration cap" begin
+        # Replicate 65 of bootstrap seed 101 on the has_diag K=2 fixture (n = 200 units, p = 6, trait intercepts).
+        # R gllvmTMB on the same data gives logLik -1422.97095347 (convergence 0); the stock Julia fit stops at
+        # the 500-iteration cap with logLik -1422.97217 (recorded 2026-11-01). (CSV parsed by hand: no extra test dependency.)
+        rows = [parse.(Float64, split(l, ',')) for l in readlines(joinpath(@__DIR__, "data", "bsig_c_s101_b65.csv")) if !isempty(strip(l))]
+        Yb = Matrix{Float64}(reduce(hcat, rows))                     # p x n
+        nb_ = size(Yb, 2); Xb = zeros(6, nb_, 6)
+        for t in 1:6; Xb[t, :, t] .= 1.0; end
+        f0 = _quiet(() -> fit_gaussian_gllvm(Yb; K = 2, has_diag = true, X = Xb))
+        @test !f0.converged && f0.n_iter == 500                      # pins the cause (stock cap)
+        _, refit = GLLVModels._bsig_setup(f0, 1, nothing, nb_, Xb, nothing)
+        fb = _quiet(() -> refit(Yb))                                  # the driver's built-in refit
+        @test fb.converged
+        @test fb.logLik >= f0.logLik
+        @test isapprox(fb.logLik, -1422.97095347239; atol = 1e-4)     # the external (R) optimum
     end
 end
