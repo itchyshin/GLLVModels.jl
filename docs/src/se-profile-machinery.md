@@ -49,6 +49,42 @@ driver covers only the `Sigma` entries at GLLVModels.jl's single site-level tier
 accepted-and-ignored. The driver makes `O(p²)` bootstrap runs. This is
 practical for a small number of responses and expensive for many responses.
 
+## `bootstrap_Sigma_r`: the pinned-R bootstrap behaviour
+
+`bootstrap_Sigma_r` follows R's `bootstrap_Sigma()` (gllvmTMB commit
+`9539352f6`) more closely than the legacy `bootstrap_Sigma` above. It is a
+different estimand and a separate function; the legacy driver is unchanged
+and no decision has been made about replacing it. One batch of `n_boot`
+datasets is simulated from the fit, each is refit once, and every requested
+summary (`Sigma`, `R`, `communality`, `ICC`) is read from that one refit.
+Bounds are type-7 percentiles of the finite draws. The result is a
+`BootstrapSigmaR`.
+
+Supported fit classes:
+
+- `GllvmFit` with no W tier, no pins, no phylogenetic block and no retained
+  Gaussian record: tier `:B` only (`Sigma_B`, `R_B`, `communality_B`).
+- `TwoLevelFit` (pass `individual`): tiers `:B` and `:W`, plus `ICC_site`.
+
+Everything else (other fit classes, `K_W > 0` on a `GllvmFit`, phylogenetic
+fits, `n_cores > 1`) throws an `ArgumentError`. `cross_corr` is always
+skipped. A replicate whose refit throws or does not converge is counted in
+`n_failed` and left out of the percentiles. Defaults mirror R: `n_boot = 999`,
+`conf = 0.95`, `progress = true`; these defaults still need maintainer
+agreement.
+
+Caveats:
+
+- No output has been compared with R. The behaviour target is R's source,
+  not an R run.
+- For a `GllvmFit` with `has_diag = true` and `K_W == 0`, tier `B` is the
+  identified total `sigma_y_site(fit)`, which includes the residual
+  variance. That this equals R's unit tier rests on a Julia comment in
+  `extractors.jl`, and is unverified against R.
+- For `has_diag = false`, `communality_B` is exactly 1 with a zero-width
+  interval.
+- The capability row stays unbound: no row, score or tolerance changes.
+
 ## `standard_errors`: an eager wrapper
 
 `standard_errors(fit, Y)` is a thin wrapper around `confint(fit; y=Y, ...)`,
@@ -86,6 +122,8 @@ forwarding call and is documented here for migration.
 ```@docs
 latent_score_sd
 bootstrap_Sigma
+bootstrap_Sigma_r
+BootstrapSigmaR
 standard_errors
 tmbprofile_wrapper
 profile_curve_targets

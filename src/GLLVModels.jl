@@ -180,6 +180,7 @@ include("confint_derived_wald.jl")       # transformed-Wald CIs for bounded deri
 # adds methods to). Additive: the ::GllvmFit methods are unchanged.
 include("link_residual.jl")
 include("extractors.jl")                # extract_*/get* post-fit extractor family (core070 Cluster 1)
+include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl.
 include("families/nb_grouped_postfit.jl") # predict/fitted/residuals/getResidualCor for NBGroupedFit + NBGroupedCovFit (#555). AFTER extractors.jl (getResidualCor, _canonical_level) and link_residual.jl (_latent_correlation).
 include("re_sd.jl")                      # latent_score_sd (renamed from getREsd): TMB-sdreport-style conditional-on-θ̂ random-effect SDs (core070 E-cluster)
 include("families/mixed.jl")             # mixed-family GLLVM (cross-family VCV): fit_mixed_gllvm + MixedFamilyFit. AFTER link_residual + the family fitters so all dispatch targets exist.
@@ -281,7 +282,7 @@ export OptimizerStage, OptimizerRecord, optimizer_info,
        loading_profile_exploratory, loading_profile,
        profile_ci_total_variance, profile_ci_phylo_signal,
        slope_sd_ci, standard_errors,
-       latent_score_sd, getREsd, bootstrap_Sigma, tmbprofile_wrapper, profile_targets, profile_curve_targets,
+       latent_score_sd, getREsd, bootstrap_Sigma, bootstrap_Sigma_r, BootstrapSigmaR, tmbprofile_wrapper, profile_targets, profile_curve_targets,
        profile_phylo_signal,
        ppca_init, em_fa,
        sigma_y_site, communality, correlation, phylo_signal, link_residual,
