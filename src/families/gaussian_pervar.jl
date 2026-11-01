@@ -188,7 +188,7 @@ end
 """
     fit_gaussian_pervar_gllvm(Y; K, X=nothing, fixed_residual_sd=0.0,
                              aghq=false, aghq_control=(;), g_tol=1e-5, iterations=1000,
-                             Λ_init=nothing, ψ²_init=nothing, n_starts=1,
+                             λ_init=nothing, ψ²_init=nothing, n_starts=1,
                              rng=Random.default_rng())
         -> GaussianPerVarFit
 
@@ -235,9 +235,9 @@ options; this does not establish R bridge or interval parity.
 
 Warm start: PPCA closed form (Tipping & Bishop 1999) for `Λ` and per-species
 residual variances initialised from the per-trait sample variances of `Y`.
-`Λ_init` (`p × K`) and `ψ²_init` (length `p`, positive unique variances) replace
-either part of that start. A supplied `Λ_init` is rotated to the lower-triangular
-parameterisation; `Λ_init * Λ_init'` is unchanged.
+`λ_init` (`p × K`) and `ψ²_init` (length `p`, positive unique variances) replace
+either part of that start. A supplied `λ_init` is rotated to the lower-triangular
+parameterisation; `λ_init * λ_init'` is unchanged.
 
 Multi-start (opt-in): `n_starts > 1` refits from `n_starts - 1` additional random
 starts drawn from `rng`, after the first fit from the default (or supplied) start.
@@ -265,7 +265,7 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
                                    g_tol::Real = 1e-5,
                                    em_tol::Real = 1e-8,
                                    iterations::Integer = 1000,
-                                   Λ_init::Union{Nothing, AbstractMatrix{<:Real}} = nothing,
+                                   λ_init::Union{Nothing, AbstractMatrix{<:Real}} = nothing,
                                    ψ²_init::Union{Nothing, AbstractVector{<:Real}} = nothing,
                                    n_starts::Integer = 1,
                                    rng::AbstractRNG = Random.default_rng())
@@ -283,22 +283,22 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         throw(ArgumentError("fixed_residual_sd must be finite and nonnegative with a representable square"))
     request = _aghq_request(aghq)
     integration_controls = _aghq_controls(aghq_control)
-    Λ_init === nothing || (size(Λ_init) == (p, K) && all(isfinite, Λ_init)) ||
-        throw(ArgumentError("Λ_init must be a finite p × K = $p × $K matrix"))
+    λ_init === nothing || (size(λ_init) == (p, K) && all(isfinite, λ_init)) ||
+        throw(ArgumentError("λ_init must be a finite p × K = $p × $K matrix"))
     ψ²_init === nothing || (length(ψ²_init) == p && all(v -> isfinite(v) && v > 0, ψ²_init)) ||
         throw(ArgumentError("ψ²_init must be a length-$p vector of finite positive variances"))
     n_starts >= 1 || throw(ArgumentError("n_starts must be at least 1"))
     if n_starts > 1
         kw = (K = K, X = X, fixed_residual_sd = fixed_residual_sd, method = method,
               g_tol = g_tol, em_tol = em_tol, iterations = iterations)
-        fits = [fit_gaussian_pervar_gllvm(Y; kw..., Λ_init = Λ_init, ψ²_init = ψ²_init)]
+        fits = [fit_gaussian_pervar_gllvm(Y; kw..., λ_init = λ_init, ψ²_init = ψ²_init)]
         # Random starts on the scale of each response's variance.
         v = vec(var(Matrix{Float64}(Y); dims = 2))
         v = ifelse.(v .> 0, v, 1.0)
         for _ in 2:n_starts
             Λs = sqrt.(v ./ K) .* randn(rng, p, K)
             ψ²s = max.(v .* exp.(randn(rng, p) .- log(2)) .- c², 1e-3)
-            push!(fits, fit_gaussian_pervar_gllvm(Y; kw..., Λ_init = Λs, ψ²_init = ψ²s))
+            push!(fits, fit_gaussian_pervar_gllvm(Y; kw..., λ_init = Λs, ψ²_init = ψ²s))
         end
         pool = any(f -> f.converged, fits) ? filter(f -> f.converged, fits) : fits
         best = pool[argmax([isnan(f.loglik) ? -Inf : f.loglik for f in pool])]
@@ -334,8 +334,8 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
     # ----- Warm starts.
     # Λ via PPCA on the centred data (requires K < p); otherwise fall back to
     # the default lower-triangular init.
-    Λ0 = if Λ_init !== nothing
-        Matrix{Float64}(qr(Matrix{Float64}(Λ_init)').R')
+    Λ0 = if λ_init !== nothing
+        Matrix{Float64}(qr(Matrix{Float64}(λ_init)').R')
     elseif K < p
         Λp, _ = ppca_init(Yc, K)
         Λp
@@ -365,7 +365,7 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         Λ_em, φ²_em, ll_em, nit_em, conv_em =
             em_fa(Yc, K; λ_init = Λ0, ψ_init = φ²_0, tol = em_tol,
                   max_iter = max(Int(iterations), 2000))
-        if Λ_init !== nothing || ψ²_init !== nothing
+        if λ_init !== nothing || ψ²_init !== nothing
             # em_fa's Woodbury log-likelihood loses accuracy when a supplied start
             # puts a ψ² near zero; report the exact value at the returned point.
             ll_em = gaussian_pervar_marginal_loglik(Yc, Λ_em, φ²_em)

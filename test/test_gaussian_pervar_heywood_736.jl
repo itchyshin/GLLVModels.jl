@@ -93,7 +93,7 @@ end
         # A user start at the optimum (including a ψ² near zero) stays there, and the
         # reported likelihood is the exact value at the returned parameters.
         u = fit_gllvm(Y; family = Normal(), K = 2, pervar = true, method = method,
-                      Λ_init = base.Λ, ψ²_init = base.ψ²)
+                      λ_init = base.Λ, ψ²_init = base.ψ²)
         @test u.converged
         @test isapprox(u.loglik, base.loglik; atol = 1e-5)
         @test isapprox(gaussian_pervar_marginal_loglik(Yc, u.Λ, u.φ²), u.loglik; atol = 1e-6)
@@ -108,7 +108,7 @@ end
         @test m1.loglik >= base.loglik - 1e-8
     end
 
-    @test_throws ArgumentError fit_gaussian_pervar_gllvm(Y; K = 2, Λ_init = zeros(p, 3))
+    @test_throws ArgumentError fit_gaussian_pervar_gllvm(Y; K = 2, λ_init = zeros(p, 3))
     @test_throws ArgumentError fit_gaussian_pervar_gllvm(Y; K = 2, ψ²_init = zeros(p))
     @test_throws ArgumentError fit_gaussian_pervar_gllvm(Y; K = 2, ψ²_init = ones(p - 1))
     @test_throws ArgumentError fit_gaussian_pervar_gllvm(Y; K = 2, n_starts = 0)
