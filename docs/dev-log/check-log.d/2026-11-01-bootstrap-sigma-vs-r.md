@@ -10,7 +10,7 @@ Both runs on Totoro, `JULIA_NUM_THREADS=1`, `OPENBLAS_NUM_THREADS=1`, at most 4 
 
 | Run | R library (Totoro) | How the pin was checked |
 |---|---|---|
-| GllvmFit | `~/hsq_work/true-parity-campaign-20261002/Rlib` (TMB 1.9.25, built 2026-10-01) | Source hash and function bodies matched. `R/bootstrap-sigma.R` sha256 c30fbad6...4238 matches the ledger; `bootstrap_Sigma`, `.extract_summaries`, `.na_summaries`, `.summarise_draws`, `.reconstruct_multi_formula` deparse identically to the installed namespace. |
+| GllvmFit | `~/hsq_work/true-parity-campaign-20261002/Rlib` (TMB 1.9.25, built 2026-10-01) | One source hash and five function bodies were checked and all matched (`extract_Sigma` and the rest of the namespace were not compared). `R/bootstrap-sigma.R` sha256 c30fbad6...4238 matches the ledger; `bootstrap_Sigma`, `.extract_summaries`, `.na_summaries`, `.summarise_draws`, `.reconstruct_multi_formula` deparse identically to the installed namespace. |
 | TwoLevel | `~/hsq_work/true-parity-prerun-20261001/Rlib` (built from `gllvmTMB-p1`) | Weaker. Only `DESCRIPTION` (ce3ba8fd...2283) and `R/extract-sigma.R` (dbd33782...0a90) hashes equal the pin file `tools/true_parity/campaign/p1_source_sha256.json`. `R/bootstrap-sigma.R` (c30fbad6...4238) is not in that file. No `.git`, so the commit is checked through two hashes only. The installed binary was NOT byte-compared with the source. |
 
 ### Alignment tables (written before any run)
@@ -54,20 +54,20 @@ TwoLevel fixtures (derived from `src/twolevel.jl` and the R sources). R model: `
 | TwoLevel A | 3.3e-8 | Sigma_B 2.8e-5, Sigma_W 4.3e-5 | 1.3e-3 | 1.6e-6 | TRUE (min eig 3.50) | TRUE |
 | TwoLevel B | 6.8e-9 | Sigma_B 1.6e-5, Sigma_W 5.1e-6 | 5.2e-4 | 2.1e-6 | TRUE (min eig 0.90) | TRUE |
 
-Reading: the logLik agrees to 4.5e-8 or better, so these are the same optimum. The estimates differ by 5e-6 to 7e-5 relative, so the 1e-6 criterion is NOT met. R stops at gradients of 5e-4 to 6e-3 (looser than Julia's). In TwoLevel a tight `nlminb` restart from R's own optimum did not move it, and adding R's fixed sigma_eps^2 back to R's Sigma_W removes only part of the gap. In the GllvmFit run R's convergence was not tightened. So looser R convergence is an inference, not proven, and the two causes were not separated. The Julia Hessian is not positive definite in the has_diag fixtures (b) and (c) (unidentified sigma_eps / sigma2_B split); Julia warns once per session at fit.
+Reading: the logLik agrees to 4.5e-8 or better, so these are the same optimum. The Sigma entries differ by 3.4e-6 to 7e-5 relative; some derived quantities are below 1e-6 (GllvmFit (b) R_B 6.2e-7, communality_B 9.9e-7). The 1e-6 criterion is NOT met for the Sigma entries in any fixture. R stops at gradients of 5e-4 to 6e-3 (looser than Julia's). In TwoLevel a tight `nlminb` restart from R's own optimum did not move it, and adding R's fixed sigma_eps^2 back to R's Sigma_W removes only part of the gap. In the GllvmFit run R's convergence was not tightened. So looser R convergence is an inference, not proven, and the two causes were not separated. The Julia Hessian is not positive definite in the has_diag fixtures (b) and (c) (unidentified sigma_eps / sigma2_B split); Julia warns once per session at fit.
 
 ### Bootstrap agreement (n_boot 999, conf 0.95)
 
 Method: per engine, mean over seeds of SE, 2.5% and 97.5% bound per entry; MC SE = seed sd / sqrt(seeds); z = (Julia mean - R mean) / sqrt(MCSE_J^2 + MCSE_R^2); flagged if |z| > 3. Flags are not independent (symmetric entries, shared simulated datasets).
 
 GllvmFit (seeds per engine: a 15, b 35, c 5):
-- (a) 0 of 324 comparisons flagged. Median relative difference 0.2-0.5%, max 1.2%. R_B and communality_B are degenerate (exactly +/-1 and 1, zero-width intervals) and equal in both engines.
-- (b) Median relative difference 0.1-0.9% (max 1.5% for SE, 0.9% for bounds). One symmetric pair remains flagged: Sigma_B upper bound (4,2)=(2,4), z = -4.26, R mean 0.6265, Julia mean 0.6211 (0.9% relative). With 15 seeds there were 12 flagged cells; with 35 seeds all but this pair vanished. I cannot tell MC noise from a small real difference without more seeds.
+- (a) 0 of 234 comparisons flagged. Median relative difference 0.2-0.5%, max 1.2%. R_B and communality_B are degenerate (exactly +/-1 and 1, zero-width intervals) and equal in both engines.
+- (b) Median relative difference 0.1-0.9% (max 1.5% for SE, 0.9% for bounds). One symmetric pair remains flagged: Sigma_B upper bound (4,2)=(2,4), z = -4.26, R mean 0.6265, Julia mean 0.6211 (0.9% relative). With 35 seeds only this pair is flagged. (The earlier 15-seed flag count quoted in the source report, 12, is unverified: that run was not retained as a table.) I cannot tell MC noise from a small real difference without more seeds.
 - (c) Only 5 seeds per engine, so low power. 0 flagged, max |z| 2.95. Large max relative differences (0.2, 0.58) are on near-zero entries with |z| < 3.
 
-TwoLevel (5 seeds per engine, 1001-1005; the SD from 5 seeds has 4 df and about 140 correlated elements are tested per statistic, so z is a rough guide):
+TwoLevel (5 seeds per engine, 1001-1005; the SD from 5 seeds has 4 df and 65 unique correlated elements are tested per statistic, so z is a rough guide):
 - Fixture A: SE and 2.5/97.5% bounds of Sigma_B, Sigma_W, communality_B, communality_W and ICC_site within about 1-2% (communality_W lower bound 7%). Beyond |z| > 3: R_B[2,1] SE z=-3.2, R_B lower z=3.4, Sigma_B upper z=4.2. ICC_site agrees for every trait (all |z| < 2.1).
-- Fixture B: ICC_site, communality_W, Sigma_W and the communality_B interior agree. Two Sigma_B entries differ: Sigma_B[5,4] SE Julia .1183 vs R .1225 (about 3.5% smaller, z = -6.0), Sigma_B[5,5] SE Julia .2341 vs R .2255 (3.8% larger, z = +3.4), and derived R_B[5,4] SE z = -3.7. Cause not isolated. Candidates: R refits that fail (2-12 of 999) being dropped and possibly the extreme draws; K_B=2 sitting near a boundary (communality_B upper bound exactly 1) where two optimisers can reach different local optima; the 1e-5 point-estimate gap. Treat as an unresolved difference of a few percent in the SE of two between-individual covariance entries, not as an error in either engine.
+- Fixture B: ICC_site, communality_W, Sigma_W and the communality_B interior agree. Two Sigma_B entries differ: Sigma_B[5,4] SE Julia .1183 vs R .1225 (about 3.5% smaller, z = -6.0), Sigma_B[5,5] SE Julia .2341 vs R .2255 (3.8% larger, z = +3.4), and derived R_B[5,4] SE z = -3.7. Cause not isolated. Candidates: R refits that fail (2-12 of 999) being dropped and possibly the extreme draws; K_B=2 sitting near a boundary (communality_B upper bound exactly 1) where two optimisers can reach different local optima; the 1e-5 point-estimate gap. Treat as an unresolved difference of a few percent in the SE of two between-individual covariance entries, not as an error in either engine. Also beyond 3 MC SE in B: Sigma_B lower bound (z 3.6), Sigma_B upper bound (z 3.1) and R_B lower bound (z 3.4).
 - B communality_B upper bound: both engines return exactly 1.0 for four of five traits; the reported z of 10-16 is 0/0 noise, not a finding.
 
 ### Answer to the has_diag question
@@ -89,7 +89,7 @@ Reason found, and the caveat that goes with it: with one row per (site, trait), 
 
 ### What this does NOT establish
 
-- Not a parity claim. The bootstrap_Sigma row stays unbound; the 1e-6 point-estimate bar was missed in all five fixtures.
+- Not a parity claim. The bootstrap_Sigma row stays unbound; the 1e-6 point-estimate bar was missed for the Sigma entries in all five fixtures.
 - Only Gaussian data; GllvmFit: p=6, n=200, one row per site-trait, K <= 2, one DGP seed per fixture; TwoLevel: p=5, 60 x 4 balanced, two fixtures. Seeds: 5-35 per engine, so z is a rough guide and the (c) fixture is low power.
 - Not covered: replicated rows per site in GllvmFit, unbalanced TwoLevel designs, phy, the PrecisionMultivariateFit and JointPhyloGroupedGaussianFit routes, non-Gaussian families, W-tier and ICC for GllvmFit (not reportable), tightened R convergence in GllvmFit.
 - The TwoLevel oracle is pinned by two file hashes only (see the table above).
@@ -100,7 +100,7 @@ Reason found, and the caveat that goes with it: with one row per (site, trait), 
 1. Isolate the TwoLevel fixture B Sigma_B[5,4] / [5,5] SE difference (more seeds, R refit-failure handling, boundary behaviour).
 2. Resolve the GllvmFit (b) Sigma_B upper-bound pair (4,2) with more seeds (z = -4.26 at 35 seeds).
 3. Raise GllvmFit (c) beyond 5 seeds; investigate the 3-9 of 999 silent Julia refit failures on the has_diag ridge and decide whether an attrition warning below 80% retained is enough.
-4. Tighten R convergence (and add back R's fixed sigma_eps^2) to separate the sources of the 5e-6 to 7e-5 point-estimate gap.
+4. Tighten R convergence (and add back R's fixed sigma_eps^2) to separate the sources of the 3.4e-6 to 7e-5 Sigma-entry point-estimate gap.
 5. Test the has_diag total equality with replicated rows per site, where R may not push sigma_eps to about 0.
 6. Decide whether Julia should return `boot_median`, and whether R's per-replicate note and the `unit_obs` forwarding failure are to be recorded as R-side defects or matched.
 7. Byte-verify the TwoLevel R library against the pin (or rebuild from a verified source) so its oracle matches the strength of the GllvmFit one.
