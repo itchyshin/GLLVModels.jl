@@ -82,7 +82,7 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
 
 @testset "bootstrap_Sigma_r (pinned-R contract)" begin
     @testset "0. RED baseline: the driver exists" begin
-        @test _bsig_defined
+        @test _bsig_defined && hasmethod(GLLVModels.bootstrap_Sigma_r, Tuple{GllvmFit})
     end
     rng = MersenneTwister(20261101)
     p, K, n = 4, 1, 150
@@ -689,8 +689,7 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         cols = Dict{String, Vector{Int}}(); for (j, l) in enumerate(lab); push!(get!(cols, l, Int[]), j); end
         same = sum(Yb[:, c[1]] * Yb[:, c[2]]' for c in values(cols)) ./ nind
         @test maximum(abs, same .- t2.Σ_B) < 0.08                              # same label share the B effect
-        other = [Yb[:, 1:1000] * Yb[:, 1001:2000]' ./ 1000][1]                 # arbitrary other-column pairs
-        @test maximum(abs, same .- t2.Σ_B) < maximum(abs, same .- zeros(3, 3)) # control: not independent
+        @test maximum(abs, same .- t2.Σ_B) < maximum(abs, t2.Σ_B)             # control: the tolerance is far below the signal
     end
 
     @testset "21. mutation-hardening: gaps found by the line-level mutation campaign" begin
@@ -869,7 +868,103 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         @test occursin("BootstrapSigmaR(level=", sprint(show, rsh)) && !occursin('\n', sprint(show, rsh))
         txt = sprint(show, MIME("text/plain"), rsh)
         @test occursin("Sigma_B", txt) && occursin("communality_B", txt) && occursin("n_effective = ", txt)
-        @test occursin("replicates failed", txt) && occursin(" [", txt)
+        @test occursin("replicates failed", txt) && occursin(r"\[1,1\] \S+ \[\S+, \S+\]", txt)
         @test occursin(string(round(rsh.point_est.Sigma_B[1, 1]; sigdigits = 4)), txt)
+    end
+    @testset "23. survivors of the independent mutation review (PR #1059 review)" begin
+    stub = (yb; kw...) -> fit
+    err(g) = try g(); nothing catch e; e end
+    @testset "S02 warn threshold boundary" begin
+        _, lg = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 998, seed = 1, progress = false, _refit = stub), min_level = Logging.Warn)
+        @test occursin("n_boot = 998 < 999", only(_warns(lg)))
+    end
+    @testset "S03 X must have exactly n_sites columns (both directions)" begin
+        e = err(() -> _bsig(fit; X = ones(p, 10, 1), n_sites = 20, n_boot = 2, what = :Sigma, progress = false, _refit = stub))
+        @test e isa ArgumentError && occursin("must agree", e.msg)
+    end
+    @testset "S04 show prints both bounds for matrix entries" begin
+        r = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 4, seed = 1, progress = false, _refit = (yb; kw...) -> _scaled(fit, 1.0)))
+        @test occursin(r"\[1,1\] \S+ \[\S+, \S+\]", sprint(show, MIME("text/plain"), r))
+    end
+    @testset "S05 refusal order: fit structure before argument checks" begin
+        fw = fit_gaussian_gllvm(y; K = 1, K_W = 1)
+        e = err(() -> _bsig(fw; y = y, level = :nonsense, progress = false, _refit = stub))
+        @test e isa ArgumentError && occursin("K_W", e.msg)
+    end
+    @testset "S06 +-Inf draws are dropped" begin
+        infit = GllvmFit(fit.model, merge(fit.pars, (Λ = [Inf; fit.pars.Λ[2:end, :]],)), fit.logLik, 1, true, fit.optim_result, 0.0)
+        r = _quiet(() -> _bsig(fit; y = y, what = :communality, n_boot = 3, seed = 1, progress = false, keep_draws = true, _refit = (yb; kw...) -> infit))
+        @test r.n_effective.communality_B[1] == 0
+        ok = _scaled(fit, 1.0)
+        c = Ref(0)
+        r2 = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 5, seed = 1, progress = false,
+                                _refit = (yb; kw...) -> (c[] += 1) == 1 ? infit : _scaled(fit, 1.0 + c[] / 10)))
+        @test isfinite(r2.ci_upper.Sigma_B[1, 1]) && isfinite(r2.ci_lower.Sigma_B[1, 1])
+    end
+    @testset "S07/S08 built-in refit: optimizer settings only for has_diag" begin
+        # same data as the driver's batch, refit directly with / without the extra kwargs
+        ys = Matrix{Float64}[]
+        _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 9, progress = false, _refit = (yb; kw...) -> (push!(ys, copy(yb)); fit)))
+        r = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 9, progress = false, keep_draws = true))
+        for (b, yb) in enumerate(ys)
+            d = fit_gaussian_gllvm(yb; K = 1, K_W = 0, has_diag = false, K_phy = 0, has_phy_unique = false, Σ_phy = nothing, X = nothing)
+            @test r.draws[b].Sigma_B == GLLVModels._r_tier_total(d, :unit)   # bit-identical: no extra kwargs
+        end
+        ysd = Matrix{Float64}[]
+        _quiet(() -> _bsig(fitd; y = y[:, 1:8], what = :Sigma, n_boot = 6, seed = 9, progress = false, _refit = (yb; kw...) -> (push!(ysd, copy(yb)); fitd)))
+        rd = _quiet(() -> _bsig(fitd; y = y[:, 1:8], what = :Sigma, n_boot = 6, seed = 9, progress = false, keep_draws = true))
+        for (b, yb) in enumerate(ysd)
+            d = fit_gaussian_gllvm(yb; K = 1, K_W = 0, has_diag = true, K_phy = 0, has_phy_unique = false, Σ_phy = nothing, X = nothing, iterations = 2000, f_tol = 1e-10)
+            exp = d.converged ? sigma_y_site(d) : fill(NaN, p, p)
+            @test isequal(rd.draws[b].Sigma_B, exp)
+        end
+    end
+    @testset "S09 seed = 0 is valid" begin
+        r = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 2, seed = 0, progress = false, _refit = stub))
+        @test r.n_boot == 2
+    end
+    @testset "S10 ICC: zero denominator with nonzero numerator is NaN, not Inf" begin
+        Σb = Matrix(Diagonal([1.0, 2.0, 3.0])); Σw = Matrix(Diagonal([-1.0, -2.0, 1.0]))
+        tg = TwoLevelFit(reshape([0.5, 0.5, 0.5], 3, 1), [0.1, 0.1, 0.1], reshape([0.3, 0.3, 0.3], 3, 1), [0.1, 0.1, 0.1], Σb, Σw, 30, 0.0, true, 0)
+        r = _quiet(() -> _bsig(tg; individual = _IND, what = :ICC, n_boot = 2, seed = 1, progress = false, _refit = (yb, i; kw...) -> tg))
+        @test isnan(r.point_est.ICC_site[1]) && isnan(r.point_est.ICC_site[2]) && r.point_est.ICC_site[3] ≈ 3 / 4
+    end
+    @testset "S11 attrition message names the FIRST of tied entries" begin
+        c = Ref(0)
+        _, lg = _logged(() -> _bsig(_mk2(); individual = _IND, n_boot = 12, seed = 1, progress = false,
+                                    _refit = (yb, i; kw...) -> _mk2(1.0, 1.0; ok = (c[] += 1) > 4)), min_level = Logging.Warn)
+        @test any(occursin("Summary communality_B kept only", m) for m in _warns(lg))
+    end
+    @testset "S12 duplicate `what` entries are collapsed" begin
+        r = _quiet(() -> _bsig(fit; y = y, what = [:Sigma, :Sigma], n_boot = 2, seed = 1, progress = false, _refit = stub))
+        @test r.what == [:Sigma] && collect(keys(r.point_est)) == [:Sigma_B]
+    end
+    end
+    @testset "24. review follow-ups: optimizer kwargs seen by the seam, clamp scope, wrong-shape count" begin
+        # a user _refit keeps its own controls: the driver injects no optimizer options into the seam
+        kwa = Any[]
+        for ft in (fitd, fit)
+            empty!(kwa)
+            _quiet(() -> _bsig(ft; y = y, what = :Sigma, n_boot = 2, seed = 1, progress = false,
+                               _refit = (yb; kw...) -> (push!(kwa, (; kw...)); ft)))
+            @test !any(haskey(k, :iterations) || haskey(k, :f_tol) for k in kwa) && length(kwa) == 2
+        end
+        # a genuine |R| > 1 is NOT hidden by the rounding clamp
+        sb = [1.0 2.0 0.1; 2.0 1.0 0.1; 0.1 0.1 1.0]
+        tbad = TwoLevelFit(reshape([0.5, 0.5, 0.5], 3, 1), [0.1, 0.1, 0.1], reshape([0.3, 0.3, 0.3], 3, 1), [0.1, 0.1, 0.1],
+                           sb, Matrix(0.5I(3)), 30, 0.0, true, 0)
+        rbad = _quiet(() -> _bsig(tbad; individual = _IND, what = :R, level = :B, n_boot = 3, seed = 1, progress = false,
+                                  _refit = (yb, i; kw...) -> tbad))
+        @test rbad.point_est.R_B[1, 2] ≈ 2.0 && rbad.ci_lower.R_B[1, 2] ≈ 2.0 && rbad.ci_upper.R_B[1, 2] ≈ 2.0
+        # a wrong-shaped summary is a NaN draw AND is counted as lost (not in n_failed)
+        w4 = TwoLevelFit([0.9, 0.6, 0.4, -0.5][:, :], fill(0.3, 4), [0.3, -0.2, 0.5, 0.1][:, :], fill(0.5, 4),
+                         Matrix(1.0I(4)), Matrix(1.0I(4)), 30, 0.0, true, 0)
+        rw, lgw = _logged(() -> _bsig(_mk2(); individual = _IND, what = :Sigma, n_boot = 3, seed = 1, progress = false,
+                                      _refit = (yb, i; kw...) -> w4), min_level = Logging.Warn)
+        @test rw.n_failed == 0 && any(occursin("3 of 3 replicates were lost", m) && occursin("3 extraction errors", m) for m in _warns(lgw))
+        # n_sites between 2 and p: accepted, and the all-NaN outcome is announced
+        rn, lgn = _logged(() -> _bsig(fit; n_sites = 3, what = :Sigma, n_boot = 3, seed = 1, progress = false), min_level = Logging.Warn)
+        @test size(rn.ci_lower.Sigma_B) == (p, p) && rn.n_boot == 3
+        @test (rn.n_failed > 0) == any(occursin("were lost", m) for m in _warns(lgn))   # loss, if any, is announced
     end
 end

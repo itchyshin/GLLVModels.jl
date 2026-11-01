@@ -308,7 +308,15 @@ do not compare them across `has_diag` settings.
 - `progress = true` emits one `@info` per replicate (about 1000 at the default) and the
   default `level` always logs a "level(s) ... dropped" `@info`; pass `progress = false` and an
   explicit `level` for quiet output.
-- Correlation bounds (`R_*`) are clamped to [-1, 1] (interpolation can overshoot by one ulp).
+- Correlation bounds (`R_*`) are clamped to [-1, 1] only when they overshoot by rounding
+  (at most 1e-8); a larger excursion is left as is so a genuine error stays visible.
+- A replicate summary of the wrong shape becomes a NaN draw and is counted in the "lost"
+  warning (not in `n_failed`), like an extraction error.
+- `n_sites` between 2 and p is accepted, but a fit with fewer sites than traits usually fails
+  every refit: the result is then all-NaN, announced only by the "lost" warning.
+- For `has_diag = true` the built-in refit uses `iterations = 2000, f_tol = 1e-10` (R's nlminb
+  stops on a relative objective change); a deviation from the pinned R, and it moves even
+  already-converged replicates by about 3e-7 to 2e-5.
 - Entries whose point estimate is itself non-finite (for example a zero-variance trait) are
   not counted in the attrition warning.
 - `TwoLevelFit` does not store `center`; the refit assumes `center = true` unless the
@@ -420,7 +428,9 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
             e isa InterruptException && rethrow()
             nothing   # R: an extraction error skips the entry; not counted as a failed replicate
         end
-        ent === nothing && (n_extract_err += 1)
+        # a summary of the wrong shape is treated like an extraction error (NaN draw, counted as lost)
+        bad_shape = ent !== nothing && any(haskey(ent, k) && size(ent[k]) != size(v) for (k, v) in pe_pairs)
+        (ent === nothing || bad_shape) && (n_extract_err += 1)
         draws[b] = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) && size(ent[k]) == size(v) ?
                                            ent[k] : _bsig_nan_like(v)) for (k, v) in pe_pairs)
     end
@@ -445,7 +455,9 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
             end
         end
         if startswith(String(k), "R_")   # interpolation can overshoot +-1 by an ulp
-            L .= clamp.(L, -1.0, 1.0); U .= clamp.(U, -1.0, 1.0)
+            # only a rounding overshoot is clamped; a genuine |R| > 1 + 1e-8 is left visible (it is a bug upstream)
+            L .= ifelse.(abs.(L) .<= 1 + 1e-8, clamp.(L, -1.0, 1.0), L)
+            U .= ifelse.(abs.(U) .<= 1 + 1e-8, clamp.(U, -1.0, 1.0), U)
         end
         lo[k] = L; hi[k] = U
         v isa AbstractVector && (neff[k] = vec(N))
