@@ -89,7 +89,7 @@ noise. [Post-fit extractors](postfit-extractors.md) explains the denominators.
     normalises by `Σ_y_site`, against R's tier-local `Σ`. This is a documented
     convention difference, not a bug; for the R-style tier-local fraction use
     `extract_communality(fit)`. Which convention both packages should adopt is
-    an open design question (issue #131).
+    an open design question.
 
 ## Uncertainty on derived quantities
 
