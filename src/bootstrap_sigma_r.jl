@@ -196,9 +196,16 @@ function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
         end
         return Ys
     end
+    # Boundary replicates (a zero unique variance, common when has_diag = true with one
+    # row per unit) creep along a flat ridge: LBFGS needs 10^3-10^4 iterations to reach
+    # g_tol = 1e-6 and the stock 500-iteration cap reports them as failed. R's nlminb
+    # stops on a RELATIVE objective change (rel.tol 1e-10), so mirror that here: a larger
+    # cap plus f_tol. Only for the built-in refit; a `_refit` test seam keeps its own kwargs.
+    # DEVIATION from the pinned-R behaviour (optimizer settings), see the PR description.
+    extra = (_refit === nothing && m.has_diag) ? (; iterations = 2000, f_tol = 1e-10) : (;)
     refit = Y -> refit_fn(Y; K = m.K, K_W = m.K_W, has_diag = m.has_diag,
                           K_phy = m.K_phy, has_phy_unique = m.has_phy_unique,
-                          Σ_phy = nothing, X = Xm)
+                          Σ_phy = nothing, X = Xm, extra...)
     return simulate, refit
 end
 
