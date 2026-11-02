@@ -982,4 +982,27 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         @test fb.logLik >= f0.logLik
         @test isapprox(fb.logLik, -1422.97095347239; atol = 1e-4)     # the external (R) optimum
     end
+
+    @testset "R_* clamp tolerance: 1e-9 overshoot is clamped, 1e-6 stays visible" begin
+        # src/bootstrap_sigma_r.jl clamps R_* bounds to [-1, 1] only for a rounding overshoot (<= 1 + 1e-8).
+        # Hand-built TwoLevelFit whose Σ_B has unit variances and off-diagonal 1 + δ, so R_B[1, 2] = 1 + δ
+        # exactly as the driver reads it; every replicate is the same fit, so both bounds equal that value.
+        function overshoot(δ)
+            Σb = [1.0 1.0+δ 0.0; 1.0+δ 1.0 0.0; 0.0 0.0 1.0]
+            tg = TwoLevelFit(reshape([0.5, 0.5, 0.5], 3, 1), [0.1, 0.1, 0.1], reshape([0.3, 0.3, 0.3], 3, 1),
+                             [0.1, 0.1, 0.1], Σb, Matrix(0.5I(3)), 30, 0.0, true, 0)
+            return _quiet(() -> _bsig(_mk2(); individual = _IND, what = [:R], n_boot = 5, seed = 1,
+                                      progress = false, _refit = (yb, i; kw...) -> tg))
+        end
+        rs = overshoot(1e-9)                                  # rounding-sized: clamped to exactly 1
+        @test rs.ci_lower.R_B[1, 2] == 1.0 && rs.ci_upper.R_B[1, 2] == 1.0
+        rb = overshoot(1e-6)                                  # genuine excursion: left visible, not clamped
+        @test isapprox(rb.ci_lower.R_B[1, 2], 1 + 1e-6; atol = 1e-12)
+        @test isapprox(rb.ci_upper.R_B[1, 2], 1 + 1e-6; atol = 1e-12)
+        @test rb.ci_upper.R_B[1, 2] > 1.0
+        rn = overshoot(-2.0 - 1e-6)                           # mirror: -1 - 1e-6 stays visible below -1
+        @test rn.ci_lower.R_B[1, 2] < -1.0
+        rm9 = overshoot(-2.0 - 1e-9)                          # mirror rounding-sized: clamped to exactly -1
+        @test rm9.ci_lower.R_B[1, 2] == -1.0 && rm9.ci_upper.R_B[1, 2] == -1.0
+    end
 end
