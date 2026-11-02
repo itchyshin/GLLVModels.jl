@@ -15,10 +15,9 @@
 # DOES include sigma_eps^2 and sigma^2_W) when `has_diag && K_W == 0`. That second meaning
 # rests on a Julia comment (extractors.jl:270-276), not on R output: UNVERIFIED against R.
 #
-# WIRING (deferred behind PR #1036, NOT done here): add `include("bootstrap_sigma_r.jl")`
-# to src/GLLVModels.jl after extractors.jl, confint_derived.jl and twolevel.jl. Until then
-# `Base.include(GLLVModels, path)` defines it inside the module. The legacy
-# `bootstrap_Sigma` (confint_derived_wald.jl) is not touched and is a different estimand.
+# WIRING: included by src/GLLVModels.jl after extractors.jl, confint_derived.jl and twolevel.jl
+# (PR #1056). The legacy `bootstrap_Sigma` (confint_derived_wald.jl) is not touched and is a
+# different estimand.
 
 """
     BootstrapSigmaR

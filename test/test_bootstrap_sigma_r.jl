@@ -9,9 +9,8 @@ using Logging
 # Statistics.quantile over replicates logged by the test's own refit wrapper. The driver's
 # internal `_refit` keyword is the test seam (not public API).
 #
-# WIRING: src/bootstrap_sigma_r.jl is not yet include()d by src/GLLVModels.jl (deferred behind
-# PR #1036), so this file includes it into the module when the name is absent. Once wired,
-# the guard is a no-op. Not yet registered in test/runtests.jl for the same reason.
+# WIRING: src/bootstrap_sigma_r.jl is include()d by src/GLLVModels.jl and this file is
+# registered in test/runtests.jl (PR #1056). The guard below is a no-op safety net.
 
 const _BSIG_SRC = joinpath(pkgdir(GLLVModels), "src", "bootstrap_sigma_r.jl")
 if !isdefined(GLLVModels, :bootstrap_Sigma_r) && isfile(_BSIG_SRC)
