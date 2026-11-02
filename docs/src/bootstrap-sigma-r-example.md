@@ -152,15 +152,25 @@ only the level and the message, so that they show up on this page. Two calls
 with different arguments:
 
 ```@example bsig
-struct MessageLogger <: AbstractLogger end     # prints "Level: message" only
+struct MessageLogger <: AbstractLogger
+    lines::Vector{String}
+end
 Logging.min_enabled_level(::MessageLogger) = Logging.Info
 Logging.shouldlog(::MessageLogger, args...) = true
 Logging.catch_exceptions(::MessageLogger) = false
-Logging.handle_message(::MessageLogger, level, message, args...; kwargs...) =
-    println(level, ": ", message)
+Logging.handle_message(l::MessageLogger, level, message, args...; kwargs...) =
+    push!(l.lines, string(level, ": ", message))
 
-logged(f) = with_logger(f, MessageLogger())
+# Run `f`, then print the level and message of everything it logged.
+function logged(f)
+    lg = MessageLogger(String[])
+    with_logger(f, lg)
+    foreach(println, lg.lines)
+end
+nothing
+```
 
+```@example bsig
 logged() do
     # (a) default `level`: an @info names the tiers a GllvmFit does not have.
     bootstrap_Sigma_r(fit; n_boot = 39, seed = 1, progress = false,
