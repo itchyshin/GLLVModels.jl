@@ -1006,3 +1006,389 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         @test rm9.ci_lower.R_B[1, 2] == -1.0 && rm9.ci_upper.R_B[1, 2] == -1.0
     end
 end
+
+# ============================================================================================
+# PHY TIER, PrecisionMultivariateFit (BEGIN PHY-TIER). Target: R bootstrap_Sigma level = "phy"
+# (gllvmTMB 9539352f66f2db2cc26b1c393e67212a359b60c9: R/bootstrap-sigma.R, redraw at
+# R/methods-gllvmTMB.R). Expected values below are computed from raw fit fields and from the exact
+# model covariance, never through the code under test. The evidence level of this tier is
+# STRUCTURAL: no numerical comparison with an R run exists. The mutation runner extracts this
+# region (header lines 1-81 plus everything from the BEGIN marker), so keep it self-contained.
+# ============================================================================================
+const _PG = GLLVModels
+
+# trait-major complete mean design (row (o-1)*d + t), built independently of the package helper
+_pmv_trait_design(d, m) = kron(ones(m, 1), Matrix{Float64}(I, d, d))
+
+# Hand-built PrecisionMultivariateFit (no optimiser): converged, arbitrary but chosen parameters.
+function _pmv_hand(phy, sid; beta, loading, unique, residual, mode = unique === nothing ? :barelowrank : :explicitunique,
+                   residual_mode = :trait, D = nothing, ok = true)
+    d = size(loading, 1); m = length(sid); rank = size(loading, 2)
+    D = D === nothing ? _pmv_trait_design(d, m) : D
+    names = Union{String, Symbol}[Symbol("b", j) for j in 1:length(beta)]
+    PrecisionMultivariateFit(Vector{Float64}(beta), Matrix{Float64}(loading),
+        unique === nothing ? nothing : Vector{Float64}(unique), Vector{Float64}(residual),
+        mode, rank, phy, collect(Int, sid), zeros(1), -1.0, ok, 0.0, 1.0, true, 1.0, 1,
+        :converged, zeros(d, m), Matrix{Float64}(D), (d, m), names, residual_mode, String[])
+end
+# copy of a fit with some fields replaced (deterministic stand-in for a refit)
+_pmv_with(f; loading = f.loading, unique = f.phylo_unique_variance, residual = f.residual_variance,
+          ok = f.converged) =
+    PrecisionMultivariateFit(f.beta, loading, unique, residual, f.mode, size(loading, 2), f.phy,
+        f.species_id, f.parameters, f.loglik, ok, f.gradient_norm, f.hessian_min_eigenvalue,
+        f.hessian_positive_definite, f.hessian_condition_number, f.iterations, f.stopping_reason,
+        f.response, f.mean_design, f.response_shape, f.coefficient_names, f.residual_mode,
+        f.parameter_labels)
+
+# Independent test-side data simulator (same template as test_precision_multivariate_fit.jl).
+function _pmv_truth_data(rng, phy, sid; beta, loading, unique, residual)
+    d = length(beta)
+    F = cholesky(Symmetric(Matrix(phy.Q))).U
+    g = F \ randn(rng, phy.n_aug, size(loading, 2)); h = F \ randn(rng, phy.n_aug, d)
+    Y = Matrix{Float64}(undef, d, length(sid))
+    for o in eachindex(sid), t in 1:d
+        nd = phy.species_aug_id[sid[o]]
+        Y[t, o] = beta[t] + sum(loading[t, k] * g[nd, k] for k in 1:size(loading, 2)) +
+            (unique === nothing ? 0.0 : sqrt(unique[t]) * h[nd, t]) + sqrt(residual[t]) * randn(rng)
+    end
+    return Y
+end
+
+# exact model covariance of vec(Y) (trait fastest) and the mean vector of a PMV fit
+function _pmv_exact_cov(f)
+    d, m = f.response_shape
+    Ainv = inv(Matrix(f.phy.Q))
+    nodes = [f.phy.species_aug_id[s] for s in f.species_id]
+    Ao = [Ainv[nodes[o], nodes[o2]] for o in 1:m, o2 in 1:m]
+    LL = f.loading * f.loading'
+    uu = f.phylo_unique_variance === nothing ? zeros(d) : f.phylo_unique_variance
+    return kron(Ao, LL + Diagonal(uu)) + kron(Matrix{Float64}(I, m, m), Diagonal(f.residual_variance))
+end
+
+# records every refit call (keywords included) and returns a real refit on the data it was given
+function _pmv_capture()
+    log = (calls = NamedTuple[],)
+    f = function (Y, phy; kw...)
+        push!(log.calls, (Y = copy(Y), phy = phy, kw = Dict{Symbol, Any}(kw)))
+        return _PG.fit_precision_multivariate(Y, phy; kw...)
+    end
+    return f, log
+end
+
+@testset "bootstrap_Sigma_r phy tier: PrecisionMultivariateFit (structural evidence only)" begin
+    phy6 = PrecisionPhy(GLLVModels.random_balanced_tree(6; branch_length = 0.35))
+    phy4 = PrecisionPhy(GLLVModels.random_balanced_tree(4; branch_length = 0.35))
+    sid6 = repeat(1:6, inner = 4)
+    sid4 = [1, 2, 3, 4, 1, 3]
+    bt = [0.4, -0.3, 0.7]
+    Ltrue = reshape([0.8, -0.5, 0.6], 3, 1)
+    utrue = [0.30, 0.20, 0.25]; rtrue = [0.10, 0.12, 0.10]
+    Y6 = _pmv_truth_data(MersenneTwister(20261102), phy6, sid6; beta = bt, loading = Ltrue,
+                         unique = utrue, residual = rtrue)
+    fpb = _quiet(() -> _PG.fit_precision_multivariate(Y6, phy6; rank = 1, mode = :barelowrank, species_id = sid6))
+    fpu = _quiet(() -> _PG.fit_precision_multivariate(Y6, phy6; rank = 1, mode = :explicitunique, species_id = sid6))
+    NB = 10
+    stub(f) = (Y, phy; kw...) -> f                      # every replicate "refits" to f itself
+
+    @testset "P0 fixtures; PMV is no longer 'unsupported'; a real refusal still is" begin
+        @test fpb.converged && fpu.converged
+        @test fpb.phylo_unique_variance === nothing && fpu.phylo_unique_variance !== nothing
+        @test phy6.species_aug_id != collect(1:6) && phy4.species_aug_id != collect(1:4)  # non-identity node map
+        @test hasmethod(GLLVModels.bootstrap_Sigma_r, Tuple{PrecisionMultivariateFit})
+        r = _quiet(() -> _bsig(fpu; level = :phy, n_boot = 3, seed = 1, progress = false, _refit = stub(fpu)))
+        @test r isa GLLVModels.BootstrapSigmaR
+        # paired control: other classes keep their refusal text
+        e = try _bsig(_NotAFit(); progress = false); nothing catch ex; ex end
+        @test e isa ArgumentError && occursin("unsupported fit class", e.msg)
+    end
+
+    @testset "P1 point estimates from raw fields: total = LL' + diag(unique), no residual; exact keys" begin
+        cases = (
+            ("barelowrank rank 2, trait residual",
+             _pmv_hand(phy6, sid6; beta = bt, loading = [0.7 0.2; -0.4 0.5; 0.3 -0.6], unique = nothing,
+                       residual = [0.3, 0.4, 0.5])),
+            ("explicitunique rank 1, trait residual",
+             _pmv_hand(phy6, sid6; beta = bt, loading = Ltrue, unique = utrue, residual = [1.5, 1.0, 2.0])),
+            ("explicitunique rank 1, shared residual",
+             _pmv_hand(phy6, sid6; beta = bt, loading = Ltrue, unique = utrue, residual = fill(0.9, 3),
+                       residual_mode = :shared)))
+        for (nm, f) in cases
+            r = _quiet(() -> _bsig(f; level = :phy, n_boot = 4, seed = 1, progress = false, _refit = stub(f)))
+            L = f.loading
+            u = f.phylo_unique_variance === nothing ? zeros(3) : f.phylo_unique_variance
+            S = L * L' + Diagonal(u)
+            @test collect(keys(r.point_est)) == [:Sigma_phy, :R_phy, :communality_phy]
+            @test r.level == [:phy]
+            @test r.point_est.Sigma_phy ≈ S atol = 1e-12
+            @test r.point_est.R_phy ≈ _cor(S) atol = 1e-12
+            @test r.point_est.communality_phy ≈ vec(sum(abs2, L; dims = 2)) ./ diag(S) atol = 1e-12
+            # every replicate refits to f, so both bounds equal the point estimate
+            @test r.ci_lower.Sigma_phy ≈ S atol = 1e-12
+            @test r.ci_upper.Sigma_phy ≈ S atol = 1e-12
+            @test r.n_failed == 0
+        end
+    end
+
+    @testset "P2 residual variance is excluded from Sigma_phy and communality_phy" begin
+        f = _pmv_hand(phy6, sid6; beta = bt, loading = Ltrue, unique = utrue, residual = [1.5, 1.0, 2.0])
+        r = _quiet(() -> _bsig(f; level = :phy, n_boot = 4, seed = 1, progress = false, _refit = stub(f)))
+        S = Ltrue * Ltrue' + Diagonal(utrue)
+        withres = S + Diagonal(f.residual_variance)
+        @test maximum(abs, withres - S) > 1                     # control: contamination is observable
+        @test r.point_est.Sigma_phy ≈ S atol = 1e-12
+        @test !isapprox(r.point_est.Sigma_phy, withres; atol = 0.5)
+        @test r.point_est.communality_phy ≈ vec(Ltrue .^ 2) ./ diag(S) atol = 1e-12
+        @test !isapprox(r.point_est.communality_phy, vec(Ltrue .^ 2) ./ diag(withres); atol = 0.05)
+    end
+
+    @testset "P1c barelowrank: communality_phy is exactly 1, zero width, flagged by @info" begin
+        f = _pmv_hand(phy6, sid6; beta = bt, loading = [0.7 0.2; -0.4 0.5; 0.3 -0.6], unique = nothing,
+                      residual = [0.3, 0.4, 0.5])
+        r, logs = _logged(() -> _bsig(f; level = :phy, n_boot = 4, seed = 1, progress = false, _refit = stub(f)))
+        @test r.point_est.communality_phy == ones(3)
+        @test r.ci_lower.communality_phy == ones(3) && r.ci_upper.communality_phy == ones(3)
+        @test any(occursin("communality_phy is exactly 1", m) for m in _infos(logs))
+        # control: with a unique component there is no such flag and communality < 1
+        g = _pmv_hand(phy6, sid6; beta = bt, loading = Ltrue, unique = utrue, residual = rtrue)
+        r2, logs2 = _logged(() -> _bsig(g; level = :phy, n_boot = 4, seed = 1, progress = false, _refit = stub(g)))
+        @test !any(occursin("communality_phy is exactly 1", m) for m in _infos(logs2))
+        @test all(<(1), r2.point_est.communality_phy)
+        # not requested -> not flagged
+        _, logs3 = _logged(() -> _bsig(f; level = :phy, what = :Sigma, n_boot = 4, seed = 1, progress = false, _refit = stub(f)))
+        @test !any(occursin("communality_phy is exactly 1", m) for m in _infos(logs3))
+    end
+
+    @testset "P3 simulator law: exact moments against the model covariance" begin
+        # d = 2 traits, 4 tips, 6 observations (tips 1 and 3 repeated), covariate-bearing mean design
+        m4 = length(sid4)
+        x = [0.5, -1.0, 2.0, 0.0, 1.5, -0.5]
+        D = zeros(2 * m4, 3)
+        for o in 1:m4
+            D[(o - 1) * 2 + 1, 1] = 1.0; D[(o - 1) * 2 + 2, 2] = 1.0
+            D[(o - 1) * 2 + 1, 3] = x[o]; D[(o - 1) * 2 + 2, 3] = x[o]
+        end
+        cases = (
+            ("rank 1, explicitunique, unequal per-trait residuals",
+             _pmv_hand(phy4, sid4; beta = [0.4, -0.3, 0.6], loading = reshape([0.9, -0.6], 2, 1),
+                       unique = [0.30, 0.55], residual = [0.50, 1.20], D = D)),
+            ("rank 2, barelowrank, d = 3",
+             _pmv_hand(phy4, sid4; beta = [0.2, 0.1, -0.2], loading = [0.8 0.3; -0.5 0.6; 0.4 -0.7],
+                       unique = nothing, residual = [0.4, 0.9, 0.6])),
+            ("shared residual, explicitunique, d = 3",
+             _pmv_hand(phy4, sid4; beta = [0.0, 0.5, -0.5], loading = reshape([0.7, 0.4, -0.8], 3, 1),
+                       unique = [0.35, 0.60, 0.25], residual = fill(0.8, 3), residual_mode = :shared)))
+        N = 40000
+        for (k, (nm, f)) in enumerate(cases)
+            d, m = f.response_shape
+            Ys = _PG._bsig_pmv_simulate_batch(MersenneTwister(31000 + k), f, N)
+            @test length(Ys) == N && all(size(Y) == (d, m) for Y in Ys[1:5])
+            S = reduce(hcat, (vec(Y) for Y in Ys))              # (d*m) x N
+            K = _pmv_exact_cov(f)
+            μ = f.mean_design * f.beta
+            sm = vec(mean(S; dims = 2)); sc = cov(S; dims = 2)
+            @test all(abs.(sm .- μ) .<= 4.5 .* sqrt.(diag(K) ./ N))
+            tol = 4.5 .* sqrt.((diag(K) * diag(K)' .+ K .^ 2) ./ N)       # analytic Gaussian SE of a covariance entry
+            bad = count(abs.(sc .- K) .> tol)
+            @test bad == 0
+            # control: the test has power (a tree-free covariance with the same diagonal is rejected)
+            Kn = Diagonal(diag(K)) * 1.0
+            @test count(abs.(sc .- Kn) .> tol) > 0
+        end
+    end
+
+    @testset "P3c the exact covariance equals the fitter's own likelihood (ties the simulator to the fit)" begin
+        for f0 in (_pmv_hand(phy6, sid6; beta = bt, loading = Ltrue, unique = utrue, residual = [0.4, 0.9, 0.6]),
+                   _pmv_hand(phy6, sid6; beta = bt, loading = [0.7 0.2; -0.4 0.5; 0.3 -0.6], unique = nothing,
+                             residual = [0.3, 0.4, 0.5]))
+            d, m = f0.response_shape
+            Yd = randn(MersenneTwister(5), d, m)
+            K = _pmv_exact_cov(f0)
+            res = vec(Yd .- reshape(f0.mean_design * f0.beta, d, m))
+            dense = -0.5 * (logdet(cholesky(Symmetric(K))) + res' * (K \ res) + length(res) * log(2π))
+            sparse_ll = _PG.multivariate_phylo_precision_loglik(Yd' .- reshape(f0.mean_design * f0.beta, d, m)',
+                f0.phy, f0.loading, f0.residual_variance; sigma2_phy = 1.0,
+                phylo_unique_variance = f0.phylo_unique_variance, species_id = f0.species_id)
+            @test isapprox(dense, sparse_ll; atol = 1e-9, rtol = 1e-12)
+        end
+    end
+
+    @testset "P4 refit receives the fitted structure; no warm start, no f_tol; reproduces the original fit" begin
+        d = 3; m = length(sid6)
+        xcov = [0.3 * mod(o, 5) - 0.6 for o in 1:m]
+        X3 = zeros(d, m, d + 1)
+        for t in 1:d; X3[t, :, t] .= 1.0; X3[t, :, d + 1] .= xcov; end
+        Yx = Y6 .+ reshape(0.5 .* xcov', 1, m)
+        names = ["a", "b", "c", "slope"]
+        fx = _quiet(() -> _PG.fit_precision_multivariate(Yx, phy6; rank = 1, mode = :explicitunique,
+                          residual_mode = :shared, species_id = sid6, X = X3, coefficient_names = names))
+        for (nm, f) in (("covariate X, shared residual", fx), ("default trait means", fpu), ("barelowrank", fpb))
+            cap, log = _pmv_capture()
+            r = _quiet(() -> _bsig(f; level = :phy, n_boot = 3, seed = 5, progress = false, _refit = cap))
+            @test length(log.calls) == 3
+            for c in log.calls
+                @test c.phy === f.phy                                        # the SAME tree object
+                @test Set(keys(c.kw)) == Set([:rank, :mode, :residual_mode, :species_id, :X, :coefficient_names])
+                @test c.kw[:rank] == f.rank && c.kw[:mode] === f.mode && c.kw[:residual_mode] === f.residual_mode
+                @test c.kw[:species_id] == f.species_id
+                @test c.kw[:X] == f.mean_design
+                @test c.kw[:coefficient_names] == f.coefficient_names
+            end
+            # the kwargs reproduce the original fit exactly when given the original data
+            kw = log.calls[1].kw
+            f2 = _quiet(() -> _PG.fit_precision_multivariate(f.response, f.phy; kw...))
+            @test maximum(abs, f2.parameters .- f.parameters) < 1e-10
+            @test length(f2.beta) == length(f.beta) && f2.coefficient_names == f.coefficient_names
+        end
+        @test length(fx.beta) == d + 1                                      # the covariate design was really used
+    end
+
+    @testset "P5 exactly n_boot refits; one batch from one stream; seeds" begin
+        cap, log = _pmv_capture()
+        n_calls = Ref(0)
+        counting = (Y, phy; kw...) -> (n_calls[] += 1; cap(Y, phy; kw...))
+        _quiet(() -> _bsig(fpu; level = :phy, n_boot = 7, seed = 11, progress = false, _refit = counting))
+        @test n_calls[] == 7 && length(log.calls) == 7
+        # the responses handed to the refit are exactly the batch from MersenneTwister(seed)
+        expect = _PG._bsig_pmv_simulate_batch(MersenneTwister(11), fpu, 7)
+        @test all(log.calls[b].Y == expect[b] for b in 1:7)
+        # same seed bit-identical, different seed different
+        runb(seed) = _quiet(() -> _bsig(fpu; level = :phy, n_boot = 6, seed = seed, progress = false, keep_draws = true))
+        ra, rb, rc = runb(3), runb(3), runb(4)
+        @test all(ra.draws[b].Sigma_phy == rb.draws[b].Sigma_phy for b in 1:6)
+        @test any(ra.draws[b].Sigma_phy != rc.draws[b].Sigma_phy for b in 1:6)
+        # the whole batch is drawn BEFORE any refit: a refit that consumes the default RNG changes nothing
+        Random.seed!(77)
+        ys_default = Matrix{Float64}[]
+        eater = (Y, phy; kw...) -> (push!(ys_default, copy(Y)); rand(); rand(); randn(); fpu)
+        _quiet(() -> _bsig(fpu; level = :phy, n_boot = 5, progress = false, _refit = eater))
+        Random.seed!(77)
+        expect2 = _PG._bsig_pmv_simulate_batch(Random.default_rng(), fpu, 5)
+        @test ys_default == expect2
+    end
+
+    @testset "P6 failure accounting: injected non-converged, throwing and wrong-class refits" begin
+        L1 = Ltrue
+        f0 = _pmv_hand(phy6, sid6; beta = bt, loading = L1, unique = utrue, residual = rtrue)
+        c(b) = 0.5 + 0.1 * b
+        function injected(bad_nonconv, bad_throw, bad_class)
+            n = Ref(0)
+            return function (Y, phy; kw...)
+                n[] += 1; b = n[]
+                b in bad_throw && error("injected refit failure")
+                b in bad_class && return _NotAFit()
+                return _pmv_with(f0; loading = c(b) .* L1, ok = !(b in bad_nonconv))
+            end
+        end
+        nb = 20
+        nonconv, thr, cls = [3, 12], [7], [15]
+        r, logs = _logged(() -> _bsig(f0; level = :phy, n_boot = nb, seed = 1, progress = false,
+                                      _refit = injected(nonconv, thr, cls)))
+        @test r.n_failed == 4
+        @test any(occursin("4 of $nb replicates were lost", w) for w in _warns(logs))
+        surv = [b for b in 1:nb if !(b in vcat(nonconv, thr, cls))]
+        vals = [c(b)^2 * L1[1]^2 + utrue[1] for b in surv]             # Sigma_phy[1,1] of each survivor
+        @test r.ci_lower.Sigma_phy[1, 1] ≈ quantile(vals, 0.025) atol = 1e-12
+        @test r.ci_upper.Sigma_phy[1, 1] ≈ quantile(vals, 0.975) atol = 1e-12
+        @test r.n_effective.communality_phy == fill(length(surv), 3)
+        @test !any(occursin("attrition", w) for w in _warns(logs))      # 16/20 = 80% retained: no attrition warning
+        # attrition below 80%: 3 of 10 lost
+        r2, logs2 = _logged(() -> _bsig(f0; level = :phy, n_boot = 10, seed = 1, progress = false,
+                                        _refit = injected([2], [5], [9])))
+        @test r2.n_failed == 3
+        @test any(occursin("attrition", w) && occursin("70.0%", w) for w in _warns(logs2))
+        # control: no failure, no warning about lost replicates
+        r3, logs3 = _logged(() -> _bsig(f0; level = :phy, n_boot = 10, seed = 1, progress = false,
+                                        _refit = injected(Int[], Int[], Int[])))
+        @test r3.n_failed == 0 && !any(occursin("lost", w) for w in _warns(logs3))
+        # a real refit stopped after one iteration is non-converged: a failure, not an exception
+        nc = (Y, phy; kw...) -> _quiet(() -> _PG.fit_precision_multivariate(Y, phy; kw..., iterations = 1))
+        r4 = _quiet(() -> _bsig(fpu; level = :phy, n_boot = 4, seed = 2, progress = false, _refit = nc))
+        @test r4.n_failed == 4 && all(isnan, r4.ci_lower.Sigma_phy)
+    end
+
+    @testset "P7 refusals, each paired with a supported control" begin
+        err(g) = try g(); nothing catch e; e end
+        cap, log = _pmv_capture()
+        ctl = _quiet(() -> _bsig(fpu; level = :phy, n_boot = 3, seed = 1, progress = false, _refit = cap))
+        @test ctl.level == [:phy] && length(log.calls) == 3
+        n_ok = length(log.calls)
+        Σ = Matrix(0.5I(3)) + fill(0.3, 3, 3)
+        for (kw, word) in ((:Σ_phy, "Σ_phy"), (:y, "`y`"), (:n_sites, "`n_sites`"), (:X, "`X`"), (:individual, "`individual`"))
+            val = kw === :Σ_phy ? Σ : kw === :y ? Y6 : kw === :n_sites ? 24 : kw === :X ? zeros(3, 24, 3) : sid6
+            e = err(() -> _bsig(fpu; level = :phy, n_boot = 3, progress = false, _refit = cap, (kw => val,)...))
+            @test e isa ArgumentError && occursin(word, e.msg) && occursin("PrecisionMultivariateFit", e.msg)
+        end
+        # tiers that do not exist for this class
+        for lv in (:B, :W, :unit, :unit_obs, [:B, :W])
+            e = err(() -> _bsig(fpu; level = lv, n_boot = 3, progress = false, _refit = cap))
+            @test e isa ArgumentError && occursin("None of the requested level(s) are present", e.msg)
+        end
+        # default level: B and W dropped with an @info, phy kept; ICC dropped; cross_corr never produced
+        r, logs = _logged(() -> _bsig(fpu; n_boot = 3, seed = 1, progress = false, _refit = cap))
+        @test r.level == [:phy]
+        @test any(occursin("not present", m) && occursin("B, W", m) for m in _infos(logs))
+        @test any(occursin("ICC", m) for m in _infos(logs))
+        @test collect(keys(r.point_est)) == [:Sigma_phy, :R_phy, :communality_phy]
+        # nothing reportable
+        for wh in ([:ICC], [:cross_corr], [:ICC, :cross_corr])
+            e = err(() -> _bsig(fpu; level = :phy, what = wh, n_boot = 3, progress = false, _refit = cap))
+            @test e isa ArgumentError
+        end
+        # n_cores > 1
+        @test_throws ArgumentError _bsig(fpu; level = :phy, n_cores = 2, n_boot = 3, progress = false, _refit = cap)
+        @test length(log.calls) == n_ok + 3                           # only the supported control (default level) refit
+        # JointPhyloGroupedGaussianFit stays refused in this stage (no verified route)
+        sj = repeat(1:4, 3); uj = [1, 2, 1, 3, 2, 3, 1, 2, 3, 1, 3, 2]
+        Yj = randn(MersenneTwister(2), 2, 12)
+        fj = _quiet(() -> _PG.fit_joint_phylo_grouped_gaussian(Yj, phy4; rank = 1, phylo_mode = :barelowrank,
+                terms = [GroupingTerm(:unit; mode = :indep, common = false)], unit = uj, species_id = sj, iterations = 20))
+        @test fj isa GLLVModels.JointPhyloGroupedGaussianFit
+        e = err(() -> _bsig(fj; level = :phy, progress = false, _refit = cap))
+        @test e isa ArgumentError && occursin("unsupported fit class", e.msg) && occursin("JointPhyloGroupedGaussianFit", e.msg)
+        @test length(log.calls) == n_ok + 3                           # no refusal triggered a refit
+    end
+
+    @testset "P8 real simulate-and-refit route, both modes (6 tips, d = 3)" begin
+        for (nm, f) in (("barelowrank", fpb), ("explicitunique", fpu))
+            r = _quiet(() -> _bsig(f; level = :phy, n_boot = 6, seed = 20261102, progress = false))
+            @test r.n_boot == 6 && 0 <= r.n_failed <= 6
+            @test r.level == [:phy] && collect(keys(r.point_est)) == [:Sigma_phy, :R_phy, :communality_phy]
+            for k in keys(r.point_est)
+                lo = r.ci_lower[k]; hi = r.ci_upper[k]
+                @test size(lo) == size(r.point_est[k]) && size(hi) == size(lo)
+                @test all((lo .<= hi) .| isnan.(lo) .| isnan.(hi))
+            end
+            @test all(-1 .<= r.ci_lower.R_phy .<= 1) && all(-1 .<= r.ci_upper.R_phy .<= 1)
+            L = f.loading; u = f.phylo_unique_variance === nothing ? zeros(3) : f.phylo_unique_variance
+            @test r.point_est.Sigma_phy ≈ L * L' + Diagonal(u) atol = 1e-12
+            @test r.n_failed < 6                                          # the route actually produces refits
+        end
+    end
+
+    @testset "P9 show, level order and the R_phy clamp scope" begin
+        r = _quiet(() -> _bsig(fpu; level = :phy, n_boot = 4, seed = 1, progress = false, _refit = stub(fpu)))
+        txt = sprint(show, MIME"text/plain"(), r)
+        @test occursin("Sigma_phy (3x3 matrix; diagonal estimate [lower, upper]):", txt)
+        @test occursin("communality_phy (estimate [lower, upper], n_effective):", txt)
+        @test occursin("level=[:phy]", sprint(show, r))
+        # rounding-sized overshoot of R_phy is clamped, a genuine excursion stays visible (testset
+        # "R_* clamp tolerance" analogue); hand fit with R_phy[1,2] = 1 + delta exactly
+        function overshoot(δ, s = 1.0)                      # R_phy[1,2] = s * (1 + δ) exactly
+            u2 = 0.64 / (1 + δ)^2 - 0.64
+            g = _pmv_hand(phy6, sid6; beta = [0.0, 0.0], loading = reshape([0.6, s * 0.8], 2, 1), unique = [0.0, u2],
+                          residual = [0.1, 0.1])               # not simulated from: it is only what every refit returns
+            f = _pmv_hand(phy6, sid6; beta = [0.0, 0.0], loading = reshape([0.6, s * 0.8], 2, 1), unique = [0.1, 0.1],
+                          residual = [0.1, 0.1])               # the (valid) original fit that is simulated from
+            return _quiet(() -> _bsig(f; level = :phy, what = [:R], n_boot = 5, seed = 1, progress = false, _refit = stub(g)))
+        end
+        rs = overshoot(1e-9)
+        @test rs.ci_lower.R_phy[1, 2] == 1.0 && rs.ci_upper.R_phy[1, 2] == 1.0
+        rb = overshoot(1e-6)
+        @test isapprox(rb.ci_upper.R_phy[1, 2], 1 + 1e-6; atol = 1e-10)
+        @test rb.ci_upper.R_phy[1, 2] > 1.0
+        rm9 = overshoot(1e-9, -1.0)
+        @test rm9.ci_lower.R_phy[1, 2] == -1.0 && rm9.ci_upper.R_phy[1, 2] == -1.0
+        @test overshoot(1e-6, -1.0).ci_lower.R_phy[1, 2] < -1.0
+    end
+end
+# END PHY-TIER
