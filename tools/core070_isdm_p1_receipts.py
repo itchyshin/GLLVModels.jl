@@ -12,7 +12,9 @@ batch pays all 20, run at gllvmTMB pin P1 (GLLVM_PARITY_PIN=P1):
                           Julia: none in this batch. At the run commit GLLVModels' src/ has
                           no iSDM code (recorded from `git grep -il isdm <commit> -- src`).
 
-So no isdm row can bind here: R SIDE ONLY, NOTHING NUMERIC TO COMPARE. Draft PRs
+That batch alone cannot bind a row: R SIDE ONLY, NOTHING NUMERIC TO COMPARE.
+The five signed public-door rows can separately bind through raw-backed paired
+behaviour receipts checked by core070_behaviour_receipts.py. Draft PRs
 #546 / #558 build the iSDM surface and a Julia-native twin of 19 of these
 predicates on another branch; whether they should pay these rows is a proposal
 for the maintainer, recorded in the PR body, not a rebinding made here.
@@ -48,6 +50,8 @@ Usage:
   python3 tools/core070_isdm_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
   python3 tools/core070_isdm_p1_receipts.py --check
 where DIR holds isdm-p1/ (the R run plus run-commit.json) and carry-scan-p1.json.
+Rows another writer owns in case-map-isdm.json (the C3 campaign rows, which carry a
+`clause`) are left untouched: kept after this tool's rows and excluded from its counts.
 """
 import argparse
 import hashlib
@@ -88,7 +92,7 @@ TIER_TEXT = {
 }
 COUNT_KEYS = ("numeric_pass", "numeric_fail", "numeric_held_batch_verifier_failed", "numeric_non_discriminating",
               "needs_surface_r_side_measured", "measured_held_batch_verifier_failed", "measured_fail",
-              "not_measured")
+              "not_measured", "behavioural")
 LEGACY_NOTE = ("ISDM-LEGACY replays R's legacy two-source route (family_var = \"isdm_family\", fixed names gbif / "
                "survey_pa). Packet 1b item 2 (signed 2026-09-27, vault decision D-296) records it as an R-only "
                "backward-compatibility disposition that GLLVModels will not twin. That disposition is not written "
@@ -260,6 +264,38 @@ def p0_evidence(base):
                     "(batch name, preservation sha256) remains."}
 
 
+# Signed dispositions written onto rows (maintainer ruling 2026-10-05, vault decision D-319, item N6; signature source
+# ~/local-scratch/lanes/GLLVM.jl-true-parity-latest/LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md).
+# ISDM-LEGACY carries the disposition already signed in Packet 1b item 2 (D-296, 2026-09-27). The three internal-
+# predicate rows are the rows whose R case tampers an argument no public call can set (traits = NULL; the family-id
+# and link-id matrix); which three rows the ruling's "3 internal predicates" means is read from each receipt's
+# r_expression (AGENT-INFERRED, for review in the PR that adds this table).
+_INTERNAL = ("R-internal admission predicate: the R case calls the predicate with {what}, an argument no call to "
+             "gllvmTMB(..., family = isdm_sources(...)) can set, and Julia's public fit_isdm_gllvm has no such argument "
+             "either, so no paired twin through either public door exists. Signed disposition under maintainer ruling "
+             "2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts.")
+SIGNED_DISPOSITIONS = {
+    "isdm/ISDM-LEGACY": ("2026-09-27", (
+        "R-only backward-compatibility route (family_var = \"isdm_family\", fixed names gbif / survey_pa) that "
+        "GLLVModels will not twin: Packet 1b item 2, signed 2026-09-27 (vault decision D-296). Written onto this row "
+        "under maintainer ruling 2026-10-05 (D-319), item N6; the R replay stays cited under non_binding_receipts.")),
+    "isdm/ISDM-NO-TRAITS": ("2026-10-05", _INTERNAL.format(what="traits = NULL")),
+    "isdm/ISDM-WRONG-ID": ("2026-10-05", _INTERNAL.format(what="a tampered family-id column of the internal row-id matrix")),
+    "isdm/ISDM-WRONG-LINK": ("2026-10-05", _INTERNAL.format(what="a tampered link-id column of the internal row-id matrix")),
+}
+
+
+def apply_signed_disposition(row):
+    """Write the signed disposition of SIGNED_DISPOSITIONS onto `row` (no-op for other rows)."""
+    signed = SIGNED_DISPOSITIONS.get(row["source_id"])
+    if signed is None:
+        return
+    row["disposition"] = "DISPOSITION-SIGNED"
+    row["signed_by"] = "Shinichi Nakagawa"
+    row["signed_on"] = signed[0]
+    row["disposition_basis"] = signed[1]
+
+
 WIRED_PREFIXES = (f"{OUT_REL}/receipts/julia-twins/", f"{OUT_REL}/receipts/fixture-twins/")
 
 
@@ -277,8 +313,60 @@ def wired_overlay(row, committed):
     row["executable_case_ids"] = committed["executable_case_ids"]
     row["evidence_tier"] = "numeric"
     row["measured_against"] = committed.get("measured_against")
-    row["evidence"] = {**row["evidence"], "receipt": paths, "tier": ev.get("tier")}
+    new_ev = {**row["evidence"], "receipt": paths, "tier": ev.get("tier")}
+    # Keep the committed key order so a write leaves the case map byte-identical.
+    order = [k for k in ev if k in new_ev] + [k for k in new_ev if k not in ev]
+    row["evidence"] = {k: new_ev[k] for k in order}
     return True
+
+
+def own_rows(cm):
+    """This tool's rows. Rows carrying a `clause` (the C3 campaign rows) belong to
+    tools/true_parity/campaign/write_receipts.py and are never read or rewritten here."""
+    return [r for r in cm["rows"] if "clause" not in r]
+
+
+def foreign_rows(cm):
+    return [r for r in cm["rows"] if "clause" in r]
+
+
+FIRST_SEVEN_ISDM = frozenset("isdm/" + name for name in (
+    "ISDM-COUNT", "ISDM-EXTRA-SOURCE", "ISDM-MISSING-IN-TRAIT",
+    "ISDM-MISSING-SOURCE", "ISDM-WRAPPER-LAW"))
+
+
+def behavioural_overlay(row, counts):
+    """Apply the public-call behaviour overlay only to the five admitted P1 rows.
+
+    Check identity and the original R-only tier before delegation; B.overlay_row
+    then verifies the receipt's source-scoped labels against the equivalence map.
+    """
+    sid = row.get("source_id")
+    if sid not in FIRST_SEVEN_ISDM:
+        return False
+    if row.get("evidence_tier") != "needs_surface_r_side_measured":
+        return False
+    if row.get("measured_against") != P1_SHA:
+        return False
+    p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
+    expected = p0[sid]["executable_case_ids"]
+    if row.get("executable_case_ids") != expected:
+        return False
+    import core070_behaviour_receipts as B
+    return B.overlay_row(row, counts)
+
+
+def rederive_map():
+    """Regenerate rows from retained receipts without overwriting measured evidence."""
+    cm = load(ROOT / CASEMAP_REL)
+    tracked = {p.stem: (str(p.relative_to(ROOT)), load(p))
+               for p in sorted((ROOT / REC_REL / "cases").glob("*.json"))}
+    receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
+    mine = own_rows(cm)
+    rows, counts = build_rows([r["source_id"] for r in mine], receipts, mine)
+    cm.update(rows=rows + foreign_rows(cm), counts=counts, scope=SCOPE, note=NOTE)
+    write_json(ROOT / CASEMAP_REL, cm)
+    print("CORE070_ISDM_MAP_REDERIVED", json.dumps(counts))
 
 
 def build_rows(in_scope, receipts, committed_rows=None):
@@ -321,8 +409,10 @@ def build_rows(in_scope, receipts, committed_rows=None):
             counts[tier] -= 1
             counts["numeric_pass"] += 1
         notes = [h[4] for h in have if h[4]]
-        if notes:
+        if notes and sid not in SIGNED_DISPOSITIONS:
             row["note"] = " ".join(dict.fromkeys(notes))
+        apply_signed_disposition(row)
+        behavioural_overlay(row, counts)
         out_rows.append(row)
     return out_rows, counts
 
@@ -382,19 +472,25 @@ def check():
         rec = tracked[cid][1]
         if (rec["evidence_kind"], rec["verdict"]) != (kind, verdict):
             problems.append(f"{cid}: kind/verdict {rec['evidence_kind']}/{rec['verdict']} != re-derived {kind}/{verdict}")
-        if {k: v for k, v in rec.items() if k not in PROVENANCE_KEYS} != body:
+        # Behaviour blocks are derived by core070_behaviour_receipts.py from
+        # the public-door sidecars (D-319 N6); this admission-batch verifier
+        # owns the remaining receipt body only.
+        if {k: v for k, v in rec.items() if k not in PROVENANCE_KEYS | {"behaviour", "behaviour_not_bound"}} != body:
             problems.append(f"{cid}: receipt body differs from the re-derivation")
         if rec.get("reference_commit") != P1_SHA or rec.get("pin") != "P1":
             problems.append(f"{cid}: receipt not pinned at P1")
     problems += provenance_problems(tracked, rc.get("glvmodels_commit"))
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     cm = load(ROOT / CASEMAP_REL)
+    mine = own_rows(cm)
     n_rows = 0
     try:
-        rows, counts = build_rows([r["source_id"] for r in cm["rows"]], receipts, cm["rows"])
+        rows, counts = build_rows([r["source_id"] for r in mine], receipts, mine)
         n_rows = len(rows)
-        if rows != cm["rows"]:
-            bad = [a["source_id"] for a, b in zip(rows, cm["rows"]) if a != b] or ["row count"]
+        if cm["rows"][:len(mine)] != mine:
+            problems.append("case-map: this tool's rows must precede the campaign rows")
+        if rows != mine:
+            bad = [a["source_id"] for a, b in zip(rows, mine) if a != b] or ["row count"]
             problems.append(f"case-map rows differ from the re-derivation: {', '.join(bad)}")
         if counts != cm["counts"]:
             problems.append(f"case-map counts {cm['counts']} != re-derived {counts}")
@@ -414,16 +510,14 @@ def check():
 # ---------------------------------------------------------------------------
 # write
 # ---------------------------------------------------------------------------
-SCOPE = ("isdm family: the 20 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 isdm "
+SCOPE = ("isdm family: the 20 required rows the P1 carry scan lists as DANGLING, initially measured by the wave1 isdm "
          "admission batch (R admission-predicate replay against the pinned P1 source; no fit, no Julia side). The 17 "
          "rejected isdm rows and the two NOT_BOUND_AT_P0 namespace exports (isdm_source, isdm_sources) are out of "
          "scope.")
-NOTE = ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
-        "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
-        "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. The R side of "
-        "every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run "
-        "commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are "
-        "not used here; mapping them onto these rows is a proposal for the maintainer (PR body).")
+NOTE = ("Classification and signed dispositions remain unchanged. "
+        "The wave1 admission replay remains non-binding by itself. Five approved first-seven rows also cite "
+        "raw-backed paired public-door behaviour receipts at P1; the canonical behavioural predicate determines "
+        "whether these bind. Other rows retain their existing evidence and dispositions.")
 
 
 def main():
@@ -434,7 +528,12 @@ def main():
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     ap.add_argument("--check", action="store_true",
                     help="verify the tracked receipts against the files they read; write nothing")
+    ap.add_argument("--rederive-map", action="store_true",
+                    help="regenerate only the case map from retained receipts")
     args = ap.parse_args()
+    if args.rederive_map:
+        rederive_map()
+        return
     if args.check:
         check()
         return
@@ -466,7 +565,8 @@ def main():
     in_scope = [r["source_id"] for r in carry["rows"]
                 if r["source_id"].startswith(FAMILY + "/") and r["status"] == "DANGLING"]
     old_map = ROOT / CASEMAP_REL
-    rows, counts = build_rows(in_scope, receipts, load(old_map)["rows"] if old_map.is_file() else None)
+    previous = load(old_map) if old_map.is_file() else {"rows": []}
+    rows, counts = build_rows(in_scope, receipts, own_rows(previous))
     write_json(ROOT / CASEMAP_REL, {
         "schema": 1, "reference_commit": P1_SHA, "scope": SCOPE, "note": NOTE,
         "generator": "tools/core070_isdm_p1_receipts.py", "glvmodels_commit": head,
@@ -475,7 +575,7 @@ def main():
             "rows_with_p0_evidence_record": sum(r["p0_evidence"]["recorded"] for r in rows),
             "rows_without_p0_evidence_record": sum(not r["p0_evidence"]["recorded"] for r in rows),
             "p0_raw_receipts_available_here": False},
-        "runtimes_seconds": runtimes.get(BATCH), "batch_artifacts": {BATCH: artifacts}, "rows": rows})
+        "runtimes_seconds": runtimes.get(BATCH), "batch_artifacts": {BATCH: artifacts}, "rows": rows + foreign_rows(previous)})
     print(FAMILY, json.dumps(counts))
     print("case receipts", len(receipts))
 

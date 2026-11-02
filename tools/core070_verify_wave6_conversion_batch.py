@@ -67,7 +67,14 @@ KNOWN_QUANTITIES = {
     "logLik_B_tcrossprod", "loglik_scalar", "confint_sigma_eps_bounds",
 }
 KNOWN_FIXTURES = {"structured_kernel_small", "gaussian_small"}
-KNOWN_KINDS = {"point", "own_receipt_defect"}
+KNOWN_KINDS = {"point", "own_receipt_defect", "integer_equality"}
+# integer_equality: the P1 nobs case, rewritten by maintainer ruling 2026-10-05 (D-319) item N2 under
+# itchyshin/GLLVModels.jl#684 item 1 (tolerance exactly 0.5, so the two integers must be equal).
+INTEGER_TOLERANCE = 0.5
+
+
+def _is_int(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and x == x and abs(x) != float("inf") and x == int(x)
 
 
 def sha(path):
@@ -153,6 +160,12 @@ def verify_contract(contract=None):
         elif row["kind"] == "own_receipt_defect":
             need(row.get("known_defect_pending_decision") is True,
                  f"{row['case_id']}: own_receipt_defect case must carry known_defect_pending_decision=true")
+        elif row["kind"] == "integer_equality":
+            need(row.get("quantity") == "nobs", f"{row['case_id']}: integer_equality case must name quantity nobs")
+            need(row.get("tolerance") == INTEGER_TOLERANCE,
+                 f"{row['case_id']}: integer_equality case needs tolerance exactly {INTEGER_TOLERANCE}")
+            need(isinstance(row.get("ruling"), str) and "D-319" in row["ruling"],
+                 f"{row['case_id']}: integer_equality case must cite its ruling (D-319)")
 
     for row in c["deferred"]:
         need(isinstance(row.get("reason"), str) and len(row["reason"]) > 40,
@@ -221,6 +234,12 @@ def check_state(contract, receipt, results_lines, julia_report):
         if row["kind"] == "own_receipt_defect":
             need(jc.get("known_defect_pending_decision") is True,
                  f"{row['case_id']}: own_receipt_defect case must retain known_defect_pending_decision=true")
+        elif row["kind"] == "integer_equality":
+            rv, jv = jc.get("r_value"), jc.get("julia_value")
+            need(_is_int(rv) and _is_int(jv), f"{row['case_id']}: integer_equality needs integer r_value and julia_value")
+            need(jc.get("tolerance") == INTEGER_TOLERANCE, f"{row['case_id']}: integer_equality tolerance is not 0.5")
+            need(int(rv) == int(jv), f"{row['case_id']}: integers differ (R {rv}, Julia {jv})")
+            need(jc.get("max_abs_diff") == 0, f"{row['case_id']}: integer_equality max_abs_diff is not 0")
         else:
             need(jc.get("max_abs_diff") is not None and jc["max_abs_diff"] <= row["tolerance"],
                  f"{row['case_id']}: max_abs_diff {jc.get('max_abs_diff')} exceeds tolerance {row['tolerance']}")
@@ -268,6 +287,10 @@ def _synthetic_state(contract):
             julia_cases[r["case_id"]] = {"pass": True, "kind": r["kind"],
                                           "known_defect_pending_decision": True,
                                           "r_nobs": 400.0, "julia_nobs": 80.0, "error": ""}
+        elif r["kind"] == "integer_equality":
+            julia_cases[r["case_id"]] = {"pass": True, "kind": r["kind"], "quantity": r["quantity"],
+                                          "tolerance": r["tolerance"], "r_value": 400.0, "julia_value": 400.0,
+                                          "max_abs_diff": 0.0, "r_len": 1, "julia_len": 1, "error": ""}
         else:
             julia_cases[r["case_id"]] = {"pass": True, "kind": r["kind"],
                                           "tolerance": r["tolerance"], "max_abs_diff": r["tolerance"] / 2,
@@ -348,6 +371,11 @@ def run_self_test():
         jr["cases"][cid]["known_defect_pending_decision"] = False
         return r, res, jr
 
+    def mut_integers_differ(r, res, jr):
+        cid = next(c["case_id"] for c in contract["cases"] if c["kind"] == "integer_equality")
+        jr["cases"][cid]["julia_value"] = 80.0  # the stale P0 expectation; pass stays true
+        return r, res, jr
+
     def mut_oracle_error_present(r, res, jr):
         r["oracle_error_count"] = 1
         return r, res, jr
@@ -380,7 +408,11 @@ def run_self_test():
     expect_rejected("one verdict flipped to FAIL in results.tsv", mut_flip_one_verdict)
     expect_rejected("max_abs_diff blown past tolerance while pass stays true", mut_tolerance_blown)
     expect_rejected("rejection case: R side did not raise", mut_rejection_r_side_did_not_raise)
-    expect_rejected("own_receipt_defect case: known_defect_pending_decision flag dropped", mut_defect_flag_dropped)
+    kinds = {c["kind"] for c in contract["cases"]}
+    if "own_receipt_defect" in kinds:
+        expect_rejected("own_receipt_defect case: known_defect_pending_decision flag dropped", mut_defect_flag_dropped)
+    if "integer_equality" in kinds:
+        expect_rejected("integer_equality case: integers differ while pass stays true", mut_integers_differ)
     expect_rejected("receipt records a nonzero oracle_error_count", mut_oracle_error_present)
     expect_rejected("receipt case_count drifted", mut_case_count_drift)
     expect_rejected("null oracle value recorded as pass=true", mut_null_oracle_value_with_pass_true)

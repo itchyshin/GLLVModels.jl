@@ -26,14 +26,14 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run.toml": "c280907d73e65ff33b4edae59f3e3904b2187e1d68f6050320b9ebad99a4f12f",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "ad43af55a7cfbaf58150c96ac746683faf75491e0bc1aaa2478fba04e1232dc2",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt": "fd01780fef3f00dd2e7d55c2f7bbec3464ab710a8162e8c9cb88e0f031cdc94d",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "2fef3946bfa53dce8ff83f28452de28526921f0dd1ab946254d5d54cf244ccc3",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-native.toml": "668687199468e2e04f091d01e3f63c202bc952fae5eb55fe2ac2d477957a046a",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-formula.toml": "61e496fc831d9a7ab7dd56e5a21d6801db61ba8f8da2fd1b6162ff37fc7152c3",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-long.toml": "2c680d505ac899838143fcee883b509e98025c4281241ca8488b87dd3f8cbd34"
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run.toml": "5e23ff98b92365a2ee6fba31c3ce724ffd89dce8900241d295175cca7c4fc986",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "cfcdca4a928b6dac7160c70ab0fca4a0724e89017c41a61eea99b9ec68c97ba3",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt": "b0c139dee33a36e0b1b8442cf21b3eed89daca63435911fac6726d4f48ccc966",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "20b56fa809c660e57565bf7331db96891ff789b0f0a43ae773a892632611852c",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-native.toml": "d639ae34ad33aeb6f069a79215dec1473e7cda02ef6be72739a0cd11e335849c",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-formula.toml": "40755b7943058389a1d18f441563699c72db9c97ce5d1976d3e36cb51b4d6bb2",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-long.toml": "0b1aa690c6d90692bba26e0c6bf237b84e1cb1d84383e15e04be1bc652a40b34"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml",
@@ -46,36 +46,36 @@
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
     "pin": "P1",
     "cases": [
       {
         "case_id": "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
         "quantity": "logLik, wide formula",
-        "max_abs_diff": 7.958078640513122e-13,
+        "max_abs_diff": 6.821210263296962e-13,
         "tolerance": 0.001,
         "tolerance_rule": "the cell's own test, @test abs(formula_fit.loglik+rvalue)<=1e-3 (rtol=0, atol=0.001; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
         "n_values": 1,
-        "r_value": -576.2849371937104,
-        "julia_value": -576.2849371937112,
+        "r_value": -576.284937193712,
+        "julia_value": -576.2849371937114,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       },
       {
         "case_id": "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE",
         "quantity": "logLik, long formula",
-        "max_abs_diff": 7.958078640513122e-13,
+        "max_abs_diff": 6.821210263296962e-13,
         "tolerance": 0.001,
         "tolerance_rule": "the cell's own test, @test abs(longfit.loglik+rvalue)<=1e-3 (rtol=0, atol=0.001; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
         "n_values": 1,
-        "r_value": -576.2849371937104,
-        "julia_value": -576.2849371937112,
+        "r_value": -576.284937193712,
+        "julia_value": -576.2849371937114,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       }

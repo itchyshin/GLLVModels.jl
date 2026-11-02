@@ -54,9 +54,12 @@ end
 
 # A draw no NB1 fit can evaluate: one negative count (log-pmf -Inf), so each
 # fitter ends on its failure sentinel. Data-driven, not RNG-driven.
-function _nb1504_bad(Y)
+# The shared route's fitter refuses a negative count up front (#730), so its failing draw is
+# an in-support count whose intercept lies past the eta clamp (#869); the grouped fitters still
+# end on the failure sentinel for a negative count.
+function _nb1504_bad(Y, route)
     B = copy(Y)
-    B[1, 1] = -5
+    B[1, 1] = route === :shared ? 10^15 : -5
     return B
 end
 
@@ -77,7 +80,7 @@ end
     end
 
     @testset "a failed refit is rejected ($route)" for (route, fit, ad, direct, pack) in routes
-        Y_bad = _nb1504_bad(Y)
+        Y_bad = _nb1504_bad(Y, route)
         fb_bad = direct(Y_bad)
         @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
         raw_bad = ad.refit(Y_bad)
@@ -88,7 +91,7 @@ end
     end
 
     @testset "end to end: n_converged counts only converged replicates ($route)" for (route, fit, ad, direct, pack) in routes
-        Y_bad = _nb1504_bad(Y)
+        Y_bad = _nb1504_bad(Y, route)
         m = length(ad.θ)
         ad_mixed = GM._FamilyCI(ad.θ, ad.nll, ad.names, ad.kinds,
                                 rng -> rand(rng) < 0.5 ? Y : Y_bad, ad.refit)

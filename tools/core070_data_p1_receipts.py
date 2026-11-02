@@ -69,8 +69,19 @@ receipts stay under evidence.non_binding_receipts), evidence_tier numeric. Class
 disposition and every other field are untouched; a row's `note` still describes the superseded
 helper-replay case. `--apply-twins` re-derives rows and counts of the tracked case-map-data.json
 from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
-result. Rows with no twin (weights rows: Julia refuses weights= everywhere; stored / predict-time
-offset, mixed-family and modelled-predictor rows: no Julia surface to fit) keep their batch tier.
+result. Rows with no twin (legacy-fit and newdata predict-time offset rows: no Julia surface to
+fit) keep their batch tier. The 13 weights rows (DATA-W-*) have fit-level twins (Poisson fits with
+observation weights, test/test_weights_twins_p1.jl, fixture test/fixtures/weights_twins_p1.toml); all
+13 bind. The six whose batch case is a helper-internal vector shape (the five mask rows and W-ZERO) bind
+on their fit-level twins under the maintainer ruling of 2026-10-06 (D-319 follow-up); the shape itself
+has no Julia counterpart. DATA-OFF-TRAIN-STORED is bound by its own twin (test/test_predict_offset_twin_p1.jl,
+fixture test/fixtures/predict_offset_twin_p1.toml); DATA-MISS-MODEL and DATA-MISS-BOTH by the
+modelled-predictor twins (test/test_data_twins_2_p1.jl, fixture test/fixtures/data_twins_2_p1.toml);
+DATA-OFF-ALL-COUNT by the three-family exposure-offset twin (test/test_off_all_count_twin_p1.jl, fixture
+test/fixtures/off_all_count_twin_p1.toml); DATA-OFF-MIXED by the mixed-family offset twin
+(test/test_off_mixed_twin_p1.jl, fixture test/fixtures/off_mixed_twin_p1.toml); DATA-OFF-PREDICT by the
+new-offset prediction twin under the maintainer ruling of 2026-10-05, D-319 (test/test_off_predict_twin_p1.jl,
+fixture test/fixtures/off_predict_twin_p1.toml).
 
 Usage:
   python3 tools/core070_data_p1_receipts.py --runs DIR --runtimes JSON [--allow-dirty]
@@ -138,10 +149,11 @@ TIER_TEXT = {
     "needs_surface_r_side_measured": (
         "R side measured at P1 (the pinned P1 R helper replays to the frozen expectation). The R side is a helper "
         "replay that produces no fit number, so there is nothing numeric to compare yet and the row does not bind. "
-        "GLLVModels has no helper-equivalent surface for these cases; it does have fit-time offset= and mask= / "
-        "missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), and no "
-        "weights surface (see each receipt's "
-        "julia_fit_time_surface_probe)"),
+        "GLLVModels has no helper-equivalent surface for these cases. Its fit-time surfaces are offset= and mask= / "
+        "missing-in-Y on the non-Gaussian fitters (offset= and mask= also on the default Gaussian path), recorded in "
+        "each receipt's julia_fit_time_surface_probe, and observation weights= on the Poisson Laplace route only "
+        "(other families refuse weights with an ArgumentError). Weights were added after the P1 surface probe ran, "
+        "so a probe that records weights as absent predates them"),
 }
 
 # Planned-surface group -> which fit-time surface(s) the surface probe exercised for it.
@@ -455,46 +467,205 @@ def p0_evidence(base):
 
 
 TWIN_REL = f"{OUT_REL}/receipts/julia-twins/data-twins"
-TWIN_TIER = ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as "
-             "test/test_data_twins_p1.jl, against R-at-P1 values copied from test/fixtures/data_twins_p1.toml (an R fit "
-             "that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. "
-             "The helper-replay batch case this row carried has no fit number; its receipt is kept under "
-             "non_binding_receipts and its ids under batch_case_ids")
+# Twin test and fixture per row; rows not listed use the shared data-twin pair.
+TWIN_SOURCES_DEFAULT = ("test/test_data_twins_p1.jl", "test/fixtures/data_twins_p1.toml")
+TWIN_SOURCES = {
+    "data/DATA-OFF-TRAIN-STORED": ("test/test_predict_offset_twin_p1.jl", "test/fixtures/predict_offset_twin_p1.toml"),
+    "data/DATA-MISS-MODEL": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
+    "data/DATA-MISS-BOTH": ("test/test_data_twins_2_p1.jl", "test/fixtures/data_twins_2_p1.toml"),
+    "data/DATA-OFF-ALL-COUNT": ("test/test_off_all_count_twin_p1.jl", "test/fixtures/off_all_count_twin_p1.toml"),
+    "data/DATA-OFF-MIXED": ("test/test_off_mixed_twin_p1.jl", "test/fixtures/off_mixed_twin_p1.toml"),
+    "data/DATA-OFF-PREDICT": ("test/test_off_predict_twin_p1.jl", "test/fixtures/off_predict_twin_p1.toml"),
+    **{f"data/DATA-W-{s}": ("test/test_weights_twins_p1.jl", "test/fixtures/weights_twins_p1.toml")
+       for s in ("NULL", "LONG", "FRACTIONAL", "ZERO", "MATRIX-SCALAR", "MATRIX-UNIT", "MATRIX-CELLS",
+                 "MATRIX-MASK-DROP", "MATRIX-MASK-INCLUDE", "MATRIX-MASK-SCALAR", "DF-UNIT",
+                 "DF-MASK-DROP", "DF-MASK-INCLUDE")},
+}
+
+
+def twin_tier(sid):
+    """The tier text of a twin-bound row, naming that row's own twin test and fixture."""
+    test, fixture = TWIN_SOURCES.get(sid, TWIN_SOURCES_DEFAULT)
+    return ("numeric: Julia values recomputed by tools/true_parity_julia_receipts.jl with the same calls and settings as "
+            f"{test}, against R-at-P1 values copied from {fixture} (an R fit "
+            "that converged with a positive-definite Hessian), each case within the tolerance asserted in that test. "
+            "The helper-replay batch case this row carried has no fit number; its receipt is kept under "
+            "non_binding_receipts and its ids under batch_case_ids")
+
+
 TWIN_FILES = {  # source_id -> twin receipt stem
     "data/DATA-OFF-NONE": "OFF-NONE",
+    "data/DATA-OFF-SCALAR": "OFF-SCALAR",
     "data/DATA-OFF-EXPOSURE": "OFF-EXPOSURE",
     "data/DATA-OFF-NB1": "OFF-NB1",
     "data/DATA-OFF-NONCOUNT-ZERO": "OFF-NONCOUNT-ZERO",
     "data/DATA-MISS-DEFAULT": "MISS-DEFAULT",
     "data/DATA-MISS-INCLUDE": "MISS-INCLUDE",
+    "data/DATA-OFF-TRAIN-STORED": "OFF-TRAIN-STORED",
+    "data/DATA-MISS-MODEL": "MISS-MODEL",
+    "data/DATA-MISS-BOTH": "MISS-BOTH",
+    "data/DATA-OFF-ALL-COUNT": "OFF-ALL-COUNT",
+    "data/DATA-OFF-MIXED": "OFF-MIXED",
+    "data/DATA-OFF-PREDICT": "OFF-PREDICT",
+    # observation weights: the seven firm rows of wave plan W4-1a
+    "data/DATA-W-NULL": "W-NULL",
+    "data/DATA-W-LONG": "W-LONG",
+    "data/DATA-W-FRACTIONAL": "W-FRACTIONAL",
+    "data/DATA-W-MATRIX-SCALAR": "W-MATRIX-SCALAR",
+    "data/DATA-W-MATRIX-UNIT": "W-MATRIX-UNIT",
+    "data/DATA-W-MATRIX-CELLS": "W-MATRIX-CELLS",
+    "data/DATA-W-DF-UNIT": "W-DF-UNIT",
+    # the six helper-internal-shape rows of wave plan W4-1b, bound on their fit-level twins under the
+    # maintainer ruling of 2026-10-06 (D-319 follow-up)
+    "data/DATA-W-ZERO": "W-ZERO",
+    "data/DATA-W-MATRIX-MASK-DROP": "W-MATRIX-MASK-DROP",
+    "data/DATA-W-MATRIX-MASK-INCLUDE": "W-MATRIX-MASK-INCLUDE",
+    "data/DATA-W-MATRIX-MASK-SCALAR": "W-MATRIX-MASK-SCALAR",
+    "data/DATA-W-DF-MASK-DROP": "W-DF-MASK-DROP",
+    "data/DATA-W-DF-MASK-INCLUDE": "W-DF-MASK-INCLUDE",
 }
 
 
 # A twin receipt that records a true measurement but does not twin its row: cited as non-binding,
 # with the reason on the row (`twin_not_bound`).
-NONBINDING_TWINS = {
-    "data/DATA-OFF-ALL-COUNT": ("OFF-ALL-COUNT",
-        "The NB2 exposure-offset fit twin (receipt cited as non-binding) covers one count family. The R case "
-        "prepares offsets for three count families in one model (family ids 5, 10, 11: nbinom2, truncated "
-        "Poisson, truncated nbinom2). Julia has no per-trait family mix (as for DATA-OFF-MIXED) and the twin "
-        "does not cover the truncated families, so the row does not bind on it."),
-    "data/DATA-OFF-SCALAR": ("OFF-SCALAR",
-        "The twin passes the scalar already broadcast (offset = fill(log(2), p, n)), so it never exercises the "
-        "capability the row names: broadcasting a constant offset to every row. Julia's own scalar input "
-        "fit_gllvm(Y; family=Poisson(), offset=log(2)) is accepted but returns logLik -Inf with converged "
-        "false (probed on 4ae7e109d, also for 1.0 and 0.0). The row can bind once the scalar input is fixed "
-        "and the twin uses it."),
-}
+NONBINDING_TWINS = {}  # source_id -> (twin receipt stem, reason); empty since the 2026-10-06 ruling
 # Rows that bind, with a stated limit of what the twin covers.
+_W_SCOPE_COMMON = ("A weight multiplies its cell's conditional log-density on both sides. gllvmTMB's logLik() aborts for "
+    "non-unit weights, so the compared number is the maximised weighted objective (R -fit$opt$objective, Julia "
+    "fit.loglik), with intercepts and Lambda Lambda'. One Poisson data set only: Julia takes weights on the Poisson "
+    "Laplace route and refuses them elsewhere (ArgumentError); binomial weights, which gllvmTMB reads as trial "
+    "counts, are not exercised.")
+_W_SCOPE_WIDE = ("gllvmTMB_wide() hardcodes latent()'s default unique = TRUE (a per-trait unique variance the Julia "
+    "Poisson route does not carry), so the R fit runs its normalise_weights(..., 'wide_matrix', ...) and pivot "
+    "verbatim and calls gllvmTMB() with unique = FALSE; that substitution is the only difference.")
+_W_SHAPE = ("Bound on its fit-level twin under the maintainer ruling of 2026-10-06 (D-319 follow-up). The R batch "
+    "case is a helper-internal vector shape of normalise_weights() ({shape}); that shape itself has no Julia "
+    "counterpart, so the twin compares its fit-level consequence: {twin}.")
 SCOPE_NOTES = {
+    "data/DATA-W-NULL": "The R batch case replays normalise_weights(NULL) to NULL; the twin is the unweighted Poisson fit "
+        "(p = 6, n = 120, one latent factor), R weights = NULL against Julia fit_gllvm(Y; family = Poisson(), K = 1) "
+        "with weights omitted; the twin test also asserts that weights = nothing gives the identical fit. "
+        + _W_SCOPE_COMMON,
+    "data/DATA-W-LONG": "The R batch case replays normalise_weights(1:6, 'long', ...) unchanged; the twin is a Poisson fit "
+        "through the long API with an integer weight (1 to 3) on every row, against Julia with the same weights as a "
+        "p x n matrix (Julia's Y is a matrix, so a long column has no direct Julia form). " + _W_SCOPE_COMMON,
+    "data/DATA-W-FRACTIONAL": "The R batch case replays fractional weights rep(0.5, 6) unchanged; the twin is a Poisson "
+        "fit through the long API with fractional weights in (0.25, 2) on every row, against Julia with the same "
+        "p x n matrix. " + _W_SCOPE_COMMON,
+    "data/DATA-W-MATRIX-SCALAR": "The R batch case replays a scalar wide-matrix weight broadcast to every cell; the twin "
+        "is a Poisson fit with weight 2 on every cell, R through gllvmTMB_wide()'s own normaliser and pivot, Julia "
+        "weights = 2.0. " + _W_SCOPE_COMMON + " " + _W_SCOPE_WIDE,
+    "data/DATA-W-MATRIX-UNIT": "The R batch case replays a per-unit wide-matrix weight vector flattened in R's units x "
+        "traits order (its negative control pins that order); the twin is a Poisson fit with one weight per unit, R "
+        "through gllvmTMB_wide()'s own normaliser and pivot, Julia weights = a length-n vector. The fit shows each "
+        "cell gets its unit's weight, the observable consequence of the order; the order of R's internal long vector "
+        "itself has no Julia counterpart. " + _W_SCOPE_COMMON + " " + _W_SCOPE_WIDE,
+    "data/DATA-W-MATRIX-CELLS": "The R batch case replays a full n x p wide-matrix weight flattened to the long vector; "
+        "the twin is a Poisson fit with a per-cell weight matrix, R through gllvmTMB_wide()'s own normaliser and "
+        "pivot, Julia weights = its transpose (Julia's layout is traits x units). " + _W_SCOPE_COMMON + " " + _W_SCOPE_WIDE,
+    "data/DATA-W-DF-UNIT": "The R batch case replays a traits()-route per-unit weight vector replicated to every trait; "
+        "the twin is a Poisson fit through the public traits() route, gllvmTMB(traits(t1, ..., t6) ~ 1 + latent(1 | "
+        "unit, d = 1, unique = FALSE), weights = <one per unit>), against Julia weights = a length-n vector. "
+        + _W_SCOPE_COMMON,
+    "data/DATA-W-ZERO": _W_SHAPE.format(shape="an all-zero length-6 vector returned unchanged", twin="a Poisson "
+        "fit through the long API with weight 0 on 15 of 720 rows and 1 elsewhere, against Julia with the same "
+        "p x n matrix (an all-zero fit is a flat objective with nothing to compare); the twin test also asserts "
+        "that the zero-weight fit equals the fit with those cells masked") + " " + _W_SCOPE_COMMON,
+    "data/DATA-W-MATRIX-MASK-DROP": _W_SHAPE.format(shape="wide-matrix weights shrunk to the retained observations "
+        "when NA cells are dropped", twin="a Poisson fit with a per-cell weight matrix that is NA where Y is NA (14 "
+        "cells), NA cells dropped, R through gllvmTMB_wide()'s own normaliser and pivot, against Julia with those "
+        "cells missing in Y and weights = the transposed matrix with NaN there") + " " + _W_SCOPE_COMMON + " "
+        + _W_SCOPE_WIDE,
+    "data/DATA-W-MATRIX-MASK-INCLUDE": _W_SHAPE.format(shape="wide-matrix weights zeroed in place at NA cells under "
+        "response = 'include'", twin="the DATA-W-MATRIX-MASK-DROP fit under response = 'include', against Julia "
+        "with a placeholder 0 at the 14 cells, mask = the observed cells and the same NaN-bearing weights; R's "
+        "drop and include objectives agree within 1e-6 (asserted in the twin test)") + " " + _W_SCOPE_COMMON + " "
+        + _W_SCOPE_WIDE,
+    "data/DATA-W-MATRIX-MASK-SCALAR": _W_SHAPE.format(shape="a scalar weight broadcast to the retained-observation "
+        "count when NA cells are dropped", twin="a Poisson fit with weight 2 on every cell and the 14 NA cells "
+        "dropped, R through gllvmTMB_wide(), against Julia with those cells missing in Y and weights = 2.0")
+        + " " + _W_SCOPE_COMMON + " " + _W_SCOPE_WIDE,
+    "data/DATA-W-DF-MASK-DROP": _W_SHAPE.format(shape="traits()-route per-unit weights replicated and shrunk to the "
+        "retained observations when NA cells are dropped", twin="a Poisson fit through the public traits() route "
+        "with one weight per unit and the 14 NA cells dropped, against Julia with those cells missing in Y and "
+        "weights = a length-n vector") + " " + _W_SCOPE_COMMON,
+    "data/DATA-W-DF-MASK-INCLUDE": _W_SHAPE.format(shape="traits()-route per-unit weights kept at full length under "
+        "response = 'include'", twin="the DATA-W-DF-MASK-DROP fit under response = 'include', against Julia with a "
+        "placeholder 0 at the 14 cells, mask = the observed cells and weights = a length-n vector; R's drop and "
+        "include objectives agree within 1e-6 (asserted in the twin test)") + " " + _W_SCOPE_COMMON,
+    "data/DATA-OFF-SCALAR": "The twin is one Poisson fit with a constant offset: R takes offset(log(2)) in the "
+        "formula, Julia takes the scalar keyword offset = log(2) and broadcasts it to every cell "
+        "(fit_gllvm; scalar input returned logLik -Inf before that was fixed). It does not exercise other "
+        "families, and through fit_gllvm the offset reaches Julia as a value, not as an expression evaluated "
+        "against the data as in R's formula.",
     "data/DATA-MISS-DEFAULT": "The twin covers response = 'drop' (missing responses dropped by default). The R "
         "case also asserts predictor = 'fail' (a missing covariate is refused); that part is not exercised. R's "
         "drop and include optima agree here, so this row and DATA-MISS-INCLUDE check two Julia input forms "
         "(missing entries in Y, and mask=) against numerically identical R fits.",
     "data/DATA-OFF-NONCOUNT-ZERO": "A zero offset cannot tell 'applied' from 'ignored', so this is a plain rank-2 "
         "Gaussian fit match plus acceptance of offset = zeros(p, n). Known differences, recorded not bound: "
-        "Julia applies a nonzero Gaussian offset where R refuses it, and Julia refuses the scalar form "
-        "offset = 0.0 with a DimensionMismatch.",
+        "Julia applies a nonzero Gaussian offset where R refuses it. (The scalar form offset = 0.0 is "
+        "now broadcast like any scalar offset; see DATA-OFF-SCALAR.)",
+    "data/DATA-OFF-TRAIN-STORED": "The R batch case reads back a vector written into a mock fit object; the twin "
+        "compares the training offset a real Poisson exposure fit kept (R .gllvmTMB_offset_vec, Julia fit.offset) "
+        "and the training-row link predictor that uses it (R predict(fit, type = 'link'), Julia predict(fit, Y; "
+        "type = :link)). Training rows only, at the training offset. R's newdata prediction on the training units "
+        "(offset re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset "
+        "= O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Julia stores the training "
+        "offset (fit.offset) on the Laplace Poisson, binomial, NB2, NB1, GP1, Beta, Gamma and Exponential fits, "
+        "their grouped-dispersion variants (NB2, NB1, Beta, Gamma), the two-part fits (hurdle-Poisson, hurdle-NB, "
+        "ZIP, ZINB, ZIB, delta-lognormal, delta-Gamma) and the mixed-family fit; this twin exercises the Poisson "
+        "fit only.",
+    "data/DATA-MISS-MODEL": "The R batch case replays miss_control(predictor = 'model') to a list; the twin is one "
+        "Gaussian fit that uses it: mi(x) with covariate model x ~ z, x missing at 18 of 120 units, one latent factor "
+        "(R gllvmTMB(..., missing = miss_control(predictor = 'model')), Julia fit_gaussian_mi_fiml). It covers one "
+        "continuous unit-level predictor with a fixed-effect covariate model and a Gaussian response; R's other "
+        "predictor = 'model' routes (grouped, phylogenetic, binary, ordered, categorical predictors, non-Gaussian "
+        "responses) are not exercised. Julia has no miss_control constructor: the policy is chosen by the fitter.",
+    "data/DATA-MISS-BOTH": "The R batch case replays miss_control('include', 'model') to a list; the twin is the "
+        "DATA-MISS-MODEL fit with 44 response cells also NA (35 drawn at random, one cell of a unit whose x is "
+        "missing, and every response of unit 5, x observed, and unit 17, x missing): R keeps them under response = "
+        "'include', Julia takes them as missing cells of Y in fit_gaussian_mi_fiml (the response mask this slice "
+        "added). R's response = 'drop' removes units with no response altogether, so it differs from 'include' here; "
+        "it is checked only as an assertion in the twin test (the Julia fit without units 5 and 17 reaches R's drop "
+        "logLik), not as a receipt case. Same scope limits as DATA-MISS-MODEL.",
+    "data/DATA-OFF-ALL-COUNT": "The row is a family-id admission-set case: the R batch case "
+        "gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10 and "
+        "11 (nbinom2, truncated Poisson, truncated nbinom2), and the case plan's comparand is the set of families "
+        "admitted (docs/dev-log/core070/data-required-case-plan.json, comparands 'R count-family id admission set "
+        "{5,10,11}' and 'Julia count-family offset admission set'). Each admitted family is twinned with an "
+        "exposure offset(log(e)), one data set each (p = 6, n = 150, one latent factor, per-trait dispersion for "
+        "the two NB2 families), R gllvmTMB(..., family = nbinom2() / truncated_poisson() / truncated_nbinom2()) "
+        "against Julia fit_gllvm(Y; family, K = 1, offset = log.(E)). Fitting several families with an offset in "
+        "one model is DATA-OFF-MIXED's obligation, not this row's. The earlier non-binding reason (commit "
+        "4ae7e109d: a mixed-family offset vector) no longer holds: the R case's last argument (d$kind) is a "
+        "trait label, not a family, and the truncated families 10 and 11 are now covered. The truncated nbinom2 "
+        "data were drawn with size 2 and every R dispersion is inside (1e-3, 1e3) (asserted in the generator), "
+        "so no trait is at the Poisson limit, the ridge behind the FAMILY-11 health-check failure; that row is "
+        "not changed by this twin.",
+    "data/DATA-OFF-MIXED": "The R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) replays the "
+        "row-wise offset admission of one mixed-family fit (family ids 2, 0, 5: poisson, gaussian, nbinom2): a "
+        "zero offset on the non-count row next to nonzero offsets on the count rows. The twin is one real fit "
+        "of that kind: p = 6 traits (poisson, gaussian, nbinom2, poisson, nbinom2, poisson), n = 150, one latent "
+        "factor, R gllvmTMB(..., family = list(...) by trait) with offset(log(e)) against Julia "
+        "fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)); e is exactly 1 on the gaussian trait and varies "
+        "by cell on the count traits. It covers one gaussian trait only: gllvmTMB shares one sigma across the "
+        "gaussian traits of a mixed fit while fit_mixed_gllvm gives each Normal trait its own, so a fit with "
+        "two or more gaussian traits is a different model on the two sides and is not compared. Both sides apply "
+        "the row-wise admission rule: a nonzero offset on the gaussian trait is refused by R (message recorded in "
+        "the fixture) and by fit_mixed_gllvm (ArgumentError naming the trait and family), asserted in the twin "
+        "test; the refusal is behaviour, not a compared number. The same model without the offset is also matched (logLik within 1e-6) and "
+        "scores lower by more than 1 on both sides.",
+    "data/DATA-OFF-PREDICT": "Bound under the maintainer ruling of 2026-10-05 (vault D-319, option (b)). The R batch "
+        "case is a helper replay of the newdata offset path; the twin is one real prediction of that kind: the "
+        "Poisson exposure fit of the DATA-OFF-TRAIN-STORED twin (p = 6, n = 150, one latent factor), predicted on "
+        "the training units with a new exposure e_new. R predict(fit, newdata = nd, type = 'link') re-evaluates the "
+        "stored offset expression on newdata and keeps the training units' latent modes (asserted in the "
+        "generator); Julia predict(fit, Y; type = :link, offset = log.(E_new), modes = :training) computes "
+        "eta = beta + O_new + Lambda z_train, the path added for this ruling. The default modes = :refit "
+        "(modes re-solved at the new offset) is a different quantity and is not what R returns. Scope: training "
+        "units only (new units have no training mode), one Poisson fit; through the matrix API the new offset "
+        "reaches Julia as a value, not as an expression evaluated against newdata as in R's formula.",
 }
 
 
@@ -538,12 +709,71 @@ def twin_overlay(sid, row, counts):
     row["evidence_tier"] = "numeric"
     row["measured_against"] = P1_SHA
     row["evidence"] = {"receipt": [rel], "non_binding_receipts": ev.get("non_binding_receipts", []),
-                       "batch_case_ids": prior_ids, "tier": TWIN_TIER}
+                       "batch_case_ids": prior_ids, "tier": twin_tier(sid)}
     row["measured_result"] = {**(row.get("measured_result") or {}), "twin_case_ids": case_ids,
                               "twin_verdict": rec["verdict"]}
     if sid in SCOPE_NOTES:
         row["scope_note"] = SCOPE_NOTES[sid]
     counts["numeric_pass"] += 1
+
+
+# ---- signed dispositions (maintainer ruling 2026-10-05, vault D-319, item N7) ----
+# Signature source: LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the true-parity lane kit (D-319).
+# The row keeps its R helper-replay receipt (non-binding) and gains disposition DISPOSITION-SIGNED.
+RULING_SOURCE = "maintainer ruling 2026-10-05 (D-319), LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md, item N7"
+NONFINITE_PROBE = "docs/dev-log/core070/true-parity-latest/receipts/data/n7-offset-nonfinite-probe.json"
+RULINGS = {
+    "data/DATA-OFF-TRAIN-LEGACY": {
+        "reason": (
+            "R-internal legacy fallback, disposition signed by maintainer ruling 2026-10-05 (D-319), item N7. R's "
+            ".gllvmTMB_offset_vec returns rep(0, n) for a fit object that carries an offset expression but no cached "
+            "offset vector, that is, an object saved before gllvmTMB cached training offsets (the P1 helper replay "
+            "confirms it). GLLVModels has no such object generation: a Laplace fit made with an offset stores it in "
+            "fit.offset at fit time (_stored_offset, src/families/fit_gllvm.jl), so there is no pre-cache object to "
+            "fall back from, and the helper is not reachable from either package's public door. The stored-offset "
+            "behaviour users meet is bound numerically by DATA-OFF-TRAIN-STORED.")},
+    "data/DATA-OFF-PREDICT-NONFINITE-HELPER": {
+        "reason": (
+            "R-internal helper that differs by design, disposition signed by maintainer ruling 2026-10-05 (D-319), "
+            "item N7. R's .gllvmTMB_offset_newdata evaluates the stored offset expression on newdata with no "
+            "finiteness guard, so e = 0 gives log(0) = -Inf (P1 helper replay: c(-Inf, 0, log(2))). GLLVModels takes "
+            "the offset as a value and refuses a non-finite offset at an observed cell with an ArgumentError, at fit "
+            "time and at predict time (probe receipt n7-offset-nonfinite-probe.json, "
+            "tools/true_parity_offset_nonfinite_probe.jl). No R-vs-Julia number exists to compare; the difference is "
+            "recorded, not hidden."),
+        "extra_non_binding": [NONFINITE_PROBE]},
+}
+
+
+def ruling_overlay(sid, row):
+    """Write the signed D-319 disposition onto a row it covers (idempotent)."""
+    r = RULINGS.get(sid)
+    if r is None:
+        return
+    ev = row.setdefault("evidence", {})
+    nb = ev.setdefault("non_binding_receipts", [])
+    for extra in r.get("extra_non_binding", []):
+        if not (ROOT / extra).is_file():
+            raise SystemExit(f"{sid}: ruling cites {extra}, which is missing")
+        if extra not in nb:
+            nb.append(extra)
+    row["reason"] = r["reason"]
+    row["disposition"] = "DISPOSITION-SIGNED"
+    row["signed_by"] = "Shinichi Nakagawa"
+    row["signed_on"] = "2026-10-05"
+    row["signature_ref"] = RULING_SOURCE
+
+
+def missing_twin_receipts(rows):
+    """Problems for case-map rows that cite a Julia twin receipt under TWIN_REL that is no longer on disk.
+    twin_overlay skips a row whose receipt file is absent, so without this the only symptom is a row diff."""
+    out = []
+    for r in rows:
+        for rel in (r.get("evidence") or {}).get("receipt") or []:
+            if rel.startswith(TWIN_REL + "/") and not (ROOT / rel).is_file():
+                out.append(f"{r['source_id']}: case map cites Julia twin receipt {rel}, which is missing; "
+                           "the twin overlay would skip it and drop the row to its batch tier")
+    return out
 
 
 def build_rows(in_scope, receipts):
@@ -615,6 +845,7 @@ def build_rows(in_scope, receipts):
         if row["evidence_tier"] == "needs_surface_r_side_measured":
             twin_overlay(sid, row, counts)
             nonbinding_twin_note(sid, row)
+        ruling_overlay(sid, row)
         out_rows.append(row)
     return out_rows, counts
 
@@ -719,6 +950,7 @@ def check():
     receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
     for fam in FAMILIES:
         cm = load(ROOT / casemap_rel(fam))
+        problems += [f"{fam}: {m}" for m in missing_twin_receipts(cm["rows"])]
         try:
             rows, counts = rebuild_with_foreign(cm["rows"], receipts)
         except (SystemExit, KeyError) as e:

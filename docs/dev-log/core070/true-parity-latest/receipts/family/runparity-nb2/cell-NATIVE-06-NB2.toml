@@ -1,14 +1,14 @@
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_negbin_parity.jl"
-status = "failed"
-run_id = "818d5c3cab229968487439be3d2148c572321419c8058d89774536fc2ce177f7"
-fixture_sha256 = "dd42e8983c80308d65777e5df827f1a9cc34b8042e94ebf7f63d6fd83fa3d4c7"
+status = "success"
+run_id = "0d1d02c0fc4e94ae216a008a731c7888ab433030b48af6d61c89db535bb240fd"
+fixture_sha256 = "e3db009afb0885b0e1a838e648a86b23bef9afc564496e36ca3db9d34d882262"
 id = "NATIVE-06-NB2"
-execution_manifest_sha256 = "a02fd34305033cad55e80dde18139807e6345738231acac599695be8c90c23a0"
+execution_manifest_sha256 = "0936210088ab0982b8eb59dd9f17b52e7b5b46e9dff407129f25be42b7786fba"
 execution_case_ids = ["NATIVE-06-NB2"]
 
 [assertions]
-passed = 16
+passed = 17
 broken = 0
-failed = 2
+failed = 0
 errored = 0

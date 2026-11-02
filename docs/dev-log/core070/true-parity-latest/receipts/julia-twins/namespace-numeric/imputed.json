@@ -1,0 +1,138 @@
+{
+  "schema": "true-parity-julia-twin-receipt/v1",
+  "source_ids": [
+    "namespace/S3method/imputed,gllvmTMB"
+  ],
+  "verdict": "PASS",
+  "evidence_kind": "julia_recomputed_vs_recorded_r",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "origin_pr": "itchyshin/GLLVModels.jl branch claude/w2-miss-twins (W2-4a)",
+  "generator": "tools/true_parity_julia_receipts.jl",
+  "julia_version": "1.10.0",
+  "gllvmodels_commit": "9fcb1377bcfffccc7604faaee10eaf5c62b6f45f",
+  "source_fixtures": [
+    {
+      "path": "test/fixtures/data_twins_2_p1.toml",
+      "sha256": "164b4f19055240e4c79c4e4f45c9749adaa11377d6838b44e5e920e0ac550285"
+    },
+    {
+      "path": "test/fixtures/data_twins_2_mi_p1_data.csv",
+      "sha256": "1abed82c2d7baf9a6902b88d32989db3019d6e064052610d0057a5c13c422269"
+    }
+  ],
+  "source_tests": [
+    {
+      "path": "test/test_data_twins_2_p1.jl",
+      "sha256": "1e4b1250a9af8c4a7ff7e0f2228ff1bcf3aabfc37b47566258e5e05fd1184b8b"
+    }
+  ],
+  "what_this_is_not": "R values are copied from the tracked fixture. Julia values are computed fresh by tools/true_parity_julia_receipts.jl, which repeats the computation of the cited twin test with the same inputs and settings; R was not run and is not recomputed here.",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "P1-JULIA-IMPUTED-MISS_MODEL-ESTIMATE",
+        "quantity": "imputed() conditional modes of the 18 missing x values, miss_model fit, in unit order (R level_id = Julia level, equal, asserted in the test)",
+        "r_source": "test/fixtures/data_twins_2_p1.toml [miss_model.imputed_estimate] (R imputed(fit)$estimate, rows = \"missing\")",
+        "julia_source": "imputed(fm, x).estimate at the missing units, fit as at test/test_data_twins_2_p1.jl:77",
+        "r_value": [
+          1.6259009018002961,
+          0.28156626832532283,
+          0.22991656577453934,
+          -0.005240766276084441,
+          0.20667560134621016,
+          -0.7221396341226066,
+          -1.1237593624784812,
+          0.4242147692610624,
+          1.1951122872155002,
+          1.2910246293667058,
+          -0.42013659423650346,
+          0.2180467798806898,
+          0.8472163417089257,
+          0.6362024918724876,
+          0.3605285423967444,
+          3.201294397467875,
+          -0.2357277890346533,
+          0.2450681031128532
+        ],
+        "julia_value": [
+          1.6259018133444196,
+          0.2815668052843163,
+          0.22991714922007042,
+          -0.005240253315025756,
+          0.20667619837742104,
+          -0.7221391676577023,
+          -1.1237590456273752,
+          0.42421531749670777,
+          1.1951130466002857,
+          1.2910253150984374,
+          -0.4201360871314205,
+          0.21804739504239562,
+          0.8472170543459818,
+          0.6362031577887717,
+          0.36052912285539646,
+          3.201295722840007,
+          -0.23572734681177238,
+          0.24506875845488274
+        ],
+        "abs_diff": 1.3253721320438672e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_data_twins_2_p1.jl:87",
+        "tolerance_source_line": "@test isapprox(im.estimate[.!im.observed], Float64.(dm[\"imputed_estimate\"]); atol = 1e-4, rtol = 0)",
+        "note": "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default). R's estimate is the conditional mode of x_mis at the joint optimum; Julia's is E[x_s | observed y_s] at its optimum, the same quantity for this Gaussian model. R's std_error (sdreport) is recorded in the fixture and not compared: Julia's imputed() reports none."
+      },
+      {
+        "case_id": "P1-JULIA-IMPUTED-MISS_BOTH-ESTIMATE",
+        "quantity": "imputed() conditional modes of the 18 missing x values, miss_both fit, in unit order (R level_id = Julia level, equal, asserted in the test)",
+        "r_source": "test/fixtures/data_twins_2_p1.toml [miss_both.imputed_estimate] (R imputed(fit)$estimate, rows = \"missing\")",
+        "julia_source": "imputed(fb, x).estimate at the missing units, fit as at test/test_data_twins_2_p1.jl:93",
+        "r_value": [
+          1.5648011269693123,
+          0.18632979326246846,
+          0.237035479303757,
+          0.022499165488834905,
+          0.20548767148318822,
+          -0.7148464357040325,
+          -1.1045877387948684,
+          0.4375531752734016,
+          1.180979630595443,
+          1.2803317610379221,
+          -0.43001725992636736,
+          0.3435838338823149,
+          0.8621997762435347,
+          0.6319133411305298,
+          0.3675439203514891,
+          3.171375463551413,
+          -0.23148742332539196,
+          0.22538210766022831
+        ],
+        "julia_value": [
+          1.564800241844746,
+          0.1863302026989338,
+          0.237035426816738,
+          0.022498997897850592,
+          0.20548767831055034,
+          -0.7148460991848564,
+          -1.1045871562589653,
+          0.437553168547024,
+          1.1809791772426785,
+          1.2803315666177681,
+          -0.43001699124239423,
+          0.3435841622389106,
+          0.8621992908842933,
+          0.6319130460304658,
+          0.36754381725526064,
+          3.171373538334232,
+          -0.23148701477887454,
+          0.22538212596863816
+        ],
+        "abs_diff": 1.925217181231176e-06,
+        "tolerance": 0.0001,
+        "tolerance_source": "test/test_data_twins_2_p1.jl:104",
+        "tolerance_source_line": "@test isapprox(ib.estimate[.!ib.observed], Float64.(db[\"imputed_estimate\"]); atol = 1e-4, rtol = 0)",
+        "note": "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. 44 response cells NA (column value_na: 35 drawn at random, one cell of a unit whose x is missing, and every response of unit 5, x observed, and unit 17, x missing). R: missing = miss_control(response = \"include\", predictor = \"model\"); Julia: the same cells as `missing` entries of Y (observed-data likelihood: unit 5 contributes only its covariate density, unit 17 nothing, and its conditional mode is the covariate-model mean). R's response = \"drop\" removes units 5 and 17 altogether and is not compared here (the twin test asserts that the Julia fit without them reaches it). R's estimate is the conditional mode of x_mis at the joint optimum; Julia's is E[x_s | observed y_s] at its optimum, the same quantity for this Gaussian model. R's std_error (sdreport) is recorded in the fixture and not compared: Julia's imputed() reports none."
+      }
+    ]
+  }
+}

@@ -294,7 +294,9 @@ end
 function _bridge_gradient_max_family(fit, Y; kwargs...)
     try
         ci = _family_ci(fit, Y; kwargs...)
-        g = ForwardDiff.gradient(ci.nll, ci.θ)
+        # An adapter's exact gradient (#552) when it has one; else ForwardDiff.
+        g = ci.grad === nothing ? nothing : ci.grad(ci.θ)
+        g === nothing && (g = ForwardDiff.gradient(ci.nll, ci.θ))
         return all(isfinite, g) ? maximum(abs, g) : NaN
     catch e
         e isa InterruptException && rethrow()
@@ -445,7 +447,7 @@ end
 # --- public entry point ----------------------------------------------------
 
 """
-    bridge_fit(; y, family, d=1, N=nothing, X=nothing, X_lv=nothing,
+    bridge_fit(; y, family, d=1, N=nothing, X=nothing, X_lv=nothing, offset=nothing,
                trait_names=nothing, unit_names=nothing, phylo=nothing,
                options=Dict())
 
@@ -467,6 +469,14 @@ rank `d`, and required one-based observation-to-tip `options["species_id"]`.
 `"none"` or `"wald"`. It returns a distinct flat candidate contract, not the
 legacy univariate diagnostic result. R `phylo_rr` admission remains separately
 gated. Missing responses, `N`, `X_lv`, and named-label overrides are unsupported.
+
+`offset` is a known additive term in the mean (a real scalar, a length-`p` vector,
+a `p x n` matrix, or a `p x 1` / `1 x n` matrix; see `fit_gaussian_gllvm`). It is
+wired only for `family = "gaussian"` on the plain no-X route and the fixed-effect `X`
+route, and is forwarded to `fit_gaussian_gllvm`; trait means (`alpha`) are taken after
+removing the offset. Any other family, the mixed-family, `sources` and `phylo` routes,
+`X_lv`, `reml = true`, and `ci_method` other than `"none"` raise `ArgumentError`
+rather than dropping the offset.
 
 `family = "zib"` reads `N` differently: the zero-inflated binomial carries ONE
 shared scalar trials count, so `N` is **required** (there is no safe default —
@@ -495,11 +505,21 @@ function bridge_fit(; y,
                     X = nothing,
                     X_lv = nothing,
                     mask = nothing,
+                    offset = nothing,
                     trait_names = nothing,
                     unit_names = nothing,
                     sources = nothing,
                     phylo = nothing,
                     options = Dict{String,Any}())
+    # An offset is wired only for the one-part Gaussian routes below; every other
+    # route refuses it loudly rather than fitting without it.
+    if offset !== nothing
+        (phylo === nothing && sources === nothing && !(family isa AbstractVector) &&
+         family !== nothing && _bridge_family_key(String(family)) == "gaussian") ||
+            throw(ArgumentError(
+                "bridge_fit: offset is wired only for the one-part family=\"gaussian\" " *
+                "route (no phylo, sources or mixed-family); use engine='tmb' otherwise."))
+    end
     # R numeric literals reach Julia as Float64: accept any integral Real.
     (isfinite(d) && d == round(d)) || throw(ArgumentError(
         "bridge_fit: d must be an integer (got $d)"))
@@ -581,13 +601,13 @@ function bridge_fit(; y,
     end
     return _bridge_fit_onepart(y, _bridge_family_key(String(family)), K, N,
                                trait_names, unit_names, options;
-                               X = X, X_lv = X_lv, mask = mask)
+                               X = X, X_lv = X_lv, mask = mask, offset = offset)
 end
 
 # --- one-part dispatch -----------------------------------------------------
 
 const _BRIDGE_MASK_FAMILIES = (
-    "poisson", "binomial", "binomial_probit", "binomial_cloglog",
+    "gaussian", "poisson", "binomial", "binomial_probit", "binomial_cloglog",
     "negbinomial", "nb1", "beta", "gamma", "betabinomial", "ordinal", "ordinal_probit",
 )
 
@@ -641,16 +661,17 @@ function _bridge_zib_trials(N, p::Integer, n::Integer)
         "intercepts are not separately identified. Pass N as a scalar, or as a " *
         "$(p)×$(n) array whose entries are all equal."))
     if N isa Number
-        Ni = round(Int, N)
-        Ni >= 1 || throw(ArgumentError(
-            "bridge_fit: family=\"zib\" needs trials N >= 1; got $(Ni)"))
+        _bridge_exact_integer(N, 1) || throw(ArgumentError(
+            "bridge_fit: family=\"zib\" trials N must be a finite integer " *
+            "≥ 1 exactly representable as Int; values are not rounded (got $(N))"))
+        Ni = Int(N)
         return Ni
     end
     A = Matrix(N)
     size(A) == (p, n) || throw(ArgumentError(
         "bridge_fit: family=\"zib\" trials N must be a scalar or a $(p)×$(n) array; " *
         "got $(size(A))"))
-    Ai = round.(Int, A)
+    Ai = _bridge_require_integer_trials(N, p, n, "zib")
     Ni = first(Ai)
     all(==(Ni), Ai) || throw(ArgumentError(
         "bridge_fit: family=\"zib\" requires ONE shared scalar trials count N, but " *
@@ -660,6 +681,53 @@ function _bridge_zib_trials(N, p::Integer, n::Integer)
     Ni >= 1 || throw(ArgumentError(
         "bridge_fit: family=\"zib\" needs trials N >= 1; got $(Ni)"))
     return Ni
+end
+
+# Count / trial inputs must be exact integers (truncated_poisson already rejects
+# rounding). Other families must match that contract so fractional R-side data
+# cannot silently change the fitted dataset.
+function _bridge_exact_integer(v::Real, lo::Real)
+    isfinite(v) && v >= lo && isinteger(v) && v <= Float64(typemax(Int))
+end
+
+function _bridge_require_integer_counts(Yf::AbstractMatrix, family::AbstractString; lo::Real = 0)
+    for i in eachindex(Yf)
+        v = Yf[i]
+        _bridge_exact_integer(v, lo) && continue
+        r, c = Tuple(CartesianIndices(Yf)[i])
+        throw(ArgumentError(
+            "bridge_fit: family=\"$(family)\" requires finite integer counts " *
+            "exactly representable as Int (minimum $(lo)); values are not rounded " *
+            "(bad cell row=$(r), col=$(c), value=$(v))"))
+    end
+    return Int.(Yf)
+end
+
+function _bridge_require_integer_trials(N, p::Integer, n::Integer, family::AbstractString)
+    if N === nothing
+        return fill(1, p, n)
+    end
+    if N isa Number
+        _bridge_exact_integer(N, 1) || throw(ArgumentError(
+            "bridge_fit: family=\"$(family)\" trials N must be a finite integer " *
+            "≥ 1 exactly representable as Int; values are not rounded (got $(N))"))
+        Ni = Int(N)
+        return fill(Ni, p, n)
+    end
+    A = Matrix(N)
+    size(A) == (p, n) || throw(ArgumentError(
+        "bridge_fit: family=\"$(family)\" trials N must be a scalar or a " *
+        "$(p)×$(n) array; got $(size(A))"))
+    for i in eachindex(A)
+        v = A[i]
+        _bridge_exact_integer(v, 1) && continue
+        r, c = Tuple(CartesianIndices(A)[i])
+        throw(ArgumentError(
+            "bridge_fit: family=\"$(family)\" requires finite integer trial counts " *
+            "exactly representable as Int (≥ 1); values are not rounded " *
+            "(bad cell row=$(r), col=$(c), value=$(v))"))
+    end
+    return Int.(A)
 end
 
 function _bridge_ci_guard_pertrait_ordinal(key::AbstractString, ci_method::AbstractString)
@@ -813,7 +881,7 @@ function bridge_capabilities()
                 f in _BRIDGE_MASK_CI_FAMILIES ?
                     "one-part reduced-rank bridge family; no-X, masked no-X, and complete-response fixed-effect-X Wald/profile/bootstrap CI payloads are routed; route support is narrower than full R-user parity" :
                 f == "gaussian" ?
-                    "one-part reduced-rank bridge family; fixed-effect-X and predictor-informed latent-score X_lv routes are wired for complete-response point fits; X_lv Wald B_lv CI payloads are routed; profile/bootstrap X_lv CIs, mixed-family X_lv, and source-specific X_lv remain follow-ups; route support is narrower than full R-user parity" :
+                    "one-part reduced-rank bridge family; missing-response masks are wired for the plain no-X point fit (trait means over observed cells; masked CIs, masked REML, masked X and masked X_lv remain follow-ups); a known offset is wired for the no-X and fixed-effect-X point fits (offset with CIs, REML or X_lv remains a follow-up); fixed-effect-X and predictor-informed latent-score X_lv routes are wired for complete-response point fits; X_lv Wald B_lv CI payloads are routed; profile/bootstrap X_lv CIs, mixed-family X_lv, and source-specific X_lv remain follow-ups; route support is narrower than full R-user parity" :
                     "one-part reduced-rank bridge family; route support is narrower than full R-user parity"
                 for f in onepart
             ],
@@ -835,12 +903,27 @@ end
 
 function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                              trait_names, unit_names, options;
-                             X = nothing, X_lv = nothing, mask = nothing)
+                             X = nothing, X_lv = nothing, mask = nothing, offset = nothing)
     Yf = Matrix{Float64}(y)
     p, n = size(Yf)
     traits = _bridge_names(trait_names, p, "trait")
     units = _bridge_names(unit_names, n, "unit")
     M = _bridge_mask(mask, p, n)
+    O = nothing
+    if offset !== nothing
+        key == "gaussian" || throw(ArgumentError(
+            "bridge_fit: offset is wired only for family=\"gaussian\"; " *
+            "family=\"$key\" is not yet supported."))
+        O = _normalize_offset(offset, p, n; Y = Yf, mask = M, caller = "bridge_fit")
+        X_lv === nothing || throw(ArgumentError(
+            "bridge_fit: offset with X_lv is not wired yet; use engine='tmb'."))
+        _bridge_ci_method(options) == "none" || throw(ArgumentError(
+            "bridge_fit: confidence intervals are not wired for Gaussian fits " *
+            "with an offset yet; use ci_method=\"none\"."))
+        _bridge_truthy(_bridge_get(options, "reml", false)) && throw(ArgumentError(
+            "bridge_fit: offset is not wired for the Gaussian REML route; " *
+            "use reml=false."))
+    end
 
     # CI routing options (validated up-front so a bad ci_method errors before the
     # — potentially expensive — fit runs). ci_method="none" ⇒ ci stays nothing ⇒
@@ -950,7 +1033,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                 "bridge_fit: X must be p×n×q ($(p)×$(n)×q); got $(size(Xarr))"))
             q = size(Xarr, 3)
             coef_fixed = _bridge_coef_fixed(options, q, "coef_fixed")
-            fit = fit_gaussian_gllvm(Yf; K = K, X = Xarr, β_fixed = coef_fixed)
+            fit = fit_gaussian_gllvm(Yf; K = K, X = Xarr, β_fixed = coef_fixed,
+                                     offset = O)
             β = collect(Float64, fit.pars.β)
             alpha = zeros(Float64, p)
             @inbounds for t in 1:p
@@ -976,11 +1060,16 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                 note = "fixed-effect covariate fit: X carries the full mean structure " *
                        "(per-trait intercepts + covariates); alpha is the per-trait " *
                        "fitted mean. coef_fixed entries, if any, are fixed at zero.", ci = ci,
-                gradient_max = _bridge_gradient_max_gaussian(fit, Yf, Xarr, nothing))
+                # The gradient reconstruction has no offset term: NaN, not a wrong value.
+                gradient_max = O === nothing ?
+                    _bridge_gradient_max_gaussian(fit, Yf, Xarr, nothing) : NaN)
             return merge(base, (mean_coef = β,
                                 mean_coef_status = _fixed_status(coef_fixed)))
         end
         reml = _bridge_truthy(_bridge_get(options, "reml", false))
+        reml && M !== nothing && throw(ArgumentError(
+            "bridge_fit: missing-response masks are not wired for the Gaussian " *
+            "REML route; use reml=false or a complete response table."))
         if reml
             # Restricted ML: per-trait intercepts enter as the GLS fixed effects X
             # (q = p, Xₜₛₜ = 1), so the trait means are REML-adjusted rather than
@@ -1019,9 +1108,28 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                 # Same empty-θ_packed guard as the CI skip above: NaN, not fabricated.
                 gradient_max = _bridge_gradient_max_gaussian(fit, Yc, nothing, nothing))
         end
-        alpha = vec(Statistics.mean(Yf; dims = 2))
-        Yc = Yf .- alpha
-        fit = fit_gaussian_gllvm(Yc; K = K)
+        # With a mask, trait means are taken over OBSERVED cells only and masked
+        # cells are zeroed after centring, so no masked value reaches the fit.
+        # With an offset the trait mean is that of the offset-removed response, so the
+        # fit sees Yc - O = (Y - O) - alpha, centred as in the no-offset case.
+        if M === nothing
+            alpha = O === nothing ? vec(Statistics.mean(Yf; dims = 2)) :
+                    vec(Statistics.mean(Yf .- O; dims = 2))
+            Yc = Yf .- alpha
+        else
+            all(t -> any(@view M[t, :]), 1:p) || throw(ArgumentError(
+                "bridge_fit: every trait needs at least one observed response " *
+                "to fit a masked Gaussian model."))
+            alpha = [sum(Yf[t, s] - (O === nothing ? 0.0 : O[t, s])
+                         for s in 1:n if M[t, s]) / count(@view M[t, :])
+                     for t in 1:p]
+            Yc = Yf .- alpha
+            Yc[.!M] .= 0.0
+        end
+        M !== nothing && ci_method != "none" && throw(ArgumentError(
+            "bridge_fit: confidence intervals are not wired for masked Gaussian " *
+            "fits yet; use ci_method=\"none\" or a complete response table."))
+        fit = fit_gaussian_gllvm(Yc; K = K, mask = M, offset = O)
         Sigma = Matrix{Float64}(sigma_y_site(fit))
         corr  = Matrix{Float64}(correlation(fit))
         comm  = Vector{Float64}(communality(fit))
@@ -1033,8 +1141,18 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             alpha = alpha, dispersion = fill(NaN, p), sigma_eps = fit.pars.σ_eps,
             link = fill("IdentityLink", p), Sigma = Sigma, corr = corr, comm = comm,
             scores = scores, df = df, loglik = fit.logLik,
-            converged = fit.converged, iterations = fit.n_iter, note = "", ci = ci,
-            gradient_max = _bridge_gradient_max_gaussian(fit, Yc, nothing, nothing))
+            converged = fit.converged, iterations = fit.n_iter,
+            note = (M === nothing ? "" :
+                   "masked Gaussian fit: alpha are trait means over observed cells; " *
+                   "masked cells are excluded from the likelihood.") *
+                   (O === nothing ? "" :
+                   (M === nothing ? "" : " ") *
+                   "offset Gaussian fit: alpha are trait means of the offset-removed " *
+                   "response; the offset is added to the mean and is not part of alpha."),
+            ci = ci, nobs = M === nothing ? nothing : count(M),
+            # The gradient reconstruction has no offset term: NaN, not a wrong value.
+            gradient_max = O === nothing ?
+                _bridge_gradient_max_gaussian(fit, Yc, nothing, nothing) : NaN)
     end
 
     # Non-Gaussian: fit, then build the latent-scale derived quantities. The six
@@ -1047,7 +1165,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
     # uses Float64.(Y)) matches to machine precision; nb1 routes too (its FamilyFit
     # is in _CIFit even though its latent-scale extractor is not yet present).
     if key == "poisson"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         if X_lv !== nothing
             Xlv = Matrix{Float64}(X_lv)
             size(Xlv, 1) == n || throw(ArgumentError(
@@ -1169,9 +1287,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             # packed objective to rebuild on this engine yet).
             gradient_max = NaN)
     elseif key in _BRIDGE_BINOMIAL_FAMILIES
-        Yi = round.(Int, Yf)
-        Ni = N === nothing ? fill(1, p, n) :
-             (N isa Number ? fill(round(Int, N), p, n) : round.(Int, Matrix(N)))
+        Yi = _bridge_require_integer_counts(Yf, key)
+        Ni = _bridge_require_integer_trials(N, p, n, key)
         link = _bridge_binomial_link(key)
         if X_lv !== nothing
             Xlv = Matrix{Float64}(X_lv)
@@ -1218,7 +1335,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             alpha = fit.β, dispersion = fill(NaN, p), df = p + _bridge_rr_df(p, K),
             scores = scores, ci = ci, mask = M)
     elseif key == "negbinomial"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         if X_lv !== nothing
             Xlv = Matrix{Float64}(X_lv)
             size(Xlv, 1) == n || throw(ArgumentError(
@@ -1267,7 +1384,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             scores = scores, ci = ci, mask = M)
         return merge(base, disp)
     elseif key == "nb1"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         fit = fit_nb1_gllvm_grouped(Yi; K = K, group = collect(1:p), mask = M)
         disp = _bridge_dispersion_payload(fit.φ, fit.group, "phi",
             "Var = mu * (1 + phi)",
@@ -1380,9 +1497,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             scores = scores, ci = ci, mask = M)
         return merge(base, disp)
     elseif key == "betabinomial"
-        Yi = round.(Int, Yf)
-        Ni = N === nothing ? fill(1, p, n) :
-             (N isa Number ? fill(round(Int, N), p, n) : round.(Int, Matrix(N)))
+        Yi = _bridge_require_integer_counts(Yf, key)
+        Ni = _bridge_require_integer_trials(N, p, n, key)
         fit = fit_beta_binomial_gllvm_grouped(Yi; K = K, N = Ni, group = collect(1:p), mask = M)
         disp = _bridge_dispersion_payload(fit.φ, fit.group, "phi",
             "Var = N * mu * (1 - mu) * (1 + (N - 1) * phi / (phi + 1))",
@@ -1395,7 +1511,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             scores = scores, ci = ci, mask = M)
         return merge(base, disp)
     elseif key in ("ordinal", "ordinal_probit")
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         link = key == "ordinal_probit" ? ProbitLink() : LogitLink()
         _bridge_ci_guard_pertrait_ordinal(key, ci_method)
         fit = fit_ordinal_gllvm_pertrait(Yi; K = K, link = link, mask = M)
@@ -1415,7 +1531,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                             cutpoint_mode = "per_trait",
                             cutpoint_link = _bridge_link_name(fit.link)))
     elseif key == "zip"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         M === nothing || throw(ArgumentError(
             "bridge_fit: missing-response masks are not wired for family=\"zip\" yet"))
         fit = fit_zip_gllvm(Yi; K = K)
@@ -1446,7 +1562,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             ci = ci, gradient_max = _bridge_gradient_max_family(fit, Float64.(Yi)))
         return merge(base, (beta_zero = collect(Float64, fit.βz),))
     elseif key == "zinb"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         M === nothing || throw(ArgumentError(
             "bridge_fit: missing-response masks are not wired for family=\"zinb\" yet"))
         fit = fit_zinb_gllvm(Yi; K = K)
@@ -1472,7 +1588,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             ci = ci, gradient_max = _bridge_gradient_max_family(fit, Float64.(Yi)))
         return merge(base, (beta_zero = collect(Float64, fit.βz),))
     elseif key == "zib"
-        Yi = round.(Int, Yf)
+        Yi = _bridge_require_integer_counts(Yf, key)
         M === nothing || throw(ArgumentError(
             "bridge_fit: missing-response masks are not wired for family=\"zib\" yet"))
         Ni = _bridge_zib_trials(N, p, n)
@@ -1543,29 +1659,30 @@ function _bridge_fit_onepart_cov(Yf::AbstractMatrix{Float64}, key::AbstractStrin
     coef_fixed = _bridge_coef_fixed(options, q, "coef_fixed")
 
     # Per-family response coercion + Binomial trial counts (mirror the no-X path):
-    # the count families round to integer-valued Float64; continuous pass through.
-    # Ordinal rounds to integer categories (same as no-X bridge path).
+    # count / ordinal families require exact integer inputs; continuous pass through.
     is_count = key in ("poisson", "binomial", "negbinomial", "betabinomial")
     is_ordinal = key in ("ordinal", "ordinal_probit")
-    Ydata = (is_count || is_ordinal) ? Float64.(round.(Int, Yf)) : Yf
+    Ydata = if is_count || is_ordinal
+        Float64.(_bridge_require_integer_counts(Yf, key))
+    else
+        Yf
+    end
     Nm = key in ("binomial", "betabinomial") ?
-         (N === nothing ? fill(1, p, n) :
-          (N isa Number ? fill(round(Int, N), p, n) : round.(Int, Matrix(N)))) :
-         nothing
+         _bridge_require_integer_trials(N, p, n, key) : nothing
 
     # Twin API B under X: NB2/NB1/Beta/Gamma default to per-trait φ/α + shared site-X;
     # ordinal/ordinal_probit default to per-trait cutpoints (τ₁=0 / K−2) + shared γ.
     # Shared-dispersion + X remains available via direct `fit_gllvm_cov` where that
     # path exists; shared-cutpoint ordinal stays an explicit Julia comparator.
     if key == "negbinomial"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_nb_gllvm_grouped_cov(Yi; X = Xarr, K = K, group = collect(1:p),
                                        γ_fixed = coef_fixed)
         return _bridge_assemble_grouped_cov(fit, key, traits, units, Yi, Xarr,
                                             coef_fixed, ci_method, ci_level,
                                             ci_nboot, ci_seed; N = nothing)
     elseif key == "nb1"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_nb1_gllvm_grouped_cov(Yi; X = Xarr, K = K, group = collect(1:p),
                                         γ_fixed = coef_fixed)
         return _bridge_assemble_grouped_cov(fit, key, traits, units, Yi, Xarr,
@@ -1584,14 +1701,14 @@ function _bridge_fit_onepart_cov(Yf::AbstractMatrix{Float64}, key::AbstractStrin
                                             coef_fixed, ci_method, ci_level,
                                             ci_nboot, ci_seed; N = nothing)
     elseif key == "betabinomial"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_beta_binomial_gllvm_grouped_cov(Yi; X = Xarr, K = K, N = Nm,
                                                   group = collect(1:p), γ_fixed = coef_fixed)
         return _bridge_assemble_grouped_cov(fit, key, traits, units, Yi, Xarr,
                                             coef_fixed, ci_method, ci_level,
                                             ci_nboot, ci_seed; N = Nm)
     elseif key in ("ordinal", "ordinal_probit")
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         link = key == "ordinal_probit" ? ProbitLink() : LogitLink()
         _bridge_ci_guard_pertrait_ordinal(key, ci_method)
         fit = fit_ordinal_gllvm_pertrait_cov(Yi; X = Xarr, K = K, link = link,
@@ -1599,12 +1716,12 @@ function _bridge_fit_onepart_cov(Yf::AbstractMatrix{Float64}, key::AbstractStrin
         return _bridge_assemble_ordinal_cov(fit, key, traits, units, Yi, Xarr,
                                             coef_fixed)
     elseif key == "zip"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_zip_gllvm_cov(Yi; X = Xarr, K = K, γ_fixed = coef_fixed)
         return _bridge_assemble_zip_cov(fit, traits, units, Yi, Xarr, coef_fixed,
                                         ci_method, ci_level, ci_nboot, ci_seed)
     elseif key == "zinb"
-        Yi = round.(Int, Ydata)
+        Yi = Int.(Ydata)
         fit = fit_zinb_gllvm_cov(Yi; X = Xarr, K = K, γ_fixed = coef_fixed)
         return _bridge_assemble_zinb_cov(fit, traits, units, Yi, Xarr, coef_fixed,
                                          ci_method, ci_level, ci_nboot, ci_seed)
@@ -1868,21 +1985,24 @@ function _bridge_fit_mixed(y, family_strs::AbstractVector, K::Integer, N,
     families = [_bridge_mixed_family_marker(f) for f in family_strs]
     links = Link[default_link(fam) for fam in families]
 
-    # Per-trait response matrix: round count rows to integers (in Float64), leave
-    # continuous rows untouched. The mixed marginal reads each row by its family.
+    # Per-trait response matrix: count rows must be exact integers (in Float64);
+    # continuous rows pass through unchanged.
     Ymix = copy(Yf)
     is_count = (k -> k in ("poisson", "binomial", "negbinomial"))
     @inbounds for t in 1:p
-        if is_count(keys_norm[t])
-            for s in 1:n
-                Ymix[t, s] = float(round(Int, Yf[t, s]))
-            end
+        is_count(keys_norm[t]) || continue
+        for s in 1:n
+            v = Yf[t, s]
+            _bridge_exact_integer(v, 0) || throw(ArgumentError(
+                "bridge_fit (mixed): trait $(t) (family=\"$(keys_norm[t])\") requires " *
+                "finite integer counts exactly representable as Int; values are not " *
+                "rounded (bad cell row=$(t), col=$(s), value=$(v))"))
+            Ymix[t, s] = float(Int(v))
         end
     end
 
     # Binomial trial counts (p×n; defaults to 1). Only the Binomial rows read N.
-    Nm = N === nothing ? fill(1, p, n) :
-         (N isa Number ? fill(round(Int, N), p, n) : round.(Int, Matrix(N)))
+    Nm = _bridge_require_integer_trials(N, p, n, "mixed")
 
     fit = fit_mixed_gllvm(Ymix; families = families, links = links, K = K, N = Nm)
 

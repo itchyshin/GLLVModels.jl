@@ -34,7 +34,10 @@ the implied `Σ_y` (near-zero variances, near-±1 correlations). The
 Hessian-based fields are only populated for `GllvmFit` (Gaussian) fits with
 `y` supplied — GLLVModels.jl has no generic Hessian path across its ~50
 non-Gaussian fit types, so those fields come back `missing` on other families
-rather than a guess. R's per-family boundary rows (binomial-prevalence
+rather than a guess. `sanity_multi` returns R's flags under R's names
+(`converged`, `max_gradient`, `sdreport_ok`, `pd_hessian`, `max_se`,
+`rr_B_min_loading`, `rr_W_min_loading`) and writes R's report lines when
+given `io = stdout`. R's per-family boundary rows (binomial-prevalence
 loading, multinomial degeneracy, ordinal cutpoint span, spatial-domain
 diameter) are not ported; only the generic variance/correlation scan is.
 
@@ -77,6 +80,10 @@ not wire in bootstrap CIs or render R's comparison plot.
 covariance/loadings of two fits using rotation- and sign-free invariants only
 — `compare_loadings` compares `Λ1Λ1ᵀ` vs `Λ2Λ2ᵀ` (Frobenius norm) and
 principal angles between column spaces, never a signed entrywise `Λ` diff.
+R's own `compare_loadings(Lambda_a, Lambda_b)` takes two loading matrices and
+reports the Procrustes rotation, the rotated `Lambda_a`, the Frobenius
+distance after alignment and the per-factor correlations; the matrix method
+`compare_loadings(Lambda_a, Lambda_b)` returns the same fields.
 
 `compare_fits_dep_vs_two_psi` and `compare_fits_indep_vs_two_psi` bridge any
 two same-`p` fits via their implied `Σ_y` and an information-criterion

@@ -3,17 +3,17 @@
   "case_id": "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE",
   "verdict": "NOT_EXECUTED",
   "evidence_kind": "not_executed",
-  "why_not_executed": "Public R bridge case: gllvmTMB(engine = 'julia') and gllvm_julia_fit() calling GLLVModels through JuliaCall. The P0 batch (tools/core070_bridge_models.R) replays bridge-fixtures.json and retained prior R fits kept only under .unlazy/, which are not on this host, and compares the bridge fit with a native GLLVModels fit (Julia against Julia) and with the retained P0 R logLik. Not run at P1 here.",
+  "why_not_executed": "Public R bridge case: gllvmTMB(engine = 'julia') and gllvm_julia_fit() calling GLLVModels through JuliaCall. Not in the frozen three-case bridge sub-contract (docs/dev-log/core070/public-bridge-required-cases.json covers 02, 05 and 07 only), so the P1 bridge twin (tools/core070_family_bridge_p1.R) does not run it. Not run at P1 here.",
   "read_from": {
     "docs/dev-log/core070/family-reconciliation-2026-09-01.json": "4623b055d75e3eb9e74fdcf4f4105d6559a5664fdd9663b5953cb8e5856e7f10"
   },
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
 }

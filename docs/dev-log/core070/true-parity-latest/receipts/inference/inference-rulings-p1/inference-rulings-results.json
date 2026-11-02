@@ -1,0 +1,324 @@
+{
+  "area": "inference-rulings",
+  "case_count": 15,
+  "cases": [
+    {
+      "case_id": "CORE070-INFERENCE-COMMUNALITY-CI-METHOD-ROUTE",
+      "control": {
+        "call": "confint(fitS, YS; parm=\"communality[1]\", method=:wald, Σ_phy)",
+        "finite": true,
+        "outcome": "result",
+        "result_method": "wald",
+        "route_tag": "wald_derived",
+        "transform": [
+          "logit"
+        ]
+      },
+      "elapsed_seconds": 10.47,
+      "error_message": "ArgumentError: confint: nonlinear profile intervals for communality are withdrawn (parm communality[1]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald or method = :bootstrap, and report the method's limitations.",
+      "error_type": "ArgumentError",
+      "group": "withdrawn_profile",
+      "julia_call": "confint(fitS, YS; parm=\"communality[1]\", method=:profile, Σ_phy)",
+      "outcome": "error",
+      "requested_method": "profile",
+      "source_id": "inference/CI-ROUTE-023",
+      "target": "communality"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+      "control": {
+        "call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:wald, Σ_phy)",
+        "finite": true,
+        "outcome": "result",
+        "result_method": "wald",
+        "route_tag": "wald_derived",
+        "transform": [
+          "fisher_z"
+        ]
+      },
+      "elapsed_seconds": 1.0,
+      "error_message": "ArgumentError: confint: nonlinear profile intervals for correlations are withdrawn (parm rho[1,2]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald (the Fisher-z interval; :fisher_z is the same) or method = :bootstrap, and report the method's limitations.",
+      "error_type": "ArgumentError",
+      "group": "withdrawn_profile",
+      "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:profile, Σ_phy)",
+      "outcome": "error",
+      "requested_method": "profile",
+      "source_id": "inference/CI-ROUTE-030",
+      "target": "rho"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-PROPORTION-CI-METHOD-ROUTE",
+      "control": {
+        "call": "confint(fitS, YS; parm=\"proportion:shared[1]\", method=:wald, Σ_phy)",
+        "finite": true,
+        "outcome": "result",
+        "result_method": "wald",
+        "route_tag": "wald_derived",
+        "transform": [
+          "logit"
+        ]
+      },
+      "elapsed_seconds": 1.11,
+      "error_message": "ArgumentError: confint: nonlinear profile intervals for variance proportions are withdrawn (parm proportion:shared[1]). gllvmTMB withdrew its penalty-based constrained-refit profile pending an exact constraint solver and diagnostic contract, and this route follows it. Request method = :wald or method = :bootstrap, and report the method's limitations.",
+      "error_type": "ArgumentError",
+      "group": "withdrawn_profile",
+      "julia_call": "confint(fitS, YS; parm=\"proportion:shared[1]\", method=:profile, Σ_phy)",
+      "outcome": "error",
+      "requested_method": "profile",
+      "source_id": "inference/CI-ROUTE-037",
+      "target": "proportion"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-METHOD-ROUTE",
+      "elapsed_seconds": 5.23,
+      "explicit_profile": {
+        "call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=:profile, Σ_phy)",
+        "finite": true,
+        "outcome": "result",
+        "result_method": "profile",
+        "route_tag": "profile"
+      },
+      "finite": true,
+      "group": "default",
+      "julia_call": "confint(fitS, YS; parm=\"phylo_signal[1]\", Σ_phy)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "wald",
+      "route_tag": "wald_derived",
+      "source_id": "inference/CI-ROUTE-015",
+      "target": "phylo_signal",
+      "transform": [
+        "logit"
+      ]
+    },
+    {
+      "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
+      "elapsed_seconds": 9.5,
+      "explicit_profile": {
+        "call": "confint(fitS, YS; parm=\"sigma_B[1]\", method=:profile, Σ_phy)",
+        "finite": false,
+        "outcome": "result",
+        "result_method": "profile",
+        "route_tag": "profile"
+      },
+      "finite": false,
+      "group": "default",
+      "julia_call": "confint(fitS, YS; parm=\"sigma_B[1]\", Σ_phy)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "",
+      "route_tag": "wald_packed",
+      "source_id": "inference/CI-ROUTE-043",
+      "target": "sigma_B"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
+      "elapsed_seconds": 0.02,
+      "explicit_profile": {
+        "call": "confint(fitS, YS; parm=\"sigma_W[1]\", method=:profile, Σ_phy)",
+        "finite": false,
+        "outcome": "result",
+        "result_method": "profile",
+        "route_tag": "profile"
+      },
+      "finite": false,
+      "group": "default",
+      "julia_call": "confint(fitS, YS; parm=\"sigma_W[1]\", Σ_phy)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "",
+      "route_tag": "wald_packed",
+      "source_id": "inference/CI-ROUTE-046",
+      "target": "sigma_W"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE",
+      "elapsed_seconds": 0.01,
+      "explicit_profile": {
+        "call": "confint(fitS, YS; parm=\"sigma_B[1]\", method=:profile, Σ_phy)",
+        "finite": false,
+        "outcome": "result",
+        "result_method": "profile",
+        "route_tag": "profile"
+      },
+      "finite": false,
+      "group": "default",
+      "julia_call": "confint(fitS, YS; parm=\"sigma_B[1]\", Σ_phy)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "",
+      "route_tag": "wald_packed",
+      "source_id": "inference/CI-ROUTE-055",
+      "target": "sigma_B"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-SIGMA-W-CI-METHOD-ROUTE",
+      "elapsed_seconds": 0.01,
+      "explicit_profile": {
+        "call": "confint(fitS, YS; parm=\"sigma_W[1]\", method=:profile, Σ_phy)",
+        "finite": false,
+        "outcome": "result",
+        "result_method": "profile",
+        "route_tag": "profile"
+      },
+      "finite": false,
+      "group": "default",
+      "julia_call": "confint(fitS, YS; parm=\"sigma_W[1]\", Σ_phy)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "",
+      "route_tag": "wald_packed",
+      "source_id": "inference/CI-ROUTE-058",
+      "target": "sigma_W"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-SIGMA-PHY-CI-METHOD-ROUTE",
+      "elapsed_seconds": 0.03,
+      "explicit_profile": {
+        "call": "confint(fitS, YS; parm=\"sigma_phy[1]\", method=:profile, Σ_phy)",
+        "finite": true,
+        "outcome": "result",
+        "result_method": "profile",
+        "route_tag": "profile"
+      },
+      "finite": true,
+      "group": "default",
+      "julia_call": "confint(fitS, YS; parm=\"sigma_phy[1]\", Σ_phy)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "",
+      "route_tag": "wald_packed",
+      "source_id": "inference/CI-ROUTE-061",
+      "target": "sigma_phy"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-BETA-CI-METHOD-ROUTE",
+      "elapsed_seconds": 2.73,
+      "explicit_profile": {
+        "call": "confint(fitA, YA; parm=\"beta[1]\", method=:profile, X=XA)",
+        "finite": true,
+        "outcome": "result",
+        "result_method": "profile",
+        "route_tag": "profile"
+      },
+      "finite": true,
+      "group": "default",
+      "julia_call": "confint(fitA, YA; parm=\"beta[1]\", X=XA)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "wald",
+      "route_tag": "wald_packed",
+      "source_id": "inference/CI-ROUTE-065",
+      "target": "beta"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-SIGMA-EPS-CI-METHOD-ROUTE",
+      "elapsed_seconds": 0.05,
+      "explicit_profile": {
+        "call": "confint(fitA, YA; parm=\"sigma_eps\", method=:profile, X=XA)",
+        "finite": true,
+        "outcome": "result",
+        "result_method": "profile",
+        "route_tag": "profile"
+      },
+      "finite": true,
+      "group": "default",
+      "julia_call": "confint(fitA, YA; parm=\"sigma_eps\", X=XA)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "wald",
+      "route_tag": "wald_packed",
+      "source_id": "inference/CI-ROUTE-068",
+      "target": "sigma_eps"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-BETA-BOOTSTRAP-FALLBACK-DIVERGENCE",
+      "elapsed_seconds": 2.33,
+      "finite": false,
+      "group": "fallback",
+      "julia_call": "confint(fitA, YA; parm=\"beta[1]\", method=:bootstrap, X=XA, n_boot=6, seed=21)",
+      "outcome": "result",
+      "requested_method": "bootstrap",
+      "result_method": "bootstrap",
+      "route_tag": "bootstrap",
+      "source_id": "inference/CI-ROUTE-067",
+      "target": "beta"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-SIGMA-EPS-BOOTSTRAP-FALLBACK-DIVERGENCE",
+      "elapsed_seconds": 0.03,
+      "finite": false,
+      "group": "fallback",
+      "julia_call": "confint(fitA, YA; parm=\"sigma_eps\", method=:bootstrap, X=XA, n_boot=6, seed=22)",
+      "outcome": "result",
+      "requested_method": "bootstrap",
+      "result_method": "bootstrap",
+      "route_tag": "bootstrap",
+      "source_id": "inference/CI-ROUTE-070",
+      "target": "sigma_eps"
+    },
+    {
+      "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+      "elapsed_seconds": 0.0,
+      "finite": true,
+      "group": "default",
+      "identical_to_wald": true,
+      "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", Σ_phy)",
+      "outcome": "result",
+      "requested_method": "DEFAULT",
+      "result_method": "wald",
+      "route_tag": "wald_derived",
+      "source_id": "inference/CI-ROUTE-029",
+      "target": "rho",
+      "transform": [
+        "fisher_z"
+      ]
+    },
+    {
+      "case_id": "CORE070-INFERENCE-RHO-CI-METHOD-ROUTE",
+      "elapsed_seconds": 0.0,
+      "finite": true,
+      "group": "fisher_z_alias",
+      "identical_to_wald": true,
+      "identical_to_wald_call": "isequal(confint(fitS, YS; parm=\"rho[1,2]\", method=:fisher_z, Σ_phy), confint(fitS, YS; parm=\"rho[1,2]\", method=:wald, Σ_phy))",
+      "interval": {
+        "estimate": 0.8243899482115343,
+        "lower": 0.668175754894526,
+        "upper": 0.910986728828955
+      },
+      "julia_call": "confint(fitS, YS; parm=\"rho[1,2]\", method=:fisher_z, Σ_phy)",
+      "outcome": "result",
+      "requested_method": "fisher-z",
+      "result_method": "wald",
+      "route_tag": "wald_derived",
+      "source_id": "inference/CI-ROUTE-034",
+      "target": "rho",
+      "transform": [
+        "fisher_z"
+      ]
+    }
+  ],
+  "gllvm_pkg_version": "0.3.0",
+  "julia_version": "1.10.0",
+  "negative_controls": {
+    "NEG-FISHER-Z-ACCEPTED-FOR-COMMUNALITY": {
+      "behaved": true
+    },
+    "NEG-PROFILE-WITHDRAWN-FOR-PHYLO-SIGNAL": {
+      "behaved": true
+    }
+  },
+  "runtime_seconds": 34.3,
+  "scope": "CORE070_INFERENCE_RULINGS_BATCH",
+  "source_pins": {
+    "src/confint.jl": "77f43942c4cf41d0c3e0d61c2f6b192beefab0c0251c3eaa1e9c6ba5d9fba216",
+    "src/confint_bootstrap.jl": "b4c784033ce8a563c4db8078275e41062fd50b6138c40ca1b1e02a5862e8c40e",
+    "src/confint_derived.jl": "488754eb4f2772f48b1fc0c4ba4d06717fdbacef933f430504f46d90aabe5997",
+    "src/confint_derived_wald.jl": "4c54fc94ad8dc26b48dda178a85961b0549028975f1df9593d658128189d5410",
+    "src/confint_profile.jl": "a3e64b0974485b9263e7f0b978d644cfefe3a800bdc0cd31e6f98604270f07be",
+    "src/families/aghq_gaussian_fit.jl": "86718c4c24857b49b55c95bd7ddb3624b5168fce44022c91a785ff4a6675796b",
+    "src/fit.jl": "e92f55fe8a05b027abd4419c86f466a59245a646c898537eb75bbb5b129f93d6",
+    "tools/core070_inference_rulings_batch.jl": "de613d1cfb4a0a84f52c8094087501c3541ee9f320b8d4cf97ba1c820519c351"
+  },
+  "status": "PASS"
+}

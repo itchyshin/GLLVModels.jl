@@ -1,49 +1,58 @@
 {
   "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-WAVE6-POSTFIT-NOBS-MULTI",
-  "verdict": "FAIL",
-  "evidence_kind": "own_receipt_defect_expectation",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
   "source_ids": [
     "postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi"
   ],
-  "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (contract from PR #567)",
-  "harness_kind": "own_receipt_defect",
-  "harness_pass": false,
-  "batch_status": "FAIL",
+  "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (contract from PR #567; nobs case rewritten as integer_equality under maintainer ruling 2026-10-05, D-319, item N2)",
+  "harness_kind": "integer_equality",
+  "harness_pass": true,
+  "batch_status": "PASS",
   "batch_verifier": {
     "tool": "tools/core070_verify_wave6_conversion_batch.py",
     "argv": "tools/core070_verify_wave6_conversion_batch.py {state}",
-    "status": "FAIL",
-    "exit_code": 1,
+    "status": "PASS",
+    "exit_code": 0,
     "accept_marker": "CORE070_WAVE6_CONVERSION_STATE_OK",
     "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/verify.txt"
   },
-  "batch_status_note": "The wave6 batch receipt reads FAIL, and tools/core070_verify_wave6_conversion_batch.py rejects the state, because of one case, CORE070-WAVE6-POSTFIT-NOBS-MULTI (own_receipt_defect): its frozen expectation that Julia nobs returns n = 80 no longer holds (Julia now returns p*n = 400, as R does). The other nine cases pass; each case receipt carries its own verdict.",
+  "batch_status_note": "",
   "r_call": "as.numeric(nobs(fit_g))",
-  "julia_call": "GLLVM.nobs(fit)  # StatsAPI.nobs(fit::AnyGllvmFit), src/postfit.jl:614",
+  "julia_call": "GLLVModels.nobs(fit_g, Y_g)  # StatsAPI.nobs(fit::AnyGllvmFit, Y; mask), src/postfit.jl",
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/julia-results.json",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/wave6-conversion-p1/r-oracle.json"
   ],
-  "measured": {
-    "r_nobs": 400,
-    "julia_nobs": 400.0,
-    "r_expected_p_times_n": 400,
-    "julia_expected_n": 80.0
-  },
-  "frozen_expectation": {
-    "r": "p * n  (R counts observed response CELLS)",
-    "julia": "n  (Julia counts UNITS/sites)"
-  },
-  "why_failing": "The frozen contract case asserts each engine against its own formula: R == p*n and Julia == n (a known defect pending decision). At P1 R returns p*n = 400 as at P0, but Julia now also returns 400, so the Julia-side expectation (n = 80) no longer holds and the harness reports FAIL. R and Julia agree; the expectation, not the parity, is what failed. Not edited here; recorded as failing.",
+  "numeric_note": "Exact integer equality, R nobs against Julia nobs on the gaussian_small fixture. Maintainer ruling 2026-10-05 (D-319), item N2, rewrote this wave6 case from the stale P0 own_receipt_defect expectation (Julia == n = 80) to integer_equality under itchyshin/GLLVModels.jl#684 item 1: tolerance 0.5, so the integers must be equal.",
+  "ruling": "maintainer ruling 2026-10-05 (D-319), item N2; comparison kind integer_equality under itchyshin/GLLVModels.jl#684 item 1 (tolerance 0.5 on integers means equal)",
+  "expected": "R and Julia return the same integer: both count observed response cells (p * n = 400 on gaussian_small, which has no missing cells)",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
+  "glvmodels_commit": "6f050fea3e5afcee2b9d55b79acbaa42c2f28a24",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "glvmodels_src_tree": "4cf28aca3f0d75c7dafd649284515a78edd5225a",
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=1",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-WAVE6-POSTFIT-NOBS-MULTI",
+        "quantity": "nobs(object) on gaussian_small",
+        "kind": "integer_equality",
+        "r_value": 400,
+        "julia_value": 400,
+        "max_abs_diff": 0,
+        "tolerance": 0.5,
+        "tolerance_rule": "integer_equality, tolerance 0.5 (itchyshin/GLLVModels.jl#684 item 1): both values are integers, so within 0.5 means equal; wave6-conversion-batch-contract-p1.json gives this case tolerance 0.5",
+        "n_values": 1,
+        "diff_source": "recomputed from r-oracle.json oracle_values['CORE070-WAVE6-POSTFIT-NOBS-MULTI'] and julia-results.json cases['CORE070-WAVE6-POSTFIT-NOBS-MULTI']['julia_value']"
+      }
+    ]
+  }
 }

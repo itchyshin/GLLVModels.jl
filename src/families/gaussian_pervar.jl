@@ -174,6 +174,11 @@ end
 _loadings(fit::GaussianPerVarFit) = fit.Λ
 _loglik(fit::GaussianPerVarFit)   = fit.loglik
 
+# Ledermann (1940) bound for Σ = ΛΛ' + diag(ψ) with one ψ per response.
+function _ledermann_pervar_k_admissible(p::Integer, K::Integer)
+    (p - K)^2 >= p + K
+end
+
 # Free params: requested fixed effects + reduced loadings + residual variances.
 function _nparams(fit::GaussianPerVarFit)
     p, K = size(fit.Λ)
@@ -186,6 +191,13 @@ end
         -> GaussianPerVarFit
 
 Fit a heteroscedastic (per-species variance) Gaussian GLLVM by EM or L-BFGS.
+
+For this per-species residual model (`Σ = Λ Λ' + diag(ψ)` with one ψ per trait),
+`K` must satisfy the Ledermann identifiability bound `(p - K)² ≥ p + K` (e.g.
+`p = 4` → `K ≤ 1`, `p = 5` → `K ≤ 2`, `p = 10` → `K ≤ 6`). The shared-residual
+fitter `fit_gaussian_gllvm` uses one scalar `σ_eps` and a weaker
+computational limit (`K < p` for the PPCA warm start only). Inadmissible `K`
+here raises `ArgumentError` before optimisation.
 
 `Y` is `p × n_sites`. Optimises `θ = [vec(packed Λ); log φ²_1 … log φ²_p]` with
 fixed effects profiled out analytically. With `X=nothing`, the `p` trait intercepts
@@ -236,6 +248,10 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
                                    iterations::Integer = 1000)
     p, n = size(Y)
     @assert K ≥ 1
+    _ledermann_pervar_k_admissible(p, K) || throw(ArgumentError(
+        "fit_gaussian_pervar_gllvm: per-species residual variances require the " *
+        "Ledermann bound (p - K)^2 >= p + K for identifiable Λ and ψ; got p=$p, " *
+        "K=$K. The shared-σ fitter fit_gaussian_gllvm uses a different condition."))
     @assert n ≥ 2 "Need n_sites ≥ 2 for per-species variances"
     method in (:em, :lbfgs) || throw(ArgumentError("method must be :em or :lbfgs"))
     c = Float64(fixed_residual_sd)
@@ -297,6 +313,7 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
     # Requires the FA regime K < p and no fixed effects; otherwise fall through to
     # L-BFGS. The per-species intercept is the profiled row means (β = μ0), so
     # EM runs on the centred residual `Yc`.
+    em_polish = nothing
     if method === :em && K < p && X === nothing && c == 0
         Λ_em, φ²_em, ll_em, nit_em, conv_em =
             em_fa(Yc, K; λ_init = Λ0, ψ_init = φ²_0, tol = em_tol,
@@ -309,7 +326,16 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
             conv_em,
             nit_em,
         )
-        return _pervar_with_fallback(fit, request, integration_controls)
+        conv_em && return _pervar_with_fallback(fit, request, integration_controls)
+        # EM converges only linearly as a unique variance tends to 0 (a Heywood
+        # case), so it can exhaust its budget short of the optimum (#736). Polish
+        # from the EM point with L-BFGS on the log-variance scale, where the
+        # gradient vanishes at the ψ² → 0 boundary; keep the EM fit if the polish
+        # cannot start or does not improve it.
+        em_polish = (fit = fit, iterations = nit_em, ll = Float64(ll_em))
+        Q = qr(Matrix{Float64}(Λ_em)')
+        params0 = vcat(pack_lambda(Matrix{Float64}(Q.R') ),
+                       log.(max.(collect(Float64, φ²_em), eps())))
     end
 
     # Exact ML GLS, using the same direct covariance factorization as the
@@ -350,6 +376,9 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         end
     end
 
+    if em_polish !== nothing && !isfinite(nll(params0))
+        return _pervar_with_fallback(em_polish.fit, request, integration_controls)
+    end
     opts = Optim.Options(g_tol = g_tol, iterations = Int(iterations),
                          show_trace = false)
     res = Optim.optimize(nll, params0, Optim.LBFGS(), opts; autodiff = :forward)
@@ -365,6 +394,12 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
 
     _, conv, iters = _fit_verdict(res)
     ll = -nll(params_hat)  # report the likelihood at the returned coordinates
+    if em_polish !== nothing
+        iters += em_polish.iterations
+        if !(ll >= em_polish.ll)   # the polish must not lose ground (also catches NaN)
+            return _pervar_with_fallback(em_polish.fit, request, integration_controls)
+        end
+    end
     conv = conv && isfinite(ll)
     if rejected_covariances[] > 0
         @warn "Rejected numerically unfactorizable covariance evaluations; no ridge was added" count=rejected_covariances[]

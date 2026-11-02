@@ -27,6 +27,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs/dev-log/core070/namespace-2-batch-contract.json"
+# --pin P1 (D-294/D-295): the P1 contract from tools/core070_namespace_2_p1_contract.py.
+PIN_CONTRACTS = {
+    "P0": (ROOT / "docs/dev-log/core070/namespace-2-batch-contract.json",
+           "b4d5fee64def88bc768dda1f1f77c29b295edd86"),
+    "P1": (ROOT / "docs/dev-log/core070/true-parity-latest/namespace-2-batch-contract-p1.json",
+           "9539352f66f2db2cc26b1c393e67212a359b60c9"),
+}
+EXPECTED_REFERENCE = PIN_CONTRACTS["P0"][1]
 DEFAULT_STATE = ROOT / ".unlazy/core070-aghq/namespace-2-batch-01"
 
 MANIFEST_ROW_COUNT = 90
@@ -52,7 +60,7 @@ def verify_contract(contract=None):
     c = contract or load_contract()
     need(c["status"] == "FROZEN_NAMESPACE_2_BATCH_CONTRACT", "wrong contract status")
     need(c["area"] == "namespace-2", "wrong area")
-    need(c["reference_commit"] == "b4d5fee64def88bc768dda1f1f77c29b295edd86", "wrong reference commit")
+    need(c["reference_commit"] == EXPECTED_REFERENCE, "wrong reference commit")
     need(c["manifest_row_count"] == MANIFEST_ROW_COUNT, "manifest row count drift")
 
     executable_ids = {x["case_id"] for x in c["cases"]}
@@ -304,7 +312,9 @@ if __name__ == "__main__":
     parser.add_argument("--state", type=Path, default=DEFAULT_STATE)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--pin", choices=sorted(PIN_CONTRACTS), default="P0")
     args = parser.parse_args()
+    CONTRACT_PATH, EXPECTED_REFERENCE = PIN_CONTRACTS[args.pin]
 
     # --self-test never substitutes for the real --state check below --
     # there is deliberately no flag that skips it (the postfit-policy

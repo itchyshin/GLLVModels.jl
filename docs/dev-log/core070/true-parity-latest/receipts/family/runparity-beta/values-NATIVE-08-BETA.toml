@@ -2,15 +2,15 @@ case_id = "NATIVE-08-BETA"
 
 [[values]]
 label = "logLik"
-julia = 173.07052637504916
+julia = 173.0705263750491
 test = "checks[\"likelihood\"]=isapprox(native.loglik,r.logLik;rtol=1e-6,atol=0)"
 rtol = 1.0e-6
-r = 173.0705263750292
+r = 173.0705263750278
 atol = 0.0
 [[values]]
 label = "objective at the R optimum"
-julia = -173.07052637502957
+julia = -173.07052637502764
 test = "checks[\"samepoint\"]=abs(report[\"samepoint_delta\"])<=1e-6"
 rtol = 0.0
-r = -173.0705263750292
+r = -173.0705263750278
 atol = 1.0e-6

@@ -23,6 +23,15 @@ identifiability. Compare a few values of `K` by log-likelihood / information
 criteria, and prefer the smallest `K` that captures the covariance you care
 about.
 
+For the **per-species residual** Gaussian model taught in the Quick start
+(`Σ = Λ Λᵀ + diag(ψ)`, one ψ per response via `fit_gaussian_pervar_gllvm` or
+`pervar = true`), both Λ and ψ are identified only when **(p − K)² ≥ p + K**
+(Ledermann bound): e.g. `p = 4` allows `K ≤ 1`, `p = 5` allows `K ≤ 2`,
+`p = 10` allows `K ≤ 6`. The shared-residual fitter `fit_gaussian_gllvm` (one
+`σ_eps` for all traits) uses a different condition; requiring `K < p` there is
+a warm-start limit, not this identifiability bound. `fit_gaussian_pervar_gllvm`
+rejects inadmissible `K` before fitting.
+
 ## Check convergence
 
 `fit_gaussian_gllvm` warm-starts from PPCA and usually converges in a step or

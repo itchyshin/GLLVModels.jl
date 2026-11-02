@@ -1,0 +1,22 @@
+{
+  "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+  "command": [
+    "/usr/bin/R",
+    "CMD",
+    "INSTALL",
+    "--no-multiarch",
+    "--library=/home/snakagaw/hsq_work/gllvm-w2-3/oracle-build/library",
+    "/home/snakagaw/hsq_work/gllvm-w2-3/oracle-build/source"
+  ],
+  "elapsed_seconds": 119.01533161097905,
+  "exit_code": 0,
+  "hostname": "totoro",
+  "installed_tree_sha256": "71ef0fb3d6c0a31e908c09ea599b97966dc8335038e1d9d23ccda901344d9997",
+  "log_sha256": "7c2b94eb73537ec7e9be35bfe2cfdee694547b262c12278459ef308b4995620d",
+  "marker_sha256": "aa1fc44f481294678c2d1eb5505eaf182f976236f3b3f50373465c68330b2941",
+  "original_source_unchanged": true,
+  "r_version": "R version 4.6.1 (2026-06-24) -- \"Happy Hop\"",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+  "tool_sha256": "5eaf43ff55d5f2c9d083414c89db1fd4f3c4a46e9f5778e42776e1c63c62ec86"
+}

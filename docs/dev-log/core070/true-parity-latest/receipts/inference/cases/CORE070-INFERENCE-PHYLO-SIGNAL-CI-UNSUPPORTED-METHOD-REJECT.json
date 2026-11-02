@@ -66,36 +66,91 @@
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
   "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
-  "behaviour_not_bound": [
-    {
-      "source_id": "inference/CI-ROUTE-019",
-      "reason": "no_valid_method_control",
-      "text": "R raised its validated cli_abort ('Method \"wald_asym\" not implemented for `phylo_signal`.') and Julia raised MethodError, but the Julia error is structural, not the same refusal. The *_wald_ci function takes no method keyword, so the call raises MethodError for every method value, including a valid one, while R's error fires only for a method outside its supported set. The harness has no valid-method control, and inference-batch-contract-p1.json known_findings.derived_quantity_reject_spec_defect_reason records that no Julia call this comparand can run against exists for these quantities. A MethodError counting as the same error class is not signed under itchyshin/GLLVModels.jl#684 item 2.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#phylo_reject.wald_asym",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT.methods.wald_asym",
-        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
-      }
+  "behaviour": {
+    "pin": "P1",
+    "ruling": "itchyshin/GLLVModels.jl#684 item 2",
+    "read_from": {
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json": "ef8ce3b20f20a5acf093a13ac1266209bceb5ac505ab117702a24db3aeec23c9",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json": "5d6a257284adbc7b42cc403a129ca2f539d2a184bc94122a2bf2de0e5ffdcb8b",
+      "test/parity/fixtures/core070_inference_routes.tsv": "5f75af28288781a5cc516bb94d38e5fdc5107b1712be54fbaabe9d0e79035db0",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv": "aa78ce4ae49ad3f05891517710bb4e54fbaa1f5b612821bd1a99eba6e5a0df1c",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json": "b0c89cbfb5186f39c1800cbe9bda524d4d7d822d7048d2181b19c86fb7eaa925",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/receipt.json": "1a44df6689de09c56ac07238eabf4a2e655d1ed36aed9924163090451f0dd675",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/run-commit.json": "c209d8cb34692cf8bf2387eb057c396dee061720d7b10aab462e84c7d0be26d3",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/verify.txt": "303ad3fd98e8194e031cfcf376b39fb5c751fa348fe7f3af603705e0837c373d",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/r-oracle.json": "c37a34dc900c165a8d4ccbffae0fea66a3ad6444a12acb3c29c22ae0223d0a98",
+      "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/r-lambda-reject/receipt.json": "911e062f903a88ef5b4029f8084f5900085a65eedb1442219a9171c55bea1a65"
     },
-    {
-      "source_id": "inference/CI-ROUTE-020",
-      "reason": "no_valid_method_control",
-      "text": "R raised its validated cli_abort ('Method \"fisher-z\" not implemented for `phylo_signal`.') and Julia raised MethodError, but the Julia error is structural, not the same refusal. The *_wald_ci function takes no method keyword, so the call raises MethodError for every method value, including a valid one, while R's error fires only for a method outside its supported set. The harness has no valid-method control, and inference-batch-contract-p1.json known_findings.derived_quantity_reject_spec_defect_reason records that no Julia call this comparand can run against exists for these quantities. A MethodError counting as the same error class is not signed under itchyshin/GLLVModels.jl#684 item 2.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#phylo_reject.fisher-z",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT.methods.fisher-z",
-        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
+    "cases": [
+      {
+        "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-019",
+        "kind": "refusal",
+        "r_observed": "Method \"wald_asym\" not implemented for `phylo_signal`.",
+        "julia_observed": "ArgumentError: confint: method = :wald_asym is not available for Gaussian GllvmFit / parm phylo_signal[1]; available: :wald, :profile, :bootstrap",
+        "requested_method": "wald_asym",
+        "julia_call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=Symbol(\"wald_asym\"), \u03a3_phy)",
+        "julia_error_type": "ArgumentError",
+        "r_control": {
+          "kind": "route_probe_stub",
+          "call": "probe row CI-ROUTE-017",
+          "result": "routes to .confint_phylo_signal:wald",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-017"
+        },
+        "julia_control": {
+          "call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=:wald, \u03a3_phy)",
+          "result": "wald_derived interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-019"
+        },
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#phylo_reject.wald_asym",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-019"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-020",
+        "kind": "refusal",
+        "r_observed": "Method \"fisher-z\" not implemented for `phylo_signal`.",
+        "julia_observed": "ArgumentError: confint: method = :fisher-z is not available for Gaussian GllvmFit / parm phylo_signal[1]; available: :wald, :profile, :bootstrap",
+        "requested_method": "fisher-z",
+        "julia_call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=Symbol(\"fisher-z\"), \u03a3_phy)",
+        "julia_error_type": "ArgumentError",
+        "r_control": {
+          "kind": "route_probe_stub",
+          "call": "probe row CI-ROUTE-017",
+          "result": "routes to .confint_phylo_signal:wald",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-017"
+        },
+        "julia_control": {
+          "call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=:wald, \u03a3_phy)",
+          "result": "wald_derived interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-020"
+        },
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#phylo_reject.fisher-z",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-020"
+      },
+      {
+        "case_id": "CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT",
+        "source_id": "inference/CI-ROUTE-021",
+        "kind": "refusal",
+        "r_observed": "Method \"bogus\" not implemented for `phylo_signal`.",
+        "julia_observed": "ArgumentError: confint: method = :bogus is not available for Gaussian GllvmFit / parm phylo_signal[1]; available: :wald, :profile, :bootstrap",
+        "requested_method": "bogus",
+        "julia_call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=Symbol(\"bogus\"), \u03a3_phy)",
+        "julia_error_type": "ArgumentError",
+        "r_control": {
+          "kind": "route_probe_stub",
+          "call": "probe row CI-ROUTE-017",
+          "result": "routes to .confint_phylo_signal:wald",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv#CI-ROUTE-017"
+        },
+        "julia_control": {
+          "call": "confint(fitS, YS; parm=\"phylo_signal[1]\", method=:wald, \u03a3_phy)",
+          "result": "wald_derived interval",
+          "source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-021"
+        },
+        "r_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#phylo_reject.bogus",
+        "julia_source": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-post709-p1/inference-post709-results.json#CI-ROUTE-021"
       }
-    },
-    {
-      "source_id": "inference/CI-ROUTE-021",
-      "reason": "no_valid_method_control",
-      "text": "R raised its validated cli_abort ('Method \"bogus\" not implemented for `phylo_signal`.') and Julia raised MethodError, but the Julia error is structural, not the same refusal. The *_wald_ci function takes no method keyword, so the call raises MethodError for every method value, including a valid one, while R's error fires only for a method outside its supported set. The harness has no valid-method control, and inference-batch-contract-p1.json known_findings.derived_quantity_reject_spec_defect_reason records that no Julia call this comparand can run against exists for these quantities. A MethodError counting as the same error class is not signed under itchyshin/GLLVModels.jl#684 item 2.",
-      "evidence": {
-        "r": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/r-oracle.json#phylo_reject.bogus",
-        "julia": "docs/dev-log/core070/true-parity-latest/receipts/inference/inference-remainder-p1/julia-results.json#CORE070-INFERENCE-PHYLO-SIGNAL-CI-UNSUPPORTED-METHOD-REJECT.methods.bogus",
-        "contract": "docs/dev-log/core070/true-parity-latest/inference-batch-contract-p1.json"
-      }
-    }
-  ]
+    ]
+  }
 }

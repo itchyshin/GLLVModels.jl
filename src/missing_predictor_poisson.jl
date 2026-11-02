@@ -92,8 +92,9 @@ _binom_logpmf_full(μ, n, y) = y * log(μ) + (n - y) * log1p(-μ) +
 # NB/Gamma/Beta log-density kernels include the dispersion-dependent normalisers
 # (functions of r/α/φ, which ARE θ parameters here), so they must be kept and
 # differentiated; the dispersion-FREE constants (e.g. loggamma(y+1)) are still dropped.
-_nb_logpmf_full(μ, r, y) = loggamma(r + y) - loggamma(r) - loggamma(y + 1.0) +
-                           r * log(r) - (r + y) * log(r + μ) + y * log(μ)
+# NB2 goes through the stable `_nb2_logpdf_mean` (src/families/negbin.jl): the
+# expanded loggamma(r+y) − loggamma(r) + r log r − (r+y) log(r+μ) cancels at large r (#871).
+_nb_logpmf_full(μ, r, y) = _nb2_logpdf_mean(μ, r, Int(y))
 _gamma_logpdf_full(μ, α, y) = (α - 1) * log(y) - y * α / μ - α * log(μ) + α * log(α) - loggamma(α)
 _beta_logpdf_full(μ, φ, y) = (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
                              (loggamma(μ * φ) + loggamma((1 - μ) * φ) - loggamma(φ))

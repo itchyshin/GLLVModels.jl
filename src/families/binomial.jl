@@ -149,7 +149,11 @@ raw latent-axis coefficients for the predictor-informed score mean; use
 [`extract_lv_effects`](@ref) for the rotation-stable trait-scale product
 `Λ * alpha_lv'`. `loading_ridge` records the `loading_ridge` fit kwarg (`Inf`
 when the loading ridge was off); `loglik` is always the UNPENALISED Laplace
-marginal, evaluated at the (possibly ridge-penalised) optimum.
+marginal, evaluated at the (possibly ridge-penalised) optimum. `offset` is the p×n
+training offset a Laplace fit was made with (`nothing` when the fit had none);
+[`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ fit leaves
+`offset === nothing`: its offset is kept in `integration.data.offset`, which the AGHQ
+post-fit route uses.
 """
 struct BinomialFit
     β::Vector{Float64}
@@ -164,7 +168,11 @@ struct BinomialFit
     saturation::Union{Nothing, LaplaceSaturationHealth}
     integration::Union{Nothing,AGHQFitInfo}
     loading_ridge::Float64   # the fit's `loading_ridge` kwarg; `Inf` = ridge off
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+# Pre-offset compat tier (12 positional args): no stored training offset.
+BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge)=
+    BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,nothing)
 # Pre-ridge compat tier (11 positional args, the prior full field list):
 # defaults the new `loading_ridge` field to `Inf` (ridge off), matching every
 # pre-existing construction site's implicit behaviour.
@@ -410,6 +418,8 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "_fit_binomial_gllvm_laplace")
     K >= 0 || throw(ArgumentError("K must be non-negative for fit_binomial_gllvm"))
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_binomial_gllvm: hessian must be :fisher or :observed; got :$hessian"))
@@ -445,7 +455,8 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = Integer.(_sanitize_missing(Y, 0))
+    _check_response_support(:binomial, Y, msk; caller = "fit_binomial_gllvm", N = Nm)
+    Yc  = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical link-scale intercepts + SVD (PPCA-like) loadings
     Zemp = [linkfun(link, clamp((Yc[t, i] + 0.5) / (Nm[t, i] + 1), 1e-4, 1 - 1e-4))
@@ -571,7 +582,8 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                                                         mask = msk), link, Λ̂) : nothing
         _warn_runaway_loadings(Λ̂)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters,
-                           alpha_hat, collect(Float64, θ̂), hessian, sat, nothing, loading_ridge)
+                           alpha_hat, collect(Float64, θ̂), hessian, sat, nothing, loading_ridge,
+                           _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
@@ -590,6 +602,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             _warn_saturation(_laplace_saturation_health(Yc, Nm, Λ̂, β̂, link, hessian;
                                                         mask = msk), link, Λ̂) : nothing
         _warn_runaway_loadings(Λ̂)
-        return BinomialFit(β̂, Λ̂, link, ll, conv, iters, nothing, Float64[], hessian, sat, nothing, loading_ridge)
+        return BinomialFit(β̂, Λ̂, link, ll, conv, iters, nothing, Float64[], hessian, sat, nothing, loading_ridge,
+                           _stored_offset(offset))
     end
 end

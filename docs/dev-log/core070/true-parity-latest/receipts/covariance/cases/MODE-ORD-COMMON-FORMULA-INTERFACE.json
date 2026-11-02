@@ -25,7 +25,7 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
+  "glvmodels_commit": "59ecd020a7f9d19873f1ad3fbf05e2cc44f08360",
   "glvmodels_worktree_dirty": [],
   "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
@@ -54,9 +54,10 @@
           0.41206295919559854,
           0.6243498257699266
         ],
-        "abs_diff": 1.5278743286242942e-13,
+        "abs_diff": 1.1401990462900358e-13,
+        "harness_norm_diff": 1.5278743286242942e-13,
         "tolerance": 1e-05,
-        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) (harness_norm_diff); abs_diff = max |julia - r| entrywise"
       },
       {
         "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
@@ -95,9 +96,10 @@
             0.5182355968918857
           ]
         ],
-        "abs_diff": 7.182585999226163e-09,
+        "abs_diff": 4.146867960130862e-09,
+        "harness_norm_diff": 7.182585999226163e-09,
         "tolerance": 1e-05,
-        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) (harness_norm_diff); abs_diff = max |julia - r| entrywise"
       },
       {
         "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
@@ -121,9 +123,10 @@
           0.41206295919559854,
           0.6243498257699266
         ],
-        "abs_diff": 1.5278743286242942e-13,
+        "abs_diff": 1.1401990462900358e-13,
+        "harness_norm_diff": 1.5278743286242942e-13,
         "tolerance": 1e-05,
-        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) (harness_norm_diff); abs_diff = max |julia - r| entrywise"
       },
       {
         "case_id": "MODE-ORD-COMMON-FORMULA-INTERFACE",
@@ -162,9 +165,10 @@
             0.5182355968918857
           ]
         ],
-        "abs_diff": 7.182585999226163e-09,
+        "abs_diff": 4.146867960130862e-09,
+        "harness_norm_diff": 7.182585999226163e-09,
         "tolerance": 1e-05,
-        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+        "tolerance_rule": "test/parity/covariance_formula_cases.jl: isapprox(julia, r; atol=1e-05, rtol=1e-05); harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) (harness_norm_diff); abs_diff = max |julia - r| entrywise"
       }
     ]
   }

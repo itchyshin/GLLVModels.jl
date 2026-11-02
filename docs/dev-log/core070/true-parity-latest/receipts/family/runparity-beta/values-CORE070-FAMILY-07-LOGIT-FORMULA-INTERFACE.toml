@@ -2,15 +2,15 @@ case_id = "CORE070-FAMILY-07-LOGIT-FORMULA-INTERFACE"
 
 [[values]]
 label = "logLik, wide formula"
-julia = 173.07052637504916
+julia = 173.0705263750491
 test = "@test fit.loglik ≈ health[\"r_loglik\"] atol=0 rtol=1e-6"
 rtol = 1.0e-6
-r = 173.0705263750292
+r = 173.0705263750278
 atol = 0.0
 [[values]]
 label = "logLik, long formula"
-julia = 173.07052637504916
+julia = 173.0705263750491
 test = "@test fit.loglik ≈ health[\"r_loglik\"] atol=0 rtol=1e-6"
 rtol = 1.0e-6
-r = 173.0705263750292
+r = 173.0705263750278
 atol = 0.0

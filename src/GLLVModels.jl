@@ -20,9 +20,11 @@ using Distributions: Distribution, Univariate, Discrete, Continuous,
 
 # Core
 include("fit_verdict.jl")            # _fit_verdict: never report a failure sentinel as a loglik
+include("optimizer_selection.jl")     # direct outer optimizer choices and immutable fit receipts
 include("packing.jl")
 include("lowrank_cholesky.jl")          # used by likelihood
 include("likelihood.jl")
+include("symmetric_admission.jl")          # tolerance-based symmetry gates (#722)
 include("source_covariance.jl")          # internal Gaussian additive source reference evaluator
 include("source_fit.jl")                 # local candidate: fixed Gaussian source covariances
 include("grouped_gaussian.jl")           # internal shared/crossed sparse Gaussian factor kernel
@@ -70,6 +72,7 @@ include("relaxed_clock.jl")              # Relaxed-clock per-branch evolution ra
 # Response families (Phase 3): Distributions types as markers + link functions
 include("families/links.jl")
 include("families/laplace.jl")           # generic family-dispatched Laplace marginal core
+include("families/response_support.jl")  # response-domain checks shared by the Laplace fitters (#730)
 include("families/aghq_grid.jl")         # Stage-1a/1b live-pin AGHQ grid + Liu–Pierce site (not a public knob)
 include("families/aghq_outer.jl")        # Internal unpenalized outer adaptation; public fit wiring pending
 include("families/aghq_fit_info.jl")
@@ -169,6 +172,7 @@ include("loading_profile_confirmatory_internal.jl")  # D3 confirmatory pins (not
 include("confint_bootstrap.jl")          # parametric bootstrap
 include("confint_derived.jl")            # derived quantities (Σ_y, communality, ...)
 include("loading_profile_confirmatory.jl") # D3 Stage 1 confirmatory loading_profile export
+include("flag_unreliable_loadings.jl")    # flag_unreliable_loadings: gllvmTMB twin on confirmatory fits
 include("confint_derived_wald.jl")       # transformed-Wald CIs for bounded derived quantities
 # Cross-family latent-scale link-implicit residual table + non-Gaussian
 # sigma_y_site/communality/correlation extractors. After postfit.jl (needs the
@@ -206,10 +210,12 @@ include("joint_phylo_grouped_gaussian.jl") # one joint Gaussian marginal, evalua
 include("joint_covariance_identification.jl") # actual covariance tangent aliases
 include("joint_phylo_grouped_fit.jl") # private joint optimizer and marginal intervals
 include("joint_phylo_grouped_postfit.jl") # explicit population mean and source-labelled extraction
+include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl, precision_multivariate_fit.jl + destination_b_postfit.jl (PrecisionMultivariateFit tier :phy) and joint_phylo_grouped_fit.jl + joint_phylo_grouped_postfit.jl + joint_covariance_identification.jl (JointPhyloGroupedGaussianFit tier :phy).
 include("diagnostics.jl")                # check_gllvmTMB / gllvmTMB_diagnose / predictive_check / sanity_multi / compare_* / confint_inspect (core070 diagnostics/compare cluster)
 include("summary_table.jl")              # coef_table: tidy Wald inference table
 include("postfit_tables.jl")             # final missing-surface cluster (core070 §1): deviance, cross-rho profiles,
                                           # predict_cross_covariance, predict_missing, rotate_loadings, tidy, summary, imputed
+include("cross_lineage_extract.jl")      # extract_Gamma / extract_coevolution_modules on a GaussianSourcesFit kernel tier (gllvmTMB P1 orientation)
 include("temporal.jl")                   # temporal source: constructors, pre-pass, unit/unit_obs composition, TemporalContractError (gllvmTMB P1 port)
 include("temporal_likelihood.jl")        # exact Gaussian marginal NLL, K_blockdiag ⊗ Sigma_T (+ unit/unit_obs blocks) + sigma_eps² I
 include("temporal_fit.jl")               # fit_temporal_gllvm / TemporalGaussianFit (separate door; no formula.jl hook)
@@ -240,7 +246,8 @@ Alias of [`ConstrainedOrdinationFit`](@ref), the result type of
 const ConcurrentOrdinationFit = ConstrainedOrdinationFit
 
 # Public API
-export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevolution_blockna,
+export OptimizerStage, OptimizerRecord, optimizer_info,
+       make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevolution_blockna,
        fit_gaussian_mi_fiml, fit_gaussian_mi_phylo, fit_gllvm_mi, fit_gllvm_mi_multi,
        spatial_cov, relatedness_cov,
        spde_fem, spde_precision, spde_projector, matern_correlation,
@@ -271,18 +278,18 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        confint, profile_ci, bootstrap_ci,
        transformed_wald_ci_derived, correlation_wald_ci, communality_wald_ci,
        icc_wald_ci, phylo_signal_wald_ci,
-       standardized_loading_wald_ci, raw_loading_wald_ci, loading_ci,
+       standardized_loading_wald_ci, raw_loading_wald_ci, loading_ci, flag_unreliable_loadings,
        loading_profile_exploratory, loading_profile,
        profile_ci_total_variance, profile_ci_phylo_signal,
        slope_sd_ci, standard_errors,
-       latent_score_sd, getREsd, bootstrap_Sigma, tmbprofile_wrapper, profile_targets, profile_curve_targets,
+       latent_score_sd, getREsd, bootstrap_Sigma, bootstrap_Sigma_r, BootstrapSigmaR, tmbprofile_wrapper, profile_targets, profile_curve_targets,
        profile_phylo_signal,
        ppca_init, em_fa,
        sigma_y_site, communality, correlation, phylo_signal, link_residual,
        extract_Sigma, extract_Sigma_table, extract_loadings, extract_rotated_loadings,
        extract_communality, extract_correlations, extract_cross_correlations,
        extract_residual_cov, extract_residual_cor, getResidualCov, getResidualCor,
-       extract_ordination, extract_cutpoints, extract_proportions, extract_phylo_signal,
+       extract_ordination, extract_cutpoints, extract_proportions, extract_residual_split, extract_phylo_signal,
        extract_repeatability, extract_ICC_site, extract_Omega,
        chibar2_pvalue, variance_lrt, profile_ci_variance,
        augmented_phy, AugmentedPhy, random_balanced_tree, sigma_phy_dense, make_phy,

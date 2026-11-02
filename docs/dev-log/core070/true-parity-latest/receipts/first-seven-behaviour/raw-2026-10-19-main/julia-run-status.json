@@ -1,0 +1,23 @@
+{
+  "command": [
+    "/Users/z3437171/.juliaup/bin/julia",
+    "--project=.",
+    "tools/first_seven_behaviour_J.jl",
+    "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-19-main/julia-public.tsv",
+    "7a2b8dcbe074412f1a1a0c6be0303ed4a1cf8f9f"
+  ],
+  "cwd": "/Users/z3437171/.codex/worktrees/p1-check-auto-20261019/GLLVM.jl",
+  "head": "7a2b8dcbe074412f1a1a0c6be0303ed4a1cf8f9f",
+  "start_utc": "2026-10-19T14:57:28.864051+00:00",
+  "timeout_seconds": 120,
+  "thread_caps": {
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "JULIA_NUM_THREADS": "4"
+  },
+  "pid": 44575,
+  "exit_code": 0,
+  "timed_out": false,
+  "elapsed_seconds": 49.13273954100441,
+  "end_utc": "2026-10-19T14:58:18.007939+00:00"
+}

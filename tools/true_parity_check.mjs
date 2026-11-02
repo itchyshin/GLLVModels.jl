@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto';
 // True-parity acceptance oracle for GLLVModels.jl vs gllvmTMB, pinned per-pin (P0 frozen at
 // 0.7.0 b4d5fee64def88bc768dda1f1f77c29b295edd86; P1 = gllvmTMB main
 // 9539352f66f2db2cc26b1c393e67212a359b60c9, 0.7.1 candidate, D-294/D-295, 2026-09-27).
@@ -50,8 +51,13 @@
 // And a recorded abs_diff/max_abs_diff that disagrees with the difference the tool recomputes
 // from r_value/julia_value fails the row as NUMERIC_RECORDED_DIFF_MISMATCH.
 //
-// Maintainer rulings of 2026-10-02 (itchyshin/GLLVModels.jl#684, signed by Shinichi Nakagawa), the
-// only signature recorded here. Prose and schemas: GATES.md, "Rulings of 2026-10-02".
+// Maintainer rulings of 2026-10-02 (itchyshin/GLLVModels.jl#684, signed by Shinichi Nakagawa) and of 2026-10-05
+// (maintainer ruling 2026-10-05, vault decision D-319), the only signatures recorded here. Prose and schemas: GATES.md,
+// "Rulings of 2026-10-02" and "Rulings of 2026-10-05". The 2026-10-05 rules: the behavioural list gains 14 explicit
+// ids (BEHAVIOURAL_EXTENDED_SOURCE_IDS); a live bridge readback receipt binds only fitted, predict and residuals
+// (BRIDGE_READBACK_ROW_PREFIX); admission-only and PUBLIC-R-BRIDGE cases may be non-binding context
+// (boundaryContext); a convergence_parity block must show both engines at gradient max-abs <= 1e-5
+// (convergenceParityProblem); an EVIDENCED real-data row must cite a direct-engine receipt (C4).
 //   Ruling 1 (integer equality): a numeric comparison case may carry `"kind": "integer_equality"`.
 //     Then r_value and julia_value must both be integers (or equal-length integer arrays) and
 //     tolerance must be exactly 0.5, i.e. exact equality. The row keeps evidence_tier "numeric".
@@ -77,6 +83,10 @@
 //     covers KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), the date must be that ruling's, and
 //     the signer must pass the signature rule, else it is listed under unsigned_decision=. A
 //     KEPT_AS_JULIA_EXTRA basis must also cite a docs/src/... file that resolves at the ref.
+//   Review of #687, follow-up: C2 to C5 and X2 read a scoreboard row's Status word, so a done word on a row
+//     whose receipt cell begins "not bound" (how true_parity_assemble.py writes a row it did not bind) is
+//     STATUS_NOT_BOUND, not done. The assembler no longer turns a case-map disposition into a done word
+//     (disposition_status); this guard keeps the two tools in agreement.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -90,22 +100,25 @@ const P1_SHA = '9539352f66f2db2cc26b1c393e67212a359b60c9';
 const SHA256_RE = /^[0-9a-f]{64}$/;
 
 // Per-pin ledger paths. "Configurable per pin": add a pin here, or override with
-// PARITY_SCOREBOARD / PARITY_CASEMAP / PARITY_REVERSE_GAP for one-off runs.
+// PARITY_SCOREBOARD / PARITY_CASEMAP / PARITY_SCOPED_TWIN_CASEMAP / PARITY_REVERSE_GAP for one-off runs.
 const PIN_PATHS = {
   P0: {
     scoreboard: 'docs/dev-log/core070/true-parity-gate-tier-scoreboard-2026-09-25.md',
     casemap: 'docs/dev-log/core070/required-source-case-map.json',
+    scopedTwinCasemap: 'docs/dev-log/core070/required-source-case-map.json',
     reverseGap: null, // P0's reverse-gap list is tool-produced by tools/parity_ledger.py, not tracked as a file
   },
   P1: {
     scoreboard: 'docs/dev-log/core070/true-parity-latest/scoreboard.md',
     casemap: 'docs/dev-log/core070/true-parity-latest/case-map.json',
+    scopedTwinCasemap: 'docs/dev-log/core070/true-parity-latest/case-map-assembled.json',
     reverseGap: 'docs/dev-log/core070/true-parity-latest/reverse-gap.json',
   },
 };
 const PATHS = {
   scoreboard: process.env.PARITY_SCOREBOARD || (PIN_PATHS[PIN] || PIN_PATHS.P1).scoreboard,
   casemap: process.env.PARITY_CASEMAP || (PIN_PATHS[PIN] || PIN_PATHS.P1).casemap,
+  scopedTwinCasemap: process.env.PARITY_SCOPED_TWIN_CASEMAP || (PIN_PATHS[PIN] || PIN_PATHS.P1).scopedTwinCasemap,
   reverseGap: process.env.PARITY_REVERSE_GAP || (PIN_PATHS[PIN] || PIN_PATHS.P1).reverseGap,
 };
 const PARITY_PAGE = 'docs/src/gllvmtmb-parity.md';
@@ -127,12 +140,19 @@ const C6_DECISION_VOCAB = new Set([
   'DEPRECATE_AND_REMOVE',
   'RENAME_TO_AVOID_COLLISION',
   'EXCLUDED_INTERNAL_HELPER',
+  'SCOPED_R_TWIN',
+  'HOLD_PENDING_EVIDENCE',
 ]);
-// C6 decisions are signed by a ruling, and a ruling covers only the words it names. The table is the
-// ONLY signature the tool accepts on a reverse-gap decision: itchyshin/GLLVModels.jl#684 item 3, signed
-// 2026-10-02, covers exactly these two words. A new ruling is a new entry here, added in review.
+const HELD_C6_NAMES = new Set([
+  'NBFit', 'Ordinal', 'TweedieFit', 'ZIB', 'ZINegBin',
+  'fit_animal_latent_gllvm', 'fit_kernel_latent_gllvm', 'gllvm', 'link_residual',
+]);
+// C6 decisions are signed by a ruling, and a ruling covers only the words it names. #684 item 3
+// covers its two original words. The 2026-10-17 record supports scoped twins with executable receipts
+// and a hold disposition for exactly HELD_C6_NAMES; a hold is not evidence of equivalence.
 const C6_RULINGS = {
   'itchyshin/GLLVModels.jl#684 item 3': { signed_on: '2026-10-02', words: new Set(['KEPT_AS_JULIA_EXTRA', 'EXCLUDED_INTERNAL_HELPER']) },
+  'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md': { signed_on: '2026-10-17', words: new Set(['SCOPED_R_TWIN', 'HOLD_PENDING_EVIDENCE']) },
 };
 const BEHAVIOUR_EQUIVALENCE = 'docs/dev-log/core070/true-parity-latest/behaviour-equivalence.json';
 const BEHAVIOUR_KINDS = new Set(['route', 'refusal', 'error_class', 'printed_fields']);
@@ -172,10 +192,24 @@ const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set([
   'model-comparison/print.anova.gllvmTMB_multi',
   'model-comparison/update.gllvmTMB_multi',
 ]);
-const behaviouralEligibleSourceId = (sid) => typeof sid === 'string' && (BEHAVIOURAL_INFERENCE_SOURCE_IDS.has(sid) || BEHAVIOURAL_NAMED_SOURCE_IDS.has(sid));
+// Extension signed 2026-10-05 (maintainer ruling 2026-10-05 (D-319); GATES.md "Rulings of 2026-10-05"): item A adds
+// the 7 aghq control rows and inference/CI-ROUTE-009; N6 adds the 5 iSDM refusal or admission rows reachable through
+// R's public door (the 3 internal-predicate rows ISDM-NO-TRAITS, -WRONG-ID and -WRONG-LINK and ISDM-LEGACY close by
+// signed disposition instead); N10 adds check_auto_residual. Same rule as the 63 rows above: listed, explicit, frozen.
+// Kept as its own set so the 59-row inference list stays tied to case-map-inference.json. Copied in
+// tools/true_parity_assemble.py (BEHAVIOURAL_EXTENDED_SOURCE_IDS; a test fails if they drift).
+const BEHAVIOURAL_EXTENDED_SOURCE_IDS = new Set([
+  'aghq/AGHQ-CTRL-AUTO', 'aghq/AGHQ-CTRL-FALSE', 'aghq/AGHQ-CTRL-NINE', 'aghq/AGHQ-CTRL-NULL',
+  'aghq/AGHQ-CTRL-ONE', 'aghq/AGHQ-CTRL-TRUE', 'aghq/AGHQ-CTRL-TWO',
+  'inference/CI-ROUTE-009',
+  'isdm/ISDM-COUNT', 'isdm/ISDM-EXTRA-SOURCE', 'isdm/ISDM-MISSING-IN-TRAIT', 'isdm/ISDM-MISSING-SOURCE',
+  'isdm/ISDM-WRAPPER-LAW',
+  'postfit/POSTFIT-SURFACE-check_auto_residual',
+]);
+const behaviouralEligibleSourceId = (sid) => typeof sid === 'string' && (BEHAVIOURAL_INFERENCE_SOURCE_IDS.has(sid) || BEHAVIOURAL_NAMED_SOURCE_IDS.has(sid) || BEHAVIOURAL_EXTENDED_SOURCE_IDS.has(sid));
 // The assembler writes a scoreboard id as the source_id with every run of other characters turned into '-'.
 const scoreboardSlug = (sid) => sid.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-const BEHAVIOURAL_ELIGIBLE_BOARD_IDS = new Set([...BEHAVIOURAL_INFERENCE_SOURCE_IDS, ...BEHAVIOURAL_NAMED_SOURCE_IDS].map(scoreboardSlug));
+const BEHAVIOURAL_ELIGIBLE_BOARD_IDS = new Set([...BEHAVIOURAL_INFERENCE_SOURCE_IDS, ...BEHAVIOURAL_NAMED_SOURCE_IDS, ...BEHAVIOURAL_EXTENDED_SOURCE_IDS].map(scoreboardSlug));
 const behaviouralEligibleBoardId = (id) => BEHAVIOURAL_ELIGIBLE_BOARD_IDS.has(id);
 
 // One definition of a visible text, shared with tools/true_parity_assemble.py (is_visible): the string
@@ -254,12 +288,12 @@ function hasSignedTokens(text) {
   return !!by && !!on && signatureProblem(by[1], on[1]) === null;
 }
 
-function loadCasemap() {
-  const j = show(PATHS.casemap);
-  if (j === null) die(`${PATHS.casemap} not on ${REF}`);
+function loadCasemap(path = PATHS.casemap) {
+  const j = show(path);
+  if (j === null) die(`${path} not on ${REF}`);
   let d;
-  try { d = JSON.parse(j); } catch (e) { die(`${PATHS.casemap} is not valid JSON: ${e.message}`); }
-  return Array.isArray(d.rows) ? d.rows : die(`${PATHS.casemap} has no "rows" array`);
+  try { d = JSON.parse(j); } catch (e) { die(`${path} is not valid JSON: ${e.message}`); }
+  return Array.isArray(d.rows) ? d.rows : die(`${path} has no "rows" array`);
 }
 
 function rowReceiptPaths(row) {
@@ -391,6 +425,102 @@ function checkComparisonBlock(cmp, p, covered) {
   return null;
 }
 
+// Maintainer ruling 2026-10-05 (D-319), ruling 1 (GATES.md "Rulings of 2026-10-05"): the live bridge readback receipt
+// (evidence_kind live_bridge_readback) shows that R's gllvmTMB_julia method returns what Julia computed. That is a real
+// adapter test for fitted, predict and residuals, which do their own arithmetic in R, and circular for coef, logLik,
+// summary, confint and simulate, which copy Julia's value (those close by signed disposition). So such a receipt binds
+// a numeric row only for the rows below, and only on that row's own cases (gllvm_julia_fit already bound on it through
+// cases that compare against the TMB engine). Copied in tools/true_parity_assemble.py (a test fails on drift).
+const BRIDGE_READBACK_ROW_PREFIX = {
+  'namespace/S3method/fitted,gllvmTMB_julia': 'P1-BRIDGE-READBACK-FITTED-',
+  'namespace/S3method/predict,gllvmTMB_julia': 'P1-BRIDGE-READBACK-PREDICT-',
+  'namespace/S3method/residuals,gllvmTMB_julia': 'P1-BRIDGE-READBACK-RESIDUALS-',
+  'namespace/export/gllvm_julia_fit': 'P1-BRIDGE-READBACK-GJF-',
+};
+function bridgeReadbackProblem(row, p) {
+  if (!Object.prototype.hasOwnProperty.call(BRIDGE_READBACK_ROW_PREFIX, row.source_id)) {
+    return `bridge readback ${p} binds only fitted, predict and residuals for gllvmTMB_julia (and gllvm_julia_fit); the other methods copy Julia's value and close by signed disposition (maintainer ruling 2026-10-05 (D-319), ruling 1)`;
+  }
+  const prefix = BRIDGE_READBACK_ROW_PREFIX[row.source_id];
+  const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
+  const off = ids.filter((id) => typeof id !== 'string' || !id.startsWith(prefix));
+  if (off.length) return `bridge readback binds ${row.source_id} only on its own cases (${prefix}*), not ${off.join(',')} (maintainer ruling 2026-10-05 (D-319), ruling 1)`;
+  return null;
+}
+
+// Maintainer ruling 2026-10-05 (D-319), N1 (GATES.md "Rulings of 2026-10-05"): an admission-only case or a
+// PUBLIC-R-BRIDGE boundary case is non-binding context. A numeric row may list such case ids under
+// `boundary_context_case_ids` (each also in executable_case_ids, so it stays visible) and cite their receipts under
+// `evidence.boundary_context_receipts`. A listed case then does not need a comparison, but only if its own receipt
+// shows it is one of these kinds: R refused at the public bridge before any Julia call (r_public_bridge_boundary,
+// verdict R_BOUNDARY_UNCHANGED, a -PUBLIC-R-BRIDGE case) or R only admits the formula grammar (r_only_formula_grammar,
+// R_ONLY_PASS). A bridge case that was not executed (not_executed, NOT_EXECUTED) is not context: N1 covers an R
+// refusal recorded by a receipt, not a case nobody ran. A context receipt that carries a comparison block is refused (a case with a number is compared, not
+// set aside), executable_case_ids may not repeat an id, and at least one executable case outside the context list
+// must be covered by a comparison block. Copied in tools/true_parity_assemble.py.
+const BOUNDARY_CONTEXT_KINDS = {
+  r_public_bridge_boundary: { verdict: 'R_BOUNDARY_UNCHANGED', suffix: '-PUBLIC-R-BRIDGE' },
+  r_only_formula_grammar: { verdict: 'R_ONLY_PASS', suffix: null },
+};
+// Returns { ids: Set } (the validated context case ids, possibly empty) or { problem }.
+function boundaryContext(row) {
+  const ctx = row.boundary_context_case_ids;
+  if (ctx === undefined || ctx === null) return { ids: new Set() };
+  const exec = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
+  if (!Array.isArray(ctx) || ctx.length === 0 || !ctx.every((x) => typeof x === 'string' && x.length > 0)) return { problem: 'boundary_context_case_ids must be a non-empty array of case ids' };
+  if (new Set(ctx).size !== ctx.length) return { problem: 'boundary_context_case_ids lists a case id twice' };
+  if (new Set(exec).size !== exec.length) return { problem: 'executable_case_ids lists a case id twice' };
+  const notExec = ctx.filter((id) => !exec.includes(id));
+  if (notExec.length) return { problem: `boundary context case ids not in executable_case_ids: ${notExec.join(',')}` };
+  if (ctx.length >= exec.length) return { problem: 'every executable case is boundary context; at least one case must bind numerically' };
+  const rps = (row.evidence && row.evidence.boundary_context_receipts) || [];
+  if (!Array.isArray(rps) || rps.length === 0) return { problem: 'no evidence.boundary_context_receipts' };
+  const byCase = new Map();
+  for (const p of rps) {
+    const txt = typeof p === 'string' ? show(p) : null;
+    if (txt === null || !existsAsBlob(p)) return { problem: `boundary context receipt ${p} does not resolve to a file` };
+    let j;
+    try { j = JSON.parse(txt); } catch { return { problem: `boundary context receipt ${p} is not JSON` }; }
+    if (!isPlainObject(j) || typeof j.case_id !== 'string') return { problem: `boundary context receipt ${p} has no case_id` };
+    byCase.set(j.case_id, [p, j]);
+  }
+  for (const id of ctx) {
+    if (!byCase.has(id)) return { problem: `boundary context case ${id} has no receipt under evidence.boundary_context_receipts` };
+    const [p, j] = byCase.get(id);
+    const rule = Object.prototype.hasOwnProperty.call(BOUNDARY_CONTEXT_KINDS, j.evidence_kind) ? BOUNDARY_CONTEXT_KINDS[j.evidence_kind] : null;
+    if (rule === null) return { problem: `boundary context case ${id}: evidence_kind ${JSON.stringify(j.evidence_kind)} is not an admission-only or PUBLIC-R-BRIDGE boundary kind (${p})` };
+    if (j.verdict !== rule.verdict) return { problem: `boundary context case ${id}: verdict ${JSON.stringify(j.verdict)} is not ${rule.verdict} for ${j.evidence_kind} (${p})` };
+    if (rule.suffix && !id.endsWith(rule.suffix)) return { problem: `boundary context case ${id}: a ${j.evidence_kind} case must be a ${rule.suffix} case` };
+    if (j.comparison !== undefined) return { problem: `boundary context case ${id}: its receipt carries a comparison block, so it is compared, not context (${p})` };
+  }
+  return { ids: new Set(ctx) };
+}
+
+// Maintainer ruling 2026-10-05 (D-319), N9 (GATES.md "Rulings of 2026-10-05"; draft in PR #715): a C3 campaign
+// comparison counts only when both engines reach gradient max-abs 1e-5 at the point whose outputs are compared. A
+// receipt records this in a top-level `convergence_parity` block:
+//   { "gradient_bound": 1e-5, "compared_point": "returned" | "newton_polished",
+//     "engines": { "R": { "max_abs_gradient": g }, "julia": { "max_abs_gradient": g } } }
+// When the block is present, the bound must be exactly 1e-5 and both gradients finite, >= 0 and <= 1e-5, or the row
+// does not bind. A receipt without the block is judged as before (see GATES.md for why the rule is not applied to
+// the rows that already bind). Copied in tools/true_parity_assemble.py (convergence_parity_problem).
+const CONVERGENCE_GRADIENT_BOUND = 1e-5;
+const CONVERGENCE_POINTS = new Set(['returned', 'newton_polished']);
+function convergenceParityProblem(cp, p) {
+  const why = (m) => `convergence parity (maintainer ruling 2026-10-05 (D-319), N9): ${m} in ${p}`;
+  if (!isPlainObject(cp)) return why('convergence_parity is not an object');
+  if (cp.gradient_bound !== CONVERGENCE_GRADIENT_BOUND) return why(`gradient_bound ${JSON.stringify(cp.gradient_bound)} is not 1e-5`);
+  if (!CONVERGENCE_POINTS.has(cp.compared_point)) return why(`compared_point ${JSON.stringify(cp.compared_point)} is not returned or newton_polished`);
+  if (!isPlainObject(cp.engines)) return why('no engines block');
+  for (const side of ['R', 'julia']) {
+    const e = cp.engines[side];
+    const g = isPlainObject(e) ? e.max_abs_gradient : undefined;
+    if (typeof g !== 'number' || !Number.isFinite(g) || g < 0) return why(`${side} max_abs_gradient ${JSON.stringify(g)} is not a finite number >= 0`);
+    if (g > CONVERGENCE_GRADIENT_BOUND) return why(`${side} max_abs_gradient ${g} > 1e-5`);
+  }
+  return null;
+}
+
 function numericReceiptStatus(row) {
   const paths = rowReceiptPaths(row);
   if (paths.length === 0) return { ok: false, reason: 'no receipt' };
@@ -403,6 +533,14 @@ function numericReceiptStatus(row) {
     let j;
     try { j = JSON.parse(txt); } catch { continue; } // a non-JSON receipt carries no comparison
     if (!j || typeof j !== 'object') continue;
+    if (j.evidence_kind === 'live_bridge_readback') {
+      const bp = bridgeReadbackProblem(row, p);
+      if (bp) return { ok: false, reason: bp };
+    }
+    if (j.convergence_parity !== undefined) {
+      const cp = convergenceParityProblem(j.convergence_parity, p);
+      if (cp) return { ok: false, reason: cp };
+    }
     if (notPassed === null) notPassed = receiptNotPassed(j, p);
     if (j.comparison === undefined) continue;
     const bad = checkComparisonBlock(j.comparison, p, covered);
@@ -411,8 +549,13 @@ function numericReceiptStatus(row) {
   }
   if (blocks === 0) return { ok: false, reason: 'no comparison block in any receipt' };
   const ids = Array.isArray(row.executable_case_ids) ? row.executable_case_ids : [row.executable_case_ids];
-  const missing = ids.filter((id) => !covered.has(id));
+  const ctx = boundaryContext(row);
+  if (ctx.problem) return { ok: false, reason: `boundary context (maintainer ruling 2026-10-05 (D-319), N1): ${ctx.problem}` };
+  const missing = ids.filter((id) => !covered.has(id) && !ctx.ids.has(id));
   if (missing.length) return { ok: false, reason: `case ids not compared: ${missing.join(',')}` };
+  // N1: context never binds a row on its own; at least one executable case outside the context list must be
+  // covered by a comparison block.
+  if (ctx.ids.size > 0 && !ids.some((id) => !ctx.ids.has(id) && covered.has(id))) return { ok: false, reason: 'boundary context (maintainer ruling 2026-10-05 (D-319), N1): no executable case outside boundary_context_case_ids is covered by a comparison' };
   // The comparison itself holds; the row still does not bind if a cited receipt says it failed.
   if (notPassed !== null) return { ok: false, kind: 'not_passed', reason: notPassed };
   return { ok: true };
@@ -572,7 +715,7 @@ function behaviouralReceiptStatus(row, cites = new Map()) {
   // Scope: the ruling covers the 59 inference routing and error-class rows and four named C1 rows only
   // (the frozen lists above). Any other row labelled behavioural (a numeric row, a campaign row, one of
   // the other four inference rows) does not bind on typed labels.
-  if (!behaviouralEligibleSourceId(row.source_id)) return { ok: false, reason: 'source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows only)' };
+  if (!behaviouralEligibleSourceId(row.source_id)) return { ok: false, reason: 'source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows) or by its extension in maintainer ruling 2026-10-05 (D-319) (14 listed rows)' };
   loadEquivalence(); // a malformed or ambiguous table is a measurement failure, whatever the row says
   const cs = carryStatus(row);
   if (cs.stale) return { ok: false, reason: cs.reason };
@@ -710,6 +853,10 @@ function evaluateScoreboardRow(r) {
   if (r.status === 'EVIDENCED-BEHAVIOURAL' && (isRSZ(r) || isRD(r) || isGRP(r) || !behaviouralEligibleBoardId(r.id))) {
     return { ok: false, reason: 'BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW' };
   }
+  // The assembler writes "not bound; cited: ..." in the receipt cell of every row it did not bind, whatever the
+  // case map said. A done word beside that cell did not come from a binding rule (an old assembler copied a
+  // disposition such as "EVIDENCED" into the Status column, and the cited path then resolved), so it is not done.
+  if (/^not bound\b/i.test(r.receiptText)) return { ok: false, reason: 'STATUS_NOT_BOUND' };
   const extracted = extractPaths(r.receiptText);
   if (extracted.length === 0) {
     if (r.status === 'DISPOSITION-SIGNED' && hasSignedTokens(r.receiptText)) return { ok: true };
@@ -720,7 +867,22 @@ function evaluateScoreboardRow(r) {
   }
   const dangling = extracted.filter((p) => !existsAsBlob(p));
   if (dangling.length) return { ok: false, reason: `DANGLING:${dangling.join(',')}` };
+  // C4 (maintainer ruling 2026-10-05 (D-319), C4: the clause text now accepts direct-engine runs, with no
+  // engine = "julia" bridge leg). An EVIDENCED real-data row is done only if a receipt it cites is a run of both
+  // engines on the data: a JSON receipt with an `engines` block holding a non-empty `R` and a non-empty `julia`
+  // object (`engines: { R: {}, julia: {} }` records no run). Copied in tools/true_parity_assemble.py. A signed
+  // disposition row is not a run and is judged as before.
+  if (isRD(r) && r.status === 'EVIDENCED' && !extracted.some(directEngineReceipt)) return { ok: false, reason: 'C4_NOT_A_DIRECT_ENGINE_RUN' };
   return { ok: true };
+}
+
+function directEngineReceipt(p) {
+  const t = show(p);
+  if (t === null) return false;
+  let j;
+  try { j = JSON.parse(t); } catch { return false; }
+  const nonEmpty = (o) => isPlainObject(o) && Object.keys(o).length > 0;
+  return isPlainObject(j) && isPlainObject(j.engines) && nonEmpty(j.engines.R) && nonEmpty(j.engines.julia);
 }
 
 function report(tag, rows, pick) {
@@ -871,16 +1033,94 @@ function checkC5() { return report('C5 grouping levels', scoreboardRows(), isGRP
 
 // --- C6: reverse-gap list, one written decision per item, from a fixed vocabulary ----
 
-// A documented Julia extra must be documented: the basis cites at least one docs/src/... file (no `..`
-// or dot-leading segment) and every cited docs/src file resolves to a blob at the ref. Shared with
-// tools/true_parity_assemble.py (docs_src_paths). Lookarounds, not \b, so both engines read the same text.
-const DOCS_SRC_RE = /(?<![A-Za-z0-9_])docs\/src\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:md|jl|toml|json|txt)(?![A-Za-z0-9_])/g;
+// A documented Julia extra must be documented: the basis names at least one page under docs/src, and every
+// page it names is an existing .md file written exactly as docs/src/<path>.md. The basis is read as tokens: it is
+// split at ASCII whitespace and at ( ) [ ] { } < > " ' ` , ; : ! ? # (so "docs/src/a.md#sec", "(docs/src/a.md)" and
+// "docs/src/a.md:12" name docs/src/a.md), trailing dots are dropped (a sentence's full stop), and every token that
+// contains "docs/src" must then BE a page path: it starts with docs/src/, has no ".." or "." or dot-leading segment
+// and no empty one, ends in .md, and has nothing after it. So "page.md.bak", "page.md~", "./docs/src/page.md",
+// "other/docs/src/page.md", a URL, a directory and an existing .json, .txt, .jl or .toml file are not citations,
+// and a malformed citation beside a good one fails too. Shared with tools/true_parity_assemble.py
+// (DOCS_SRC_SPLIT_RE, DOCS_SRC_PAGE_RE: the same text; the delimiter set is explicit ASCII so both engines
+// split the same way).
+const DOCS_SRC_SPLIT_RE = /[ \t\n\r\f\v()\[\]{}<>\x22\x27\x60,;:!?#]+/;
+const DOCS_SRC_PAGE_RE = /^docs\/src\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.md$/;
+function docsSrcCitations(basis) {
+  const tokens = [...new Set(basis.split(DOCS_SRC_SPLIT_RE).map((t) => t.replace(/\.+$/, '')).filter((t) => t.includes('docs/src')))].sort();
+  return { pages: tokens.filter((t) => DOCS_SRC_PAGE_RE.test(t)), malformed: tokens.filter((t) => !DOCS_SRC_PAGE_RE.test(t)) };
+}
 function keptBasisProblem(basis) {
-  const paths = [...new Set(basis.match(DOCS_SRC_RE) || [])];
-  if (paths.length === 0) return 'KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file';
-  const dangling = paths.filter((q) => !existsAsBlob(q));
+  const { pages, malformed } = docsSrcCitations(basis);
+  const notExact = 'not an exact docs/src/<path>.md page';
+  if (pages.length === 0) return `KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file${malformed.length ? `; ${notExact}: ${malformed.join(',')}` : ''}`;
+  if (malformed.length) return `KEPT_AS_JULIA_EXTRA basis cites ${malformed.join(',')}, which is ${notExact}`;
+  const dangling = pages.filter((q) => !existsAsBlob(q));
   if (dangling.length) return `KEPT_AS_JULIA_EXTRA basis cites ${dangling.join(',')}, which does not resolve at the ref`;
   return null;
+}
+
+// Exact contracts signed on 2026-10-17, from c6-approved-decisions-2026-10-17.toml.
+// The general rule is not a signature for a new name or a changed route.
+const C6_APPROVED_SCOPE_SHA256 = {
+  "BetaBinom": "9cd3b96b383762cbb5b55d7d4614beedb0e4fb8b735eab9aa59d26b9710264c5",
+  "NB1": "ba276a261732c8125bcd33765ff1db054139fcab46b4ac98d2e3b5e36d7cb7fc",
+  "StudentT": "b6321a8f647f1ee2a646c6951bb85011b1b01f04b391e55bf19b13136d544279",
+  "StudentTFamily": "e571e8fa54d7a51b2d9504cdd2cf8d96cbdb9ab65895285d82820908852b5e46",
+  "TruncatedNegBin2": "174a5994c47565f760dc413a5a76a660f6de077db824011cb7b918679bea31c3",
+  "bridge_fit": "5b5c1f8e067571073f71038d0263fbb63201e19d0fe854a2ff39a77903fb3222",
+  "fit_animal_dep_gllvm": "fb8bd42aeaa88c3d3ea79ee37c8f542fe52837967513cb4b6a6efa3e2186788e",
+  "fit_dep_gllvm": "c0baa3610de08e061b21bb117e93a2faccc6c51b03fccd2debcb57b7129e0125",
+  "fit_gllvm": "a666827b39c386b01a5ef76d48ea5d3d4f354fb22f71d0d5baaaed8716193488",
+  "fit_kernel_dep_gllvm": "33475a40838b1a5fc85d26dada32b69f80bc65c0468cd1f3a07ae227e349c756",
+  "fit_kernel_indep_gllvm": "13dcb057d0794cb3b806f1825025db2817708ec402d8b13a68c5b2338c5427b8"
+};
+function c6Canonical(value) {
+  if (Array.isArray(value)) return value.map(c6Canonical);
+  if (value !== null && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(k => [k, c6Canonical(value[k])]));
+  return value;
+}
+function approvedScopeProblem(item) {
+  if (!Object.hasOwn(C6_APPROVED_SCOPE_SHA256, item.name) || item.source_id !== `julia-export/${item.name}`) return 'SCOPED_R_TWIN name is not an exact approved Julia export';
+  const contract = Object.fromEntries(['counterpart', 'scope', 'receipt_ids', 'ruling'].map(k => [k, item[k]]));
+  const digest = createHash('sha256').update(JSON.stringify(c6Canonical(contract))).digest('hex');
+  return digest === C6_APPROVED_SCOPE_SHA256[item.name] ? null : 'SCOPED_R_TWIN contract differs from the exact approved scope';
+}
+
+function scopedTwinProblem(item) {
+  const counterpart = item.counterpart;
+  if (!counterpart || typeof counterpart !== 'object' || Array.isArray(counterpart)) return 'SCOPED_R_TWIN requires a counterpart object';
+  if (!isVisible(counterpart.r_function)) return 'SCOPED_R_TWIN requires counterpart.r_function';
+  if (counterpart.r_commit !== P1_SHA) return `SCOPED_R_TWIN counterpart.r_commit must equal pinned P1 ${P1_SHA}`;
+  const rloc = counterpart.r_source;
+  if (typeof rloc !== 'string' || !/^R\/[^:\s]+:\d+(?:-\d+)?$/.test(rloc)) return 'SCOPED_R_TWIN requires counterpart.r_source as R/path:line[-line]';
+  const jloc = counterpart.julia_source;
+  if (typeof jloc !== 'string' || !/^src\/[^:\s]+:\d+(?:-\d+)?$/.test(jloc)) return 'SCOPED_R_TWIN requires counterpart.julia_source as src/path:line[-line]';
+  if (!existsAsBlob(jloc.split(':')[0])) return `SCOPED_R_TWIN Julia source ${jloc} does not resolve at the ref`;
+  const scope = item.scope;
+  if (!scope || typeof scope !== 'object' || Array.isArray(scope)) return 'SCOPED_R_TWIN requires a scope object';
+  for (const key of ['public_route', 'family_link', 'data', 'estimand']) {
+    if (!isVisible(scope[key])) return `SCOPED_R_TWIN requires scope.${key}`;
+  }
+  for (const key of ['outputs', 'exclusions']) {
+    if (!Array.isArray(scope[key]) || scope[key].length === 0 || !scope[key].every(isVisible)) return `SCOPED_R_TWIN requires a non-empty string array scope.${key}`;
+  }
+  if (!Array.isArray(item.receipt_ids) || item.receipt_ids.length === 0 || !item.receipt_ids.every(isVisible)) return 'SCOPED_R_TWIN requires non-empty receipt_ids';
+  if (new Set(item.receipt_ids).size !== item.receipt_ids.length) return 'SCOPED_R_TWIN receipt_ids must be unique';
+  // Scoped C6 decisions bind to the generated union of per-family case maps. The
+  // ordinary C1-C8/X2 ledger keeps using case-map.json, whose dispositions are
+  // independently maintained and must not be replaced by the generated union.
+  const rows = loadCasemap(PATHS.scopedTwinCasemap);
+  for (const receiptId of item.receipt_ids) {
+    const bound = rows.some((row) => {
+      if (!Array.isArray(row.executable_case_ids) || !row.executable_case_ids.includes(receiptId)) return false;
+      if (row.measured_against !== P1_SHA || !['numeric', 'behavioural'].includes(row.evidence_tier)) return false;
+      const paths = rowReceiptPaths(row);
+      return paths.length > 0 && paths.every((path) => typeof path === 'string'
+        && !path.startsWith('/') && !path.split('/').includes('..') && existsAsBlob(path));
+    });
+    if (!bound) return `SCOPED_R_TWIN receipt id ${receiptId} has no executable P1 numeric or behavioural row with a resolving receipt`;
+  }
+  return approvedScopeProblem(item);
 }
 
 function checkC6() {
@@ -891,11 +1131,10 @@ function checkC6() {
   try { items = JSON.parse(j); } catch (e) { die(`${PATHS.reverseGap} is not valid JSON: ${e.message}`); }
   if (!Array.isArray(items) || items.length === 0) { console.log('C6 items=0 EMPTY_SELECTION (vacuous; not a pass)'); return false; }
   const invalid = items.filter((it) => !C6_DECISION_VOCAB.has(it.decision)).map((it) => `${it.source_id || it.name || '?'}:${JSON.stringify(it.decision)}`);
-  // Ruling 3 (itchyshin/GLLVModels.jl#684 item 3): a decided item needs a written basis (a visible
-  // text) and a ruling {ref, signed_by, signed_on} whose signer and date pass the signature rule. A
-  // KEPT_AS_JULIA_EXTRA basis must also cite a docs/src/... file that resolves at the ref (a documented
-  // extra is documented). The tool cannot check that the named person signed (PR review does), but it
-  // refuses an item with no basis, no ruling reference, or a signer outside the allow-list.
+  // A decided item needs a written basis (visible text) and a ruling {ref, signed_by, signed_on}
+  // whose signer/date pass the signature rule. KEPT_AS_JULIA_EXTRA also cites a docs/src page.
+  // SCOPED_R_TWIN carries exact counterpart, route/scope, and receipt identifiers; those identifiers
+  // must bind to executable P1 evidence. The rule approval does not sign an individual name.
   const unsignedDecision = [];
   const counts = Object.fromEntries([...C6_DECISION_VOCAB].map((d) => [d, 0]));
   for (const it of items) {
@@ -912,6 +1151,17 @@ function checkC6() {
     else why = signatureProblem(rl.signed_by, rl.signed_on);
     if (why === null && rl.signed_on.trim() !== C6_RULINGS[rl.ref].signed_on) why = `ruling signed_on ${JSON.stringify(rl.signed_on)} is not the date of ${rl.ref}`;
     if (why === null && it.decision === 'KEPT_AS_JULIA_EXTRA') why = keptBasisProblem(it.basis);
+    if (why === null && it.decision === 'SCOPED_R_TWIN' && !existsAsBlob(rl.ref)) why = `SCOPED_R_TWIN approval record ${rl.ref} does not resolve at the ref`;
+    if (why === null && it.decision === 'SCOPED_R_TWIN') why = scopedTwinProblem(it);
+    if (why === null && it.decision === 'HOLD_PENDING_EVIDENCE') {
+      if (!HELD_C6_NAMES.has(it.name)) why = 'HOLD_PENDING_EVIDENCE is restricted to the nine approved held names';
+      else if (it.source_id !== `julia-export/${it.name}`) why = 'HOLD_PENDING_EVIDENCE source_id must match its exact Julia export name';
+      else if (it.status !== 'held') why = 'HOLD_PENDING_EVIDENCE requires status held';
+      else if (rl.ref !== 'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md') why = 'HOLD_PENDING_EVIDENCE requires its explicit maintainer ruling';
+      else if (!existsAsBlob(rl.ref)) why = `HOLD_PENDING_EVIDENCE approval record ${rl.ref} does not resolve at the ref`;
+      else if (!it.basis.includes('no twin or parity claim') || !it.basis.includes('no scoreboard row')) why = 'HOLD_PENDING_EVIDENCE basis must state no twin/parity claim and no scoreboard row admission';
+      else if ('counterpart' in it || 'scope' in it || 'receipt_ids' in it) why = 'HOLD_PENDING_EVIDENCE cannot carry twin scope or receipt fields';
+    }
     if (why !== null) unsignedDecision.push(`${id}(${why})`);
   }
   console.log(`C6 items=${items.length} invalid_decision=${invalid.join(',') || 'none'} (vocabulary: ${[...C6_DECISION_VOCAB].join('|')}) unsigned_decision=${unsignedDecision.join(',') || 'none'} decision_counts=${Object.entries(counts).map(([d, n]) => `${d}:${n}`).join(',')}`);

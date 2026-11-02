@@ -12,9 +12,11 @@ docs/dev-log/core070/true-parity-latest/:
 Numbers in each `comparison` block are recomputed here from the raw R and
 Julia values in the batch output, with the tolerance each harness itself
 declares (never a wider one). A harness check written as
-`isapprox(a, b; atol, rtol)` is reported as abs_diff = norm(a - b) against
+`isapprox(a, b; atol, rtol)` is judged as harness_norm_diff = norm(a - b) against
 tolerance = max(atol, rtol * max(norm(a), norm(b))), which is exactly the
-bound isapprox applies. A scalar `abs(a - b) <= tol` check is reported as-is.
+bound isapprox applies; its abs_diff records the max absolute entrywise
+difference, the value tools/true_parity_check.mjs recomputes from r_value and
+julia_value. A scalar `abs(a - b) <= tol` check is reported as-is.
 
 A row is marked evidence_tier "numeric" only when every one of its
 executable_case_ids has a comparison block within tolerance AND every batch
@@ -38,11 +40,31 @@ the runparity run's execution inventory differs from its content at HEAD, so
 the recorded commit is the one the runs used. Run the batches and this tool
 from the same clean commit.
 
+Julia twins (overlay). Six rows carry R-only formula-grammar cases with no fit number: the three
+ordinary latent() rows (COV-ORD-LATENT-BARE, -DEFAULT, -COMMON) and three phylo rows (COV-PHYLO-DEP,
+-A-ALIAS, -FOLDED-UNIQUE). A row for which a fit-level twin exists is bound by it instead, as
+tools/core070_data_p1_receipts.py does for the data rows: R-at-P1 fits recorded in a tracked
+fixture against Julia fits of the same data, receipts under receipts/julia-twins/covariance-twins/
+(written by tools/true_parity_cov_ord_latent_receipt.jl for the latent() rows and by section 12f
+of tools/true_parity_julia_receipts.jl for the phylo rows). The COV_TWINS registry (one block per
+twin family, above main()) names each row's receipt, twin test, fixture and receipt tool.
+twin_overlay adds the evidence fields such a receipt supports: the twin receipt under
+evidence.receipt, executable_case_ids set to the twin's case ids (the formula-grammar case ids
+move to evidence.batch_case_ids and their receipts stay under evidence.non_binding_receipts),
+evidence_tier numeric. Classification, disposition and every other field are untouched.
+`--apply-twins` re-derives the twin rows and the counts of the tracked case-map-covariance.json
+from the tracked receipts and twin receipts (no run directory needed); `--check` verifies the
+result without writing. Both also apply COV_SIGNED, the maintainer-signed dispositions (signer,
+date, ruling and signature source copied onto the row; evidence untouched).
+
 Usage (inputs are the raw run directories, e.g. under local-scratch):
   python3 tools/core070_covariance_p1_receipts.py \
       --runparity DIR --default-modes DIR --wave6 DIR --cov-batch DIR \
       --bridge-tsv FILE --oracle-dir DIR --runtimes JSON \
       [--numeric-exceptions JSON] [--allow-dirty]
+  python3 tools/core070_covariance_p1_receipts.py --apply-twins
+  python3 tools/core070_covariance_p1_receipts.py --check
+  python3 tools/core070_covariance_p1_receipts.py --rebind-wave6 DIR   # ruling N2, see rebind_wave6
 """
 import argparse
 import hashlib
@@ -88,6 +110,26 @@ BRIDGE_EXPECTED_GATE = {k: ("EARLY-GENERIC-ERROR" if v == "MODE-ORD-DEP" else "G
                         for k, v in BRIDGE_FIXTURE_ID.items()}
 
 
+# R-only tier text (the formula-grammar batch has no Julia comparand).
+R_ONLY_TIER = ("R-only formula-grammar structure check re-run at P1; no Julia comparand exists in "
+               "this harness, so the row needs a Julia surface before it can bind")
+
+CASEMAP_NOTE = ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
+                "PARITY_CASEMAP pointing at this file. Classifications are carried from "
+                "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows "
+                "whose every executable case id carries a numeric R-vs-Julia comparison block cite evidence.receipt; "
+                "rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as "
+                "not bound under both the current checker and the numeric-tier rule proposed in PR #561. "
+                "A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way "
+                "(evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed receipt_status_exception is "
+                "recorded on it. An R-only row with a fit-level Julia twin (receipts/julia-twins/covariance-twins/) is "
+                "bound by that twin instead (evidence_tier numeric, the formula-grammar case ids kept under "
+                "evidence.batch_case_ids); see --apply-twins. Maintainer ruling 2026-10-05 (D-319), N1: on the seven "
+                "rows of COV_N1_CONTEXT the PUBLIC-R-BRIDGE case is non-binding context (boundary_context_case_ids, "
+                "its receipt under evidence.boundary_context_receipts) and the row binds on its native and "
+                "formula-interface cases.")
+
+
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -112,13 +154,23 @@ def scalar_entry(case_id, quantity, r, j, tol, rule):
             "abs_diff": abs(r - j), "tolerance": tol, "tolerance_rule": rule}
 
 
+def flat(v):
+    return [x for row in v for x in row] if v and isinstance(v[0], list) else list(v)
+
+
 def isapprox_entry(case_id, quantity, r, j, atol, rtol, rule):
-    diff = norm(sub(j, r))
+    # abs_diff is the max absolute entrywise difference, the quantity tools/true_parity_check.mjs
+    # recomputes from r_value/julia_value (as tools/core070_family_p1_receipts.py records it).
+    # The harness's own test is unchanged: norm(julia - r) <= max(atol, rtol*max(norm)), kept
+    # as harness_norm_diff and judged against the same tolerance. max-abs <= norm, so a case that
+    # passes the harness test also passes the checker's max-abs test.
     tol = max(atol, rtol * max(norm(j), norm(r)))
     return {"case_id": case_id, "quantity": quantity, "r_value": r, "julia_value": j,
-            "abs_diff": diff, "tolerance": tol,
+            "abs_diff": max(abs(a - b) for a, b in zip(flat(j), flat(r), strict=True)),
+            "harness_norm_diff": norm(sub(j, r)), "tolerance": tol,
             "tolerance_rule": f"{rule}: isapprox(julia, r; atol={atol:g}, rtol={rtol:g}); "
-                              "abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"}
+                              "harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) "
+                              "(harness_norm_diff); abs_diff = max |julia - r| entrywise"}
 
 
 # ---- comparisons per harness ---------------------------------------------------------------
@@ -178,7 +230,7 @@ def formula_entries(row):
 def wave6_entry(case_id, julia, oracle, contract_case):
     rv = oracle["oracle_values"][case_id]
     jv = julia["cases"][case_id]["julia_values"]
-    diff = max(abs(a - b) for a, b in zip(rv, jv))
+    diff = max(abs(a - b) for a, b in zip(rv, jv, strict=True))
     return {"case_id": case_id, "quantity": contract_case["quantity"], "r_value": rv, "julia_value": jv,
             "max_abs_diff": diff, "tolerance": contract_case["tolerance"],
             "tolerance_rule": "wave6-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); "
@@ -186,6 +238,57 @@ def wave6_entry(case_id, julia, oracle, contract_case):
 
 
 # ---- writers ---------------------------------------------------------------------------------
+
+def batch_common_for(head, dirty):
+    """Fields every case receipt of one generation carries (pins, oracle receipts, provenance)."""
+    return {"pin": "P1", "reference_commit": P1_SHA, "gllvmtmb_version": "0.7.1",
+            "oracle_build_receipt": f"{REC_REL}/oracle/build.json",
+            "oracle_source_receipt": f"{REC_REL}/oracle/source.json",
+            "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
+            "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+            "p0_reference_commit": P0_SHA}
+
+
+# wave6 cases this tool writes: the two covariance ones (main and --rebind-wave6) and, on --rebind-wave6
+# only, the two namespace keyword ones (ruling N2: they bind once the wave6 verifier accepts the run).
+WAVE6_COV = ("CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE", "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE")
+WAVE6_NS = {"CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-NAMESPACE": "namespace/export/kernel_latent",
+            "CORE070-WAVE6-KERNEL-SCALAR-FIT": "namespace/export/kernel_scalar"}
+NS_REC = OUT / "receipts/namespace/cases"
+
+
+def wave6_case_receipts(wave6_dir, verifier, batch_common, cids, out_dir):
+    """One numeric case receipt per wave6 case id in `cids`, from a wave6 run directory."""
+    out = {}
+    w6_contract = json.loads((OUT / "wave6-conversion-batch-contract-p1.json").read_text())
+    w6_julia = json.loads((wave6_dir / "julia-results.json").read_text())
+    w6_oracle = json.loads((wave6_dir / "r-oracle.json").read_text())
+    w6_receipt = json.loads((wave6_dir / "receipt.json").read_text())
+    for cid in cids:
+        cc = next(c for c in w6_contract["cases"] if c["case_id"] == cid)
+        entry = wave6_entry(cid, w6_julia, w6_oracle, cc)
+        ok = entry["max_abs_diff"] <= entry["tolerance"] and w6_julia["cases"][cid]["pass"]
+        receipt = {
+            "schema": "core070-covariance-p1-case-receipt/v1", "case_id": cid, "source_id": cc["source_id"],
+            "verdict": "PASS" if ok else "FAIL", "evidence_kind": "numeric_r_vs_julia",
+            "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (whole 10-case batch)",
+            "r_call": cc["r_call"],
+            "raw": [f"{REC_REL}/wave6-conversion-p1/julia-results.json", f"{REC_REL}/wave6-conversion-p1/r-oracle.json"],
+            "batch_status": w6_receipt["status"], "batch_verifier": verifier,
+            "batch_status_note": ("The batch receipt reads FAIL and tools/core070_verify_wave6_conversion_batch.py rejects "
+                                  "the state because of one unrelated case, CORE070-WAVE6-POSTFIT-NOBS-MULTI "
+                                  "(postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi, kind own_receipt_defect): its frozen "
+                                  "expectation is that Julia nobs returns n = 80 while R returns p*n = 400; at the "
+                                  "GLLVModels head both return 400, so the recorded defect no longer reproduces. "
+                                  "The nine point cases, including this one, pass.") if w6_receipt["status"] != "PASS" else "",
+            **batch_common,
+            "comparison": {"pin": "P1", "cases": [entry]},
+        }
+        path = out_dir / f"{cid}.json"
+        write_json(path, receipt)
+        out[cid] = (str(path.relative_to(ROOT)), "numeric", receipt["verdict"], verifier["status"])
+    return out
+
 
 def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -257,20 +360,355 @@ def load_exceptions(path):
     return table
 
 
+# ---- Julia fit-level twins (overlay) -----------------------------------------------------------
+# A row whose batch case is an R-only formula-grammar check is bound instead by a fit-level twin
+# when one exists: R-at-P1 fits recorded in a tracked fixture against Julia fits of the same data,
+# receipts written by that family's Julia receipt tool under receipts/julia-twins/<dir>/. The
+# overlay (the pattern of tools/core070_data_p1_receipts.py) sets executable_case_ids to the twin's
+# case ids, cites the twin receipt under evidence.receipt, and keeps the formula-grammar receipt
+# under evidence.non_binding_receipts with its ids under evidence.batch_case_ids. Classification
+# and disposition are never touched. `--apply-twins` re-derives the twin rows and the counts of
+# the tracked case-map-covariance.json from the tracked receipts (no run directory needed);
+# `--check` verifies that the tracked file equals that derivation. Each block below is one twin
+# family; add a new family as its own block.
+TWIN_ROOT_REL = "docs/dev-log/core070/true-parity-latest/receipts/julia-twins"
+COV_TWINS = {}      # source_id -> (receipt path under TWIN_ROOT_REL, twin test, fixture, receipt tool)
+COV_SCOPE_NOTES = {}  # source_id -> what the twin covers and does not
+
+# COV-ORD-LATENT twins (wave-plan W3-4(d)): test/test_cov_ord_latent_p1.jl,
+# fixture test/fixtures/cov_ord_latent_p1.toml (gen_cov_ord_latent_p1.R),
+# receipts by tools/true_parity_cov_ord_latent_receipt.jl.
+_ORD_TWIN = ("test/test_cov_ord_latent_p1.jl", "test/fixtures/cov_ord_latent_p1.toml",
+             "tools/true_parity_cov_ord_latent_receipt.jl")
+COV_TWINS.update({
+    f"covariance/{s}": (f"covariance-twins/{s}.json", *_ORD_TWIN)
+    for s in ("COV-ORD-LATENT-BARE", "COV-ORD-LATENT-DEFAULT", "COV-ORD-LATENT-COMMON")
+})
+_COL_SCOPE = (" One data set: n = 60 sites, p = 4 traits, one Gaussian observation per trait and site, "
+              "unit = site, rank 1; R gllvmTMB(value ~ 0 + trait + <term>, unit = 'site') against Julia "
+              "fit_gaussian_sources(Y; sources = [SourceCovariance(I_n; groups = 1:n, mode = :latent, rank = 1, "
+              "unique, common)]). The Julia objective at R's optimum and at an off-optimum probe point "
+              "(R's -obj$fn there) reproduces R's value, so the two sides fit the same likelihood. Not covered: "
+              "non-Gaussian families, rank > 1, replicated observations, and the formula route (the Julia side "
+              "is the native source fitter, not formula sugar for latent()).")
+COV_SCOPE_NOTES.update({
+    "covariance/COV-ORD-LATENT-BARE": "The R batch case only parses latent(0 + trait | site, unique = FALSE) to one "
+        "rr covstruct; the twin fits it: Sigma_B = Lambda Lambda' with the residual SD estimated (unique = false "
+        "on the Julia side)." + _COL_SCOPE,
+    "covariance/COV-ORD-LATENT-DEFAULT": "The R batch case only parses latent(0 + trait | site) to rr plus the "
+        "auto-unique diag; the twin fits it: Sigma_B = Lambda Lambda' + diag(psi), with the residual SD fixed at "
+        "max(0.001 sd(y), 1e-6), as gllvmTMB fixes it when a site-level diagonal is present (unique = true, the "
+        "same fixed residual SD on the Julia side)." + _COL_SCOPE,
+    "covariance/COV-ORD-LATENT-COMMON": "The R batch case only parses latent(0 + trait | site, common = TRUE) to rr "
+        "plus a common auto-unique diag; the twin fits it: Sigma_B = Lambda Lambda' + psi I_p (one theta_diag_B), "
+        "residual SD fixed as for DEFAULT (unique = true, common = true on the Julia side, which ties the unique "
+        "diagonal to one log SD). The logLik of this fit equals the bare fit's to 1.8e-11 on the R side, as "
+        "expected: one shared diagonal variance either way." + _COL_SCOPE,
+})
+
+# COV-PHYLO twins (wave-plan W3-4(e)): test/test_cov_phylo_twins_p1.jl,
+# fixture test/fixtures/cov_phylo_twins_p1.toml (gen_cov_phylo_twins_p1.R),
+# receipts by tools/true_parity_julia_receipts.jl (section 12f).
+_PHYLO_TWIN = ("test/test_cov_phylo_twins_p1.jl", "test/fixtures/cov_phylo_twins_p1.toml",
+               "tools/true_parity_julia_receipts.jl")
+COV_TWINS.update({
+    "covariance/COV-PHYLO-DEP": ("covariance-twins/PHYLO-DEP.json", *_PHYLO_TWIN),
+    "covariance/COV-PHYLO-A-ALIAS": ("covariance-twins/PHYLO-A-ALIAS.json", *_PHYLO_TWIN),
+    "covariance/COV-PHYLO-FOLDED-UNIQUE": ("covariance-twins/PHYLO-FOLDED-UNIQUE.json", *_PHYLO_TWIN),
+})
+COV_SCOPE_NOTES.update({
+    "covariance/COV-PHYLO-DEP": (
+        "The batch case checks that phylo_dep(0 + trait | species) parses to phylo_rr(d = n_traits, .dep = TRUE); "
+        "the twin is one Gaussian fit of that term (tree route, 120 tips, 4 traits) against "
+        "fit_phylo_latent_gllvm(d = 4), the engine path gllvmTMB documents phylo_dep as. Julia has no phylo_dep "
+        "keyword of its own on this route (fit_phylo_dep_gllvm in src/phylo_dep.jl is a different, row-phylogeny "
+        "Gaussian model and is not the twin). Julia's fit, from its default start, stops at the objective's "
+        "rounding floor: max |FD gradient| about 4.0e-5 on the log residual-SD coordinate (the ForwardDiff "
+        "gradient of the same likelihood agrees, so it is not finite-difference noise), Newton decrement about "
+        "3e-12. Julia's optimiser flag can report not converged at the rounding floor on some platforms (here "
+        "converged = false against g_tol 1e-5); the twin asserts stationarity instead: a positive-definite "
+        "Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. "
+        "Gaussian only; the .dep guards (phylo_dep with "
+        "phylo_latent or phylo_indep refused) are not twinned."),
+    "covariance/COV-PHYLO-A-ALIAS": (
+        "The batch case checks that phylo_latent(species, A = A) parses to phylo_rr(vcv = A); the twin is one "
+        "Gaussian rank-1 fit with A = A (dense route) in R and Julia, and both engines give the identical result "
+        "for the vcv = A spelling. Gaussian, d = 1, rho = 1 only."),
+    "covariance/COV-PHYLO-FOLDED-UNIQUE": (
+        "The batch case checks that phylo_latent(species, unique = TRUE) parses to phylo_rr(d = 1) plus the folded "
+        ".phylo_unique/.auto_unique companion; the twin is one Gaussian fit of that term (tree route) against "
+        "fit_phylo_latent_gllvm(d = 1, unique = true). R's companion is the phylo_diag block (per-trait field on "
+        "the same A, sd exp(log_sd_phy_diag)) and Julia's :explicitunique has the same covariance; Julia's "
+        "objective at R's optimum equals R's objective within 1.3e-11, which is the evidence that the two "
+        "likelihoods are the same model. Julia's optimiser flag can report not converged at the rounding floor on "
+        "some platforms (converged = true on macOS, false on Linux CI for this fit); the twin asserts stationarity "
+        "instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the "
+        "returned parameters. Gaussian, d = 1, rho = 1 only; the duplicate-companion and "
+        "off-family guards are not twinned."),
+})
+
+
+# ---- Maintainer-signed dispositions (overlay) ----------------------------------------------------
+# A row the maintainer has resolved by a signed disposition instead of a twin. The signature is the
+# maintainer's own (signed_by / signed_on as he gave them); this tool only copies it onto the row, with
+# the ruling and its source. Evidence fields are kept as measured. Applied by main() and --apply-twins;
+# --check verifies it. Signature source for 2026-10-05: vault D-319 and
+# LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md (lane kit).
+D319 = {"signed_by": MAINTAINER, "signed_on": "2026-10-05",
+        "signature_source": "vault D-319 (2026-10-05); LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the "
+                            "true-parity lane kit; recorded by an agent, signed by the maintainer"}
+_N3 = ("Ruling N3 (wave plan 2026-10-03, signed under D-319): known-V (meta-analytic) covariance is a documented gap at P1, "
+       "to be revisited at P2. Julia has no known-V surface (no fitter or formula term takes a known sampling covariance V; "
+       "wave plan section 3), so no R-vs-Julia number can exist for this row. Building it is 18 to 24 h and an API change "
+       "that needs the maintainer's approval; it is not done here. ")
+COV_SIGNED = {
+    "covariance/COV-META-EXACT": {**D319, "ruling": "N3", "text": _N3 + "The R-only formula-grammar receipt stays cited as "
+                                  "non-binding context."},
+    "covariance/COV-META-LEGACY": {**D319, "ruling": "N3", "text": _N3 + "No Julia alias is added for R's deprecated "
+                                   "spelling. The R-only adapter receipt stays cited as non-binding context."},
+}
+
+
+# ---- N1 boundary context (overlay) -----------------------------------------------------------------
+# Maintainer ruling 2026-10-05 (D-319), N1 (GATES.md "Rulings of 2026-10-05"): a PUBLIC-R-BRIDGE case at which
+# gllvmTMB(engine = 'julia') refuses the structured term before any Julia call is non-binding context. On these rows
+# the native and formula-interface cases carry passing numeric comparison blocks from an accepted batch; the bridge
+# case moves to boundary_context_case_ids (still listed in executable_case_ids) with its receipt under
+# evidence.boundary_context_receipts, and the row binds on the rest. The checker (boundaryContext) re-validates it.
+COV_N1_CONTEXT = {f"covariance/{s}" for s in ("COV-ANIMAL-DEP", "COV-ANIMAL-INDEP", "COV-KERNEL-DEP", "COV-KERNEL-INDEP",
+                                              "COV-ORD-DEP", "COV-ORD-INDEP", "COV-ORD-INDEP-COMMON")}
+N1_TIER = ("numeric: the native and formula-interface case receipts carry R-vs-Julia comparison blocks pinned to P1 "
+           "from a batch whose verifier accepted the run; the PUBLIC-R-BRIDGE case (gllvmTMB engine='julia' refuses "
+           "the structured term before any Julia call) is non-binding boundary context under maintainer ruling "
+           "2026-10-05 (D-319), N1")
+
+
+def n1_overlay(row):
+    """Re-tier a bridge-boundary row under N1 (idempotent). Leaves the row as it is unless every non-bridge case
+    receipt is a passing numeric comparison from an accepted batch and every bridge case is an R boundary."""
+    ev = row.get("evidence") or {}
+    if row["evidence_tier"] == "partial_numeric_bridge_boundary":
+        paths = list(ev.get("non_binding_receipts") or [])
+    elif row["evidence_tier"] == "numeric" and row.get("boundary_context_case_ids"):
+        paths = list(ev.get("receipt") or []) + list(ev.get("boundary_context_receipts") or [])
+    else:
+        return
+    recs = {}
+    for p in paths:
+        j = json.loads((ROOT / p).read_text())
+        recs[j["case_id"]] = (p, j)
+    ids = row["executable_case_ids"]
+    if sorted(recs) != sorted(ids):
+        raise SystemExit(f"{row['source_id']}: N1 overlay needs one receipt per executable case")
+    ctx = [i for i in ids if i.endswith("-PUBLIC-R-BRIDGE")]
+    rest = [i for i in ids if i not in ctx]
+    if not ctx or not rest:
+        return
+    for i in ctx:
+        j = recs[i][1]
+        if j.get("evidence_kind") != "r_public_bridge_boundary" or j.get("verdict") != "R_BOUNDARY_UNCHANGED" or "comparison" in j:
+            return
+    for i in rest:
+        j = recs[i][1]
+        if (j.get("evidence_kind") != "numeric_r_vs_julia" or j.get("verdict") != "PASS"
+                or (j.get("batch_verifier") or {}).get("status") != "PASS" or "comparison" not in j):
+            return
+    row["boundary_context_case_ids"] = ctx
+    row["evidence_tier"] = "numeric"
+    row["evidence"] = {"receipt": [recs[i][0] for i in rest], "boundary_context_receipts": [recs[i][0] for i in ctx],
+                       "tier": N1_TIER}
+    row["measured_result"] = {"case_verdicts": {i: recs[i][1]["verdict"] for i in ids},
+                              "batch_verifier": {i: recs[i][1]["batch_verifier"]["status"] for i in rest},
+                              "row_verdict": "PASS"}
+
+
+def signed_overlay(row):
+    """Copy the maintainer's signed disposition onto `row` (idempotent). Evidence is not touched."""
+    s = COV_SIGNED[row["source_id"]]
+    row["disposition"] = "DISPOSITION-SIGNED"
+    row["signed_by"], row["signed_on"] = s["signed_by"], s["signed_on"]
+    row["signed_disposition"] = {"ruling": s["ruling"], "text": s["text"], "signature_source": s["signature_source"]}
+
+
+def twin_tier(sid):
+    """The tier text of a twin-bound row, naming that row's own receipt tool, twin test and fixture."""
+    _, test, fixture, tool = COV_TWINS[sid]
+    return (f"numeric: Julia values recomputed by {tool} with the same calls and settings as {test}, against "
+            f"R-at-P1 values copied from {fixture} (R fits that converged with a positive-definite Hessian), each "
+            "case within the tolerance asserted in that test. The formula-grammar batch case this row carried has "
+            "no fit number; its receipt is kept under non_binding_receipts and its ids under batch_case_ids")
+
+
+def twin_overlay(row):
+    """Bind `row` to its Julia twin receipt (idempotent: an already overlaid row is re-derived)."""
+    sid = row["source_id"]
+    rel = f"{TWIN_ROOT_REL}/{COV_TWINS[sid][0]}"
+    path = ROOT / rel
+    if not path.is_file():
+        return
+    rec = json.loads(path.read_text())
+    cases = rec.get("comparison", {}).get("cases") or []
+    ok = (rec.get("schema") == "true-parity-julia-twin-receipt/v1" and rec.get("source_ids") == [sid]
+          and rec.get("verdict") == "PASS" and rec.get("pin") == "P1" and rec.get("reference_commit") == P1_SHA
+          and rec.get("evidence_kind") == "julia_recomputed_vs_recorded_r"
+          and cases and all(c["abs_diff"] <= c["tolerance"] for c in cases))
+    if not ok:
+        raise SystemExit(f"{rel}: not a passing P1 Julia twin receipt for {sid}")
+    ev = row.get("evidence") or {}
+    mr = row.get("measured_result") or {}
+    prior_ids = ev.get("batch_case_ids", row["executable_case_ids"])
+    if row["evidence_tier"] not in ("r_only", "numeric") or (row["evidence_tier"] == "numeric" and "batch_case_ids" not in ev):
+        raise SystemExit(f"{sid}: twin overlay expects an r_only row (or one it already overlaid); got {row['evidence_tier']}")
+    case_ids = [c["case_id"] for c in cases]
+    row["executable_case_ids"] = case_ids
+    row["evidence_tier"] = "numeric"
+    row["measured_against"] = P1_SHA
+    row["evidence"] = {"receipt": [rel], "non_binding_receipts": ev.get("non_binding_receipts", []),
+                       "batch_case_ids": prior_ids, "tier": twin_tier(sid)}
+    row["measured_result"] = {"case_verdicts": mr.get("case_verdicts", {}), "twin_case_ids": case_ids,
+                              "twin_verdict": rec["verdict"], "row_verdict": rec["verdict"]}
+    row["scope_note"] = COV_SCOPE_NOTES[sid]
+
+
+def recount(rows):
+    """counts over this tool's own rows (PARTIAL_STALE + DANGLING), from their tiers."""
+    own = {f"covariance/{s}" for s in PARTIAL_STALE + DANGLING}
+    counts = {"numeric_pass": 0, "numeric_fail": 0, "numeric_held_batch_verifier_failed": 0,
+              "partial_numeric_bridge_boundary": 0, "r_only_needs_julia_surface": 0, "not_measured": 0}
+    key = {"numeric_held_batch_verifier_failed": "numeric_held_batch_verifier_failed",
+           "partial_numeric_bridge_boundary": "partial_numeric_bridge_boundary",
+           "r_only": "r_only_needs_julia_surface", "not_measured": "not_measured"}
+    for r in rows:
+        if r["source_id"] not in own:
+            continue
+        if r["evidence_tier"] == "numeric":
+            verdict = r["measured_result"].get("row_verdict", r["measured_result"].get("twin_verdict"))
+            counts["numeric_pass" if verdict == "PASS" else "numeric_fail"] += 1
+        else:
+            counts[key[r["evidence_tier"]]] += 1
+    return counts
+
+
+def derive_twins(casemap):
+    out = json.loads(json.dumps(casemap))
+    for row in out["rows"]:
+        if row["source_id"] in COV_TWINS:
+            twin_overlay(row)
+        if row["source_id"] in COV_N1_CONTEXT:
+            n1_overlay(row)
+        if row["source_id"] in COV_SIGNED:
+            signed_overlay(row)
+    out["counts"] = recount(out["rows"])
+    out["note"] = CASEMAP_NOTE
+    return out
+
+
+def apply_twins(check_only):
+    path = OUT / "case-map-covariance.json"
+    tracked = json.loads(path.read_text())
+    derived = derive_twins(tracked)
+    if check_only:
+        if derived != tracked:
+            stale = [r["source_id"] for r, o in zip(derived["rows"], tracked["rows"]) if r != o]
+            stale += [k for k in ("counts", "note") if derived[k] != tracked[k]]
+            raise SystemExit("case-map-covariance.json is stale against the twin receipts (run --apply-twins): "
+                             + ", ".join(stale))
+        print("CORE070_COVARIANCE_TWINS_OK", json.dumps(derived["counts"]))
+        return
+    write_json(path, derived)
+    print(json.dumps(derived["counts"]))
+
+
+def rebind_wave6(wave6_dir, allow_dirty):
+    """Ruling N2 (wave plan 2026-10-03, signed under D-319): re-read one wave6 run, re-run its verifier, rewrite the
+    wave6 case receipts this tool owns and re-tier their rows. Covariance: COV-KERNEL-FOLDED-UNIQUE and
+    COV-KERNEL-LATENT (case-map-covariance.json). Namespace: kernel_latent and kernel_scalar
+    (case-map-namespace.json; their case receipts go under receipts/namespace/cases/). A row binds (numeric) only
+    when its case passes and the batch verifier accepts the run; otherwise it is held exactly as main() holds it.
+    Nothing else in either map changes."""
+    head, dirty = git_state()
+    if dirty and not allow_dirty:
+        raise SystemExit("tracked files are modified outside the output directory; commit first or pass "
+                         "--allow-dirty: " + ", ".join(dirty))
+    copy_batch(wave6_dir, "wave6-conversion-p1",
+               ["*.json", "diagnostics.log", "julia-stderr.log", "julia-stdout.log", "*.tsv"])
+    tracked = REC / "wave6-conversion-p1"
+    verifier = run_verifier(["python3", "tools/core070_verify_wave6_conversion_batch.py", str(tracked)],
+                            "wave6-conversion-p1/verify.log", "CORE070_WAVE6_CONVERSION_STATE_OK")
+    common = batch_common_for(head, dirty)
+    rec = wave6_case_receipts(tracked, verifier, common, WAVE6_COV, REC / "cases")
+    rec.update(wave6_case_receipts(tracked, verifier, common, tuple(WAVE6_NS), NS_REC))
+
+    def tier(row, ids):
+        paths = [rec[i][0] for i in ids]
+        verdicts = {i: rec[i][2] for i in ids}
+        batch_ok = {i: rec[i][3] for i in ids}
+        row["executable_case_ids"] = list(ids)
+        row["measured_against"] = P1_SHA
+        if all(v == "PASS" for v in batch_ok.values()) and all(v == "PASS" for v in verdicts.values()):
+            row["evidence_tier"] = "numeric"
+            row["evidence"] = {"receipt": paths,
+                               "tier": "numeric: per-case receipts carry an R-vs-Julia comparison block pinned to P1"}
+            row["measured_result"] = {"case_verdicts": verdicts, "batch_verifier": batch_ok, "row_verdict": "PASS"}
+            row.pop("note", None)
+        else:
+            row["evidence_tier"] = "numeric_held_batch_verifier_failed"
+            row["evidence"] = {"non_binding_receipts": paths,
+                               "tier": "numeric comparison blocks pass, but the batch verifier rejected the run, so "
+                                       "the row does not bind"}
+            row["note"] = HELD_NOTE
+            row["measured_result"] = {"case_verdicts": verdicts, "batch_verifier": batch_ok}
+
+    cov_path = OUT / "case-map-covariance.json"
+    cov = json.loads(cov_path.read_text())
+    for row in cov["rows"]:
+        if row["source_id"] in ("covariance/COV-KERNEL-FOLDED-UNIQUE", "covariance/COV-KERNEL-LATENT"):
+            tier(row, row["executable_case_ids"])
+    cov["counts"] = recount(cov["rows"])
+    write_json(cov_path, cov)
+    ns_path = OUT / "case-map-namespace.json"
+    ns = json.loads(ns_path.read_text())
+    by_sid = {sid: cid for cid, sid in WAVE6_NS.items()}
+    for row in ns["rows"]:
+        if row["source_id"] in by_sid:
+            tier(row, [by_sid[row["source_id"]]])
+            row.pop("not_measured_reason", None)
+            row["reason"] = (f"Measured at P1 by the wave6 conversion batch ({by_sid[row['source_id']]}); ruling N2 "
+                             "(D-319) rewrote the batch's unrelated nobs expectation as integer equality.")
+    ns_path.write_text(json.dumps(ns, indent=1) + "\n")
+    print("wave6 verifier", verifier["status"], json.dumps({k: v[2] for k, v in rec.items()}))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--runparity", type=Path, required=True)
-    ap.add_argument("--default-modes", type=Path, required=True)
-    ap.add_argument("--wave6", type=Path, required=True)
-    ap.add_argument("--cov-batch", type=Path, required=True)
-    ap.add_argument("--bridge-tsv", type=Path, required=True)
-    ap.add_argument("--oracle-dir", type=Path, required=True)
-    ap.add_argument("--runtimes", type=Path, required=True)
+    ap.add_argument("--runparity", type=Path)
+    ap.add_argument("--default-modes", type=Path)
+    ap.add_argument("--wave6", type=Path)
+    ap.add_argument("--cov-batch", type=Path)
+    ap.add_argument("--bridge-tsv", type=Path)
+    ap.add_argument("--oracle-dir", type=Path)
+    ap.add_argument("--runtimes", type=Path)
+    ap.add_argument("--apply-twins", action="store_true",
+                    help="re-derive the Julia-twin rows of the tracked case-map-covariance.json (no run directory)")
+    ap.add_argument("--check", action="store_true",
+                    help="verify the tracked case-map-covariance.json twin rows re-derive unchanged; write nothing")
     ap.add_argument("--numeric-exceptions", type=Path, default=None,
                     help="JSON {source_id: {signed_by, signed_on, reason}}; signed_by must be the maintainer")
+    ap.add_argument("--rebind-wave6", type=Path, default=None,
+                    help="ruling N2: re-read one wave6 run and re-tier its two covariance and two namespace rows")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
+    if args.rebind_wave6 is not None:
+        rebind_wave6(args.rebind_wave6, args.allow_dirty)
+        return
+    if args.apply_twins or args.check:
+        apply_twins(check_only=args.check)
+        return
+    missing = [n for n in ("runparity", "default_modes", "wave6", "cov_batch", "bridge_tsv", "oracle_dir", "runtimes")
+               if getattr(args, n) is None]
+    if missing:
+        ap.error("required unless --apply-twins or --check: " + ", ".join("--" + m.replace("_", "-") for m in missing))
     runtimes = json.loads(args.runtimes.read_text())
     exceptions = load_exceptions(args.numeric_exceptions)
     head, dirty = git_state()
@@ -307,12 +745,7 @@ def main():
                                    str(args.cov_batch / "covariance-batch-results.json"), "--self-test"],
                                   "covariance-batch-p1/verify.log", "CORE070_COVARIANCE_BATCH_VERIFIED"),
     }
-    batch_common = {"pin": "P1", "reference_commit": P1_SHA, "gllvmtmb_version": "0.7.1",
-                    "oracle_build_receipt": f"{REC_REL}/oracle/build.json",
-                    "oracle_source_receipt": f"{REC_REL}/oracle/source.json",
-                    "glvmodels_commit": head, "glvmodels_worktree_dirty": dirty,
-                    "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
-                    "p0_reference_commit": P0_SHA}
+    batch_common = batch_common_for(head, dirty)
 
     receipts = {}  # case_id -> (path, kind)
 
@@ -328,7 +761,7 @@ def main():
     for r, entries, raw, group_ok in rows:
         cid = r["id"]
         cell = tomllib.loads((args.runparity / f"cell-{cid}.toml").read_text())
-        within = all(e["abs_diff"] <= e["tolerance"] for e in entries)
+        within = all(e.get("harness_norm_diff", e["abs_diff"]) <= e["tolerance"] for e in entries)
         checks = r["checks"]
         receipt = {
             "schema": "core070-covariance-p1-case-receipt/v1", "case_id": cid,
@@ -349,33 +782,7 @@ def main():
         receipts[cid] = (str(path.relative_to(ROOT)), "numeric", receipt["verdict"], verifiers["runparity"]["status"])
 
     # 2. wave6 kernel_latent cases (the two covariance ones)
-    w6_contract = json.loads((OUT / "wave6-conversion-batch-contract-p1.json").read_text())
-    w6_julia = json.loads((args.wave6 / "julia-results.json").read_text())
-    w6_oracle = json.loads((args.wave6 / "r-oracle.json").read_text())
-    w6_receipt = json.loads((args.wave6 / "receipt.json").read_text())
-    for cid in ("CORE070-WAVE6-KERNEL-LATENT-SINGLE-PSI-COVARIANCE", "CORE070-WAVE6-KERNEL-LATENT-MULTI-NAMESPACE"):
-        cc = next(c for c in w6_contract["cases"] if c["case_id"] == cid)
-        entry = wave6_entry(cid, w6_julia, w6_oracle, cc)
-        ok = entry["max_abs_diff"] <= entry["tolerance"] and w6_julia["cases"][cid]["pass"]
-        receipt = {
-            "schema": "core070-covariance-p1-case-receipt/v1", "case_id": cid, "source_id": cc["source_id"],
-            "verdict": "PASS" if ok else "FAIL", "evidence_kind": "numeric_r_vs_julia",
-            "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (whole 10-case batch)",
-            "r_call": cc["r_call"],
-            "raw": [f"{REC_REL}/wave6-conversion-p1/julia-results.json", f"{REC_REL}/wave6-conversion-p1/r-oracle.json"],
-            "batch_status": w6_receipt["status"], "batch_verifier": verifiers["wave6"],
-            "batch_status_note": ("The batch receipt reads FAIL and tools/core070_verify_wave6_conversion_batch.py rejects "
-                                  "the state because of one unrelated case, CORE070-WAVE6-POSTFIT-NOBS-MULTI "
-                                  "(postfit/POSTFIT-SURFACE-nobs.gllvmTMB_multi, kind own_receipt_defect): its frozen "
-                                  "expectation is that Julia nobs returns n = 80 while R returns p*n = 400; at the "
-                                  "GLLVModels head both return 400, so the recorded defect no longer reproduces. "
-                                  "The nine point cases, including this one, pass.") if w6_receipt["status"] != "PASS" else "",
-            **batch_common,
-            "comparison": {"pin": "P1", "cases": [entry]},
-        }
-        path = REC / "cases" / f"{cid}.json"
-        write_json(path, receipt)
-        receipts[cid] = (str(path.relative_to(ROOT)), "numeric", receipt["verdict"], verifiers["wave6"]["status"])
+    receipts.update(wave6_case_receipts(args.wave6, verifiers["wave6"], batch_common, WAVE6_COV, REC / "cases"))
 
     # 3. R-only formula-grammar batch (no Julia comparand)
     cb = json.loads((args.cov_batch / "covariance-batch-results.json").read_text())
@@ -465,7 +872,13 @@ def main():
                            measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok,
                                             "row_verdict": "PASS" if ok else "FAIL"})
                 if sid in exceptions:
-                    row["numeric_exception"] = exceptions[sid]
+                    # A signed exception waives only the batch verifier, never a
+                    # failed comparison: the checker judges max-abs, which is weaker
+                    # than the harness's norm test that the case verdict carries.
+                    if not ok:
+                        raise SystemExit(f"{sid}: refusing a receipt_status_exception on a row whose case "
+                                         f"verdicts are not all PASS: {verdicts}")
+                    row["receipt_status_exception"] = exceptions[sid]
                 counts["numeric_pass" if ok else "numeric_fail"] += 1
             else:
                 tier = "partial_numeric_bridge_boundary" if "numeric" in kinds else "r_only"
@@ -474,27 +887,33 @@ def main():
                                      "tier": ("native and formula cases carry numeric R-vs-Julia comparison blocks; the "
                                               "PUBLIC-R-BRIDGE case is an R-side boundary (gllvmTMB engine='julia' refuses the "
                                               "structured term), so the row as a whole has no numeric twin and does not bind")
-                                     if tier != "r_only" else
-                                     ("R-only formula-grammar structure check re-run at P1; no Julia comparand exists in "
-                                      "this harness, so the row needs a Julia surface before it can bind")},
+                                     if tier != "r_only" else R_ONLY_TIER},
                            measured_result={"case_verdicts": verdicts})
                 counts["partial_numeric_bridge_boundary" if tier != "r_only" else "r_only_needs_julia_surface"] += 1
         out_rows.append(row)
+
+    for row in out_rows:  # Julia fit-level twins (see the overlay block above)
+        if row["source_id"] in COV_TWINS:
+            twin_overlay(row)
+        if row["source_id"] in COV_N1_CONTEXT:
+            n1_overlay(row)
+        if row["source_id"] in COV_SIGNED:
+            signed_overlay(row)
+    counts = recount(out_rows)
+
+    # Rows this tool does not generate (e.g. the C3 campaign rows added under #684 item 4) are
+    # carried over unchanged, so regenerating the 17 rows never drops another writer's rows.
+    generated = {r["source_id"] for r in out_rows}
+    prior = OUT / "case-map-covariance.json"
+    if prior.is_file():
+        out_rows += [r for r in json.loads(prior.read_text())["rows"] if r["source_id"] not in generated]
 
     casemap = {
         "schema": 1, "reference_commit": P1_SHA,
         "scope": "covariance family: the 17 rows the P1 carry scan lists as PARTIAL_STALE_AT_P1 (7) or DANGLING (10); "
                  "the 22 NOT_BOUND_AT_P0 covariance rows had no P0 evidence and are out of scope here",
         "glvmodels_commit": head,
-        "note": ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
-                 "PARITY_CASEMAP pointing at this file. Classifications are carried from "
-                 "docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows "
-                 "whose every executable case id carries a numeric R-vs-Julia comparison block cite evidence.receipt; "
-                 "rows with an R-only or R-boundary case cite evidence.non_binding_receipts instead, so they read as "
-                 "not bound under both the current checker and the numeric-tier rule proposed in PR #561. "
-                 "A row whose numeric cases pass but whose batch verifier rejected the run is held back the same way "
-                 "(evidence_tier numeric_held_batch_verifier_failed) unless a maintainer-signed numeric_exception is "
-                 "recorded on it."),
+        "note": CASEMAP_NOTE,
         "generator": "tools/core070_covariance_p1_receipts.py",
         "counts": counts, "runtimes_seconds": runtimes,
         "rows": out_rows,

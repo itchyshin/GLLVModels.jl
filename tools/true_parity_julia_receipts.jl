@@ -1661,8 +1661,10 @@ end
 #     `data` rows (offset and missing-response handling) whose batch cases were R helper
 #     replays with no fit number, bound to fit-level twins: R-at-P1 fits recorded in
 #     test/fixtures/data_twins_p1.toml against Julia fits of the same data. Weights rows are not
-#     here (Julia refuses weights= on every fitter); the stored/predict-offset, mixed-family and
-#     modelled-predictor rows have no Julia surface to fit.
+#     here (Julia refuses weights= on every fitter); the legacy-fit and newdata predict-offset
+#     rows have no Julia surface to fit (the stored-offset row has its own twin, section 12b; the
+#     modelled-predictor rows theirs, section 12c; the all-count-families offset row its own,
+#     section 12d; the mixed-family offset row its own, section 12e).
 # =============================================================================================
 function _dt_load(path, col, p, n)
     hdr = split(readline(path), ",")
@@ -1729,9 +1731,9 @@ function receipts_data_twins()
     f0 = fit_gllvm(Yc; family = Poisson(), K = 1)
     twin("OFF-NONE", "data/DATA-OFF-NONE", "pois_none", f0, cite(tp, "f0 = fit_gllvm(Yc; family = Poisson(), K = 1)"),
         base * " No offset on either side: replaces the helper replay that a NULL offset gives rep(0, n); here the whole fit agrees.")
-    fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = fill(log(2), p, n))
-    twin("OFF-SCALAR", "data/DATA-OFF-SCALAR", "pois_scalar", fs, cite(tp, "fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = fill(log(2), p, n))"),
-        base * " R: + offset(log(2)); Julia: offset = fill(log(2), 6, 150). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number).")
+    fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log(2))
+    twin("OFF-SCALAR", "data/DATA-OFF-SCALAR", "pois_scalar", fs, cite(tp, "fs = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log(2))"),
+        base * " R: + offset(log(2)), a constant broadcast to every row; Julia: the scalar offset = log(2), which fit_gllvm broadcasts to the 6 x 150 matrix fill(log(2), 6, 150) (a scalar offset returned logLik -Inf before that was fixed). A constant offset is absorbed by the intercepts, so the logLik equals the no-offset fit and the intercepts are shifted by -log(2) in both engines (the intercept case carries the discriminating number).")
     fe = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log.(E))
     twin("OFF-EXPOSURE", "data/DATA-OFF-EXPOSURE", "pois_exposure", fe, cite(tp, "fe = fit_gllvm(Yc; family = Poisson(), K = 1, offset = log.(E))"),
         base * " R: + offset(log(e)) with e = the data column e (varies by cell, 0.5 to 3); Julia: offset = log.(E). The exposure offset moves the logLik by more than 150 against the no-offset fit.")
@@ -1743,13 +1745,9 @@ function receipts_data_twins()
     twin("MISS-INCLUDE", "data/DATA-MISS-INCLUDE", "pois_na_include", fi, cite(tp, "fi = fit_gllvm(Yc; family = Poisson(), K = 1, mask = .!ismissing.(Ona))"),
         base * " 12 response cells are NA (column value_na). R: missing = miss_control(response = \"include\") (cells kept and masked out of the likelihood); Julia: mask = the observed-cell matrix. R documents that include reaches the drop optimum (asserted in the generator and the test); the Julia mask fit equals the Julia missing-cell fit to 1e-8 (asserted in the test).")
 
-    nb2 = joinpath(ROOT, dir, "data_twins_nb2_p1_data.csv"); nb1 = joinpath(ROOT, dir, "data_twins_nb1_p1_data.csv")
-    f2 = fit_gllvm(_dt_counts(_dt_load(nb2, "value", p, n)); family = NegativeBinomial(1.0, 0.5), disp_group = :species, K = 1,
-        offset = log.(Float64.(_dt_load(nb2, "e", p, n))))
-    f2.group == collect(1:p) || fail("nb2 dispersion is not per trait")
-    twin("OFF-ALL-COUNT", "data/DATA-OFF-ALL-COUNT", "nb2_exposure", f2, cite(tp, "f2 = fit_gllvm(_dt_counts(_dt_load(nb2"),
-        "nbinom2 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides. Scope: every trait is one count family (the batch case mixed three count families on three rows, which Julia has no fit for), so this exercises a non-Poisson count family accepting a nonzero offset, not a family mix.";
-        phi = (:r_group, "@test isapprox(f2.r_group, Float64.(d[\"phi\"])"))
+    # The nbinom2 exposure fit of this fixture (test/test_data_twins_p1.jl, nb2_exposure) is no longer a
+    # receipt: data/DATA-OFF-ALL-COUNT is bound by its three-family twin (section 12d).
+    nb1 = joinpath(ROOT, dir, "data_twins_nb1_p1_data.csv")
     f1 = fit_gllvm(_dt_counts(_dt_load(nb1, "value", p, n)); family = NB1(), K = 1, offset = log.(Float64.(_dt_load(nb1, "e", p, n))))
     twin("OFF-NB1", "data/DATA-OFF-NB1", "nb1_exposure", f1, cite(tp, "f1 = fit_gllvm(_dt_counts(_dt_load(nb1"),
         "nbinom1 one-axis latent fit, p = 6, n = 150 (sha256 checked), R: family = nbinom1() + offset(log(e)), converged with a positive-definite Hessian; same optimum (logLik within 1e-6, asserted in the test). Dispersion is per trait on both sides (R phi_nbinom1, Julia NB1 phi, variance mu (1 + phi)).";
@@ -1768,6 +1766,487 @@ function receipts_data_twins()
         mkcase("P1-JULIA-DATA-GAUSS_ZERO-INTERCEPTS", "trait intercepts (6 values) of the Gaussian fit with a zero offset",
             "$fxp [gauss_zero.beta]", "coef(fg), fit as at " * cite(tp, "fg = fit_gllvm(Y; family = Normal(), K = 2, offset = zeros(p, ng))"),
             Float64.(g["beta"]), coef(fg), test_tolerance(tp, "@test isapprox(coef(fg), Float64.(g[\"beta\"])"), noteG)]))
+    return out
+end
+
+# =============================================================================================
+# 12b. predict-offset twin   test/test_predict_offset_twin_p1.jl
+#     data/DATA-OFF-TRAIN-STORED: a fit keeps its training offset and the training-row prediction
+#     uses it. R-at-P1 values (the stored .gllvmTMB_offset_vec and predict(fit, type = "link")$est
+#     of the Poisson exposure fit) recorded in test/fixtures/predict_offset_twin_p1.toml, against
+#     the Julia fit's stored `fit.offset` and `predict(fit, Y; type = :link)`.
+# =============================================================================================
+function receipts_predict_offset_twin()
+    ORIGIN = "itchyshin/GLLVModels.jl branch claude/w2-predict-offset (W2-4b)"
+    fxp = "test/fixtures/predict_offset_twin_p1.toml"
+    tp = "test/test_predict_offset_twin_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("predict-offset twin fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    sec = "pois_exposure_stored"
+    d = fx[sec]
+    datap = "test/fixtures/" * d["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+    (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+    csv = joinpath(ROOT, datap)
+    Y = Int.(Float64.(_dt_load(csv, "value", p, n)))
+    E = Float64.(_dt_load(csv, "e", p, n))
+    fe = fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E))
+    fe.converged || fail("$sec Julia fit did not converge")
+    src = cite(tp, "fe = fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E))")
+    wide(v) = reshape(Float64.(v), p, n)
+    note = "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE twin); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)); same optimum (logLik within 1e-6). The R batch case read back a vector written into a mock fit object (tmb_data\$offset_vec <- c(1, 2, 3)); here the stored offset is the one a real fit kept, and the training-row link predictor shows it is used. Scope: training rows at the training offset only. R's newdata prediction on the training units (offset expression re-evaluated against newdata, training units' latent modes kept) is Julia's predict(fit, Y; offset = O_new, modes = :training), compared in the DATA-OFF-PREDICT twin, not here. Before Julia fits kept their offset, the training-row link predictor missed R's by 1.89 (the offset-free mode search and predictor)."
+    cs = Case[
+        mkcase("P1-JULIA-DATA-POIS_EXPOSURE_STORED-LOGLIK", "maximised logLik of the Poisson exposure fit",
+            "$fxp [$sec.loglik]", "fe.loglik, fit as at $src",
+            Float64(d["loglik"]), fe.loglik, test_tolerance(tp, "@test isapprox(fe.loglik, Float64(d[\"loglik\"])"), note),
+        mkcase("P1-JULIA-DATA-POIS_EXPOSURE_STORED-OFFSET", "stored training offset (900 values, long order): R .gllvmTMB_offset_vec(fit), Julia fit.offset",
+            "$fxp [$sec.offset_vec]", "fe.offset, fit as at $src",
+            wide(d["offset_vec"]), fe.offset, test_tolerance(tp, "@test isapprox(fe.offset, R_off"), note),
+        mkcase("P1-JULIA-DATA-POIS_EXPOSURE_STORED-PREDICT-LINK", "training-row link predictor at the latent modes, offset included (900 values): R predict(fit, type = \"link\")\$est, Julia predict(fit, Y; type = :link)",
+            "$fxp [$sec.eta_link]", "predict(fe, Y; type = :link), fit as at $src",
+            wide(d["eta_link"]), predict(fe, Y; type = :link), test_tolerance(tp, "@test isapprox(predict(fe, Y; type = :link), R_eta"), note)]
+    return ["data-twins/OFF-TRAIN-STORED.json" => Receipt(["data/DATA-OFF-TRAIN-STORED"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs)]
+end
+
+# =============================================================================================
+# 12b2. off-predict twin   test/test_off_predict_twin_p1.jl
+#     data/DATA-OFF-PREDICT (maintainer ruling 2026-10-05, vault D-319, option (b)): a prediction on
+#     the training units with a new offset, keeping the training units' latent modes. R-at-P1 values
+#     (predict(fit, newdata = training rows with e = e_new, type = "link")$est of the Poisson exposure
+#     fit) recorded in test/fixtures/off_predict_twin_p1.toml, against the Julia fit's
+#     predict(fit, Y; type = :link, offset = log.(E_new), modes = :training).
+# =============================================================================================
+function receipts_off_predict_twin()
+    ORIGIN = "itchyshin/GLLVModels.jl branch claude/rulings-c6-predict (maintainer ruling 2026-10-05, D-319)"
+    fxp = "test/fixtures/off_predict_twin_p1.toml"
+    tp = "test/test_off_predict_twin_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("off-predict twin fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    sec = "pois_exposure_new_offset"
+    d = fx[sec]
+    datap = "test/fixtures/" * d["data_file"]
+    newp = "test/fixtures/" * d["new_offset_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == d["data_sha256"] || fail("$sec data csv drifted")
+    bytes2hex(sha256(read(joinpath(ROOT, newp)))) == d["new_offset_sha256"] || fail("$sec new-offset csv drifted")
+    (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+    csv = joinpath(ROOT, datap)
+    Y = Int.(Float64.(_dt_load(csv, "value", p, n)))
+    E = Float64.(_dt_load(csv, "e", p, n))
+    Enew = Float64.(_dt_load(joinpath(ROOT, newp), d["new_offset_column"], p, n))
+    fe = fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E))
+    fe.converged || fail("$sec Julia fit did not converge")
+    src = cite(tp, "fe = fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E))")
+    wide(v) = reshape(Float64.(v), p, n)
+    note = "Poisson, K = 1, p = 6, n = 150 (sha256 checked; the data of the DATA-OFF-EXPOSURE and DATA-OFF-TRAIN-STORED twins); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian, then predict(fit, newdata = nd, type = \"link\")\$est with nd the training rows and e replaced by e_new (runif 0.5 to 3, seed 20261006; off_predict_twin_p1_data.csv, sha256 checked). R re-evaluates the stored offset expression on newdata and keeps the training units' latent modes (asserted in the generator: the new prediction minus log(e_new) equals the training prediction minus log(e) to 1e-12). Julia: fit_gllvm(Y; family = Poisson(), K = 1, offset = log.(E)), then predict(fit, Y; type = :link, offset = log.(E_new), modes = :training), the path added under maintainer ruling 2026-10-05 (D-319) option (b): eta = beta + O_new + Lambda z_train. Same optimum (logLik within 1e-6). The default modes = :refit (modes re-solved at the new offset) is a different quantity and misses R by more than 0.1 (asserted in the test). Scope: the training units only; new units with no training mode are not compared."
+    cs = Case[
+        mkcase("P1-JULIA-DATA-OFF-PREDICT-LOGLIK", "maximised logLik of the Poisson exposure fit",
+            "$fxp [$sec.loglik]", "fe.loglik, fit as at $src",
+            Float64(d["loglik"]), fe.loglik, test_tolerance(tp, "@test isapprox(fe.loglik, Float64(d[\"loglik\"])"), note),
+        mkcase("P1-JULIA-DATA-OFF-PREDICT-NEW-OFFSET-LINK", "link predictor on the training units with a new offset, training modes kept (900 values): R predict(fit, newdata = nd, type = \"link\")\$est, Julia predict(fit, Y; type = :link, offset = log.(E_new), modes = :training)",
+            "$fxp [$sec.eta_link_new_offset]", "predict(fe, Y; type = :link, offset = log.(Enew), modes = :training), fit as at $src",
+            wide(d["eta_link_new_offset"]), predict(fe, Y; type = :link, offset = log.(Enew), modes = :training),
+            test_tolerance(tp, "@test isapprox(eta_new, R_new"), note)]
+    return ["data-twins/OFF-PREDICT.json" => Receipt(["data/DATA-OFF-PREDICT"], ORIGIN, [fxp, datap, newp], [tp], NOT_A_FIXTURE_PAIR, cs)]
+end
+
+# =============================================================================================
+# 12c. data twins 2   test/test_data_twins_2_p1.jl
+#     data/DATA-MISS-MODEL, data/DATA-MISS-BOTH and namespace S3method/imputed,gllvmTMB: a modelled
+#     missing predictor (mi(x), miss_control(predictor = "model")), alone and with a response mask
+#     (miss_control("include", "model")). R-at-P1 Gaussian fits recorded in
+#     test/fixtures/data_twins_2_p1.toml, against fit_gaussian_mi_fiml and imputed(fit, x).
+# =============================================================================================
+function receipts_data_twins_2()
+    ORIGIN = "itchyshin/GLLVModels.jl branch claude/w2-miss-twins (W2-4a)"
+    fxp = "test/fixtures/data_twins_2_p1.toml"
+    tp = "test/test_data_twins_2_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("data twins 2 fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("data twins 2 data csv drifted")
+    csv = joinpath(ROOT, datap)
+    x = _dt_load(csv, "x", p, n)[1, :]
+    z = reshape(Float64.(_dt_load(csv, "z", p, n)[1, :]), n, 1)
+    miss_units = Int.(fx["missing_x_units"])
+    findall(ismissing, x) == miss_units || fail("data twins 2: missing x units differ from the fixture")
+    base = "Gaussian, p = 4, n = 120 units (sha256 checked), x NA at 18 units; R: value ~ 0 + trait + mi(x) + latent(0 + trait | unit, d = 1, unique = FALSE), impute = list(x = x ~ z), family = gaussian(), converged with a positive-definite Hessian; Julia: fit_gaussian_mi_fiml(Y, x; K = 1, Z = z), the same model (shared slope on x, covariate model x ~ N(mu_x + gamma z, sigma_x^2), one latent factor, common residual SD) with the missing x integrated out in closed form where R uses the Laplace approximation (exact for this Gaussian model). The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+    out = Pair{String,Receipt}[]
+    imputed_cases = Case[]
+    for (sec, col, sid, rel, v, extra) in (
+            ("miss_model", "value", "data/DATA-MISS-MODEL", "MISS-MODEL", "fm",
+             " Every response observed; R: missing = miss_control(predictor = \"model\") (response = \"drop\", engine = \"laplace\" by default)."),
+            ("miss_both", "value_na", "data/DATA-MISS-BOTH", "MISS-BOTH", "fb",
+             " 44 response cells NA (column value_na: 35 drawn at random, one cell of a unit whose x is missing, and every response of unit 5, x observed, and unit 17, x missing). R: missing = miss_control(response = \"include\", predictor = \"model\"); Julia: the same cells as `missing` entries of Y (observed-data likelihood: unit 5 contributes only its covariate density, unit 17 nothing, and its conditional mode is the covariate-model mean). R's response = \"drop\" removes units 5 and 17 altogether and is not compared here (the twin test asserts that the Julia fit without them reaches it)."))
+        d = fx[sec]
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        Yraw = _dt_load(csv, col, p, n)
+        Y = any(ismissing, Yraw) ? Yraw : Float64.(Yraw)
+        f = fit_gaussian_mi_fiml(Y, x; K = 1, Z = z)
+        f.converged || fail("$sec Julia fit did not converge")
+        src = cite(tp, "$v = fit_gaussian_mi_fiml(")
+        note = base * extra
+        S = uppercase(sec)
+        cs = Case[
+            mkcase("P1-JULIA-DATA-$S-LOGLIK", "maximised logLik of the $sec fit",
+                "$fxp [$sec.loglik]", "$v.logLik, fit as at $src",
+                Float64(d["loglik"]), f.logLik, test_tolerance(tp, "@test isapprox($v.logLik, Float64(d"), note),
+            mkcase("P1-JULIA-DATA-$S-INTERCEPTS", "trait intercepts (4 values) of the $sec fit",
+                "$fxp [$sec.intercepts]", "$v.a, fit as at $src",
+                Float64.(d["intercepts"]), f.a, test_tolerance(tp, "@test isapprox($v.a, "), note),
+            mkcase("P1-JULIA-DATA-$S-B-X", "slope on the modelled predictor x of the $sec fit",
+                "$fxp [$sec.b_x]", "$v.b_x, fit as at $src",
+                Float64(d["b_x"]), f.b_x, test_tolerance(tp, "@test isapprox($v.b_x, "), note),
+            mkcase("P1-JULIA-DATA-$S-COVARIATE-MODEL", "covariate-model coefficients (mu_x, gamma on z) of the $sec fit",
+                "$fxp [$sec.mu_x, $sec.gamma_z]", "vcat($v.μ_x, $v.γ), fit as at $src",
+                [Float64(d["mu_x"]), Float64(d["gamma_z"])], vcat(f.μ_x, f.γ), test_tolerance(tp, "@test isapprox(vcat($v.μ_x, $v.γ)"), note),
+            mkcase("P1-JULIA-DATA-$S-SDS", "covariate-model SD sigma_x and residual SD sigma_eps of the $sec fit",
+                "$fxp [$sec.sigma_x, $sec.sigma_eps]", "[$v.σ_x, $v.σ_eps], fit as at $src",
+                [Float64(d["sigma_x"]), Float64(d["sigma_eps"])], [f.σ_x, f.σ_eps], test_tolerance(tp, "@test isapprox([$v.σ_x, $v.σ_eps]"), note),
+            mkcase("P1-JULIA-DATA-$S-LAMBDA-LAMBDAT", "Lambda Lambda' (4 x 4) of the $sec fit",
+                "$fxp [$sec.LLt]", "$v.Λ * $v.Λ', fit as at $src",
+                reshape(Float64.(d["LLt"]), p, p), f.Λ * f.Λ', test_tolerance(tp, "@test isapprox($v.Λ * $v.Λ'"), note)]
+        push!(out, "data-twins/$rel.json" => Receipt([sid], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs))
+        im = imputed(f, x)
+        iv = v == "fm" ? "im" : "ib"
+        im.level[.!im.observed] == Int.(d["imputed_level_id"]) || fail("$sec imputed(): missing units differ from R's level_id")
+        push!(imputed_cases, mkcase("P1-JULIA-IMPUTED-$S-ESTIMATE",
+            "imputed() conditional modes of the 18 missing x values, $sec fit, in unit order (R level_id = Julia level, equal, asserted in the test)",
+            "$fxp [$sec.imputed_estimate] (R imputed(fit)\$estimate, rows = \"missing\")",
+            "imputed($v, x).estimate at the missing units, fit as at $src",
+            Float64.(d["imputed_estimate"]), im.estimate[.!im.observed],
+            test_tolerance(tp, "@test isapprox($iv.estimate[.!$iv.observed]"),
+            note * " R's estimate is the conditional mode of x_mis at the joint optimum; Julia's is E[x_s | observed y_s] at its optimum, the same quantity for this Gaussian model. R's std_error (sdreport) is recorded in the fixture and not compared: Julia's imputed() reports none."))
+    end
+    push!(out, "namespace-numeric/imputed.json" => Receipt(["namespace/S3method/imputed,gllvmTMB"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, imputed_cases))
+    return out
+end
+
+# =============================================================================================
+# 12d. off-all-count twin   test/test_off_all_count_twin_p1.jl
+#     data/DATA-OFF-ALL-COUNT (a family-id admission-set case): an exposure offset on each count
+#     family the R batch case admits (family ids 5, 10, 11: nbinom2, truncated Poisson, truncated
+#     nbinom2), one fit each. R-at-P1 fits recorded in test/fixtures/off_all_count_twin_p1.toml, against
+#     fit_gllvm(Y; family, K = 1, offset = log.(E)) on the same data.
+# =============================================================================================
+function receipts_off_all_count()
+    ORIGIN = "itchyshin/GLLVModels.jl#798"
+    fxp = "test/fixtures/off_all_count_twin_p1.toml"
+    tp = "test/test_off_all_count_twin_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("off-all-count twin fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("off-all-count data csv drifted")
+    csv = joinpath(ROOT, datap)
+    src = cite(tp, "f = fit_gllvm(Y; family = fam, K = 1, offset = log.(E), kw...)")
+    base = "p = 6, n = 150 (sha256 checked), one data set per family; R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE), converged with a positive-definite Hessian; Julia: fit_gllvm(Y; family, K = 1, offset = log.(E)). The row is a family-id admission-set case: the R batch case gll_prepare_offset(quote(e), c(5L, 10L, 11L), ...) admits a nonzero offset for count family ids 5, 10, 11, and the case plan's comparand is the set of families admitted (docs/dev-log/core070/data-required-case-plan.json); each admitted family is twinned here with an exposure offset. Fitting several families with an offset in one model is DATA-OFF-MIXED's obligation. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also evaluates the Julia marginal without the offset at the fitted parameters (no refit) and asserts it is lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+    cs = Case[]
+    for (sec, fid, fam, kw, dfld, label) in (
+            ("nb2", 5, NegativeBinomial(1.0, 0.5), (; disp_group = :species), :r_group,
+             "nbinom2 (family id 5), per-trait dispersion on both sides (R exp(log_phi_nbinom2), Julia r_group with disp_group = :species)."),
+            ("tpois", 10, TruncatedPoisson(), (;), nothing,
+             "truncated Poisson (family id 10), y >= 1, log link on the untruncated mean on both sides."),
+            ("tnb2", 11, TruncatedNegBin2(), (; disp_group = :species), :r,
+             "truncated nbinom2 (family id 11), y >= 1, per-trait dispersion on both sides (R exp(log_phi_truncnb2), Julia r of fit_truncated_nbinom2_gllvm_pertrait via disp_group = :species); drawn with size 2, every R dispersion inside (1e-3, 1e3), so no trait is at the Poisson limit."))
+        d = fx[sec]
+        d["family_id"] == fid || fail("$sec: family id is not $fid")
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        Y = Int.(Float64.(_dt_load(csv, d["response_column"], p, n)))
+        E = Float64.(_dt_load(csv, d["exposure_column"], p, n))
+        f = fit_gllvm(Y; family = fam, K = 1, offset = log.(E), kw...)
+        f.converged || fail("$sec Julia fit did not converge")
+        note = label * " " * base
+        S = uppercase(sec)
+        push!(cs, mkcase("P1-JULIA-DATA-OFF-ALL-COUNT-$S-LOGLIK", "maximised logLik of the $sec exposure-offset fit",
+            "$fxp [$sec.loglik]", "f.loglik, fit as at $src",
+            Float64(d["loglik"]), f.loglik, test_tolerance(tp, "@test isapprox(f.loglik, Float64(d[\"loglik\"])"), note))
+        push!(cs, mkcase("P1-JULIA-DATA-OFF-ALL-COUNT-$S-INTERCEPTS", "trait intercepts (6 values) of the $sec fit; the offset is not absorbed into them",
+            "$fxp [$sec.beta]", "f.β, fit as at $src",
+            Float64.(d["beta"]), f.β, test_tolerance(tp, "@test isapprox(f.β, Float64.(d[\"beta\"])"), note))
+        push!(cs, mkcase("P1-JULIA-DATA-OFF-ALL-COUNT-$S-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6) of the $sec fit",
+            "$fxp [$sec.lambda_lambdat]", "f.Λ * f.Λ', fit as at $src",
+            _ns_mat(d["lambda_lambdat"], p, p), f.Λ * f.Λ', test_tolerance(tp, "@test isapprox(f.Λ * f.Λ'"), note))
+        if dfld !== nothing
+            push!(cs, mkcase("P1-JULIA-DATA-OFF-ALL-COUNT-$S-DISPERSION", "per-trait dispersion (6 values) of the $sec fit",
+                "$fxp [$sec.phi]", "f.$(dfld), fit as at $src",
+                Float64.(d["phi"]), getproperty(f, dfld), test_tolerance(tp, "@test isapprox(getproperty(f, dfld), Float64.(d[\"phi\"])"), note))
+        end
+    end
+    return ["data-twins/OFF-ALL-COUNT.json" => Receipt(["data/DATA-OFF-ALL-COUNT"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs)]
+end
+
+# =============================================================================================
+# 12e. off-mixed twin   test/test_off_mixed_twin_p1.jl
+#     data/DATA-OFF-MIXED: one mixed-family fit (poisson / gaussian / nbinom2 traits, family ids 2, 0,
+#     5) with an exposure offset that is zero on the gaussian trait and nonzero on the count traits.
+#     R-at-P1 fit recorded in test/fixtures/off_mixed_twin_p1.toml, against
+#     fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)) on the same data.
+# =============================================================================================
+function receipts_off_mixed()
+    ORIGIN = "itchyshin/GLLVModels.jl#808"
+    fxp = "test/fixtures/off_mixed_twin_p1.toml"
+    tp = "test/test_off_mixed_twin_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("off-mixed twin fixture is not pinned at P1")
+    (fx["converged"] === true && fx["pd_hessian"] === true) || fail("off-mixed R fit not converged with a PD Hessian; not a valid twin")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("off-mixed data csv drifted")
+    csv = joinpath(ROOT, datap)
+    famnames = String.(fx["families"])
+    ids = Dict("poisson" => 2, "gaussian" => 0, "nbinom2" => 5)
+    [ids[k] for k in famnames] == Int.(fx["family_ids"]) || fail("off-mixed family ids do not match the family names")
+    Set(fx["family_ids"]) == Set([2, 0, 5]) || fail("off-mixed fixture does not carry family ids 2, 0, 5")
+    mk = Dict("poisson" => () -> Poisson(), "gaussian" => () -> Normal(), "nbinom2" => () -> NegativeBinomial(1.0, 0.5))
+    fams = [mk[k]() for k in famnames]
+    Y = Float64.(_dt_load(csv, fx["response_column"], p, n))
+    O = log.(Float64.(_dt_load(csv, fx["exposure_column"], p, n)))
+    gauss = findall(==("gaussian"), famnames)
+    nb = findall(==("nbinom2"), famnames)
+    (length(gauss) == 1 && all(iszero, O[gauss, :]) && all(!iszero, O[setdiff(1:p, gauss), :])) ||
+        fail("off-mixed offset is not zero on the one gaussian trait and nonzero on the count traits")
+    f = fit_mixed_gllvm(Y; families = fams, K = 1, offset = O)
+    f.converged || fail("off-mixed Julia fit did not converge")
+    f0 = fit_mixed_gllvm(Y; families = fams, K = 1)
+    f0.converged || fail("off-mixed Julia no-offset fit did not converge")
+    src = cite(tp, "f = fit_mixed_gllvm(Y; families = fams, K = 1, offset = O)")
+    src0 = cite(tp, "f0 = fit_mixed_gllvm(Y; families = fams, K = 1)")
+    note = "p = 6, n = 150 (sha256 checked), one mixed-family data set with traits poisson, gaussian, nbinom2, poisson, nbinom2, poisson (family ids 2, 0, 5); R: value ~ 0 + trait + offset(log(e)) + latent(0 + trait | unit, d = 1, unique = FALSE) with family = list(...) by trait, converged with a positive-definite Hessian; Julia: fit_mixed_gllvm(Y; families, K = 1, offset = log.(E)). The exposure e is exactly 1 on the gaussian trait (offset zero) and varies by cell on the count traits (offset nonzero), the admission the R batch case gll_prepare_offset(quote(c(1,0,4)), c(2L,0L,5L), ...) asserts row-wise. One gaussian trait only: gllvmTMB shares one sigma across the gaussian traits of a mixed fit and Julia gives each Normal trait its own, which coincide with one. The offset varies by cell, so intercept parity within 1e-4 is the evidence it is applied on both sides; the twin test also asserts that the Julia marginal without the offset at the fitted parameters is lower by more than 1, and that the offset-free refit scores lower by more than 1. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'. The refusal half of the row-wise rule is asserted in the twin test, not as a case here (no number to compare, and the row is outside the behavioural tier's frozen list): R refuses the same fit with a nonzero offset on the gaussian trait (first line of its message in the fixture, [nonzero_gaussian_offset_refusal]) and fit_mixed_gllvm raises an ArgumentError naming the trait and family; a zero offset on that trait is accepted on both sides."
+    startswith(get(fx, "nonzero_gaussian_offset_refusal", ""), "offsets are supported for count families") ||
+        fail("off-mixed fixture does not record R's refusal of a nonzero gaussian offset")
+    Obad = copy(O); Obad[only(gauss), :] .= 0.5
+    refused = try
+        fit_mixed_gllvm(Y; families = fams, K = 1, offset = Obad); false
+    catch e
+        e isa ArgumentError || rethrow()
+        true
+    end
+    refused || fail("off-mixed: fit_mixed_gllvm accepted a nonzero offset on the gaussian trait")
+    cs = Case[]
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-LOGLIK", "maximised logLik of the mixed-family exposure-offset fit",
+        "$fxp [loglik]", "f.loglik, fit as at $src",
+        Float64(fx["loglik"]), f.loglik, test_tolerance(tp, "@test isapprox(f.loglik, Float64(fx[\"loglik\"])"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-INTERCEPTS", "trait intercepts (6 values, each on its trait's link scale); the offset is not absorbed into them",
+        "$fxp [beta]", "f.β, fit as at $src",
+        Float64.(fx["beta"]), f.β, test_tolerance(tp, "@test isapprox(f.β, Float64.(fx[\"beta\"])"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6) of the mixed-family fit",
+        "$fxp [lambda_lambdat]", "f.Λ * f.Λ', fit as at $src",
+        _ns_mat(fx["lambda_lambdat"], p, p), f.Λ * f.Λ', test_tolerance(tp, "@test isapprox(f.Λ * f.Λ'"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-NB2-DISPERSION", "per-trait nbinom2 dispersion (traits t3 and t5; R exp(log_phi_nbinom2), Julia NegativeBinomial r)",
+        "$fxp [phi]", "f.dispersion[nb], fit as at $src",
+        Float64.(fx["phi"]), f.dispersion[nb], test_tolerance(tp, "@test isapprox(f.dispersion[nb]"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-GAUSSIAN-SIGMA", "residual sd of the gaussian trait t2 (R exp(log_sigma_eps), Julia Normal sigma)",
+        "$fxp [sigma]", "f.dispersion[only(gauss)], fit as at $src",
+        Float64(fx["sigma"]), f.dispersion[only(gauss)], test_tolerance(tp, "@test isapprox(f.dispersion[only(gauss)]"), note))
+    push!(cs, mkcase("P1-JULIA-DATA-OFF-MIXED-NO-OFFSET-LOGLIK", "maximised logLik of the same mixed-family model without the offset (lower than the offset fit by more than 1 on both sides)",
+        "$fxp [loglik_no_offset]", "f0.loglik, fit as at $src0",
+        Float64(fx["loglik_no_offset"]), f0.loglik, test_tolerance(tp, "@test isapprox(f0.loglik, Float64(fx[\"loglik_no_offset\"])"), note))
+    return ["data-twins/OFF-MIXED.json" => Receipt(["data/DATA-OFF-MIXED"], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs)]
+end
+
+# =============================================================================================
+# 12g. weights twins   test/test_weights_twins_p1.jl
+#     The 13 data/DATA-W-* rows (observation weights). Each R batch case replays the internal
+#     helper normalise_weights() with no fit number; each weight shape is twinned here by a real
+#     Poisson fit. R-at-P1 fits recorded in test/fixtures/weights_twins_p1.toml, against
+#     fit_gllvm(Y; family = Poisson(), K = 1, weights = ...) on the same data. One receipt per row.
+# =============================================================================================
+# Copy of test/test_weights_twins_p1.jl's `_wt_load` (R's write.csv long data -> p x n matrix,
+# "NA" as missing).
+function _wtr_load(path, col, p, n)
+    hdr = split(readline(path), ",")
+    ci = findfirst(==("\"" * col * "\""), hdr)
+    ci === nothing && fail("column $col not found in $path")
+    M = Matrix{Union{Missing, Float64}}(missing, p, n)
+    open(path) do io
+        readline(io)
+        for line in eachline(io)
+            isempty(line) && continue
+            a = split(line, ",")
+            M[parse(Int, strip(a[2], ['"', 't'])), parse(Int, strip(a[1], '"'))] =
+                a[ci] == "NA" ? missing : parse(Float64, a[ci])
+        end
+    end
+    return M
+end
+
+function receipts_weights_twins()
+    ORIGIN = "itchyshin/GLLVModels.jl#839"
+    fxp = "test/fixtures/weights_twins_p1.toml"
+    tp = "test/test_weights_twins_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("weights twin fixture is not pinned at P1")
+    p, n = Int(fx["p"]), Int(fx["n_unit"])
+    datap = "test/fixtures/" * fx["data_file"]
+    bytes2hex(sha256(read(joinpath(ROOT, datap)))) == fx["data_sha256"] || fail("weights data csv drifted")
+    csv = joinpath(ROOT, datap)
+    col = c -> _wtr_load(csv, c, p, n)
+    # The inputs of test/test_weights_twins_p1.jl's `_wt_julia_inputs`, copied.
+    Y   = Int.(col("y"))
+    Yna = map(v -> ismissing(v) ? missing : Int(v), col("y_na"))
+    obs = .!ismissing.(Yna)
+    Yfill = Int.(coalesce.(Yna, 0))
+    Wcell = Float64.(col("w_cell"))
+    Wcell_na = ifelse.(obs, Wcell, NaN)
+    wunit = Float64.(col("w_unit")[1, :])
+    inputs = Dict(
+        "null"                => (Y, nothing, (;), "weights omitted (= nothing)"),
+        "long"                => (Y, Float64.(col("w_int")), (;), "weights = the p x n matrix of the long column w_int (integers 1..3)"),
+        "fractional"          => (Y, Float64.(col("w_frac")), (;), "weights = the p x n matrix of the long column w_frac (0.25 to 2)"),
+        "zero"                => (Y, Float64.(col("w_zero")), (;), "weights = the p x n matrix of the long column w_zero (0 on 15 cells, 1 elsewhere)"),
+        "matrix_scalar"       => (Y, 2.0, (;), "weights = 2.0 (scalar, every cell)"),
+        "matrix_unit"         => (Y, wunit, (;), "weights = the length-120 vector w_unit (one per unit)"),
+        "matrix_cells"        => (Y, permutedims(permutedims(Wcell)), (;), "weights = permutedims of R's n x p cell matrix w_cell"),
+        "matrix_mask_drop"    => (Yna, Wcell_na, (;), "Y with 14 missing cells; weights = the cell matrix with NaN at those cells"),
+        "matrix_mask_include" => (Yfill, Wcell_na, (; mask = obs), "Y with a placeholder 0 at the 14 cells and mask = the observed cells; weights = the cell matrix with NaN at those cells"),
+        "matrix_mask_scalar"  => (Yna, 2.0, (;), "Y with 14 missing cells; weights = 2.0"),
+        "df_unit"             => (Y, wunit, (;), "weights = the length-120 vector w_unit (one per unit)"),
+        "df_mask_drop"        => (Yna, wunit, (;), "Y with 14 missing cells; weights = w_unit (one per unit)"),
+        "df_mask_include"     => (Yfill, wunit, (; mask = obs), "Y with a placeholder 0 at the 14 cells and mask = the observed cells; weights = w_unit"))
+    route_text = Dict(
+        "long" => "R long API: gllvmTMB(value ~ 0 + trait + latent(0 + trait | unit, d = 1, unique = FALSE), family = poisson(), weights = <length nrow(data) vector>).",
+        "wide_matrix" => "R wide-matrix route: gllvmTMB_wide()'s own normalise_weights(weights, \"wide_matrix\", ...) and pivot, then gllvmTMB(value ~ 0 + trait + latent(0 + trait | site, d = 1, unique = FALSE), family = poisson(), weights = <normalised vector>); gllvmTMB_wide() itself hardcodes latent()'s default unique = TRUE, a per-trait unique variance the Julia Poisson route does not carry, and that substitution is the only difference from it.",
+        "wide_df" => "R traits() route: gllvmTMB(traits(t1, ..., t6) ~ 1 + latent(1 | unit, d = 1, unique = FALSE), family = poisson(), weights = <length-n vector>), the public route.")
+    src = cite(tp, "f = fit_gllvm(Y; family = Poisson(), K = 1, weights = W, kw...)")
+    base = "p = 6, n = 120 (sha256 checked), one Poisson data set, one latent factor; every R fit converged with a positive-definite Hessian. A weight multiplies its cell's conditional log-density on both sides (gllvmTMB weights_i in src/gllvmTMB.cpp; GLLVModels src/families/laplace.jl). gllvmTMB's logLik() aborts for non-unit weights, so the compared number is the maximised weighted objective (R -fit\$opt\$objective, Julia fit.loglik; logLik() for the unweighted fit). The twin test also asserts that every weighted R objective differs from the unweighted one by more than 1, so the weights are applied, not ignored. The sign of a one-axis loading is not identified, so loadings are compared through Lambda Lambda'."
+    out = Pair{String,Any}[]
+    for sec in ("null", "long", "fractional", "zero", "matrix_scalar", "matrix_unit", "matrix_cells",
+                "matrix_mask_drop", "matrix_mask_include", "matrix_mask_scalar", "df_unit",
+                "df_mask_drop", "df_mask_include")
+        d = fx[sec]
+        (d["converged"] === true && d["pd_hessian"] === true) || fail("$sec R fit not converged with a PD Hessian; not a valid twin")
+        Yx, W, kw, jdesc = inputs[sec]
+        f = fit_gllvm(Yx; family = Poisson(), K = 1, weights = W, kw...)
+        f.converged || fail("$sec Julia fit did not converge")
+        sid = d["source_id"]
+        stem = replace(sid, "data/DATA-" => "")
+        note = "R: $(d["route"]) route, $(d["description"]). $(route_text[d["route"]]) Julia: fit_gllvm(Y; family = Poisson(), K = 1, ...), $jdesc. " * base
+        cs = Case[]
+        push!(cs, mkcase("P1-JULIA-DATA-$stem-OBJECTIVE", "maximised weighted objective of the Poisson fit (the logLik for the unweighted fit)",
+            "$fxp [$sec.objective]", "f.loglik, fit as at $src",
+            Float64(d["objective"]), f.loglik, test_tolerance(tp, "@test isapprox(f.loglik, Float64(d[\"objective\"])"), note))
+        push!(cs, mkcase("P1-JULIA-DATA-$stem-INTERCEPTS", "trait intercepts (6 values)",
+            "$fxp [$sec.beta]", "f.β, fit as at $src",
+            Float64.(d["beta"]), f.β, test_tolerance(tp, "@test isapprox(f.β, Float64.(d[\"beta\"])"), note))
+        push!(cs, mkcase("P1-JULIA-DATA-$stem-LAMBDA-LAMBDAT", "Lambda Lambda' (6 x 6)",
+            "$fxp [$sec.lambda_lambdat]", "f.Λ * f.Λ', fit as at $src",
+            _ns_mat(d["lambda_lambdat"], p, p), f.Λ * f.Λ', test_tolerance(tp, "@test isapprox(f.Λ * f.Λ'"), note))
+        push!(out, "data-twins/$stem.json" => Receipt([sid], ORIGIN, [fxp, datap], [tp], NOT_A_FIXTURE_PAIR, cs))
+    end
+    return out
+end
+
+# =============================================================================================
+# 12f. covariance phylo twins   test/test_cov_phylo_twins_p1.jl
+#     covariance/COV-PHYLO-DEP, COV-PHYLO-A-ALIAS, COV-PHYLO-FOLDED-UNIQUE: one shared Gaussian fixture
+#     (120-tip coalescent tree, 4 traits, 2 observations per species) fitted at P1 with
+#     phylo_dep(0 + trait | species), phylo_latent(species, A = A) and phylo_latent(species, unique = TRUE)
+#     (test/fixtures/cov_phylo_twins_p1.toml), against fit_phylo_latent_gllvm with d = n_traits, A = A
+#     and unique = true. One receipt per row.
+# =============================================================================================
+_cpr_mat(v, p) = permutedims(reshape(Float64.(v), p, p))
+_cpr_objective(fit) = θ -> GMJ._precision_multivariate_nll(fit.response, fit.phy, θ;
+    rank = fit.rank, mode = fit.mode, residual_mode = fit.residual_mode,
+    species_id = fit.species_id, mean_design = fit.mean_design)
+function _cpr_r_theta(blk)
+    names = String.(blk["par_names"]); par = Float64.(blk["par"])
+    pick(n) = par[names .== n]
+    return vcat(pick("b_fix"), pick("theta_rr_phy"), pick("log_sd_phy_diag"), pick("log_sigma_eps"))
+end
+_cpr_sigma_phy(fit) = fit.phylo_unique_variance === nothing ? fit.loading * fit.loading' :
+    fit.loading * fit.loading' + Diagonal(fit.phylo_unique_variance)
+# Stationarity at the returned parameters, as in the twin test's _cpt_stationarity (FD gradient and FD
+# Hessian, the fitter's own stencils).
+function _cpr_stationarity(fit)
+    f = _cpr_objective(fit)
+    θ = fit.parameters
+    g = similar(θ)
+    GMJ._pmv_fd_gradient!(g, f, θ)
+    H = Symmetric(GMJ._fd_hessian(f, θ))
+    pd = isposdef(H)
+    return (pd = pd, decrement = pd ? dot(g, H \ g) / 2 : Inf, gmax = maximum(abs, g))
+end
+
+function receipts_cov_phylo_twins()
+    ORIGIN = "itchyshin/GLLVModels.jl#810"
+    fxp = "test/fixtures/cov_phylo_twins_p1.toml"
+    tp = "test/test_cov_phylo_twins_p1.jl"
+    fx = TOML.parsefile(joinpath(ROOT, fxp))
+    fx["gllvmtmb_commit"] == P1_SHA || fail("cov-phylo twin fixture is not pinned at P1")
+    (fx["converged"] === true && fx["pd_hessian"] === true) || fail("cov-phylo R fits not converged with a PD Hessian; not a valid twin")
+    T = Int(fx["n_traits"])
+    tips = String.(fx["tip_labels"]); sp = String.(fx["observation_species"]); newick = fx["newick"]
+    Y = permutedims(reshape(Float64.(fx["Y"]), length(sp), T))
+    phy = augmented_phy(newick; correlation = true)
+    C = GMJ.sigma_phy_dense(phy)
+    o = [findfirst(==(t), phy.leaf_names) for t in tips]
+    A = Matrix{Float64}(C[o, o])
+    (isapprox(sum(A), Float64(fx["A_sum"]); rtol = 1e-10) && isapprox(norm(A), Float64(fx["A_frobenius"]); rtol = 1e-10) &&
+        maximum(abs.(A[1, :] .- Float64.(fx["A_first_row"]))) <= 1e-12) || fail("cov-phylo: A rebuilt from the tree is not the matrix R fitted")
+    fits = Dict(
+        "dep" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = T, tree = newick),
+        "alias" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, A = A, tip_labels = tips),
+        "unique" => fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, unique = true, tree = newick))
+    fitv = fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, vcv = A, tip_labels = tips)
+    (fitv.parameters == fits["alias"].parameters && fitv.loglik == fits["alias"].loglik) ||
+        fail("cov-phylo: Julia's A = and vcv = spellings give different fits")
+    Float64(fx["alias"]["objective_vcv_spelling"]) == Float64(fx["alias"]["objective"]) ||
+        fail("cov-phylo: R's A = and vcv = spellings give different objectives in the fixture")
+    # Stationarity, not the optimiser's flag: the flag can read not converged at the objective's rounding
+    # floor on some platforms (see the twin test header), so the same bounds as the test are required here.
+    for k in ("dep", "alias", "unique")
+        st = _cpr_stationarity(fits[k])
+        (st.pd && fits[k].hessian_positive_definite && st.decrement <= 1e-9 && st.gmax <= 1e-4) ||
+            fail("cov-phylo $k: Julia fit is not stationary (PD Hessian, Newton decrement <= 1e-9, max |gradient| <= 1e-4)")
+    end
+    bare = fit_phylo_latent_gllvm(Y, sp; species_levels = tips, d = 1, tree = newick)
+    fits["unique"].loglik - bare.loglik > 1 || fail("cov-phylo FOLDED-UNIQUE: unique companion is inert")
+    common = "Shared fixture: 120-tip coalescent tree (ape::rcoal, seed 20261005), 4 traits, 2 observations per species, Gaussian, drawn from (Lambda Lambda' + diag(s^2)) (x) A + 0.4^2 I with A the unit-height tip correlation; Y and the Newick string stored to 17 digits, A rebuilt in Julia from the tree and checked against the stored sum, norm and first row of R's A. R: gllvmTMB(..., trait = 'trait', unit = 'species', cluster = 'species', family = gaussian(), REML = FALSE), nlminb rel.tol 1e-10, every fit converged with a positive-definite Hessian. The fixed-parameter case evaluates Julia's objective (GLLVModels._precision_multivariate_nll, the fitter's own objective) at R's optimum opt\$par, mapped by name onto Julia's [beta; theta_rr; log_sd_unique; log_sd_eps] (both engines pack the loadings with the gllvmTMB.cpp layout), and compares it with R's objective there; it does not depend on either optimiser. Loadings are compared through Sigma_phy because a loading column's sign is not identified."
+    rows = (
+        ("dep", "COV-PHYLO-DEP", "PHYLO-DEP", 1,
+         "R: value ~ 0 + trait + phylo_dep(0 + trait | species, tree = tree), which gllvmTMB rewrites to phylo_rr(d = n_traits, .dep = TRUE), the phylo_latent(d = T) engine path (full unstructured Sigma_phy (x) A, T(T+1)/2 = 10 loading parameters). Julia: fit_phylo_latent_gllvm(Y, species; d = 4, tree) from its default start. Julia's LBFGS stops at the objective's rounding floor with max |FD gradient| about 4.0e-5 on the log residual-SD coordinate (the ForwardDiff gradient of a dense AD-capable copy of the likelihood, matching the sparse objective to 8e-12, agrees, so that is not finite-difference noise), curvature about 1.6e3 and Newton decrement about 3e-12, so no descent step is resolvable. Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = false against g_tol 1e-5 on macOS and Linux); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement g' H^-1 g / 2 <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. R's own optimum has max |AD gradient| 6.1e-4. ",
+         "Sigma_rr", "Lambda_phy Lambda_phy' (4 x 4), the full unstructured phylogenetic trait covariance"),
+        ("alias", "COV-PHYLO-A-ALIAS", "PHYLO-A-ALIAS", 2,
+         "R: value ~ 0 + trait + phylo_latent(species, A = A), which gllvmTMB rewrites to phylo_rr(vcv = A) (the dense route with R's 1e-8 ridge); the vcv = A spelling gives the identical nlminb objective (asserted in the generator, recorded as objective_vcv_spelling). Julia: fit_phylo_latent_gllvm(Y, species; d = 1, A = A, tip_labels); Julia's vcv = A spelling gives the bitwise identical fit (asserted in the twin test and here), and A together with vcv is refused on both sides. ",
+         "Sigma_rr", "Lambda_phy Lambda_phy' (4 x 4) of the rank-1 fit"),
+        ("unique", "COV-PHYLO-FOLDED-UNIQUE", "PHYLO-FOLDED-UNIQUE", 3,
+         "R: value ~ 0 + trait + phylo_latent(species, unique = TRUE, tree = tree), which gllvmTMB parses to phylo_rr(d = 1) plus the folded phylo_rr(.phylo_unique, .auto_unique) companion; at P1 that companion is the phylo_diag block of src/gllvmTMB.cpp (g_phy_diag[, t] ~ N(0, A) with the same Ainv_phy_rr / log_det_A_phy_rr as phylo_rr, scaled by exp(log_sd_phy_diag[t])), so the model is (Lambda Lambda' + diag(sd^2)) (x) A + sigma_eps^2 I. Julia: fit_phylo_latent_gllvm(Y, species; d = 1, unique = true, tree), mode :explicitunique, the same covariance with unique variance exp(2 * log_sd), so the model is the same and R's log_sd_phy_diag maps one to one onto Julia's coordinate (the fixed-parameter case is the direct evidence that the two likelihoods agree). Julia's optimiser flag can report not converged at the rounding floor on some platforms (this fit reads converged = true on macOS and converged = false on Linux CI); the twin asserts stationarity instead: a positive-definite Hessian, Newton decrement <= 1e-9 and max |gradient| <= 1e-4 at the returned parameters. The twin test also asserts the unique companion is not inert: the fit beats phylo_latent(d = 1) alone by more than 1 in logLik. ",
+         "Sigma_total", "Lambda Lambda' + diag(sd_phy_diag^2) (4 x 4), the total phylogenetic trait covariance of the folded fit"),
+    )
+    out = Pair{String,Any}[]
+    for (key, short, stem, nth, what, smat, sdesc) in rows
+        r = fx[key]; fit = fits[key]
+        src = cite(tp, "_cpt_fit_$(key)(d) = fit_phylo_latent_gllvm")
+        note = what * common
+        id = "P1-JULIA-$(short)"
+        cs = Case[]
+        push!(cs, mkcase("$id-LOGLIK", "maximised logLik", "$fxp [$key] loglik", "fit.loglik, fit as at $src",
+            Float64(r["loglik"]), fit.loglik,
+            test_tolerance(tp, "@test abs(fit.loglik - Float64(r[\"loglik\"]))"; nth = nth), note))
+        push!(cs, mkcase("$id-OBJECTIVE-AT-R-OPTIMUM", "negative log-likelihood at R's optimum: R's objective (tmb_obj\$fn(opt\$par)) vs Julia's objective at the same parameters",
+            "$fxp [$key] objective, par, par_names", "Julia objective at R's opt\$par mapped by name, fit as at $src",
+            Float64(r["objective"]), _cpr_objective(fit)(_cpr_r_theta(r)),
+            test_tolerance(tp, "@test abs(_cpt_cross(fit, r))"; nth = nth), note))
+        push!(cs, mkcase("$id-INTERCEPTS", "trait intercepts (4 values)", "$fxp [$key] beta", "fit.beta, fit as at $src",
+            Float64.(r["beta"]), fit.beta,
+            test_tolerance(tp, "@test maximum(abs.(fit.beta .- Float64.(r[\"beta\"])))"; nth = nth), note))
+        push!(cs, mkcase("$id-SIGMA-EPS", "shared residual sd (R exp(log_sigma_eps))", "$fxp [$key] sigma_eps", "sqrt(fit.residual_variance), fit as at $src",
+            Float64(r["sigma_eps"]), sqrt(only(unique(fit.residual_variance))),
+            test_tolerance(tp, "@test abs(sqrt(only(unique(fit.residual_variance))) - Float64(r[\"sigma_eps\"]))"; nth = nth), note))
+        if key == "unique"
+            push!(cs, mkcase("$id-SD-PHY-DIAG", "per-trait phylogenetic unique sd (R sd_phy_diag = exp(log_sd_phy_diag); Julia sqrt(phylo_unique_variance))",
+                "$fxp [$key] sd_phy_diag", "sqrt.(fit.phylo_unique_variance), fit as at $src",
+                Float64.(r["sd_phy_diag"]), sqrt.(fit.phylo_unique_variance),
+                test_tolerance(tp, "@test maximum(abs.(sqrt.(fit.phylo_unique_variance)"), note))
+        end
+        push!(cs, mkcase("$id-SIGMA-PHY", sdesc, "$fxp [$key] $smat", "phylogenetic trait covariance of the fit as at $src",
+            _cpr_mat(r[smat], T), _cpr_sigma_phy(fit),
+            test_tolerance(tp, "@test maximum(abs.(_cpt_sigma_phy(fit)"; nth = nth), note))
+        push!(out, "covariance-twins/$(stem).json" => Receipt(["covariance/$(short)"], ORIGIN, [fxp], [tp], NOT_A_FIXTURE_PAIR, cs))
+    end
     return out
 end
 
@@ -1961,6 +2440,13 @@ function build(only::Vector{String} = String[])
             ("postfit-twins", receipts_postfit_twins),
             ("namespace-numeric-b", receipts_namespace_numeric_b),
             ("data-twins", receipts_data_twins),
+            ("predict-offset-twin", receipts_predict_offset_twin),
+            ("off-predict-twin", receipts_off_predict_twin),
+            ("data-twins-2", receipts_data_twins_2),
+            ("off-all-count", receipts_off_all_count),
+            ("off-mixed", receipts_off_mixed),
+            ("weights-twins", receipts_weights_twins),
+            ("cov-phylo-twins", receipts_cov_phylo_twins),
             ("c1-behaviour", receipts_c1_behaviour))
         isempty(only) || name in only || continue
         t0 = time()

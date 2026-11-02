@@ -119,9 +119,13 @@ function spde_mesh_delaunay(points::AbstractMatrix)
     ymin = minimum(@view points[:, 2]); ymax = maximum(@view points[:, 2])
 
     dx = xmax - xmin;  dy = ymax - ymin
-    delta = max(dx, dy)
-    # Guard against degenerate (all-collinear) point sets.
-    delta = max(delta, 1.0)
+    extent = max(dx, dy)
+    # In-circle determinant has units of length^4. Keep the 1e-10 guard at
+    # ordinary (extent >= 1) coordinates; shrink it with extent^4 below that
+    # so a 1e-8 domain does not mark every triangle bad (#748).
+    incircle_tol = 1e-10 * (extent > 0.0 ? min(extent, 1.0)^4 : 0.0)
+    # Super-triangle still uses a floor of 1 so order-1 construction is unchanged.
+    delta = max(extent, 1.0)
 
     # Centre of the bounding box.
     midx = (xmin + xmax) / 2
@@ -185,9 +189,9 @@ function spde_mesh_delaunay(points::AbstractMatrix)
             bx = all_x[t[2]]; by = all_y[t[2]]
             cx = all_x[t[3]]; cy = all_y[t[3]]
             # incircle_val > 0 iff (px,py) is strictly inside the circumcircle
-            # of CCW triangle (a, b, c).  Use a small negative epsilon to avoid
-            # flipping valid triangles due to floating-point error on the circle.
-            bad_mask[k] = _incircle_val(ax, ay, bx, by, cx, cy, px, py) > -1e-10
+            # of CCW triangle (a, b, c). Negative epsilon is scaled to extent
+            # (length^4) so small-domain coordinates keep a usable cavity.
+            bad_mask[k] = _incircle_val(ax, ay, bx, by, cx, cy, px, py) > -incircle_tol
         end
 
         # ── 3b. find cavity boundary edges ────────────────────────────────
@@ -283,6 +287,11 @@ function spde_mesh_delaunay(points::AbstractMatrix)
     T_out = length(good)
     T_out ≥ 1 || throw(ErrorException(
         "Bowyer–Watson produced no valid triangles for $N input points; " *
+        "check for duplicate or nearly-collinear inputs."))
+    # A triangulation of N points has T = 2N - 2 - H triangles, H <= N, so T >= N-2.
+    # Fewer triangles means a hole (silent sparse mesh) rather than a valid cover.
+    T_out >= N - 2 || throw(ErrorException(
+        "Bowyer–Watson produced a degenerate mesh ($T_out triangles for $N points); " *
         "check for duplicate or nearly-collinear inputs."))
 
     # ── Step 5: build output matrices ────────────────────────────────────────

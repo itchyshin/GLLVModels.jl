@@ -30,7 +30,7 @@ function SourceCovariance(C::AbstractMatrix, P::AbstractMatrix;
         unique::Bool=false, common::Bool=false)
     size(C,1)==size(C,2) && size(C,1)>0 || throw(DimensionMismatch("source covariance must be nonempty and square"))
     size(P,2)==size(C,1) && size(P,1)>0 || throw(DimensionMismatch("projection must be nonempty units × source nodes"))
-    all(x->x isa Real && isfinite(x),C) && issymmetric(C) || throw(ArgumentError("source covariance must be finite, real and exactly symmetric"))
+    C = _symmetric_admit(C, "source covariance")
     all(x->x isa Real && isfinite(x),P) || throw(ArgumentError("projection must be finite and real"))
     mode in (:latent,:indep,:dep) || throw(ArgumentError("source mode must be :latent, :indep or :dep"))
     unique && mode!==:latent && throw(ArgumentError("unique is allowed only with mode=:latent"))
@@ -217,7 +217,15 @@ struct GaussianSourcesFit <: StatsAPI.StatisticalModel
     mean_design::Matrix{Float64}
     response_shape::Tuple{Int,Int}
     coefficient_names::Vector{Union{String,Symbol}}
+    optimizer_info::Union{Nothing,OptimizerRecord}
 end
+
+GaussianSourcesFit(beta,sigma_eps,trait_covariances,sources,parameters,loglik,
+        converged,gradient_norm,hessian_min_eigenvalue,hessian_positive_definite,iterations,
+        stopping_reason,observations,residual_fixed,mean_design,response_shape,coefficient_names) =
+    GaussianSourcesFit(beta,sigma_eps,trait_covariances,sources,parameters,loglik,
+        converged,gradient_norm,hessian_min_eigenvalue,hessian_positive_definite,iterations,
+        stopping_reason,observations,residual_fixed,mean_design,response_shape,coefficient_names,nothing)
 
 function _legacy_source_mean_metadata(beta,observations)
     p=length(beta)
@@ -249,7 +257,7 @@ GaussianSourcesFit(beta,sigma_eps,trait_covariances,sources,parameters,loglik,
 """
     fit_gaussian_sources(Y; sources, X=nothing, coefficient_names=nothing,
                          start=nothing, sigma_eps_fixed=nothing,
-                         g_tol=1e-6, iterations=500)
+                         g_tol=1e-6, iterations=500, optimizer=nothing)
 
 Fit finite complete Gaussian data `Y` (traits × units) with independent
 residual noise and additive [`SourceCovariance`](@ref) blocks. The covariance
@@ -289,7 +297,8 @@ full R-parity claim.
 """
 function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
         coefficient_names=nothing,start=nothing,sigma_eps_fixed=nothing,
-        g_tol::Real=1e-6,iterations::Integer=500)
+        g_tol::Real=1e-6,iterations::Integer=500,optimizer=nothing)
+    selected_optimizer = _optimizer_method(optimizer, Optim.LBFGS(); route = "fit_gaussian_sources")
     p,n=size(Y)
     p>0 && n>=2 || throw(ArgumentError("source fitting needs at least one trait and two units"))
     all(isfinite,Y) || throw(ArgumentError("source fitting requires finite complete responses"))
@@ -346,6 +355,7 @@ function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
         X=default_means ? nothing : D)
     isfinite(objective(theta)) || throw(ArgumentError("start produces an invalid covariance"))
     if total==0
+        _refuse_optimizer(optimizer, "fit_gaussian_sources", "a zero-parameter route with no outer solve")
         value=objective(theta)
         B=_source_trait_covariances(ss,p,Float64[])
         return GaussianSourcesFit(Float64[],fixed_sigma,B,ss,Float64[],-value,true,0.0,
@@ -356,9 +366,12 @@ function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
     # approximate-Wolfe acceptance reaches that gate on both declared
     # regressions (explicit source design, and the default-mean frozen
     # COV-ORD-LATENT-BARE case).
-    optimizer=Optim.LBFGS()
-    result=Optim.optimize(objective,theta,optimizer,
-        Optim.Options(g_tol=Float64(g_tol),iterations=Int(iterations));autodiff=:forward)
+    options=Optim.Options(g_tol=Float64(g_tol),iterations=Int(iterations))
+    result=Optim.optimize(objective,theta,selected_optimizer,options;autodiff=:forward)
+    controls=(g_tol=Float64(g_tol),iterations=Int(iterations),show_trace=false,
+              optim_options=options)
+    stages=OptimizerStage[]
+    _optimizer_stage!(stages,:primary,selected_optimizer,:forwarddiff,controls,result)
     estimate=Optim.minimizer(result);value=objective(estimate)
     # An invalid final objective cannot yield trustworthy derivative diagnostics.
     # Do not differentiate the constant failure sentinel and report a zero gradient.
@@ -378,7 +391,9 @@ function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
     sigma_eps=residual_fixed ? fixed_sigma : exp(estimate[end])
     return GaussianSourcesFit(collect(estimate[1:q]),sigma_eps,B,ss,
         collect(estimate),-value,converged,gradient_norm,min_eig,pd,
-        Optim.iterations(result),reason,length(data),residual_fixed,D,(p,n),names)
+        Optim.iterations(result),reason,length(data),residual_fixed,D,(p,n),names,
+        _optimizer_record(optimizer,stages;controls=controls,derivative=:forwarddiff,
+                          actual=selected_optimizer))
 end
 
 """Return the fixed-effect mean coefficients of a `GaussianSourcesFit`."""

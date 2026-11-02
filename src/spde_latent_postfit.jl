@@ -38,7 +38,13 @@ function _spde_latent_rebuild(fit::SPDELatentFit,
                                maxiter::Integer = 50,
                                tol::Real = 1e-9)
     p, M = size(Y)
-    Ntr  = ones(Float64, p, M)                  # trial-count matrix (ones for no-trial families)
+    Ntr = if size(fit.N) == (p, M)
+        fit.N
+    elseif isempty(fit.N)
+        ones(Float64, p, M)
+    else
+        throw(ArgumentError("stored trial counts size $(size(fit.N)) does not match Y $(size(Y))"))
+    end
     Cdiag, G = spde_fem(fit.nodes, fit.tris)
     Q        = spde_precision(Cdiag, G, fit.κ, fit.τ; α = α)
     Qs       = sparse(Q)
@@ -52,7 +58,8 @@ function _spde_latent_rebuild(fit::SPDELatentFit,
     U = _spde_latent_mode(fam, Y, Ntr, fit.Λ, fit.β, fit.link, A, Qs;
                           maxiter = maxiter, tol = tol)
     if U === nothing
-        error("SPDE-latent mode-finder failed to converge (non-SPD Hessian). " *
+        error("SPDE-latent mode-finder did not converge (non-SPD Hessian, no non-decreasing " *
+              "step, or `maxiter` exhausted; raise `maxiter`). " *
               "The fit may be numerically ill-conditioned.")
     end
     return U, A, Qs

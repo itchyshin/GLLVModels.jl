@@ -42,7 +42,7 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
+  "glvmodels_commit": "59ecd020a7f9d19873f1ad3fbf05e2cc44f08360",
   "glvmodels_worktree_dirty": [],
   "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86"

@@ -375,7 +375,7 @@ function _studentt_grouped_loglik_site(fams::AbstractVector{<:StudentTFamily}, y
         F = cholesky(A; check = false)
         issuccess(F) || return oftype(ℓ, -Inf)
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # ---------------------------------------------------------------------------
@@ -500,6 +500,7 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         "fit_studentt_gllvm: hessian must be :fisher or :observed; got :$hessian"))
     disp_group in (:shared, :species) || throw(ArgumentError(
         "fit_studentt_gllvm: disp_group must be :shared or :species; got :$disp_group"))
+    _check_response_support(:finite, Y, nothing; caller = "fit_studentt_gllvm")
     rr = rr_theta_len(p, K)
 
     Zemp = float.(Y)                                   # identity link ⇒ Z = Y

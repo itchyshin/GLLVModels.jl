@@ -25,7 +25,7 @@
   "gllvmtmb_version": "0.7.1",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "ead8f4180957dd47111f662efcda6e0734c9de94",
+  "glvmodels_commit": "59ecd020a7f9d19873f1ad3fbf05e2cc44f08360",
   "glvmodels_worktree_dirty": [],
   "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
@@ -54,9 +54,10 @@
           0.04792879216454467,
           0.2242146267679074
         ],
-        "abs_diff": 5.064150765935032e-08,
+        "abs_diff": 3.490605920974943e-08,
+        "harness_norm_diff": 5.064150765935032e-08,
         "tolerance": 1e-05,
-        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) (harness_norm_diff); abs_diff = max |julia - r| entrywise"
       },
       {
         "case_id": "FIT-MODE-KERNEL-DEP",
@@ -95,9 +96,10 @@
             0.6161159572681423
           ]
         ],
-        "abs_diff": 1.0693127879265719e-06,
+        "abs_diff": 5.847550709758842e-07,
+        "harness_norm_diff": 1.0693127879265719e-06,
         "tolerance": 1.4428818186277364e-05,
-        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) (harness_norm_diff); abs_diff = max |julia - r| entrywise"
       },
       {
         "case_id": "FIT-MODE-KERNEL-DEP",
@@ -109,8 +111,9 @@
           0.17835179325889433
         ],
         "abs_diff": 1.7183848233237597e-08,
+        "harness_norm_diff": 1.7183848233237597e-08,
         "tolerance": 1e-05,
-        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); abs_diff = norm(julia - r), tolerance = max(atol, rtol*max(norm))"
+        "tolerance_rule": "tools/core070_covariance_mode_fits.jl (tight-control): isapprox(julia, r; atol=1e-05, rtol=1e-05); harness test norm(julia - r) <= tolerance = max(atol, rtol*max(norm)) (harness_norm_diff); abs_diff = max |julia - r| entrywise"
       }
     ]
   }

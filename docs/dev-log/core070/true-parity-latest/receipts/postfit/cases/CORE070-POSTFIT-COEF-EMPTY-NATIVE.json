@@ -2,7 +2,7 @@
   "schema": "core070-postfit-p1-case-receipt/v2",
   "case_id": "CORE070-POSTFIT-COEF-EMPTY-NATIVE",
   "verdict": "PASS",
-  "evidence_kind": "paired_policy_check",
+  "evidence_kind": "numeric_r_vs_julia",
   "source_ids": [
     "postfit-policy/POST-COEF-EMPTY"
   ],
@@ -16,8 +16,8 @@
     "accept_marker": "CORE070_POSTFIT_POLICY_BATCH_VERIFIED",
     "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/verify.txt"
   },
-  "r_call": "coef.gllvmTMB_multi's empty-X_fix_names branch (R/vcov-coef.R:59-64)",
-  "julia_surface": "StatsAPI.coef(fit::GllvmFit) (src/postfit.jl:633)",
+  "r_call": "coef.gllvmTMB_multi's empty-X_fix_names branch (R/vcov-coef.R:59-65 at P1 9539352f6), evaluated by the batch on a synthetic object list(X_fix_names = character(0)), not on a fitted model",
+  "julia_surface": "StatsAPI.coef(fit::GllvmFit) on a real fit with no X (src/postfit.jl:633 at the measured commit 681c4c3ca)",
   "comparand": "length(coef)==0 on both sides",
   "check": "length(StatsAPI.coef(fit_no_x))==0 && length(r_empty_coef)==0",
   "harness_fields": {
@@ -29,7 +29,6 @@
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/julia-results.json",
     "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/r-oracle.json"
   ],
-  "why_not_numeric": "Both sides return an empty coefficient vector; there is no number to compare.",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
@@ -39,5 +38,25 @@
   "glvmodels_commit": "681c4c3ca666e630470bba01a057bc88158b85f3",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
+  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-POSTFIT-COEF-EMPTY-NATIVE",
+        "quantity": "length(coef(object)) on a fit with no fixed-effect columns",
+        "kind": "integer_equality",
+        "r_value": 0,
+        "julia_value": 0,
+        "max_abs_diff": 0,
+        "tolerance": 0.5,
+        "tolerance_rule": "integer_equality, tolerance 0.5 (itchyshin/GLLVModels.jl#684 item 1): both values are integers, so within 0.5 means equal; the contract's integer_exact = 0 is the same condition",
+        "n_values": 1,
+        "diff_source": "recomputed from len(r-oracle.json['empty_coef']) and julia-results.json cases['CORE070-POSTFIT-COEF-EMPTY-NATIVE']['julia_length']",
+        "discriminating": false,
+        "degenerate_reason": "every |R value| < 1e-10 (max 0)"
+      }
+    ]
+  },
+  "numeric_note": "Integer equality on the coefficient-vector length: R 0, Julia 0. Basis of the extension: the drafted N2 text of wave-plan-2026-10-03.md line 17 (lane kit LOOP/lanes/true-parity-latest), which names POST-COEF-EMPTY alongside POSTFIT-SURFACE-nobs as rows integer_equality (itchyshin/GLLVModels.jl#684 item 1) covers; signed with item N2 by maintainer ruling 2026-10-05 (D-319). Scope: the R length comes from coef.gllvmTMB_multi applied to a synthetic object with no fixed-effect names; the Julia length from a real fit with no X. The case plan (docs/dev-log/core070/postfit-policy-required-case-plan.json) also names a second comparand, R names(coef) == character(0) against Julia's unnamed empty vector, recorded there as an accepted representational gap (Julia has no coef-name carrier), not a value mismatch. Not bound: under the shared degenerate-comparison rule a 0 = 0 length cannot discriminate (a constant-zero implementation passes too), so the comparison is flagged discriminating: false and the row is numeric_non_discriminating."
 }

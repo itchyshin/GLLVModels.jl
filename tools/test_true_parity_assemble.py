@@ -38,6 +38,9 @@ def make_root(tmp: Path, maps: dict | None = None) -> Path:
     (tmp / "test/fixtures").mkdir(parents=True)
     (tmp / "docs/src").mkdir(parents=True)
     (tmp / "docs/src/page.md").write_text("# page\n")  # a docs/src file a KEPT_AS_JULIA_EXTRA basis can cite
+    for rel in ("docs/src/assets/x.json", "docs/src/notes.txt", "docs/src/code.jl", "docs/src/cfg.toml", "docs/src/real.md.bak", "docs/src/sub/deep.md"):
+        (tmp / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp / rel).write_text("x\n")  # existing docs/src files that are not exact .md page citations, plus one nested page
     (tmp / "tools").mkdir(parents=True)
     (tmp / "tools/gen.py").write_text("# the committed generator of reverse-gap-decisions.json\n")
     for name in A.EXPECTED_MAPS:
@@ -323,15 +326,24 @@ def main():
     expect("temporal_cond_H_method_names_its_hessian", "ForwardDiff" in tmpl["engines"]["julia"]["cond_H_method"], tmpl["engines"]["julia"]["cond_H_method"])
     grp = json.loads((A.ROOT / A.LEDGER / "receipts/fit-input/campaign/GRP-UNIT.json").read_text())
     expect("c5_rule_claims_no_hessian_leg", "R_pdHess_true" not in grp["pass_rule"]["legs"] and "no R Hessian leg" in grp["pass_rule"]["rule"], grp["pass_rule"]["rule"])
-    # Row tiers: a measured row that fails no number but lacks a required step reads PARTIAL, never FAIL; a row that also
-    # misses a tolerance keeps numeric_fail; the phylo row does not bind (its R receipt is unqualified until the maintainer signs).
+    # Row tiers: C4 accepts direct-engine runs (maintainer ruling 2026-10-05, D-319, C4 text change), so crabs, which
+    # meets every leg, binds and no row carries the old bridge leg; a row that misses a tolerance keeps numeric_fail;
+    # the phylo row binds now that its R receipt carries the maintainer's D-300 answer 9 promotion (signed 2026-10-05,
+    # D-319; tools/phylo_latent/promote_p1.py); the three C4 dispositions are signed (item F, D-319).
     def camp_row(mapname, sid):
         return next(r for r in json.loads((A.ROOT / A.LEDGER / mapname).read_text())["rows"] if r["source_id"] == sid)
     crabs = camp_row("case-map-data.json", "data/RD-CRABS-GAUSSIAN"); spider = camp_row("case-map-data.json", "data/RD-SPIDER-NB2")
     phylo = camp_row("case-map-covariance.json", "covariance/COV-PHYLO-LATENT-RSZ")
-    expect("crabs_is_partial_not_fail", crabs["evidence_tier"] == "partial_case_not_executed" and "bridge route" in crabs["evidence"]["tier"], crabs["evidence"]["tier"])
-    expect("row_with_failed_tolerance_stays_numeric_fail", spider["evidence_tier"] == "numeric_fail" and "bridge route" in spider["evidence"]["tier"] and "logLik" in spider["evidence"]["tier"], spider["evidence"]["tier"])
-    expect("phylo_row_does_not_bind", phylo["evidence_tier"] == "partial_case_not_executed" and "receipt" not in phylo["evidence"] and "qualified = false" in phylo["evidence"]["tier"], json.dumps(phylo["evidence"]))
+    crabs_rc = json.loads((A.ROOT / A.LEDGER / "receipts/data/campaign/RD-CRABS-GAUSSIAN.json").read_text())
+    expect("crabs_binds_as_direct_engine_run", crabs["evidence_tier"] == "numeric" and "receipt" in crabs["evidence"]
+           and crabs_rc["verdict"] == "PASS" and crabs_rc["engines"]["R"] and crabs_rc["engines"]["julia"]
+           and not any("bridge" in k for k in crabs_rc["pass_rule"]["legs"]), json.dumps(crabs["evidence"]))
+    expect("row_with_failed_tolerance_stays_numeric_fail", spider["evidence_tier"] == "numeric_fail" and "bridge route" not in spider["evidence"]["tier"] and "logLik" in spider["evidence"]["tier"], spider["evidence"]["tier"])
+    disp = [camp_row("case-map-data.json", f"data/RD-{k}-DISPOSITION") for k in ("PHYLO", "TEMPORAL", "ISDM")]
+    expect("c4_dispositions_signed_d319", all(r["disposition"] == "DISPOSITION-SIGNED" and r["signed_by"] == "Shinichi Nakagawa"
+           and r["signed_on"] == "2026-10-05" and r["signature_ref"] == "D-319" and "proposed_disposition" not in r for r in disp),
+           json.dumps(disp)[:400])
+    expect("phylo_row_binds_on_promoted_receipt", phylo["evidence_tier"] == "numeric" and "receipt" in phylo["evidence"] and "non_binding_receipts" not in phylo["evidence"], json.dumps(phylo["evidence"]))
 
     # ... and a hand edit that keeps the receipt self-consistent must still fail: a changed value (with a matching
     # max_abs_diff and flag), a widened tolerance, and a changed large-vector difference.
@@ -364,7 +376,7 @@ def main():
             f = rec / rel; d = json.loads(f.read_text()); d["pass_rule"]["legs"][leg] = value
             f.write_text(json.dumps(d, indent=1) + "\n")
         return go
-    tamper("campaign_check_catches_phylo_qualification_forged", edit_leg("covariance/campaign/COV-PHYLO-LATENT-RSZ.json", "R_side_receipt_qualified_by_maintainer", True))
+    tamper("campaign_check_catches_phylo_qualification_hand_edit", edit_leg("covariance/campaign/COV-PHYLO-LATENT-RSZ.json", "R_side_receipt_qualified_by_maintainer", False))
     # the urbanisation summary receipt is not re-derivable, but a self-contradicting edit must still fail
     def urban_flag(c): c["within_tolerance"] = not c["within_tolerance"]
     tamper("campaign_check_catches_urbanisation_summary_inconsistency",
@@ -441,8 +453,8 @@ def main():
     expect("behavioural_empty_basis_fails_run", c == 1 and "empty basis" in o, o)
     shutil.rmtree(tmp)
     # Scope of the behavioural tier: inference/* rows and four named C1 rows only.
-    for sid in ("isdm/X", "postfit/POSTFIT-SURFACE-nobs", "inference2/N", "data/RD-01", "inference/CI-ROUTE-008", "inference/CI-ROUTE-009",
-                "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/", "inference/../isdm/X", "inference/CI-ROUTE-999",
+    for sid in ("isdm/X", "postfit/POSTFIT-SURFACE-nobs", "inference2/N", "data/RD-01", "inference/CI-ROUTE-008", "isdm/ISDM-WRONG-ID",
+                "isdm/ISDM-LEGACY", "aghq/AGHQ-CTRL-THREE", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/", "inference/../isdm/X", "inference/CI-ROUTE-999",
                 "Inference/CI-ROUTE-001"):
         root, tmp = behavioural_root(sid=sid)
         rid = A.scoreboard_id(sid)
@@ -453,7 +465,7 @@ def main():
                c == 0 and status_of(root, rid) == "BEHAVIOURAL-UNVERIFIED" and "not covered by itchyshin/GLLVModels.jl#684 item 2" in (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
                and (out is None or (m is not None and int(m.group(1)) == 0)), f"{status_of(root, rid)} {o}")
         shutil.rmtree(tmp)
-    for sid in A.BEHAVIOURAL_NAMED_SOURCE_IDS:
+    for sid in A.BEHAVIOURAL_NAMED_SOURCE_IDS + A.BEHAVIOURAL_EXTENDED_SOURCE_IDS:
         root, tmp = behavioural_root(sid=sid)
         rid = A.scoreboard_id(sid)
         c, o = run(root)
@@ -550,8 +562,10 @@ def main():
     c, o = run(root, "--check")
     expect("decisions_output_checks_current", c == 0 and "ASSEMBLE_OK" in o, o)
     if shutil.which("node"):
-        env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root))
-        out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C6"], env=env, capture_output=True, text=True).stdout
+        env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root),
+                   PARITY_CASEMAP=str(A.LEDGER / A.OUT_CASEMAP))
+        check = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C6"], env=env, capture_output=True, text=True)
+        out = check.stdout + check.stderr
         expect("checker_c6_accepts_assembled_decision", "C6_MET" in out and "EXCLUDED_INTERNAL_HELPER:1" in out and "unsigned_decision=none" in out, out)
     shutil.rmtree(tmp)
     root, tmp = with_root()
@@ -600,6 +614,101 @@ def main():
     rg = json.loads((root / A.LEDGER / A.OUT_REVERSE_GAP).read_text())
     expect("decisions_file_kept_as_julia_extra_ok", c == 0 and rg[0]["decision"] == "KEPT_AS_JULIA_EXTRA" and rg[0]["status"] == "decided", o)
     shutil.rmtree(tmp)
+    scoped_ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+    scoped_ruling = {"ref": scoped_ref, "signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-17"}
+    scoped_entry = {
+        "decision": "SCOPED_R_TWIN", "basis": "bounded executable P1 twin with explicit limits",
+        "ruling": scoped_ruling,
+        "counterpart": {"r_function": "betabinomial", "r_commit": A.P1_SHA,
+                        "r_source": "R/family.R:10-20", "julia_source": "src/test.jl:1-2"},
+        "scope": {"public_route": "fit_beta_binomial_gllvm", "family_link": "beta-binomial/logit",
+                  "data": "pinned fixture", "estimand": "fixed effects and dispersion",
+                  "outputs": ["beta", "dispersion"], "exclusions": ["other families"]},
+        "receipt_ids": ["C"],
+    }
+    root, tmp = numeric_root()
+    (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+    (root / scoped_ref).write_text("Approved general SCOPED_R_TWIN evidence rule.\n")
+    (root / "src/test.jl").parent.mkdir(parents=True, exist_ok=True)
+    (root / "src/test.jl").write_text("# fixture source\n")
+    (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": scoped_entry})))
+    c, o = run(root)
+    expect("general_rule_does_not_authorize_fabricated_scoped_name",
+           c == 1 and "not an exact approved Julia export" in o, o)
+    shutil.rmtree(tmp)
+    root, tmp = numeric_root()
+    (root / "src/test.jl").parent.mkdir(parents=True, exist_ok=True)
+    (root / "src/test.jl").write_text("# fixture source\n")
+    (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": scoped_entry})))
+    c, o = run(root, "--check")
+    expect("scoped_twin_missing_approval_record_fails_closed",
+           c == 1 and "SCOPED_R_TWIN approval record" in o and "is missing" in o, o)
+    shutil.rmtree(tmp)
+    hold_ruling = {"ref": scoped_ref, "signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-17"}
+    hold_decision = {"decision": "HOLD_PENDING_EVIDENCE",
+                     "basis": "held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted",
+                     "ruling": hold_ruling}
+    root, tmp = with_root()
+    (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+    (root / scoped_ref).write_text("Shinichi approved the nine exact names to remain held pending route evidence.\n")
+    inp = json.loads((root / A.LEDGER / A.IN_REVERSE_GAP).read_text())
+    inp["julia_exports"] = [{"name": "NBFit", "kind": "Type"}]
+    (root / A.LEDGER / A.IN_REVERSE_GAP).write_text(json.dumps(inp))
+    c, o = run(root)
+    scoreboard_before_hold = (root / A.LEDGER / A.OUT_SCOREBOARD).read_bytes()
+    (root / DEC).write_text(json.dumps(decisions(decisions={"NBFit": hold_decision})))
+    c, o = run(root)
+    rg = json.loads((root / A.LEDGER / A.OUT_REVERSE_GAP).read_text())
+    expect("hold_pending_evidence_is_signed_held_and_does_not_change_scoreboard",
+           c == 0 and len(rg) == 1 and rg[0]["name"] == "NBFit"
+           and rg[0]["decision"] == "HOLD_PENDING_EVIDENCE" and rg[0]["status"] == "held"
+           and rg[0]["ruling"] == hold_ruling
+           and (root / A.LEDGER / A.OUT_SCOREBOARD).read_bytes() == scoreboard_before_hold, (rg, o))
+    shutil.rmtree(tmp)
+    root, tmp = with_root()
+    (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+    (root / scoped_ref).write_text("Shinichi approved only the nine exact held names.\n")
+    (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": hold_decision})))
+    c, o = run(root, "--check")
+    expect("hold_pending_evidence_for_unapproved_name_fails_closed",
+           c == 1 and "not in the approved hold name set" in o and "julia_only" in o, o)
+    shutil.rmtree(tmp)
+    for label, bad in (
+        ("no_item_ruling", {"decision": "HOLD_PENDING_EVIDENCE",
+          "basis": "held pending evidence; no twin or parity claim; no scoreboard row admitted"}),
+        ("basis_claims_twin", {"decision": "HOLD_PENDING_EVIDENCE", "basis": "measured twin equivalence" , "ruling": hold_ruling}),
+    ):
+        root, tmp = with_root()
+        (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+        (root / scoped_ref).write_text("Shinichi approved only the nine exact held names.\n")
+        (root / DEC).write_text(json.dumps(decisions(decisions={"NBFit": bad})))
+        c, o = run(root, "--check")
+        expect(f"hold_pending_evidence_{label}_fails_closed", c == 1 and "ASSEMBLE_FAIL" in o, o)
+        shutil.rmtree(tmp)
+    for label, update in (
+        ("missing_counterpart", {"counterpart": None}),
+        ("wrong_pinned_r_commit", {"counterpart": {**scoped_entry["counterpart"], "r_commit": "0" * 40}}),
+        ("missing_julia_source", {"counterpart": {"r_function": "betabinomial", "r_commit": A.P1_SHA,
+                                           "r_source": "R/family.R:10-20"}}),
+        ("missing_scope_exclusions", {"scope": {**scoped_entry["scope"], "exclusions": []}}),
+        ("missing_receipt_ids", {"receipt_ids": []}),
+        ("unknown_receipt_id", {"receipt_ids": ["NOT-A-CASE"]}),
+        ("duplicate_receipt_ids", {"receipt_ids": ["C"] * 2}),
+        ("missing_item_ruling", {"ruling": None}),
+    ):
+        root, tmp = numeric_root() if label == "unknown_receipt_id" else with_root()
+        (root / scoped_ref).parent.mkdir(parents=True, exist_ok=True)
+        (root / scoped_ref).write_text("Approved general SCOPED_R_TWIN evidence rule.\n")
+        (root / "src/test.jl").parent.mkdir(parents=True, exist_ok=True)
+        (root / "src/test.jl").write_text("# fixture source\n")
+        bad = {**scoped_entry, **update}
+        (root / DEC).write_text(json.dumps(decisions(decisions={"julia_only": bad})))
+        c, o = run(root, "--check")
+        ok = c == 1 and "ASSEMBLE_FAIL" in o
+        if label == "unknown_receipt_id":
+            ok = ok and "no executable P1 numeric or behavioural row" in o
+        expect(f"scoped_twin_{label}_fails_closed", ok, o)
+        shutil.rmtree(tmp)
     for label, over in (("no_ruling", {"ruling": None}), ("ruling_missing_signed_on", {"ruling": {"ref": "r", "signed_by": "x"}}),
                         ("bad_schema", {"schema": 2})):
         root, tmp = with_root()
@@ -646,13 +755,14 @@ def main():
             finally:
                 shutil.rmtree(tmp)
         return f
-    for sid in ("inference/CI-ROUTE-008", "inference/CI-ROUTE-009", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/",
+    for sid in ("inference/CI-ROUTE-008", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "inference/",
                 "inference/../isdm/X", "inference/CI-ROUTE-999", "inference/CI-ROUTE-005", "Inference/CI-ROUTE-001", "inference/CI-ROUTE-001 "):
         check(f"scope_frozen_list_rejects_{sid!r}", scope_list_case(sid))
 
     def all_63():
-        # All 59 listed rows plus the four excluded inference rows, every one tier behavioural with a scoped, matching entry.
-        excluded = [f"inference/CI-ROUTE-{n:03d}" for n in (8, 9, 10, 11)]
+        # All 59 listed rows plus the three inference rows still excluded (CI-ROUTE-009 joined in the 2026-10-05
+        # extension), every one tier behavioural with a scoped, matching entry.
+        excluded = [f"inference/CI-ROUTE-{n:03d}" for n in (8, 10, 11)]
         sids = list(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) + excluded
         rows = [row(sid, tier="behavioural", executable_case_ids=[f"CASE-{i}"], evidence={"receipt": [BR]}) for i, sid in enumerate(sids)]
         root, tmp = with_root({"case-map-family.json": rows})
@@ -664,10 +774,16 @@ def main():
             n_ok = sum(v == "EVIDENCED-BEHAVIOURAL" for sid, v in statuses.items() if sid in A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)
             n_bad = sum(statuses[sid] == "BEHAVIOURAL-UNVERIFIED" for sid in excluded)
             b = bound_beh(root)
-            return c == 0 and n_ok == 59 and n_bad == 4 and (b is None or b == 59), f"code={c} evidenced={n_ok} unverified_excluded={n_bad} checker_bound={b} {o}"
+            return c == 0 and n_ok == 59 and n_bad == 3 and (b is None or b == 59), f"code={c} evidenced={n_ok} unverified_excluded={n_bad} checker_bound={b} {o}"
         finally:
             shutil.rmtree(tmp)
-    check("scope_all_59_listed_rows_bind_and_the_four_others_do_not", all_63)
+    check("scope_all_59_listed_rows_bind_and_the_three_others_do_not", all_63)
+    check("scope_extended_list_has_14_unique_ids_disjoint_from_the_other_lists", lambda: (
+        len(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS) == 14 and len(set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS)) == 14
+        and not set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS) & (set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) | set(A.BEHAVIOURAL_NAMED_SOURCE_IDS))
+        and not {"inference/CI-ROUTE-008", "inference/CI-ROUTE-010", "inference/CI-ROUTE-011", "isdm/ISDM-LEGACY",
+                 "isdm/ISDM-NO-TRAITS", "isdm/ISDM-WRONG-ID", "isdm/ISDM-WRONG-LINK"} & set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS),
+        A.BEHAVIOURAL_EXTENDED_SOURCE_IDS))
     check("scope_list_has_59_unique_ids_none_of_008_to_011", lambda: (
         len(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS) == 59 and len(set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)) == 59
         and not {f"inference/CI-ROUTE-{n:03d}" for n in (8, 9, 10, 11)} & set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS), len(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)))
@@ -676,21 +792,25 @@ def main():
         led = A.ROOT / A.LEDGER
         inf = {r["source_id"]: r.get("evidence_tier") for r in json.loads((led / "case-map-inference.json").read_text())["rows"]}
         listed = set(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS)
+        extended = set(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS)  # CI-ROUTE-009 (2026-10-05): partial until its slice relabels it
         routing = {sid for sid, t in inf.items() if t in ("routing_control_flow", "reject_error_class")}
         missing = sorted(listed - set(inf))
         unlisted_routing = sorted(routing - listed)
         # A listed row is a routing or error-class row, or has already been relabelled behavioural by its slice;
         # no row outside the list may be behavioural; the four rows the ruling does not name are numeric or partial.
         bad_listed = sorted(sid for sid in listed if inf.get(sid) not in ("routing_control_flow", "reject_error_class", "behavioural"))
-        stray = sorted(sid for sid, t in inf.items() if t == "behavioural" and sid not in listed)
-        others = sorted(set(inf) - listed)
-        ok_others = all(inf[sid] in ("numeric", "partial_non_numeric_case") for sid in others)
+        stray = sorted(sid for sid, t in inf.items() if t == "behavioural" and sid not in listed | extended)
+        bad_extended = sorted(sid for sid in extended & set(inf) if inf[sid] not in ("partial_non_numeric_case", "behavioural"))
+        others = sorted(set(inf) - listed - extended)
+        ok_others = all(inf[sid] in ("numeric", "partial_non_numeric_case") for sid in others) and not bad_extended
         named = set()
         for f in sorted(led.glob("case-map*.json")):
             named |= {r["source_id"] for r in json.loads(f.read_text())["rows"]}
         named_missing = sorted(set(A.BEHAVIOURAL_NAMED_SOURCE_IDS) - named)
-        ok = not (missing or unlisted_routing or bad_listed or stray or named_missing) and ok_others and len(others) == 4
-        return ok, f"missing={missing} unlisted_routing={unlisted_routing} bad_listed={bad_listed} stray={stray} others={others} named_missing={named_missing}"
+        extended_missing = sorted(extended - named)
+        ok = not (missing or unlisted_routing or bad_listed or stray or named_missing or extended_missing) and ok_others and len(others) == 3
+        return ok, (f"missing={missing} unlisted_routing={unlisted_routing} bad_listed={bad_listed} stray={stray} others={others} "
+                    f"named_missing={named_missing} extended_missing={extended_missing} bad_extended={bad_extended}")
     check("scope_list_ties_to_case_map_inference_json", scope_ties_to_ledger)
 
     # Item 2: labels match by class identity, not by canonical string (external review F8a, F8b, F8e, F8f).
@@ -912,15 +1032,51 @@ def main():
         check(name, f)
     kept = lambda basis: {"julia_only": {"decision": "KEPT_AS_JULIA_EXTRA", "basis": basis}}  # noqa: E731
     helper = lambda basis: {"julia_only": {"decision": "EXCLUDED_INTERNAL_HELPER", "basis": basis}}  # noqa: E731
+    for ref in ("constructor", "__proto__", "toString", "hasOwnProperty", "valueOf", "isPrototypeOf"):
+        decision_fail(f"c6_ruling_ref_{ref}_is_not_a_recognised_ruling", "is not a recognised signed ruling", ruling=dict(RULING, ref=ref))
     decision_fail("c6_generator_that_does_not_exist_fails", "is not a file in the tree", generator="tools/does_not_exist.py")
     decision_fail("c6_generator_that_is_a_directory_fails", "is not a file in the tree", generator="tools")
     decision_fail("c6_generator_outside_the_tree_fails", "is not a file in the tree", generator="../outside.py")
     decision_fail("c6_generator_absolute_path_fails", "is not a file in the tree", generator=str(Path(__file__).resolve()))
+    # Review of #687 follow-up 3: GATES.md says a `..` path is refused; a `..` that resolves back into the tree was not.
+    for label, gen in (("tools_dotdot_tools", "tools/../tools/gen.py"), ("docs_dotdot_tools", "docs/../tools/gen.py"),
+                       ("trailing_dotdot", "tools/gen.py/.."), ("backslash_dotdot", "tools\\..\\tools\\gen.py"),
+                       ("many_dotdot", "tools/a/../../tools/gen.py")):
+        decision_fail(f"c6_generator_with_a_dotdot_segment_is_refused_{label}", "a path with a '..' segment is refused", generator=gen)
     for label, basis, why in (("no_path", "documented in the README", "must cite a docs/src/... file"), ("bare_dot", ".", "must cite a docs/src/... file"),
                               ("outside_docs_src", "see tools/gen.py", "must cite a docs/src/... file"), ("dot_dot", "docs/src/../x.md", "must cite a docs/src/... file"),
                               ("missing_file", "docs/src/missing.md", "docs/src/missing.md, which does not exist in the tree"),
                               ("one_missing_one_present", "docs/src/page.md and docs/src/gone.md", "docs/src/gone.md, which does not exist")):
         decision_fail(f"c6_kept_basis_{label}_fails", why, decisions=kept(basis))
+    # Review of #687 follow-up 3: the cited page is matched exactly (an existing .md file written docs/src/<path>.md).
+    NOT_EXACT = "not an exact docs/src/<path>.md page: "
+    for label, basis, bad in (
+            ("bak_suffix_on_an_existing_page", "see docs/src/page.md.bak", "docs/src/page.md.bak"),
+            ("existing_bak_file", "docs/src/real.md.bak", "docs/src/real.md.bak"),
+            ("mdx_suffix", "docs/src/page.mdx", "docs/src/page.mdx"),
+            ("tilde_suffix", "docs/src/page.md~", "docs/src/page.md~"),
+            ("trailing_slash", "docs/src/page.md/", "docs/src/page.md/"),
+            ("existing_json", "docs/src/assets/x.json", "docs/src/assets/x.json"),
+            ("existing_txt", "see docs/src/notes.txt", "docs/src/notes.txt"),
+            ("existing_jl", "see docs/src/code.jl", "docs/src/code.jl"),
+            ("existing_toml", "see docs/src/cfg.toml", "docs/src/cfg.toml"),
+            ("dot_slash_prefix", "./docs/src/page.md", "./docs/src/page.md"),
+            ("dot_dot_slash_prefix", "../docs/src/page.md", "../docs/src/page.md"),
+            ("directory_prefix", "other/docs/src/page.md", "other/docs/src/page.md"),
+            ("absolute_prefix", "/abs/docs/src/page.md", "/abs/docs/src/page.md"),
+            ("letter_before_docs", "xdocs/src/page.md", "xdocs/src/page.md"),
+            ("url", "https://example.org/docs/src/page.md", "//example.org/docs/src/page.md"),
+            ("dot_dot_segment_resolving_to_a_page", "docs/src/../src/page.md", "docs/src/../src/page.md"),
+            ("dot_dot_after_a_directory", "docs/src/sub/../page.md", "docs/src/sub/../page.md"),
+            ("dot_segment", "docs/src/./page.md", "docs/src/./page.md"),
+            ("doubled_slash", "docs/src//page.md", "docs/src//page.md"),
+            ("directory_only", "see docs/src/", "docs/src/"),
+            ("no_break_space_after_the_page", "docs/src/page.md" + chr(0xa0), None)):
+        decision_fail(f"c6_kept_basis_exact_page_{label}_fails", "must cite a docs/src/... file; " + (NOT_EXACT + bad if bad else "not an exact"), decisions=kept(basis))
+    for label, basis, bad in (("good_beside_a_bak", "docs/src/page.md and docs/src/gone.md.bak", "docs/src/gone.md.bak"),
+                              ("good_beside_a_dot_slash_copy", "docs/src/page.md and ./docs/src/page.md", "./docs/src/page.md"),
+                              ("good_beside_the_directory", "docs/src/ and docs/src/page.md", "docs/src/")):
+        decision_fail(f"c6_kept_basis_exact_page_{label}_fails", f"cites {bad}, which is not an exact docs/src/<path>.md page", decisions=kept(basis))
     for name, ch in INVIS:
         decision_fail(f"c6_helper_basis_U{name}_fails", "basis must be a non-empty string", decisions=helper(ch))
         decision_fail(f"c6_kept_basis_U{name}_fails", "basis must be a non-empty string", decisions=kept(ch))
@@ -938,7 +1094,12 @@ def main():
                 shutil.rmtree(tmp)
         check(name, f)
     decisions_ok("c6_kept_basis_citing_an_existing_docs_src_file_ok", kept("see docs/src/page.md, section extras."))
+    for i, basis in enumerate(("docs/src/page.md", "(docs/src/page.md)", "`docs/src/page.md`", "docs/src/page.md:12", "see docs/src/page.md.",
+                               "[extras](docs/src/page.md#x)", "docs/src/page.md;docs/src/sub/deep.md", "docs/src/sub/deep.md",
+                               "documented in\ndocs/src/page.md\nand elsewhere", "a \"docs/src/page.md\" b", "'docs/src/page.md'")):
+        decisions_ok(f"c6_kept_basis_exact_page_accepted_{i}", kept(basis))
     decisions_ok("c6_helper_basis_with_a_visible_character_ok", helper("."))
+    decisions_ok("c6_generator_with_a_plain_in_tree_path_still_ok", helper("."), generator="tools/gen.py")
 
     # Item 10: a Julia export has a gllvmTMB counterpart when the names match after tools/parity_ledger.py norm().
     def reverse_gap_norm():
@@ -988,25 +1149,319 @@ def main():
         check(f"signature_with_U{name}_padding_reads_the_same_in_both_tools", signature_agrees("Shinichi Nakagawa" + ch, "2026-09-27" + ch))
         check(f"signature_with_leading_U{name}_reads_the_same_in_both_tools", signature_agrees(ch + "Shinichi Nakagawa", ch + "2026-09-27"))
 
+    # Review of #687 follow-up 1: a case-map `disposition` is free text copied into the scoreboard's Status column,
+    # so it must never read there as a status the assembler (or the checker's DONE set) trusts. Each control fails
+    # on the head before this change (a disposition of "EVIDENCED" became the status verbatim).
+    def x2_counts(root):
+        """(rows, done) from the checker's X2 over this root's assembled scoreboard; None without node."""
+        if not shutil.which("node"):
+            return None
+        env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root))
+        out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "X2"], env=env, capture_output=True, text=True).stdout
+        m = re.search(r"\brows=(\d+) done=(\d+)", out)
+        return (int(m.group(1)), int(m.group(2))) if m else None
+
+    def unbound_numeric_root(**row_kw):
+        """A numeric row whose receipt exists but says FAIL: honestly NUMERIC-UNVERIFIED, so X2 must not count it."""
+        return numeric_root({"verdict": "FAIL"}, **row_kw)
+
+    def forged_disposition(disp, want_status="DISPOSITION-UNVERIFIED", why=None):
+        def f():
+            root, tmp = unbound_numeric_root(disposition=disp)
+            try:
+                c, o = run(root)
+                st = status_of(root)
+                x2 = x2_counts(root)
+                ok = c == 0 and st == want_status and (x2 is None or x2[1] == 0) and (why is None or why in text_of(root))
+                return ok, f"exit={c} status={st!r} x2={x2} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+
+    def honest_baseline():
+        root, tmp = unbound_numeric_root()
+        try:
+            c, o = run(root)
+            x2 = x2_counts(root)
+            return c == 0 and status_of(root) == "NUMERIC-UNVERIFIED" and (x2 is None or x2[1] == 0), f"{status_of(root)} {x2} {o}"
+        finally:
+            shutil.rmtree(tmp)
+    check("disposition_status_baseline_failed_receipt_row_is_not_done", honest_baseline)
+
+    DONE_WORDS = ("EVIDENCED", "EVIDENCED-BEHAVIOURAL", "DISPOSITION-SIGNED")
+    check("disposition_status_word_is_unverified_and_not_counted_by_x2_EVIDENCED", forged_disposition("EVIDENCED", why="reserved status word"))
+    check("disposition_status_word_is_unverified_and_not_counted_by_x2_EVIDENCED_BEHAVIOURAL", forged_disposition("EVIDENCED-BEHAVIOURAL", why="reserved status word"))
+    check("disposition_status_word_is_unverified_and_not_counted_by_x2_DISPOSITION_SIGNED_no_signature", forged_disposition("DISPOSITION-SIGNED"))
+    check("disposition_status_word_with_spaces_is_unverified_and_not_counted_by_x2", forged_disposition("  EVIDENCED  "))
+    check("disposition_status_word_with_a_trailing_U_FEFF_is_unverified_and_not_counted_by_x2", forged_disposition("EVIDENCED\ufeff"))
+    check("disposition_status_word_with_a_leading_U_00A0_is_unverified_and_not_counted_by_x2", forged_disposition("\u00a0EVIDENCED-BEHAVIOURAL"))
+    check("disposition_status_word_lower_case_is_unverified", forged_disposition("evidenced"))
+    check("disposition_with_an_inner_CR_is_unverified", forged_disposition("see\rnotes"))
+    check("disposition_pipe_forged_status_column_is_unverified_and_not_counted_by_x2", forged_disposition(f"EVIDENCED | {RP} | forged |", why="table delimiter"))
+    check("disposition_with_a_line_break_is_unverified_not_a_failed_run", forged_disposition("EVIDENCED\n| family-FAKE | r | EVIDENCED | " + RP + " | n |", why="table delimiter or line break"))
+    check("disposition_with_an_inner_line_break_is_unverified_not_a_failed_run", forged_disposition("see\nnotes", why="table delimiter or line break"))
+
+    def reserved_variants():
+        def pads(w):
+            return [w, w.lower(), w.title(), f" {w} ", f"{w}\r", f"{w}\n", f"\t{w}", f"{w}\ufeff", f"\u00a0{w}", f"\u2028{w}\u2029", f"\u3000{w}\u3000"]
+        bad = []
+        for w in sorted(A.RESERVED_STATUS_WORDS):
+            for d in pads(w):
+                st, _why = A.derive_status(row("family/N", disposition=d), A.ROOT, {})
+                if st != "DISPOSITION-UNVERIFIED":
+                    bad.append((d, st))
+        return not bad and len(A.RESERVED_STATUS_WORDS) >= 15, f"{bad[:5]} words={len(A.RESERVED_STATUS_WORDS)}"
+    check("every_reserved_status_word_in_every_padding_and_case_is_unverified_as_a_disposition", reserved_variants)
+
+    def odd_dispositions():
+        bad = []
+        for d in (5, 0, True, False, 1.5, ["EVIDENCED"], {"a": 1}, "", "   ", "\ufeff", "\u0085"):
+            st, _why = A.derive_status(row("family/N", disposition=d), A.ROOT, {})
+            if st != "DISPOSITION-UNVERIFIED":
+                bad.append((d, st))
+        return not bad, str(bad)
+    check("non_string_or_blank_disposition_is_unverified", odd_dispositions)
+
+    def plain_dispositions_still_pass_through():
+        want = {"BLOCKED_NEEDS_JULIA_SURFACE": "NEEDS-SURFACE", "outside_boundary": "outside_boundary",
+                "see EVIDENCED notes": "see EVIDENCED notes", "EVIDENCED-BEHAVIOURALX": "EVIDENCED-BEHAVIOURALX",
+                "NEEDS_JULIA_SURFACE": "NEEDS-SURFACE", "PARTIAL_X": "PARTIAL_X"}
+        got = {d: A.derive_status(row("family/N", disposition=d), A.ROOT, {})[0] for d in want}
+        return got == want, f"{got}"
+    check("plain_dispositions_keep_their_old_status", plain_dispositions_still_pass_through)
+
+    def disposition_signed_still_signs():
+        root, tmp = with_root({"case-map-data.json": [row("data/S", **sig)]})
+        try:
+            c, o = run(root)
+            x2 = x2_counts(root)
+            return c == 0 and status_of(root, "data-S") == "DISPOSITION-SIGNED" and (x2 is None or x2[1] >= 1), f"{status_of(root, 'data-S')} {x2} {o}"
+        finally:
+            shutil.rmtree(tmp)
+    check("a_valid_signature_still_reads_disposition_signed_after_the_reserved_word_guard", disposition_signed_still_signs)
+
+    def reserved_words_cover_emitted_statuses():
+        import inspect
+        src = inspect.getsource(A.derive_status) + inspect.getsource(A.disposition_status)
+        emitted = set(re.findall(r'"([A-Z]+(?:-[A-Z]+)*)"', src))
+        missing = sorted(emitted - A.RESERVED_STATUS_WORDS)
+        return bool(emitted) and not missing and set(A.TIER_BUCKET.values()) <= A.RESERVED_STATUS_WORDS and set(A.STATUS_ORDER) <= A.RESERVED_STATUS_WORDS, f"missing={missing} emitted={sorted(emitted)}"
+    check("reserved_status_words_cover_every_status_derive_status_emits", reserved_words_cover_emitted_statuses)
+
+    def checker_done_set_is_reserved():
+        mjs_text = (HERE / "true_parity_check.mjs").read_text()
+        done = re.findall(r"'([A-Z-]+)'", re.search(r"const DONE = new Set\(\[(.*?)\]\);", mjs_text).group(1))
+        return done == list(DONE_WORDS) and set(done) <= A.RESERVED_STATUS_WORDS, str(done)
+    check("checker_done_set_is_a_subset_of_the_reserved_status_words", checker_done_set_is_reserved)
+
     # The two tools carry copies of the C6 vocabulary, the C6 ruling table and the behavioural scope; they must not drift.
     mjs = (HERE / "true_parity_check.mjs").read_text()
     vocab = re.search(r"const C6_DECISION_VOCAB = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("c6_vocab_matches_checker", re.findall(r"'([A-Z_]+)'", vocab) == list(A.C6_DECISION_VOCAB), vocab)
     rtable = re.search(r"const C6_RULINGS = \{(.*?)\n\};", mjs, re.S).group(1)
-    ref = re.search(r"'([^']+#684 item 3)': \{ signed_on: '([0-9-]+)', words: new Set\(\[([^\]]*)\]\)", rtable)
-    expect("c6_rulings_match_checker",
-           ref is not None and list(A.C6_RULINGS) == [ref.group(1)] and A.C6_RULINGS[ref.group(1)]["signed_on"] == ref.group(2)
-           and re.findall(r"'([A-Z_]+)'", ref.group(3)) == list(A.C6_RULINGS[ref.group(1)]["words"]), rtable)
+    refs = re.findall(r"'([^']+)': \{ signed_on: '([0-9-]+)', words: new Set\(\[([^\]]*)\]\) \}", rtable)
+    parsed_rulings = {ref: {"signed_on": date, "words": tuple(re.findall(r"'([A-Z_]+)'", words))}
+                      for ref, date, words in refs}
+    expect("c6_rulings_match_checker", parsed_rulings == A.C6_RULINGS, (parsed_rulings, A.C6_RULINGS))
+    held_js = re.search(r"const HELD_C6_NAMES = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
+    held_checkpoint = re.search(r"export const HELD_C6_NAMES = Object.freeze\(\[(.*?)\]\);", (HERE / "true_parity_checkpoint_check.mjs").read_text(), re.S).group(1)
+    held_classifier = re.search(r"const HOLD_PENDING_NAMES = Set\(\[(.*?)\]\);?", (HERE / "true_parity_c6_classify.jl").read_text(), re.S).group(1)
+    parse_names = lambda text: re.findall(r"'([^']+)'", text)  # noqa: E731
+    expect("c6_held_name_allowlists_match_checkers",
+           parse_names(held_js) == list(A.C6_HELD_NAMES) == parse_names(held_checkpoint)
+           and re.findall(r'"([^"]+)"', held_classifier) == list(A.C6_HELD_NAMES),
+           (parse_names(held_js), A.C6_HELD_NAMES, parse_names(held_checkpoint),
+            re.findall(r'"([^"]+)"', held_classifier)))
     named = re.search(r"const BEHAVIOURAL_NAMED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("behavioural_named_ids_match_checker", re.findall(r"'([^']+)'", named) == list(A.BEHAVIOURAL_NAMED_SOURCE_IDS), named)
+    ext = re.search(r"const BEHAVIOURAL_EXTENDED_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
+    expect("behavioural_extended_ids_match_checker", re.findall(r"'([^']+)'", ext) == list(A.BEHAVIOURAL_EXTENDED_SOURCE_IDS), ext)
     infer = re.search(r"const BEHAVIOURAL_INFERENCE_SOURCE_IDS = new Set\(\[(.*?)\]\);", mjs, re.S).group(1)
     expect("behavioural_inference_ids_match_checker", re.findall(r"'([^']+)'", infer) == list(A.BEHAVIOURAL_INFERENCE_SOURCE_IDS), infer)
     expect("receipt_status_fields_match_checker",
            re.findall(r"'([a-z_]+)'", re.search(r"const RECEIPT_STATUS_FIELDS = \[(.*?)\];", mjs).group(1)) == A.STATUS_FIELDS
            and "const BEHAVIOURAL_STATUS_FIELDS = [...RECEIPT_STATUS_FIELDS, 'result'];" in mjs
            and A.BEHAVIOURAL_STATUS_FIELDS == A.STATUS_FIELDS + ["result"], "RECEIPT_STATUS_FIELDS or BEHAVIOURAL_STATUS_FIELDS drifted")
-    js_docs = re.search(r"const DOCS_SRC_RE = /(.*)/g;", mjs).group(1).replace("\\/", "/")
-    expect("docs_src_regex_matches_checker", js_docs == A.DOCS_SRC_RE.pattern, f"{js_docs} != {A.DOCS_SRC_RE.pattern}")
+    js_split = re.search(r"const DOCS_SRC_SPLIT_RE = /(.*)/;", mjs).group(1).replace("\\/", "/")
+    js_page = re.search(r"const DOCS_SRC_PAGE_RE = /(.*)/;", mjs).group(1).replace("\\/", "/")
+    expect("docs_src_split_regex_matches_checker", js_split == A.DOCS_SRC_SPLIT_RE.pattern, f"{js_split} != {A.DOCS_SRC_SPLIT_RE.pattern}")
+    expect("docs_src_page_regex_matches_checker", js_page == A.DOCS_SRC_PAGE_RE.pattern, f"{js_page} != {A.DOCS_SRC_PAGE_RE.pattern}")
+
+    # The two tools must accept and refuse the same bases: run the checker's C6 on the corpus and compare, item by item,
+    # with the assembler's kept_basis_problem over the same tree.
+    def basis_agreement():
+        if not shutil.which("node"):
+            return True, "node not available"
+        corpus = ["docs/src/page.md", "see docs/src/page.md, section extras.", "x docs/src/page.md#extras", "(docs/src/page.md)", "docs/src/page.md.",
+                  "docs/src/sub/deep.md", "docs/src/page.md and docs/src/sub/deep.md", "docs/src/page.md.bak", "docs/src/real.md.bak", "docs/src/page.mdx",
+                  "docs/src/page.md~", "docs/src/page.md/", "docs/src/assets/x.json", "docs/src/notes.txt", "docs/src/code.jl", "docs/src/cfg.toml",
+                  "./docs/src/page.md", "../docs/src/page.md", "other/docs/src/page.md", "/abs/docs/src/page.md", "xdocs/src/page.md",
+                  "https://example.org/docs/src/page.md", "docs/src/../src/page.md", "docs/src/sub/../page.md", "docs/src/./page.md", "docs/src//page.md",
+                  "docs/src/", "docs/src", "docs/src/missing.md", "docs/src/page.md and docs/src/gone.md", "docs/src/page.md and docs/src/gone.md.bak",
+                  "docs/src/page.md" + chr(0xa0), chr(0xa0) + "docs/src/page.md", "docs/src/page.md" + chr(0xfeff), "docs/src/page.md\u2028", "DOCS/SRC/page.md",
+                  "docs\\src\\page.md", "nothing here", ".", "docs/src/.hidden.md", "docs/src/a b.md", "docs/src/pa\tge.md", "docs/src/page.md\tdocs/src/sub/deep.md",
+                  "a,docs/src/page.md,b", "a;docs/src/page.md;b", "a'docs/src/page.md'b", "<docs/src/page.md>", "docs/src/page.md!", "docs/src/page.md?", "docs/src/page.md..."]
+        root, tmp = with_root()
+        try:
+            items = [{"source_id": f"julia-export/b{i}", "decision": "KEPT_AS_JULIA_EXTRA", "basis": b,
+                      "ruling": {"ref": "itchyshin/GLLVModels.jl#684 item 3", "signed_by": "Shinichi Nakagawa", "signed_on": "2026-10-02"}}
+                     for i, b in enumerate(corpus)]
+            (root / A.LEDGER / "reverse-gap.json").write_text(json.dumps(items))
+            env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root))
+            out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C6"], env=env, capture_output=True, text=True).stdout
+            refused_js = {int(m) for m in re.findall(r"julia-export/b(\d+)\(KEPT_AS_JULIA_EXTRA basis ", out)}
+            refused_py = {i for i, b in enumerate(corpus) if A.kept_basis_problem(b, root) is not None}
+            diff = sorted(refused_js ^ refused_py)
+            return bool(refused_py) and len(refused_py) < len(corpus) and not diff, f"differ on {[(i, corpus[i]) for i in diff]}; js refused {len(refused_js)}, py refused {len(refused_py)}"
+        finally:
+            shutil.rmtree(tmp)
+    check("kept_basis_accept_and_refuse_agree_between_checker_and_assembler", basis_agreement)
+
+    # Maintainer ruling 2026-10-05 (D-319), ruling 1: a live_bridge_readback receipt binds fitted, predict and residuals
+    # (and gllvm_julia_fit) only, each on its own cases; the checker gives the same verdict.
+    def bridge_case(sid, cid, kind, want_status, contains=None):
+        def f():
+            root, tmp = with_root({"case-map-namespace.json": [row(sid, cls="compatibility_adapter", tier="numeric",
+                                                                    executable_case_ids=[cid], evidence={"receipt": [RP]})]})
+            try:
+                (root / RP).write_text(json.dumps({"evidence_kind": kind, "verdict": "PASS", "comparison": {
+                    "pin": "P1", "cases": [{"case_id": cid, "r_value": 1.0, "julia_value": 1.0, "tolerance": 1e-12}]}}))
+                c, o = run(root)
+                rid = A.scoreboard_id(sid)
+                st = status_of(root, rid)
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("bridge_readback_fitted_own_case_evidenced",
+          bridge_case("namespace/S3method/fitted,gllvmTMB_julia", "P1-BRIDGE-READBACK-FITTED-RESPONSE", "live_bridge_readback", "EVIDENCED"))
+    check("bridge_readback_residuals_own_case_evidenced",
+          bridge_case("namespace/S3method/residuals,gllvmTMB_julia", "P1-BRIDGE-READBACK-RESIDUALS-PEARSON", "live_bridge_readback", "EVIDENCED"))
+    check("bridge_readback_coef_relabelled_numeric_does_not_bind",
+          bridge_case("namespace/S3method/coef,gllvmTMB_julia", "P1-BRIDGE-READBACK-COEF-ALPHA", "live_bridge_readback",
+                      "NUMERIC-UNVERIFIED", "binds only fitted, predict and residuals"))
+    check("bridge_readback_fitted_borrowing_coef_case_does_not_bind",
+          bridge_case("namespace/S3method/fitted,gllvmTMB_julia", "P1-BRIDGE-READBACK-COEF-ALPHA", "live_bridge_readback",
+                      "NUMERIC-UNVERIFIED", "only on its own cases"))
+    check("bridge_readback_other_kind_not_affected",
+          bridge_case("namespace/S3method/coef,gllvmTMB_julia", "P1-COEF-TWIN", "numeric_r_vs_julia", "EVIDENCED"))
+    def bridge_prefix_drift():
+        mjs = (HERE / "true_parity_check.mjs").read_text()
+        body = re.search(r"const BRIDGE_READBACK_ROW_PREFIX = \{(.*?)\n\};", mjs, re.S).group(1)
+        pairs = dict(re.findall(r"'([^']+)': '([^']+)'", body))
+        return pairs == A.BRIDGE_READBACK_ROW_PREFIX, str(pairs)
+    check("bridge_readback_prefix_table_matches_checker", bridge_prefix_drift)
+
+    # Maintainer ruling 2026-10-05 (D-319), N1: boundary context cases; the checker gives the same verdict.
+    CTX = str(A.LEDGER / "receipts/ctx.json")
+    def ctx_case(ctx_receipt, want_status, contains=None, ids=("C", "C-PUBLIC-R-BRIDGE"), ctx_ids=("C-PUBLIC-R-BRIDGE",)):
+        def f():
+            root, tmp = with_root({"case-map-covariance.json": [row(
+                "covariance/N", tier="numeric", executable_case_ids=list(ids), boundary_context_case_ids=list(ctx_ids),
+                evidence={"receipt": [RP], "boundary_context_receipts": [CTX]})]})
+            try:
+                (root / RP).write_text(json.dumps({"comparison": GOOD_CMP}))
+                (root / CTX).write_text(json.dumps({"case_id": ctx_ids[0], **ctx_receipt}))
+                c, o = run(root)
+                st = status_of(root, "covariance-N")
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("boundary_context_public_r_bridge_refusal_evidenced",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "EVIDENCED"))
+    check("boundary_context_admission_only_evidenced",
+          ctx_case({"evidence_kind": "r_only_formula_grammar", "verdict": "R_ONLY_PASS"}, "EVIDENCED",
+                   ids=("C", "C-FORMULA"), ctx_ids=("C-FORMULA",)))
+    check("boundary_context_other_kind_refused",
+          ctx_case({"evidence_kind": "numeric_r_vs_julia", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "not an admission-only or PUBLIC-R-BRIDGE boundary kind"))
+    check("boundary_context_wrong_verdict_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "is not R_BOUNDARY_UNCHANGED"))
+    check("boundary_context_with_comparison_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "comparison": {}}, "NUMERIC-UNVERIFIED", "so it is compared, not context"))
+    # N1 covers an R refusal recorded by a receipt; a bridge case nobody ran is not context.
+    check("boundary_context_not_executed_bridge_case_refused",
+          ctx_case({"evidence_kind": "not_executed", "verdict": "NOT_EXECUTED"}, "NUMERIC-UNVERIFIED",
+                   "not an admission-only or PUBLIC-R-BRIDGE boundary kind"))
+    check("boundary_context_bridge_kind_on_native_case_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED", "must be a -PUBLIC-R-BRIDGE case",
+                   ids=("C", "C-NATIVE"), ctx_ids=("C-NATIVE",)))
+    check("boundary_context_all_cases_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
+                   "every executable case is boundary context", ids=("C-PUBLIC-R-BRIDGE",)))
+    # The duplicate-id hole: a context id listed twice in executable_case_ids would pass the count test while no
+    # executable case outside the context list is compared (the receipt compares case C, which the row does not list).
+    check("boundary_context_duplicate_executable_id_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
+                   "executable_case_ids lists a case id twice", ids=("C-PUBLIC-R-BRIDGE", "C-PUBLIC-R-BRIDGE")))
+
+    # Maintainer ruling 2026-10-05 (D-319), C4: an EVIDENCED real-data row must cite a direct-engine run (a receipt
+    # with non-empty engines.R and engines.julia objects). The scoreboard never shows EVIDENCED on an RD row the
+    # checker's C4 counts not done.
+    def c4_case(extra, want_status):
+        def f():
+            root, tmp = with_root({"case-map-data.json": [row(
+                "data/RD-X", tier="numeric", executable_case_ids=["C"], evidence={"receipt": [RP]})]})
+            try:
+                (root / RP).write_text(json.dumps({"comparison": GOOD_CMP, **extra}))
+                c, o = run(root)
+                st = status_of(root, "data-RD-X")
+                out = None
+                if shutil.which("node"):
+                    env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root), PARITY_CASEMAP=str(A.LEDGER / A.OUT_CASEMAP))
+                    out = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C4"], env=env, capture_output=True, text=True).stdout
+                want_done = want_status == "EVIDENCED"
+                agree = out is None or (re.search(r"C4 real-data workflows rows=1 done=1\b", out) is not None) == want_done
+                ok = c == 0 and st == want_status and agree
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("c4_direct_engine_receipt_evidenced",
+          c4_case({"engines": {"R": {"engine": "R gllvmTMB"}, "julia": {"engine": "GLLVModels.jl"}}}, "EVIDENCED"))
+    check("c4_no_engines_block_not_evidenced", c4_case({}, "NUMERIC-UNVERIFIED"))
+    check("c4_only_r_engine_not_evidenced", c4_case({"engines": {"R": {"engine": "R gllvmTMB"}}}, "NUMERIC-UNVERIFIED"))
+    check("c4_empty_engine_blocks_not_evidenced", c4_case({"engines": {"R": {}, "julia": {}}}, "NUMERIC-UNVERIFIED"))
+
+    # Maintainer ruling 2026-10-05 (D-319), N9: convergence parity; the checker gives the same verdict.
+    def cp_case(cp, want_status, contains=None):
+        def f():
+            root, tmp = numeric_root({"convergence_parity": cp})
+            try:
+                c, o = run(root)
+                st = status_of(root)
+                txt = (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+                out = checker_c1(root)
+                m = re.search(r"\bbound=(\d+)", out or "")
+                want_bound = 1 if want_status == "EVIDENCED" else 0
+                ok = c == 0 and st == want_status and (contains is None or contains in txt) and (out is None or (m and int(m.group(1)) == want_bound))
+                return ok, f"code={c} status={st} checker={out and out[:300]} {o}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    def cpb(rg, jg, **over):
+        d = {"gradient_bound": 1e-5, "compared_point": "newton_polished",
+             "engines": {"R": {"max_abs_gradient": rg}, "julia": {"max_abs_gradient": jg}}}
+        d.update(over)
+        return d
+    check("convergence_parity_both_below_bound_evidenced", cp_case(cpb(4.709e-7, 2.365e-6), "EVIDENCED"))
+    check("convergence_parity_exactly_bound_evidenced", cp_case(cpb(1e-5, 1e-5), "EVIDENCED"))
+    check("convergence_parity_r_early_stop_unverified", cp_case(cpb(4.314e-4, 7.822e-6), "NUMERIC-UNVERIFIED", "R max_abs_gradient 0.0004314 > 1e-5"))
+    check("convergence_parity_looser_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=1e-4), "NUMERIC-UNVERIFIED", "is not 1e-5"))
+    check("convergence_parity_bool_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=True), "NUMERIC-UNVERIFIED", "is not 1e-5"))
+    check("convergence_parity_missing_julia_unverified",
+          cp_case({"gradient_bound": 1e-5, "compared_point": "returned", "engines": {"R": {"max_abs_gradient": 1e-7}}}, "NUMERIC-UNVERIFIED", "julia max_abs_gradient"))
+    check("convergence_parity_unknown_point_unverified", cp_case(cpb(1e-7, 1e-7, compared_point="best"), "NUMERIC-UNVERIFIED", "is not returned or newton_polished"))
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
@@ -1025,5 +1480,24 @@ def main():
     return 1 if FAILS else 0
 
 
+def check_exact_scoped_authorization():
+    import copy
+    records = json.loads((A.ROOT / A.LEDGER / A.IN_REVERSE_GAP_DECISIONS).read_text())["decisions"]
+    scoped = {n: v for n, v in records.items() if v["decision"] == "SCOPED_R_TWIN"}
+    expect("exact_scoped_authorization_has_eleven_names", set(scoped) == set(A.C6_APPROVED_SCOPE_SHA256))
+    for name, entry in scoped.items():
+        expect(f"exact_scope_{name}_passes", A.approved_scope_problem(name, entry) is None)
+        expect(f"unsigned_name_{name}_fails", A.approved_scope_problem("unsigned_" + name, entry) is not None)
+        for field in ("public_route", "family_link", "data", "estimand", "outputs", "exclusions"):
+            bad = copy.deepcopy(entry)
+            bad["scope"][field] = ["unsigned expansion"] if isinstance(bad["scope"][field], list) else "unsigned expansion"
+            expect(f"expanded_scope_{name}_{field}_fails", A.approved_scope_problem(name, bad) is not None)
+        for field in ("receipt_ids", "counterpart", "ruling"):
+            bad = copy.deepcopy(entry)
+            bad[field] = ["unsigned receipt"] if field == "receipt_ids" else {"unsigned": "replacement"}
+            expect(f"changed_contract_{name}_{field}_fails", A.approved_scope_problem(name, bad) is not None)
+
+
 if __name__ == "__main__":
+    check_exact_scoped_authorization()
     sys.exit(main())

@@ -2,8 +2,8 @@ case_id = "NATIVE-16-NB1"
 
 [[values]]
 label = "logLik"
-julia = -1129.6667320235438
+julia = -1129.6667320235442
 test = "@test jl_logL ≈ r.logLik rtol = 1e-6"
 rtol = 1.0e-6
-r = -1129.666732037156
+r = -1129.6667320371553
 atol = 0.0

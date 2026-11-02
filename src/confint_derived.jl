@@ -541,6 +541,7 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
 
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     n_boot ≥ 1   || throw(ArgumentError("n_boot must be ≥ 1; got $n_boot"))
+    _check_unpinned_refit(fit, "bootstrap_ci_derived")
 
     if _has_gaussian_record(fit)
         data=y===nothing ? fit.integration.data.responses : y
@@ -1057,6 +1058,7 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
                             max_bisect::Integer = 30,
                             bounds::Union{Nothing, Tuple{Real, Real}} = nothing)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
+    _check_unpinned_refit(fit, "profile_ci_derived")
     y === nothing && throw(ArgumentError(
         "profile_ci_derived requires the data matrix `y`"))
     X = _mean_X(fit, X, size(y, 2))
@@ -1259,20 +1261,21 @@ end
 
 Profile-likelihood CI for the RAW reduced-rank loading entry `Λ[t, k]` on an
 **exploratory (unpinned)** fit (`component = :B`, default — the shared/between
-tier; `component = :W` for the within tier). GLLVModels.jl has no separate
-confirmatory fit mode with `lambda_constraint` pins; the lower-triangular
-packing convention (`src/packing.jl`) is this package's built-in identifiability
-device, so this function runs on any fit.
+tier; `component = :W` for the within tier). On an exploratory fit the
+lower-triangular packing convention (`src/packing.jl`) is the identifiability
+device. On a fit made with `fit_gaussian_gllvm(y; K, lambda_constraint = M)`
+whose `M` pins a loading, it throws an `ArgumentError` for an entry with
+`k ≤ t`, because the profile refits would drop the pins; [`loading_profile`](@ref)
+profiles the free loadings of such a fit with the pins held.
 
-**Estimand scope (Core070 D3, 2026-09-04):** this is **not** R's
-`loading_profile()`, which profiles a Λ entry on a **confirmatory
-(pinned-loadings)** fit gated on R's `fit\$lambda_constraint`
-(`.unlazy/core070-aghq/oracle-source/readback/R/loading-profile.R`). Same
-family of quantity, different estimand — the rename makes that gap visible in
-the API rather than hiding it behind a matching signature.
+**Difference from R.** This is not R's `loading_profile()`. R profiles a
+loading from a confirmatory model in which selected loadings were fixed before
+fitting. GLLVModels.jl instead profiles a raw loading from its exploratory
+model under the built-in lower-triangular constraint. The functions therefore
+concern the same kind of quantity but estimate it under different constraints.
+The name `loading_profile_exploratory` makes that distinction explicit.
 
-Implementation: a thin wrapper around [`profile_ci_derived`](@ref) using the
-packed-θ closure `θ -> Λ_component(θ)[t, k]`; all keyword arguments forward.
+Additional keyword arguments are passed to the profile-likelihood calculation.
 
 For `k > t` on the lower-triangular reduced-rank packing convention, the entry
 is structurally pinned at `0`: this returns

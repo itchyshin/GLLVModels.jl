@@ -1,76 +1,75 @@
 {
   "schema": "core070-family-p1-case-receipt/v1",
   "case_id": "NATIVE-06-NB2",
-  "verdict": "FAIL",
+  "verdict": "PASS",
   "evidence_kind": "numeric_r_vs_julia",
   "batch": "test/parity/runparity.jl, CORE070_PARITY_REQUIRED=1, GLLVM_PARITY_PIN=P1, run runparity-nb2",
   "harness_cell": "NATIVE-06-NB2",
   "fixture": "test/parity/test_negbin_parity.jl",
   "measures": "NB2 log, per-trait dispersion, p=5, n=80, K=2, seed 45; toy fixture, likelihood-level agreement only",
-  "cell_status": "failed",
+  "cell_status": "success",
   "cell_assertions": {
-    "passed": 16,
+    "passed": 17,
     "broken": 0,
-    "failed": 2,
+    "failed": 0,
     "errored": 0
   },
   "cell_execution_case_ids": [
     "NATIVE-06-NB2"
   ],
-  "run_status": "failed",
-  "run_failure_reason": "one or more cells have failed, skipped, broken, or zero assertions",
+  "run_status": "success",
+  "run_failure_reason": null,
   "batch_verifier": {
     "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
-    "status": "FAIL",
+    "status": "PASS",
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run.toml": "deb7f3f2dc9ef1e2efcf76ff735fd10faca4c5bba154554f1b915eb0bb6f7a21",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/values-NATIVE-06-NB2.toml": "3976f2cbfc854c9152eaced5cfda847cde2f703e08eb9bcc8a88294dd59e1baf",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt": "229cf86d9a187edd62f93cce6efdd5fd43ebc7a841dac8f508aae9f03d844af6",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/cell-NATIVE-06-NB2.toml": "0f5a9b20feddb476368b00ffecb6d9f0b17ba75e2e532eaa87b58e4443ae1f92",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml": "22d0b0a0397bf663998502806627bcba8902f7a41e23e4afcdafaf81787c2ace"
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run.toml": "136fa050da8f3a4f7f380bd50f4c6c40ffeb563fd91485ebb14ca6fed56a6373",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/values-NATIVE-06-NB2.toml": "8b63578d025a651bfe12742a156b3edbff22a3fc5e6b8899bc421b92333336ce",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt": "6501206a960ab0ac2ca86d990b6e7ac5f5fdf6fd13157dc04470b0431ef5ecf0",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/cell-NATIVE-06-NB2.toml": "d0656480969244d3613dd78dc5c262d5a6757dfb647b860a6656e155959d5dd1",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml": "51b9d16de28a98fdb2940af4c9365304237cfabe7f3e3f24f4b013ed3c260eb3"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/values-NATIVE-06-NB2.toml",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/cell-NATIVE-06-NB2.toml",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml"
   ],
-  "why_fail": "the cell's own assertions did not all pass at P1 (see cell_assertions; the failing assertion may be a health or structure check rather than the compared numbers)",
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
     "pin": "P1",
     "cases": [
       {
         "case_id": "NATIVE-06-NB2",
         "quantity": "objective at the R optimum",
-        "max_abs_diff": 1.3642420526593924e-12,
+        "max_abs_diff": 5.4569682106375694e-12,
         "tolerance": 1e-06,
         "tolerance_rule": "the cell's own test, @test abs(d[\"samepoint_delta\"]) <= 1e-6 (rtol=0, atol=1e-06; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
         "n_values": 1,
-        "r_value": 820.548534328469,
-        "julia_value": 820.5485343284704,
+        "r_value": 1159.1978313989032,
+        "julia_value": 1159.1978313988977,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       },
       {
         "case_id": "NATIVE-06-NB2",
         "quantity": "logLik",
-        "max_abs_diff": 1.2128236903663492e-07,
-        "tolerance": 0.000820548534328469,
+        "max_abs_diff": 1.442231223336421e-09,
+        "tolerance": 0.0011591978313989031,
         "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
         "n_values": 1,
-        "r_value": -820.548534328469,
-        "julia_value": -820.5485342071867,
+        "r_value": -1159.1978313989032,
+        "julia_value": -1159.197831397461,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       }

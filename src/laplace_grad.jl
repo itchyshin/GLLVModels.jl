@@ -52,6 +52,33 @@ function _optimize_with_analytic(negll, analytic_grad, θ0, ls, opts)
     return Optim.optimize(negll, g!, θ0, ls, opts)
 end
 
+# L-BFGS (m = 10) can crawl near the optimum of these ill-conditioned Laplace objectives
+# and stop at the iteration cap at a point that is already stationary to about 1e-6 in
+# log-likelihood. #554: Poisson K = 2 on mvabund::spider reported converged = false at
+# gllvmTMB's optimum (|Δ logLik| < 1e-6) after 500 iterations; L-BFGS needed 660.
+# For a run that did not converge, continue once from its end point with dense BFGS
+# (`_COV_BFGS`, the optimiser `_nb_poisson_ridge_polish` already uses) and keep that run
+# when it is no worse by 1e-6 and either converged or strictly better. A converged run,
+# or one on the failure sentinel, is returned unchanged. `run(alg, θ)` re-runs the
+# caller's objective. Returns `(θ, nll, converged, iterations)`.
+function _bfgs_continuation(run, res; stage_callback = nothing)
+    θ = Optim.minimizer(res)
+    f0 = Optim.minimum(res)
+    conv = Optim.converged(res)
+    iters = Optim.iterations(res)
+    (conv || _nll_failed(f0)) && return (θ, f0, conv, iters)
+    method = _COV_BFGS()
+    trial = run(method, copy(θ))
+    f1 = Optim.minimum(trial)
+    c1 = Optim.converged(trial)
+    accepted = f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+    stage_callback === nothing || stage_callback(:legacy_bfgs_continuation, method, trial; accepted = accepted)
+    if accepted
+        return (Optim.minimizer(trial), f1, c1, iters + Optim.iterations(trial))
+    end
+    return (θ, f0, conv, iters)
+end
+
 # R6 (allocation-free per-site kernel, S6 item 3): scratch buffers for
 # `_poisson_site_diffable` at a fixed (element type T, p, K), avoiding the
 # nine-ish fresh p- or (p×K)-sized allocations the naive broadcasted version
@@ -279,10 +306,12 @@ end
 # --- Negative binomial (log link) — dispersion family: r enters θ as log r ---
 # AD-friendly NB2 log-pmf kernel (mean μ, dispersion r); the loggamma(y+1) constant
 # is dropped (zero gradient). r is a θ parameter (via log r), so the r-dependent
-# loggamma(r+y) − loggamma(r) terms are kept and differentiated (loggamma' = digamma,
-# which ForwardDiff supports).
-_nb_logker(μ, r, y) = loggamma(r + y) - loggamma(r) +
-                      r * log(r) - (r + y) * log(r + μ) + y * log(μ)
+# terms are kept and differentiated. Evaluated through the stable
+# `_nb2_logpdf_mean` (src/families/negbin.jl), the log-pmf the objective uses: the
+# expanded loggamma(r+y) − loggamma(r) + r log r − (r+y) log(r+μ) subtracts
+# O(r log r) terms whose difference is O(1), so near the Poisson limit its value and
+# its log-r derivative were rounding noise (#871).
+_nb_logker(μ, r, y) = _nb2_logpdf_mean(μ, r, Int(y)) + loggamma(float(y) + 1)
 
 function _nb_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, logr;
                            mask = nothing)

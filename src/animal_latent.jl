@@ -1,18 +1,28 @@
 # animal × latent — Gaussian matrix fitter (rank-d Λ_phy on Σ_animal).
 #
-# Twin estimand (Identity 2026-09-14; pin gllvmTMB animal_latent roxygen b4d5fee6):
-# low-rank cross-trait additive-genetic covariance on a relatedness matrix; d = p
-# matches animal × dep / animal_latent(..., d = T). Reuses fit_gaussian_gllvm J3
-# block. No @formula animal_latent() sugar (formula v1 rejects FunctionTerm).
+# Row-relatedness model: the rows of Y are the individuals indexed by A and the
+# animal block is (Λ_phy Λ_phy') .* Σ_animal. This is NOT gllvmTMB's
+# animal_latent, which is Λ Λ' ⊗ A; the Julia model with that covariance is
+# fit_kernel_latent_gllvm(Y, A, groups, d). Same path as animal_dep (#823).
+# Reuses fit_gaussian_gllvm J3 block. No @formula animal_latent() sugar
+# (formula v1 rejects FunctionTerm).
 
 """
     fit_animal_latent_gllvm(Y, A, d; family = Normal(), unique = false,
                             Σ_animal = nothing, jitter = 1e-6, kwargs...)
 
-Standalone **animal × latent** Gaussian fit: rank-`d` relatedness trait loadings
-(`K_phy = d`, packed Λ_phy) on a fixed p × p GRM / NRM passed as engine `Σ_phy`,
-with a minimal unit-tier factor (`K = 1`). When `d == p` this is the same estimand
-class as [`fit_animal_dep_gllvm`](@ref) / twin `animal_latent(..., d = T)`.
+Standalone **row-relatedness** Gaussian fit: the `p` rows of `Y` are the
+individuals indexed by `A`, and the relatedness block of the row covariance is the
+Hadamard product `(Λ_phy Λ_phy') .* A` with rank-`d` loadings (`K_phy = d`, packed
+Λ_phy), a fixed p × p GRM / NRM passed as engine `Σ_phy`, and a minimal unit-tier
+factor (`K = 1`). When `d == p` this is [`fit_animal_dep_gllvm`](@ref).
+
+This is **not** the estimand of gllvmTMB's `animal_latent(0 + trait | id, d = d,
+A = A)`. R's `animal_latent` puts traits and individuals on separate axes, with
+covariance `Λ Λ' ⊗ A` (a rank-`d` trait covariance Kronecker the relatedness
+`A`), not `Σ_trait ⊗ A` with an unstructured trait covariance. The Julia model with
+the Kronecker form is [`fit_kernel_latent_gllvm`](@ref)`(Y, A, groups, d)`, with `Y`
+traits × units and `groups` mapping each unit to its row of `A`.
 
 `unique = false` (default) is loadings-only on the animal block (`has_phy_unique =
 false`). `unique = true` (twin `animal_latent(..., unique = TRUE)`) is not yet
@@ -21,7 +31,7 @@ available and raises an error.
 This is a **Gaussian matrix** fitter. `@formula` `animal_latent()` syntax is not
 currently available.
 
-`A` must be square p × p. `Y` is traits × sites with `size(Y, 1) == size(A, 1)`.
+`A` must be square p × p. `Y` is individuals × sites with `size(Y, 1) == size(A, 1)`.
 `d` must satisfy `1 ≤ d ≤ p`.
 
 `K`, `num_lv`, `K_W`, `has_diag`, `K_phy`, and `has_phy_unique` are fail-loud —

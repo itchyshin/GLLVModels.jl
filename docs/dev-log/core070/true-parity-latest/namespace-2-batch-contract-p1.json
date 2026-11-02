@@ -1,0 +1,719 @@
+{
+ "schema": "core070-required-case-plan/v1-executable-batch",
+ "status": "FROZEN_NAMESPACE_2_BATCH_CONTRACT",
+ "area": "namespace-2",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "manifest_source": "docs/dev-log/core070/manifest-freeze-work/drafts/namespace-2.json",
+ "case_plan_annex": "docs/dev-log/core070/namespace-2-required-case-plan.json",
+ "manifest_row_count": 90,
+ "triage_method": "Every one of the 90 namespace-2 rows was classified by direct evidence: (1) the 34 rows the manifest draft itself already flags with a `reclassify` proposal (compatibility_adapter / intentionally_excluded) are recorded verbatim as REUSED_OR_RECLASSIFY -- no fresh check fabricated for them; (2) of the remaining 56 case-spec'd rows, every julia_surface claim was checked against the actual loaded/greppable src/*.jl -- and, where the SAME underlying R function already has a real, previously-EXECUTED runtime verdict in a sibling area's frozen contract (postfit-1-batch-contract.json's coef/getLoadings/getREsd/getResidualCor/getResidualCov/loading_ci/gllvmTMB_diagnose rows; postfit-2-batch-contract.json's 39 rows, all backed by isdefined()+functional-probe runtime evidence), that prior verdict is deferred to rather than re-derived, to avoid contradicting or duplicating already-executed evidence; (3) the remaining 9 rows (bridge admission + 3 non-Gaussian family-bridge dispatch keys that genuinely have no sibling-area coverage) are built as this batch's EXECUTABLE_NOW cases.",
+ "expected_case_count": 9,
+ "needs_new_julia_surface_count": 47,
+ "reclassify_row_count": 34,
+ "spec_defect_note_count": 0,
+ "cases": [
+  {
+   "case_id": "CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT",
+   "source_id": "namespace/export/gllvmTMB",
+   "evidence_kind": "bridge",
+   "r_call": "gllvmTMB(y ~ 1, family = gaussian(), num.lv = 2, data = dat)` on a small simulated dataset",
+   "julia_surface": "GLLVM.jl top-level fit entry point (`fit_gllvm`/family dispatch in `families/fit_gllvm.jl`) invoked via `gllvm_julia_fit` on the identical simulated data",
+   "comparands": [
+    "log-likelihood to <=1e-6 (or documented tolerance for non-Gaussian Laplace)",
+    "point estimates (loadings, coefficients)"
+   ],
+   "fixture": "gaussian_fixture",
+   "check": "R gllvmTMB(value ~ 0 + trait + latent(...), family=gaussian()) native fit vs Julia fit_gaussian_gllvm(Y; K, X) on the identical Y: |loglik_R - loglik_Julia| and max|coef_R - coef_Julia|.",
+   "tolerance": "<=1e-6"
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GLLVMTMB-WIDE-NATIVE-FIT",
+   "source_id": "namespace/export/gllvmTMB_wide",
+   "evidence_kind": "bridge",
+   "r_call": "gllvmTMB_wide(Y, X = NULL, family = gaussian(), num.lv = 2)` wide-matrix-input fit entry point",
+   "julia_surface": "Julia bridge's wide/matrix-input fit path (or documented rejection if wide-input is not yet exposed by the bridge)",
+   "comparands": [
+    "log-likelihood parity to the equivalent long-format gllvmTMB() call",
+    "point estimates"
+   ],
+   "fixture": "gaussian_fixture",
+   "check": "R gllvmTMB_wide(Y_wide, d=K, family=gaussian()) loglik vs the SAME R session's gllvmTMB() long-format loglik on the transposed-equivalent data (both R-native; this case is an R-internal long-vs-wide consistency check, matching the manifest's own comparand 'log-likelihood parity to the equivalent long-format gllvmTMB() call').",
+   "tolerance": "<=1e-8"
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GLLVM-JULIA-FIT-BRIDGE-ADMISSION",
+   "source_id": "namespace/export/gllvm_julia_fit",
+   "evidence_kind": "bridge",
+   "r_call": "gllvm_julia_fit(data, formula, family = gaussian(), num.lv = 2, ...)` R-side entry point that dispatches into the Julia bridge",
+   "julia_surface": "the Julia-side fit function it calls into (`GLLVM.fit_gllvm`/family dispatch) plus the JuliaCall/JuliaConnectoR marshalling layer",
+   "comparands": [
+    "successful round-trip admission (no marshalling error)",
+    "returned log-likelihood and point estimates vs. the equivalent native R gllvmTMB() fit"
+   ],
+   "fixture": "gaussian_fixture",
+   "check": "R-side: gllvm_julia_fit()'s own family-argument mapper (.gllvm_julia_family_scalar, sourced directly from R/julia-bridge.R, no gllvmTMB package build required) accepts family='gaussian' and resolves it to the bridge key 'gaussian'. Julia-side: the exact function gllvm_julia_fit marshals into, bridge_fit(y=Y, family='gaussian', d=K, X=X), is called directly on the identical Y and must succeed with loglik matching the CORE070-NAMESPACE2-GLLVMTMB-NATIVE-FIT case's Julia oracle. Scope note: as above, this proves both halves of the admission path work without a live JuliaCall round trip from inside R.",
+   "tolerance": "<=1e-6 loglik delta vs the native-fit case"
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GLLVM-JULIA-SETUP-BRIDGE-ADMISSION",
+   "source_id": "namespace/export/gllvm_julia_setup",
+   "evidence_kind": "bridge",
+   "r_call": "gllvm_julia_setup(...)` environment/session bootstrap (Julia binary discovery, package activation)",
+   "julia_surface": "successful activation of the `GLLVM.jl` project environment it targets",
+   "comparands": [
+    "setup completes without error on a clean R session",
+    "reported Julia/GLLVM.jl version strings are consistent with the pinned bridge contract"
+   ],
+   "fixture": "none (environment probe)",
+   "check": "R-side: gllvm_julia_setup()'s own preconditions (Sys.which('julia') resolves; the GLLVM_JL_PATH env var / gllvmTMB.GLLVM.jl.path option would resolve to this checkout) are satisfiable, checked without invoking JuliaCall itself. Julia-side: the already-running child process independently confirms realpath(Base.pkgdir(GLLVM)) == realpath(pwd()) and reports VERSION -- i.e. exactly the preconditions gllvm_julia_setup's jl_path would need are met in this checkout. Scope note: this does NOT execute a live JuliaCall session from within R (see contract rationale); it is a preconditions-satisfied check, not a full R-embeds-Julia round trip.",
+   "tolerance": "boolean (both preconditions true)"
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-LOGNORMAL-FAMILY-BRIDGE",
+   "source_id": "namespace/export/lognormal",
+   "evidence_kind": "bridge",
+   "r_call": "lognormal(link='log')` family-object construction, then `gllvmTMB(y ~ 1, family = lognormal(), num.lv = 2, data = dat)`",
+   "julia_surface": "no direct GLLVM.jl analytic-Laplace fitter yet; comparand is the bridge's documented rejection/'unsupported family' path",
+   "comparands": [
+    "family/link name strings match the bridge's dispatch key",
+    "for families with a wired Julia fitter: log-likelihood/point-estimate parity; for unwired families: a documented, non-crashing rejection with a clear error surfaced to R"
+   ],
+   "fixture": "none (pure R admission-gate probe, no live fit)",
+   "check": "R-side only: .gllvm_julia_family_scalar('lognormal') (sourced directly from R/julia-bridge.R, no gllvmTMB package build required, no frozen library needed) must raise a clean, non-crashing error whose message contains 'GJL-GATE-FAMILY' and 'lognormal' -- confirming the R-side engine='julia' admission gate (.GLLVM_JULIA_BRIDGE_FAMILIES, which omits 'lognormal' even though src/bridge.jl's own _bridge_family_key DOES support it) produces the manifest's documented alternate comparand: 'a documented, non-crashing rejection with a clear error surfaced to R'. This is an asymmetric-gap finding: Julia's bridge supports lognormal, but R's engine='julia' admission list does not yet expose it, so the end-to-end user-facing behaviour is a clean rejection, not a crash and not silent wrong output.",
+   "tolerance": "boolean (clean rejection with the expected gate id + family name in the message)"
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-NBINOM1-FAMILY-BRIDGE",
+   "source_id": "namespace/export/nbinom1",
+   "evidence_kind": "bridge",
+   "r_call": "nbinom1(link='log')` family-object construction, then `gllvmTMB(y ~ 1, family = nbinom1(), num.lv = 2, data = dat)`",
+   "julia_surface": "GLLVM.jl's Negative Binomial family (`families/negbin.jl`) under the NB1 mean-variance parameterization, or documented rejection if only NB2 is wired",
+   "comparands": [
+    "family/link name strings match the bridge's dispatch key",
+    "for families with a wired Julia fitter: log-likelihood/point-estimate parity; for unwired families: a documented, non-crashing rejection with a clear error surfaced to R"
+   ],
+   "fixture": "nb_fixture",
+   "check": "R gllvmTMB(count ~ 0 + trait + latent(...), family=nbinom1()) native fit vs Julia bridge_fit(y=Y, family='nb1', d=K, X=X) on the identical Y, plus the R-side/Julia-side dispatch-key check (.gllvm_julia_family_scalar('nb1')=='nb1' and GLLVM._bridge_family_key('nb1')=='nb1').",
+   "tolerance": "<=1e-6 loglik delta (Workflow Q R-parity tolerance)"
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-NBINOM2-FAMILY-BRIDGE",
+   "source_id": "namespace/export/nbinom2",
+   "evidence_kind": "bridge",
+   "r_call": "nbinom2(link='log')` family-object construction, then `gllvmTMB(y ~ 1, family = nbinom2(), num.lv = 2, data = dat)`",
+   "julia_surface": "GLLVM.jl's Negative Binomial family (`families/negbin.jl`, scalar-auxiliary implicit gradient over (eta, log dispersion))",
+   "comparands": [
+    "family/link name strings match the bridge's dispatch key",
+    "for families with a wired Julia fitter: log-likelihood/point-estimate parity; for unwired families: a documented, non-crashing rejection with a clear error surfaced to R"
+   ],
+   "fixture": "nb_fixture",
+   "check": "R gllvmTMB(count ~ 0 + trait + latent(...), family=nbinom2()) native fit vs Julia bridge_fit(y=Y, family='negbinomial', d=K, X=X) on the identical Y, plus the dispatch-key check (.gllvm_julia_family_scalar('nbinom2')=='negbinomial' and GLLVM._bridge_family_key('nbinom2')=='negbinomial').",
+   "tolerance": "<=1e-6 loglik delta (Workflow Q R-parity tolerance)"
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-ORDINAL-PROBIT-FAMILY-BRIDGE",
+   "source_id": "namespace/export/ordinal_probit",
+   "evidence_kind": "bridge",
+   "r_call": "ordinal_probit(link='probit')` family-object construction, then `gllvmTMB(y ~ 1, family = ordinal_probit(), num.lv = 2, data = dat)`",
+   "julia_surface": "GLLVM.jl's Ordinal family (`families/ordinal.jl`, generic implicit cumulative-logit gradient) under a probit link, or documented rejection if only logit is wired",
+   "comparands": [
+    "family/link name strings match the bridge's dispatch key",
+    "for families with a wired Julia fitter: log-likelihood/point-estimate parity; for unwired families: a documented, non-crashing rejection with a clear error surfaced to R"
+   ],
+   "fixture": "ordinal_fixture",
+   "check": "R gllvmTMB(cat ~ 0 + trait + latent(...), family=ordinal_probit()) native fit vs Julia bridge_fit(y=Y, family='ordinal_probit', d=K) on the identical Y, plus the dispatch-key check (.gllvm_julia_family_scalar('ordinal_probit')=='ordinal_probit' and GLLVM._bridge_family_key('ordinal_probit')=='ordinal_probit').",
+   "tolerance": "<=1e-6 loglik delta (Workflow Q R-parity tolerance)"
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-TRUNCATED-POISSON-FAMILY-BRIDGE",
+   "source_id": "namespace/export/truncated_poisson",
+   "evidence_kind": "bridge",
+   "r_call": "truncated_poisson(link='log')` family-object construction, then `gllvmTMB(y ~ 1, family = truncated_poisson(), num.lv = 2, data = dat)`",
+   "julia_surface": "no truncated-Poisson fitter yet in GLLVM.jl; comparand is the bridge's documented rejection/'unsupported family' path",
+   "comparands": [
+    "family/link name strings match the bridge's dispatch key",
+    "for families with a wired Julia fitter: log-likelihood/point-estimate parity; for unwired families: a documented, non-crashing rejection with a clear error surfaced to R"
+   ],
+   "fixture": "none (pure R admission-gate probe, no live fit)",
+   "check": "Same pattern as CORE070-NAMESPACE2-LOGNORMAL-FAMILY-BRIDGE for family='truncated_poisson': R's .GLLVM_JULIA_BRIDGE_FAMILIES omits it even though src/bridge.jl's _bridge_family_key supports it (key 'truncated_poisson'); the end-to-end behaviour via engine='julia' is a clean, documented rejection.",
+   "tolerance": "boolean (clean rejection with the expected gate id + family name in the message)"
+  }
+ ],
+ "needs_new_julia_surface": [
+  {
+   "case_id": "CORE070-NAMESPACE2-GETLOADINGS-POSTFIT-READBACK",
+   "source_id": "namespace/export/getLoadings",
+   "missing_surface": "R getLoadings(fit, level=..., rotate=...) has no matching Julia surface",
+   "reason": "GLLVM.getLoadings(fit; rotate::Bool) exists (src/postfit.jl:74) but has no `level` tier argument and does not special-case a gllvmTMB_julia bridge fit the way R's getLoadings does (R/output-methods.R:33); confirmed already NEEDS_NEW_JULIA_SURFACE in docs/dev-log/core070/postfit-1-batch-contract.json (case CORE070-POSTFIT-GETLOADINGS-READBACK)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GETRESD-POSTFIT-READBACK",
+   "source_id": "namespace/export/getREsd",
+   "missing_surface": "no Julia function/export named or equivalent to getREsd()",
+   "reason": "grep -rniE 'getREsd|re_sd' src/*.jl: 0 hits. Confirmed already NEEDS_NEW_JULIA_SURFACE in docs/dev-log/core070/postfit-1-batch-contract.json (POSTFIT-SURFACE-getREsd)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GETRESIDUALCOR-POSTFIT-READBACK",
+   "source_id": "namespace/export/getResidualCor",
+   "missing_surface": "no Julia function/export named or equivalent to getResidualCor()",
+   "reason": "grep -rniE 'residual.?cor' src/*.jl: 0 hits (only unrelated comment matches). Confirmed already NEEDS_NEW_JULIA_SURFACE in docs/dev-log/core070/postfit-1-batch-contract.json (POSTFIT-SURFACE-getResidualCor)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GETRESIDUALCOV-POSTFIT-READBACK",
+   "source_id": "namespace/export/getResidualCov",
+   "missing_surface": "no Julia function/export named or equivalent to getResidualCov()",
+   "reason": "grep -rniE 'residual.?cov' src/*.jl: 0 hits (only unrelated comment matches). Confirmed already NEEDS_NEW_JULIA_SURFACE in docs/dev-log/core070/postfit-1-batch-contract.json (POSTFIT-SURFACE-getResidualCov)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GLLVMTMBCONTROL-STRUCTURE",
+   "source_id": "namespace/export/gllvmTMBcontrol",
+   "missing_surface": "no Julia control/options struct mirroring gllvmTMBcontrol()'s field-and-default contract",
+   "reason": "src/bridge.jl's bridge_fit(...; options::Dict{String,Any}=Dict()) reads keys ad hoc via _bridge_get(options, key, default) with no enumerated struct or exported defaults table; there is nothing to diff field-by-field against R's gllvmTMBcontrol(optimizer=, maxit=, ...) defaults."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-MISS-CONTROL-STRUCTURE",
+   "source_id": "namespace/export/miss_control",
+   "missing_surface": "no Julia missing-data-imputation control subsystem at all",
+   "reason": "grep -rniE 'miss_control|MissControl' src/*.jl: 0 hits. Matches the manifest's own JL note ('N/A -- no Julia missing-data-imputation subsystem is implemented')."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GLLVMTMB-CHECK-CONSISTENCY-POSTFIT-READBACK",
+   "source_id": "namespace/export/gllvmTMB_check_consistency",
+   "missing_surface": "no Julia function/export named or equivalent to gllvmTMB_check_consistency()",
+   "reason": "grep -rniE 'check_consistency' src/*.jl: 0 hits; only scattered raw components (gradient norm in confint.jl, SE via vcov) exist without a packaged diagnostic surface, same gap class as the sibling gllvmTMB_diagnose row below."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GLLVMTMB-DIAGNOSE-POSTFIT-READBACK",
+   "source_id": "namespace/export/gllvmTMB_diagnose",
+   "missing_surface": "no Julia function/export named or equivalent to gllvmTMB_diagnose()",
+   "reason": "grep -rniE 'diagnose' src/*.jl: 0 hits. Confirmed already NEEDS_NEW_JULIA_SURFACE in docs/dev-log/core070/postfit-1-batch-contract.json (POSTFIT-SURFACE-gllvmTMB_diagnose)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-SANITY-MULTI-POSTFIT-READBACK",
+   "source_id": "namespace/export/sanity_multi",
+   "missing_surface": "no Julia function/export named or equivalent to sanity_multi()",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-sanity_multi); see the receipt behind tools/core070_postfit_2_batch.jl."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PREDICTIVE-CHECK-POSTFIT-READBACK",
+   "source_id": "namespace/export/predictive_check",
+   "missing_surface": "no Julia function/export named or equivalent to predictive_check()",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-predictive_check)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-STANDARD-ERRORS-POSTFIT-READBACK",
+   "source_id": "namespace/export/standard_errors",
+   "missing_surface": "no Julia function/export named or equivalent to standard_errors()",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-standard_errors)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PROFILE-TARGETS-POSTFIT-READBACK",
+   "source_id": "namespace/export/profile_targets",
+   "missing_surface": "no Julia function/export named or equivalent to profile_targets()",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-profile_targets)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-MULTINOMIAL-FAMILY-BRIDGE",
+   "source_id": "namespace/export/multinomial",
+   "missing_surface": "src/bridge.jl _bridge_family_key has no dispatch key for 'multinomial'",
+   "reason": "src/bridge.jl:141-165 _bridge_family_key()'s ArgumentError enumerates every supported family string; 'multinomial' is absent (core fitter fit_multinomial_gllvm/MultinomialFit already exists in src/families/multinomial.jl but is not wired into the bridge's family-key mapping)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-STUDENT-FAMILY-BRIDGE",
+   "source_id": "namespace/export/student",
+   "missing_surface": "src/bridge.jl _bridge_family_key has no dispatch key for 'student'",
+   "reason": "src/bridge.jl:141-165 _bridge_family_key()'s ArgumentError enumerates every supported family string; no 'student' entry (core fitter fit_studentt_gllvm/StudentTFit already exists in src/families/studentt.jl but is not wired into the bridge's family-key mapping)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-TRUNCATED-NBINOM2-FAMILY-BRIDGE",
+   "source_id": "namespace/export/truncated_nbinom2",
+   "missing_surface": "src/bridge.jl _bridge_family_key has no dispatch key for 'truncated_nbinom2'",
+   "reason": "src/bridge.jl:141-165 _bridge_family_key()'s ArgumentError enumerates every supported family string; no 'truncated_nbinom2' entry (core fitter fit_truncated_nbinom2_gllvm/TruncatedNegBin2Fit already exists in src/families/truncated_nbinom2.jl but is not wired into the bridge's family-key mapping)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-TWEEDIE-FAMILY-BRIDGE",
+   "source_id": "namespace/export/tweedie",
+   "missing_surface": "src/bridge.jl _bridge_family_key has no dispatch key for 'tweedie'",
+   "reason": "src/bridge.jl:141-165 _bridge_family_key()'s ArgumentError enumerates every supported family string; no 'tweedie' entry (core fitter fit_tweedie_gllvm/TweedieFit already exists in src/families/tweedie.jl but is not wired into the bridge's family-key mapping)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-GR-FORMULA-TERM",
+   "source_id": "namespace/export/gr",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'gr(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"gr\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (gr() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ gr(...)) in Julia the way R parses ~ gr(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-INDEP-FORMULA-TERM",
+   "source_id": "namespace/export/indep",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'indep(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"indep\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (indep() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ indep(...)) in Julia the way R parses ~ indep(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-KERNEL-DEP-FORMULA-TERM",
+   "source_id": "namespace/export/kernel_dep",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'kernel_dep(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"kernel_dep\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (kernel_dep() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ kernel_dep(...)) in Julia the way R parses ~ kernel_dep(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-KERNEL-INDEP-FORMULA-TERM",
+   "source_id": "namespace/export/kernel_indep",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'kernel_indep(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"kernel_indep\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (kernel_indep() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ kernel_indep(...)) in Julia the way R parses ~ kernel_indep(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-KERNEL-LATENT-FORMULA-TERM",
+   "source_id": "namespace/export/kernel_latent",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'kernel_latent(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"kernel_latent\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (kernel_latent() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ kernel_latent(...)) in Julia the way R parses ~ kernel_latent(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-KERNEL-SCALAR-FORMULA-TERM",
+   "source_id": "namespace/export/kernel_scalar",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'kernel_scalar(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"kernel_scalar\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (kernel_scalar() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ kernel_scalar(...)) in Julia the way R parses ~ kernel_scalar(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-KERNEL-UNIQUE-FORMULA-TERM",
+   "source_id": "namespace/export/kernel_unique",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'kernel_unique(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"kernel_unique\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (kernel_unique() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ kernel_unique(...)) in Julia the way R parses ~ kernel_unique(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-LATENT-FORMULA-TERM",
+   "source_id": "namespace/export/latent",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'latent(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"latent\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (latent() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ latent(...)) in Julia the way R parses ~ latent(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-META-FORMULA-TERM",
+   "source_id": "namespace/export/meta",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'meta(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"meta\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (meta() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ meta(...)) in Julia the way R parses ~ meta(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-META-V-FORMULA-TERM",
+   "source_id": "namespace/export/meta_V",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'meta_V(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"meta_V\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (meta_V() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ meta_V(...)) in Julia the way R parses ~ meta_V(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-META-KNOWN-V-FORMULA-TERM",
+   "source_id": "namespace/export/meta_known_V",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'meta_known_V(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"meta_known_V\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (meta_known_V() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ meta_known_V(...)) in Julia the way R parses ~ meta_known_V(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-SCALAR-FORMULA-TERM",
+   "source_id": "namespace/export/scalar",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'scalar(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"scalar\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (scalar() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ scalar(...)) in Julia the way R parses ~ scalar(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-TRAITS-FORMULA-TERM",
+   "source_id": "namespace/export/traits",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'traits(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"traits\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (traits() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ traits(...)) in Julia the way R parses ~ traits(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PHYLO-DEP-FORMULA-TERM",
+   "source_id": "namespace/export/phylo_dep",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'phylo_dep(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"phylo_dep\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (phylo_dep() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ phylo_dep(...)) in Julia the way R parses ~ phylo_dep(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PHYLO-INDEP-FORMULA-TERM",
+   "source_id": "namespace/export/phylo_indep",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'phylo_indep(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"phylo_indep\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (phylo_indep() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ phylo_indep(...)) in Julia the way R parses ~ phylo_indep(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PHYLO-LATENT-FORMULA-TERM",
+   "source_id": "namespace/export/phylo_latent",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'phylo_latent(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"phylo_latent\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (phylo_latent() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ phylo_latent(...)) in Julia the way R parses ~ phylo_latent(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PHYLO-RR-FORMULA-TERM",
+   "source_id": "namespace/export/phylo_rr",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'phylo_rr(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"phylo_rr\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (phylo_rr() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ phylo_rr(...)) in Julia the way R parses ~ phylo_rr(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PHYLO-SCALAR-FORMULA-TERM",
+   "source_id": "namespace/export/phylo_scalar",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'phylo_scalar(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"phylo_scalar\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (phylo_scalar() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ phylo_scalar(...)) in Julia the way R parses ~ phylo_scalar(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PHYLO-SLOPE-FORMULA-TERM",
+   "source_id": "namespace/export/phylo_slope",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'phylo_slope(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"phylo_slope\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (phylo_slope() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ phylo_slope(...)) in Julia the way R parses ~ phylo_slope(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PHYLO-UNIQUE-FORMULA-TERM",
+   "source_id": "namespace/export/phylo_unique",
+   "missing_surface": "GLLVM.jl's @formula front-end (src/formula.jl) has no term-recognizer for 'phylo_unique(...)'",
+   "reason": "src/formula.jl (module header: 'Slices 1-2 of the formula-front-end design spec') implements only plain StatsModels covariate/interaction terms; grep -rniE '\"phylo_unique\"' src/formula.jl src/bridge.jl: 0 hits for a term-name dispatch. gllvmTMB's brms-sugar keyword grammar (phylo_unique() and its 19 siblings, all defined in R/brms-sugar.R, R/kernel-keywords.R or R/traits-keyword.R) is parsed entirely on the R side into structured arguments (K, mode, tree, kernel spec, ...) before ever reaching the Julia bridge; bridge_fit/fit_gllvm receive those already-decomposed keyword arguments directly, never the literal term text. Some underlying mechanisms exist elsewhere in the engine (e.g. phylo_glm.jl, cross_kernel.jl) but there is no formula-term parser that would let a user write @formula(y ~ phylo_unique(...)) in Julia the way R parses ~ phylo_unique(...)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-LOADING-CI-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/loading_ci",
+   "missing_surface": "no Julia function/export named loading_ci; confint.jl is joint, not a loading-only table",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE in docs/dev-log/core070/postfit-1-batch-contract.json (POSTFIT-SURFACE-loading_ci): 'confint.jl's confint(fit;y) returns a CI over all packed parameters jointly, not a loading-only table matching R's loading_ci() output shape; grep -rn \"function loading_ci\\b\" src/*.jl: 0 hits'."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-LOADING-PROFILE-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/loading_profile",
+   "missing_surface": "no Julia function/export named loading_profile",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-loading_profile)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PROFILE-CI-PHYLO-SIGNAL-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/profile_ci_phylo_signal",
+   "missing_surface": "no Julia function/export named profile_ci_phylo_signal",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-profile_ci_phylo_signal); GLLVM.jl only has the generic point-estimate phylo_signal(fit) and the generic profiler profile_ci_derived(fit, derived_fn) (src/confint_derived.jl), not a like-named wrapper."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PROFILE-CI-TOTAL-VARIANCE-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/profile_ci_total_variance",
+   "missing_surface": "no Julia function/export named profile_ci_total_variance",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-profile_ci_total_variance)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PROFILE-CROSS-RHO-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/profile_cross_rho",
+   "missing_surface": "no Julia function/export named profile_cross_rho",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-profile_cross_rho)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PROFILE-CROSS-RHO-CI-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/profile_cross_rho_ci",
+   "missing_surface": "no Julia function/export named profile_cross_rho_ci",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-profile_cross_rho_ci)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PROFILE-PHYLO-SIGNAL-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/profile_phylo_signal",
+   "missing_surface": "no Julia function/export named profile_phylo_signal",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-profile_phylo_signal)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-SLOPE-SD-CI-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/slope_sd_ci",
+   "missing_surface": "no Julia function/export named slope_sd_ci",
+   "reason": "grep -rniE 'randomslope|random_slope' src/confint*.jl: 0 hits (GaussianRandomSlopeFit has no CI machinery at all). Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-slope_sd_ci)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-TMBPROFILE-WRAPPER-CI-POSTFIT-READBACK",
+   "source_id": "namespace/export/tmbprofile_wrapper",
+   "missing_surface": "no Julia function/export named tmbprofile_wrapper",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-tmbprofile_wrapper); GLLVM.jl's profile_ci(fit, param_index; ...) (src/confint_profile.jl) is a same-purpose but differently-named/shaped bracket-then-bisect kernel, not a like-named wrapper."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-PREDICT-CROSS-COVARIANCE-POSTFIT",
+   "source_id": "namespace/export/predict_cross_covariance",
+   "missing_surface": "no Julia function/export named predict_cross_covariance",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-predict_cross_covariance)."
+  },
+  {
+   "case_id": "CORE070-NAMESPACE2-ROTATE-LOADINGS-POSTFIT",
+   "source_id": "namespace/export/rotate_loadings",
+   "missing_surface": "GLLVM.rotation(fit) has no method= keyword; no varimax/promax rotation exists under any name",
+   "reason": "Confirmed already NEEDS_NEW_JULIA_SURFACE (real isdefined()+functional-probe runtime evidence) in docs/dev-log/core070/postfit-2-batch-contract.json (POSTFIT-SURFACE-rotate_loadings): 'rotate_loadings not isdefined, and GLLVM.rotation(fit) (the only rotation entry point) has no method keyword (varimax/promax/none)' (tools/core070_postfit_2_batch.jl:127-133)."
+  }
+ ],
+ "reclassify_rows": [
+  {
+   "source_id": "namespace/export/phylo",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "confirms input classification: phylo() (R/brms-sugar.R:343-355) is a marker function whose body is explicitly commented 'Body unused -- never called at evaluation time' -- it is a pure argument-sniffing dispatcher onto phylo_dep/phylo_indep/phylo_latent/phylo_scalar/phylo_rr/phylo_slope/phylo_unique, each already carrying its own required_core planned case in this manifest."
+  },
+  {
+   "source_id": "namespace/export/spatial",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "confirms input classification: spatial() (R/brms-sugar.R:1309-1317) is a marker function whose body is explicitly commented 'Body unused -- never called at evaluation time' -- it is a pure argument-sniffing dispatcher onto spatial_dep/spatial_indep/spatial_latent/spatial_scalar/spatial_unique, which are separately reclassified compatibility_adapter elsewhere in this manifest."
+  },
+  {
+   "source_id": "namespace/export/suggest_lambda_constraint",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "confirms input classification: suggest_lambda_constraint() (R/suggest-lambda-constraint.R:90) inspects a single already-fitted R model and prints/returns advisory constraint-suggestion text; it is a singular convenience wrapper around suggest_lambda_constraints() with no numeric quantity and no Julia bridge surface to compare against."
+  },
+  {
+   "source_id": "namespace/export/suggest_lambda_constraints",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "confirms input classification: suggest_lambda_constraints() (R/suggest-lambda-constraint.R:544) produces human-readable advisory guidance text from R-side fit internals (not a numeric quantity), so it has no Julia comparand to test against."
+  },
+  {
+   "source_id": "namespace/useDynLib/gllvmTMB (.registration=TRUE)",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "confirms input classification: NAMESPACE:237 'useDynLib(gllvmTMB, .registration = TRUE)' registers the package's compiled TMB shared object at load time; it is a package-loading directive, not an R function with observable public behaviour, so it has no executable case of its own."
+  },
+  {
+   "source_id": "namespace/export/get_crs",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/make_mesh",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/make_cross_kernel",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/spde",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/pedigree_to_A",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/pedigree_to_Ainv_sparse",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/isdm_source",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/isdm_sources",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/impute_model",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/imputed",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/phylo_signal_mi",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/predict_missing",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/spatial_dep",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/spatial_indep",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/spatial_latent",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/spatial_scalar",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/spatial_unique",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "GLLVM.jl's current implemented surface (per repo CLAUDE.md) is Gaussian + phylogenetic + six dense-Laplace non-Gaussian families only; no spatial/SPDE, animal-pedigree, integrated-SDM (isdm), or missing-data-imputation subsystem is ported, so there is no Julia comparand for this R source fact today. Reclassify to compatibility_adapter pending that subsystem landing; revisit when the corresponding Julia representation ships."
+  },
+  {
+   "source_id": "namespace/export/plot_Sigma_comparison",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/plot_Sigma_heatmap",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/plot_Sigma_table",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/plot_anisotropy",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/plot_anisotropy2",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/plot_correlations",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/plot_loadings_confidence_eye",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/plot_rotated_loadings",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/ordiplot",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "intentionally_excluded",
+   "reason": "Produces an R-only graphical object (ggplot2/base plot or print side effect); GLLVM.jl's figure work (Confidence Eye contract, CairoMakie.jl) is a separate, independently-specified port owned by Florence, not a call-for-call reproduction of this R plotting function. No cross-language public-behavior contract exists to adjudicate here. Reclassify to intentionally_excluded; R-side correctness of the plot stays covered by gllvmTMB's own test suite, outside this bridge-parity manifest."
+  },
+  {
+   "source_id": "namespace/export/simulate_site_trait",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "R-side ADEMP data-generating simulator for its own recovery-test suite. GLLVM.jl carries an independent simulator (src/simulate.jl); the two are not required to reproduce identical RNG streams or call signatures, only DGP-level parameter recovery, which is a separate validation programme (see repo AGENTS.md 'recovery-over-pdHess'), not a bridge/native/formula call-parity fact. Reclassify to compatibility_adapter."
+  },
+  {
+   "source_id": "namespace/export/simulate_unit_trait",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "R-side ADEMP data-generating simulator for its own recovery-test suite. GLLVM.jl carries an independent simulator (src/simulate.jl); the two are not required to reproduce identical RNG streams or call signatures, only DGP-level parameter recovery, which is a separate validation programme (see repo AGENTS.md 'recovery-over-pdHess'), not a bridge/native/formula call-parity fact. Reclassify to compatibility_adapter."
+  },
+  {
+   "source_id": "namespace/export/tidy",
+   "status": "REUSED_OR_RECLASSIFY",
+   "pointer": "compatibility_adapter",
+   "reason": "R/generics-imports.R re-exports generics::tidy as a bare S3 generic (`generics::tidy`) with no package-specific body; the only package behavior is the tidy.gllvmTMB_multi method, a tabular-summary view whose postfit numeric content is already exercised by the standard_errors / gllvmTMB_check_consistency / sanity_multi required cases. Testing the bare generic re-export would duplicate that coverage without adding a distinct contract. Reclassify to compatibility_adapter."
+  }
+ ],
+ "spec_defect_notes": [],
+ "fixture_specification": {
+  "gaussian_fixture": {
+   "p": 5,
+   "K": 2,
+   "n": 80,
+   "seed": 42,
+   "formula": "value ~ 0 + trait + latent(0 + trait | site, d = K, unique = FALSE)",
+   "family": "gaussian()",
+   "note": "identical convention to tools/core070_postfit_policy_batch.R's fixture, for direct reuse/lower risk; a fresh independent draw (different seed) from that batch's own fixture."
+  },
+  "nb_fixture": {
+   "p": 5,
+   "K": 1,
+   "n": 60,
+   "seed": 4201,
+   "formula": "count ~ 0 + trait + latent(0 + trait | site, d = K, unique = FALSE)",
+   "family": "nbinom1() and nbinom2() (two separate fits over the identical count matrix)"
+  },
+  "ordinal_fixture": {
+   "p": 4,
+   "K": 1,
+   "n": 60,
+   "n_categories": 3,
+   "seed": 4301,
+   "formula": "cat ~ 0 + trait + latent(0 + trait | site, d = K, unique = FALSE)",
+   "family": "ordinal_probit()"
+  }
+ },
+ "source_pins": {
+  "R/gllvmTMB.R": "a1ad39041f88d08b017500132bac45b5282f246025c488bc1829dc57aeae3faf",
+  "R/gllvmTMB-wide.R": "bb2b585aff92e38178112592625f3fe4b19900b5fa54486682a2a5778f5abadf",
+  "R/julia-bridge.R": "b588fd8084828586414a52ce4bc728ab75e282f0bd9253c5908d786fe1be26ee",
+  "R/families.R": "beed3caa91b0ed77b402f40192a493db693eafdd0bb214aa0ef73c33e4538791"
+ },
+ "negative_controls": [
+  {
+   "control_id": "NEG-COEF-SHIFTED",
+   "description": "shift the Gaussian native-fit Julia coefficient vector by +1.0 before comparing to the R oracle; must NOT pass the tolerance.",
+   "check": "max|coef_R - (coef_Julia + 1.0)| > 1e-6"
+  },
+  {
+   "control_id": "NEG-LOGLIK-SHIFTED",
+   "description": "shift the Gaussian native-fit Julia loglik by +1.0 before comparing to the R oracle; must NOT pass the tolerance.",
+   "check": "|loglik_R - (loglik_Julia + 1.0)| > 1e-6"
+  },
+  {
+   "control_id": "NEG-LOGNORMAL-ACCEPTED",
+   "description": "assert .gllvm_julia_family_scalar('lognormal') does NOT return a string (i.e. does not silently succeed); if it ever returns instead of erroring, the rejection-path case must be marked failed, not accidentally treated as a pass under a laxer check.",
+   "check": "calling the mapper on 'lognormal' must throw, not return"
+  },
+  {
+   "control_id": "NEG-NB-FAMILY-SWAPPED",
+   "description": "compare the nbinom1 R oracle's loglik against the nbinom2 Julia fit's loglik (deliberately mismatched families on the same count fixture); must NOT pass the tolerance.",
+   "check": "|loglik_R_nbinom1 - loglik_Julia_negbinomial| > 1e-6 (generically true for distinct dispersion parameterisations on a finite sample)"
+  }
+ ],
+ "rationale_notes": [
+  "gllvm_julia_setup / gllvm_julia_fit are scoped to prove BOTH halves of the admission path (R-side argument/family validation logic, and the exact Julia function the R side marshals into) work correctly, WITHOUT executing a live JuliaCall session embedded inside the R process. A prior incident in this same campaign (see tools/core070_postfit_policy_batch.R's header) showed that embedding one language's live runtime inside the other's child process is fragile (segfaults, unrelated fixtures reached transitively); JuliaCall is only a SUGGESTED R dependency (R/julia-bridge.R:1-9) and may not even be installed against the frozen library, so a literal round-trip test would non-portably gate this batch's executability on an optional package. This narrower, file/subprocess-based design still gives real coverage of the documented failure mode (family admission) and the documented success mode (fit correctness) without that fragility.",
+  "lognormal and truncated_poisson are EXECUTABLE_NOW as REJECTION-path cases, not numeric-parity cases: src/bridge.jl's _bridge_family_key DOES support both, but R's own .GLLVM_JULIA_BRIDGE_FAMILIES admission list (R/julia-bridge.R:18-30) does not, so the family is rejected before Julia is ever reached. This matches the manifest's own alternate comparand clause ('for unwired families: a documented, non-crashing rejection with a clear error surfaced to R') even though the underlying reason (an R-side allow-list gap, not a missing Julia fitter) differs from the manifest's original assumption ('no direct GLLVM.jl analytic-Laplace fitter yet') -- corrected here from directly reading both sides' source, per the task's 'verify existence by grepping the actual source before classifying' instruction."
+ ],
+ "runner": {
+  "outer_argv": "Rscript --vanilla tools/core070_namespace_2_batch.R <frozen-library> <destination>",
+  "inner_invocation": "julia --project=. tools/core070_namespace_2_batch.jl <julia-results.json> (destination path only; oracle handed via the CORE070_NAMESPACE_2_R_ORACLE env var, never RCall/parity-runner include)",
+  "self_test": "python3 tools/core070_verify_namespace_2_batch.py --self-test"
+ },
+ "source_access": "git-show",
+ "regeneration_log": {
+  "generator": "tools/core070_namespace_2_p1_contract.py",
+  "p0_contract": "docs/dev-log/core070/namespace-2-batch-contract.json",
+  "p0_contract_sha256": "3e0c07cb15b0daab6b7dc830727ee2f443e9dbc534dbca90054cd1275b86a1aa",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "pin": "P1",
+  "gllvmtmb_version": "0.7.1",
+  "changes": [
+   "reference_commit set to the P1 commit from tools/core070_oracle_pins.toml",
+   "source_pins re-hashed at P1 with git show (same four files as P0)",
+   "source_access = git-show (R sources read from the P1 commit, not the P0 readback tree)"
+  ],
+  "p0_source_pins": {
+   "R/gllvmTMB.R": "bf78912c192311d1ca40704cd81493c2c06773eb3eb7aea14b826a7459dd6f20",
+   "R/gllvmTMB-wide.R": "92da25e6928f228289cf6dc0a6c2758777f6b175d9cfac389e45782bbe63ced1",
+   "R/julia-bridge.R": "d6c167179b7cb9774655a3a68e401b133ac3a3d7f443028498529316d697fffa",
+   "R/families.R": "1d39b05e33ef60ffd11ded940e22f9fd3234fcea1cce0a91938d31dab61a5be6"
+  },
+  "unchanged": "cases, tolerances, buckets (needs_new_julia_surface, reclassify_rows), negative controls and fixtures are carried verbatim from P0"
+ }
+}

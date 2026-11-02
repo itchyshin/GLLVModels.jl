@@ -337,6 +337,34 @@ for cs in cases
         continue
     end
 
+    if kind == "integer_equality"
+        # P1 nobs case (maintainer ruling 2026-10-05, D-319, item N2): R nobs == Julia nobs exactly
+        # (integer_equality, itchyshin/GLLVModels.jl#684 item 1: tolerance 0.5 on integers means equal).
+        r_ok, r_vec = oracle_numeric_or_missing(oracle, case_id)
+        if !r_ok || length(r_vec) != 1
+            results[case_id] = Dict{String, Any}("pass" => false, "kind" => kind,
+                                                  "error" => "null_oracle_value: R oracle_values[$case_id] was null/missing or not a scalar")
+            global all_ok = false
+            continue
+        end
+        r_int = r_vec[1]
+        jl_int, jl_err = try
+            (Float64(GLLVModels.nobs(fit_g, Y_g)), "")
+        catch e
+            (NaN, sprint(showerror, e))
+        end
+        tol = Float64(cs["tolerance"])
+        ints_ok = isfinite(r_int) && r_int == round(r_int) && isfinite(jl_int) && jl_int == round(jl_int)
+        ok = tol == 0.5 && ints_ok && abs(r_int - jl_int) <= tol
+        results[case_id] = Dict{String, Any}("pass" => ok, "kind" => kind, "quantity" => cs["quantity"],
+                                              "tolerance" => tol, "r_value" => r_int, "julia_value" => jl_int,
+                                              "max_abs_diff" => (isfinite(jl_int) ? abs(r_int - jl_int) : NaN),
+                                              "r_len" => 1, "julia_len" => 1, "julia_values" => [jl_int],
+                                              "error" => jl_err)
+        global all_ok &= ok
+        continue
+    end
+
     # Remaining "point" postfit cases, keyed by `quantity`.
     quantity = cs["quantity"]
     tol = Float64(cs["tolerance"])

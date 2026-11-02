@@ -1,0 +1,66 @@
+{
+  "schema": "core070-covariance-p1-case-receipt/v1",
+  "case_id": "CORE070-WAVE6-KERNEL-SCALAR-FIT",
+  "source_id": "namespace/export/kernel_scalar",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "batch": "tools/core070_wave6_conversion_batch.R + .jl, GLLVM_PARITY_PIN=P1 (whole 10-case batch)",
+  "r_call": "gllvmTMB(value ~ 0 + trait + kernel_scalar(species, K = C, name = \"k1\"), df, unit = \"site\", trait = \"trait\", family = stats::gaussian(), control = control)",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/covariance/wave6-conversion-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/covariance/wave6-conversion-p1/r-oracle.json"
+  ],
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_verify_wave6_conversion_batch.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/covariance/wave6-conversion-p1/verify.log"
+  },
+  "batch_status_note": "",
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "gllvmtmb_version": "0.7.1",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
+  "glvmodels_commit": "6f050fea3e5afcee2b9d55b79acbaa42c2f28a24",
+  "glvmodels_worktree_dirty": [],
+  "host": "local Mac (M1 Ultra), single BLAS/OMP thread, JULIA_NUM_THREADS=4",
+  "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-WAVE6-KERNEL-SCALAR-FIT",
+        "quantity": "logLik_B_tcrossprod",
+        "r_value": [
+          -20.5154075015976,
+          0.507127924163192,
+          0,
+          0,
+          0,
+          0.507127924163192,
+          0,
+          0,
+          0,
+          0.507127924163192
+        ],
+        "julia_value": [
+          -20.515407513349597,
+          0.507127921750612,
+          0.0,
+          0.0,
+          0.0,
+          0.507127921750612,
+          0.0,
+          0.0,
+          0.0,
+          0.507127921750612
+        ],
+        "max_abs_diff": 1.1751996709108425e-08,
+        "tolerance": 0.0001,
+        "tolerance_rule": "wave6-conversion-batch-contract-p1.json per-case tolerance (carried verbatim from P0); max |r - julia| over the logLik + tcrossprod(B) vector"
+      }
+    ]
+  }
+}

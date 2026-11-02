@@ -8,7 +8,7 @@
 # the link types below — Distributions provides the distributions, not the links.
 
 abstract type Link end
-"""Logit link: `g(μ) = log(μ / (1 - μ))`, inverse `g⁻¹(η) = 1 / (1 + exp(-η))`. Canonical link for `Binomial` and `Beta`."""
+"""Logit link: `g(μ) = log(μ / (1 - μ))`, inverse `g⁻¹(η) = 1 / (1 + exp(-η))`. Canonical link for `Binomial`. Conventional default (not canonical) for `Beta`."""
 struct LogitLink    <: Link end
 """Probit link: `g(μ) = Φ⁻¹(μ)`, inverse `g⁻¹(η) = Φ(η)` (standard-normal CDF)."""
 struct ProbitLink   <: Link end
@@ -16,7 +16,7 @@ struct ProbitLink   <: Link end
 struct CLogLogLink  <: Link end
 """Identity link: `g(μ) = μ`. Canonical link for `Normal`."""
 struct IdentityLink <: Link end
-"""Log link: `g(μ) = log(μ)`, inverse `g⁻¹(η) = exp(η)`. Canonical link for `Poisson`, `Gamma`, and `NegativeBinomial`."""
+"""Log link: `g(μ) = log(μ)`, inverse `g⁻¹(η) = exp(η)`. Canonical link for `Poisson`. Default (not canonical) for `Gamma` and `NegativeBinomial`."""
 struct LogLink      <: Link end
 
 """
@@ -56,8 +56,14 @@ linkfun(::LogLink, μ)      = log(μ)
 """
     default_link(family) -> Link
 
-Canonical link for a response family: identity for `Normal`, logit for
-`Binomial`, log for `Poisson`.
+Default link for a response family. Methods in this file:
+
+- `Normal` → `IdentityLink` (canonical)
+- `Binomial` → `LogitLink` (canonical)
+- `Poisson` → `LogLink` (canonical)
+- `NegativeBinomial` → `LogLink` (default; not canonical)
+- `Beta` → `LogitLink` (conventional default; not a canonical-link GLM)
+- `Gamma` → `LogLink` (default; not canonical)
 """
 default_link(::Normal)   = IdentityLink()
 default_link(::Binomial) = LogitLink()

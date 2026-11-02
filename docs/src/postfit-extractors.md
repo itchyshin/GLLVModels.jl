@@ -29,15 +29,22 @@ Choose the denominator to match your biological question:
 
 - `extract_communality`, `extract_correlations`, and `extract_proportions`
   default to `level = :unit`. They describe the selected source alone and
-  exclude Gaussian observation noise `σ_eps²`.
+  exclude Gaussian observation noise `σ_eps²`. The exception is a Gaussian
+  fit with `has_diag = true` and `K_W == 0`: the data identify only the sum
+  `σ²_B + σ²_W + σ_eps²`, so the `:unit` source uses the identified
+  denominator `sigma_y_site(fit)`, as `gllvmTMB` does, and
+  `extract_communality(fit)` equals `communality(fit)`.
 - `communality(fit)` and `extract_communality(fit; level = :total)` describe
   the unit latent fraction of `sigma_y_site(fit)`. That denominator includes
   the other site-specific variances and observation noise, but excludes the
   structured phylogenetic block. The analogous `:total` option is available
   for `extract_correlations` and `extract_proportions`.
 - `extract_Omega` defaults to `level = :auto`, combining the sources present
-  in the fit without observation noise. Its `level = :total` option adds
-  observation noise; it is a different summary from `sigma_y_site`.
+  in the fit. That combination excludes observation noise `σ_eps²` only
+  when the fit has a genuine `:unit_obs` tier or no diagonal. For a
+  Gaussian fit with `has_diag = true` and `K_W == 0` the identified
+  total `sigma_y_site(fit)` (including `σ_eps²`) is used, so
+  `level = :total` coincides with `:auto`.
 
 For example, with one latent source and no source-specific diagonal
 variance, `extract_communality(fit)` is `1.0` wherever that source has
@@ -50,6 +57,10 @@ are zero. A source with zero total variance has an undefined fraction.
 Check the individual accessor's definition when comparing outputs:
 `extract_Sigma(fit; level = :unit_obs)` includes observation noise, unlike
 the source-only `extract_communality` denominator at that level.
+`extract_Sigma` and `extract_ICC_site` still report the fitted split of the
+diagonal between `:unit` and `:unit_obs` on a `has_diag = true`, `K_W == 0`
+fit, where that split is not identified; the `:unit` extractors above use the
+identified sum instead.
 `extract_Sigma(fit; level = :site)` returns `sigma_y_site(fit)`.
 
 ```@docs
@@ -65,6 +76,7 @@ extract_communality
 extract_correlations
 extract_cross_correlations
 extract_proportions
+extract_residual_split
 extract_Omega
 extract_ICC_site
 extract_repeatability
@@ -75,8 +87,10 @@ extract_phylo_signal
 
 ## What is not here
 
-`extract_residual_split` (an OLRE-specific σ²_d/σ²_e/σ²_total decomposition)
-and `extract_coevolution_modules`'s companion accessor are not implemented —
+`extract_residual_split` exists only for the Gaussian two-level fit
+(`TwoLevelFit`), where σ²_d is zero; the non-Gaussian σ²_d values and the
+`GllvmFit` method are not implemented. `extract_coevolution_modules`'s
+companion accessor is not implemented either;
 see [Post-fit tables and prediction](postfit-tables.md) for
 `extract_coevolution_modules` itself, and
 [Diagnostics and model comparison](diagnostics.md) for `getREsd`'s replacement

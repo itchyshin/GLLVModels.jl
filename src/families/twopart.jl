@@ -271,6 +271,20 @@ end
 # unchanged.
 _tp_observed_Wc(::Any, y, ηc, Wc) = Wc
 
+# A family whose observed count curvature also depends on η^z (the zero-inflated mixtures:
+# at y = 0 the posterior share of structural zeros enters) overrides `_tp_observed_Wc_z`.
+# The default forwards to `_tp_observed_Wc`, so every other family is bit-for-bit unchanged.
+_tp_observed_Wc_z(family, y, ηz, ηc, Wc) = _tp_observed_Wc(family, y, ηc, Wc)
+@inline _tp_observed_Wc_at(family, t, y, ηz, ηc, Wc) = _tp_observed_Wc_z(family, y, ηz, ηc, Wc)
+@inline _tp_observed_Wc_at(fams::AbstractVector, t, y, ηz, ηc, Wc) = _tp_observed_Wc_z(fams[t], y, ηz, ηc, Wc)
+
+# Smallest admissible eigenvalue of the site precision A = I + Λ'WΛ under `hessian = :observed`
+# (0 = no guard). Where the observed curvature goes negative A can approach singularity while
+# the mode search still converges, and -½ logdet A then inflates the Laplace value; see the
+# breakdown-guard note above `ZI_LAPLACE_EIGMIN_FLOOR` in zi_twin.jl. Only ZIPoisson sets one.
+_tp_eigmin_floor(::Any) = 0.0
+_tp_eigmin_floor(fams::AbstractVector) = isempty(fams) ? 0.0 : maximum(_tp_eigmin_floor, fams)
+
 """
     twopart_loglik_site(family, y, Λz, Λc, βz, βc; offsetz=nothing, offsetc=nothing,
                         maxiter=100, tol=1e-9) -> Float64
@@ -319,7 +333,7 @@ function twopart_loglik_site(family, y::AbstractVector,
         _, _, W_z, W_c, logf = _tp_pieces_at(family, t, y[t], ηz[t], ηc[t])
         # Observed curvature enters HERE ONLY (the log-det), never the mode solve.
         Wz[t] = W_z
-        Wc[t] = hessian === :observed ? _tp_observed_Wc_at(family, t, y[t], ηc[t], W_c) : W_c
+        Wc[t] = hessian === :observed ? _tp_observed_Wc_at(family, t, y[t], ηz[t], ηc[t], W_c) : W_c
         ℓ += logf
     end
     # Per-call buffers (written in place with the SAME broadcast / BLAS expressions
@@ -333,7 +347,9 @@ function twopart_loglik_site(family, y::AbstractVector,
         Amat[d, d] += 1.0                      # + I (adds 1.0 to each diagonal entry)
     end
     A = Symmetric(Amat)
-    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * logdet(A)
+    floor_ = hessian === :observed ? _tp_eigmin_floor(family) : 0.0
+    floor_ > 0 && K > 0 && eigmin(A) < floor_ && return -Inf   # eigmin throws on 0x0 (K = 0)
+    return ℓ - 0.5 * dot(ẑ, ẑ) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -465,6 +481,8 @@ predictor drives both parts, `gllvmTMB.cpp:2816-2830`), `βz === βc` and `Λc`
 IS the shared loadings matrix (also equal to `Λz`) — read `f.βc`/`f.Λc` as
 "the one shared predictor" in that mode, `f.βz` is the identical array, not
 an independent estimate.)
+`offset` is the p×n training offset on the positive-part predictor `η^c` (`nothing` when
+the fit had none); [`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct DeltaLogNormalFit
     βz::Vector{Float64}
@@ -476,6 +494,7 @@ struct DeltaLogNormalFit
     iterations::Int
     predictor::Symbol
     disp_group::Symbol
+    offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
 end
 
 # Positional-compat constructors (hessian::Symbol precedent, e.g. binomial.jl):
@@ -484,6 +503,9 @@ DeltaLogNormalFit(βz, βc, Λc, σ, loglik, converged, iterations) =
     DeltaLogNormalFit(βz, βc, Λc, σ, loglik, converged, iterations, :separate, :shared)
 DeltaLogNormalFit(βz, βc, Λc, σ, loglik, converged, iterations, predictor) =
     DeltaLogNormalFit(βz, βc, Λc, σ, loglik, converged, iterations, predictor, :shared)
+# Pre-offset compat tier (9 positional args): no stored training offset.
+DeltaLogNormalFit(βz, βc, Λc, σ, loglik, converged, iterations, predictor, disp_group) =
+    DeltaLogNormalFit(βz, βc, Λc, σ, loglik, converged, iterations, predictor, disp_group, nothing)
 
 function Base.show(io::IO, f::DeltaLogNormalFit)
     p, K = size(f.Λc)
@@ -567,6 +589,8 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_delta_lognormal_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_delta_lognormal_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     predictor in (:separate, :shared) || throw(ArgumentError(
@@ -605,6 +629,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     σ0vec = [nres_t[t] > 1 ? max(sqrt(sumsq_t[t] / (nres_t[t] - 1)), 0.1) : σ0 for t in 1:p]
     ndisp = disp_group === :shared ? 1 : p
     Zc = [Y[t, j] > 0 ? log(Y[t, j]) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -619,6 +644,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             βc = θ[(p + 1):(2p)]
             Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
             σ = disp_group === :shared ? exp(θ[2p + rr + 1]) : exp.(θ[(2p + rr + 1):(2p + rr + ndisp)])
+            _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-scale positive part)
             v = try
                 -delta_lognormal_marginal_loglik_laplace(Y, Λc, βz, βc, σ; offsetc = offset, hessian = hessian,
                                                          maxiter = newton_maxiter, tol = newton_tol)
@@ -634,6 +660,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
             σ = disp_group === :shared ? exp(θ[p + rr + 1]) : exp.(θ[(p + rr + 1):(p + rr + ndisp)])
+            _eta_above_clamp(β, offset) && return 1e12   # #869: η-clamp plateau (log-scale positive part)
             v = try
                 -delta_lognormal_marginal_loglik_laplace(Y, Λ, β, β, σ; Λz = Λ,
                         offsetz = offset, offsetc = offset, hessian = hessian,
@@ -658,7 +685,10 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         σ = disp_group === :shared ? exp(θ̂[p + rr + 1]) : exp.(θ̂[(p + rr + 1):(p + rr + ndisp)])
         βz = β; βc = β
     end
-    return DeltaLogNormalFit(βz, βc, Λc, σ, _fit_verdict(res)..., predictor, disp_group)
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_delta_lognormal_gllvm")
+    return DeltaLogNormalFit(βz, βc, Λc, σ, ll, conv, iters, predictor, disp_group,
+                             _stored_offset(offset))
 end
 
 # ---------------------------------------------------------------------------
@@ -711,7 +741,9 @@ end
     HurdlePoissonFit
 
 Result of [`fit_hurdle_poisson_gllvm`](@ref): occurrence logits `βz`, count log-mean
-intercepts `βc`, count loadings `Λc`, `loglik`, `converged`, `iterations`.
+intercepts `βc`, count loadings `Λc`, `loglik`, `converged`, `iterations`, and
+`offset`, the p×n training offset on the count predictor (`nothing` when the fit had
+none), which [`predict`](@ref) and [`getLV`](@ref) use by default.
 """
 struct HurdlePoissonFit
     βz::Vector{Float64}
@@ -720,7 +752,11 @@ struct HurdlePoissonFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
 end
+# Pre-offset compat tier: no stored training offset.
+HurdlePoissonFit(βz, βc, Λc, loglik, converged, iterations) =
+    HurdlePoissonFit(βz, βc, Λc, loglik, converged, iterations, nothing)
 
 function Base.show(io::IO, f::HurdlePoissonFit)
     p, K = size(f.Λc)
@@ -749,6 +785,8 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_hurdle_poisson_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_poisson_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_hurdle_poisson_gllvm", Y, _tp_count_ok, "non-negative integer counts")
@@ -767,6 +805,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         βc0[t] = c == 0 ? 0.0 : log(max(s / c, 1.0))
     end
     Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 0.5)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -777,6 +816,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
+        _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -hurdle_poisson_marginal_loglik_laplace(Y, Λc, βz, βc; offsetc = offset, hessian = hessian,
                                                     maxiter = newton_maxiter, tol = newton_tol)
@@ -791,7 +831,9 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     θ̂ = Optim.minimizer(res)
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
-    return HurdlePoissonFit(βz, βc, Λc, _fit_verdict(res)...)
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_hurdle_poisson_gllvm")
+    return HurdlePoissonFit(βz, βc, Λc, ll, conv, iters, _stored_offset(offset))
 end
 
 # ---------------------------------------------------------------------------
@@ -867,6 +909,8 @@ end
 
 Result of [`fit_hurdle_nb_gllvm`](@ref): `βz`, `βc`, `Λc`, dispersion `r`, `loglik`,
 `converged`, `iterations`.
+`offset` is the p×n training offset on the count / positive-part predictor `η^c` (`nothing`
+when the fit had none); [`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct HurdleNBFit
     βz::Vector{Float64}
@@ -876,7 +920,11 @@ struct HurdleNBFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
 end
+# Pre-offset compat tier: no stored training offset.
+HurdleNBFit(βz, βc, Λc, r, loglik, converged, iterations) =
+    HurdleNBFit(βz, βc, Λc, r, loglik, converged, iterations, nothing)
 
 function Base.show(io::IO, f::HurdleNBFit)
     p, K = size(f.Λc)
@@ -903,6 +951,8 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_hurdle_nb_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_nb_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_hurdle_nb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
@@ -921,6 +971,7 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         βc0[t] = c == 0 ? 0.0 : log(max(s / c, 1.0))
     end
     Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 0.5)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -931,6 +982,7 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
         r = exp(θ[2p + rr + 1])
+        _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -hurdle_nb_marginal_loglik_laplace(Y, Λc, βz, βc, r; offsetc = offset, hessian = hessian,
                                                maxiter = newton_maxiter, tol = newton_tol)
@@ -946,7 +998,9 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
     r = exp(θ̂[2p + rr + 1])
-    return HurdleNBFit(βz, βc, Λc, r, _fit_verdict(res)...)
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_hurdle_nb_gllvm")
+    return HurdleNBFit(βz, βc, Λc, r, ll, conv, iters, _stored_offset(offset))
 end
 
 # ---------------------------------------------------------------------------
@@ -1064,6 +1118,10 @@ drives both parts, `gllvmTMB.cpp:2831-2844`), `βz === βc` and `Λc` IS the
 shared loadings matrix (also equal to `Λz`) — read `f.βc`/`f.Λc` as "the one
 shared predictor" in that mode, `f.βz` is the identical array, not an
 independent estimate.)
+`offset` is the p×n training offset on the positive-part predictor `η^c` (`nothing` when
+the fit had none); [`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
+`hessian` is the Laplace log-det curvature the fit was made with (`:observed` or `:fisher`);
+`confint` rebuilds the same objective from it.
 """
 struct DeltaGammaFit
     βz::Vector{Float64}
@@ -1075,6 +1133,8 @@ struct DeltaGammaFit
     iterations::Int
     predictor::Symbol
     disp_group::Symbol
+    offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
+    hessian::Symbol   # the Laplace log-det curvature this fit's objective used
 end
 
 # Positional-compat constructors (hessian::Symbol precedent, e.g. binomial.jl):
@@ -1083,6 +1143,12 @@ DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations) =
     DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, :separate, :shared)
 DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor) =
     DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, :shared)
+# Pre-offset compat tier (9 positional args): no stored training offset.
+DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, disp_group) =
+    DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, disp_group, nothing)
+# Pre-`hessian` compat tier (10 positional args): the default curvature.
+DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, disp_group, offset) =
+    DeltaGammaFit(βz, βc, Λc, α, loglik, converged, iterations, predictor, disp_group, offset, :observed)
 
 function Base.show(io::IO, f::DeltaGammaFit)
     p, K = size(f.Λc)
@@ -1151,6 +1217,8 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     disp_group in (:shared, :species) || throw(ArgumentError(
         "fit_delta_gamma_gllvm: disp_group must be :shared or :species; got :$disp_group"))
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_delta_gamma_gllvm", maskable = false)
     _check_twopart_support("fit_delta_gamma_gllvm", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)
 
@@ -1186,11 +1254,9 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     α0vec = [nres_t[t] > 1 ? clamp((nres_t[t] - 1) / sumsq_t[t], 0.1, 100.0) : α0 for t in 1:p]
     ndisp = disp_group === :shared ? 1 : p
     Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 1e-6)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
-    # Offset (on the positive-part predictor η^c = β^c + offset + Λ^c z): remove it
-    # from the loadings warm start so the SVD sees the offset-free residual.
-    offset === nothing || (@inbounds for t in 1:p, j in 1:n
-        Y[t, j] > 0 && (Zc[t, j] -= offset[t, j])
-    end)
+    # Offset (on the positive-part predictor η^c = β^c + offset + Λ^c z): remove it from
+    # the intercept start and from the residual the loadings' SVD start sees.
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -1205,6 +1271,7 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             βz = θ[1:p]; βc = θ[(p + 1):(2p)]
             Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
             α = disp_group === :shared ? exp(θ[2p + rr + 1]) : exp.(θ[(2p + rr + 1):(2p + rr + ndisp)])
+            _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link positive part)
             v = try
                 -delta_gamma_marginal_loglik_laplace(Y, Λc, βz, βc, α; offsetc = offset,
                                                      hessian = hessian,
@@ -1221,6 +1288,7 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
             α = disp_group === :shared ? exp(θ[p + rr + 1]) : exp.(θ[(p + rr + 1):(p + rr + ndisp)])
+            _eta_above_clamp(β, offset) && return 1e12   # #869: η-clamp plateau (log-link positive part)
             v = try
                 -delta_gamma_marginal_loglik_laplace(Y, Λ, β, β, α; Λz = Λ,
                         offsetz = offset, offsetc = offset, hessian = hessian,
@@ -1245,7 +1313,10 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         α = disp_group === :shared ? exp(θ̂[p + rr + 1]) : exp.(θ̂[(p + rr + 1):(p + rr + ndisp)])
         βz = β; βc = β
     end
-    return DeltaGammaFit(βz, βc, Λc, α, _fit_verdict(res)..., predictor, disp_group)
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_delta_gamma_gllvm")
+    return DeltaGammaFit(βz, βc, Λc, α, ll, conv, iters, predictor, disp_group,
+                         _stored_offset(offset), hessian)
 end
 
 # ===========================================================================
@@ -1313,6 +1384,20 @@ function _tp_pieces(::ZIPoisson, y, ηz, ηc)
     end
 end
 
+# Observed count curvature -∂² log f / ∂(η^c)² for the zero-inflated Poisson (#739). A positive
+# count is Poisson, so it is μ. At y = 0, log f = log(π + (1-π)e^{-μ}) and, with
+# g = (1-π)e^{-μ}/P0 the posterior share of count-process zeros, ∂g/∂η^c = -μ g (1-g), so
+# the curvature is gμ(1 - μ(1-g)): negative for moderate μ, hence the eigenvalue floor.
+function _tp_observed_Wc_z(::ZIPoisson, y, ηz, ηc, Wc)
+    μ = exp(ηc)
+    y > 0 && return μ
+    π = inv(one(ηz) + exp(-ηz))
+    e = exp(-μ)
+    g = (one(π) - π) * e / (π + (one(π) - π) * e)
+    return g * μ * (one(g) - μ * (one(g) - g))
+end
+_tp_eigmin_floor(::ZIPoisson) = ZI_LAPLACE_EIGMIN_FLOOR
+
 """
     zip_marginal_loglik_laplace(Y, Λc, βz, βc; Λz=nothing, kwargs...) -> Float64
 
@@ -1334,6 +1419,8 @@ end
 
 Result of [`fit_zip_gllvm`](@ref): structural-zero logits `βz`, count log-mean
 intercepts `βc`, count loadings `Λc`, `loglik`, `converged`, `iterations`.
+`offset` is the p×n training offset on the count / positive-part predictor `η^c` (`nothing`
+when the fit had none); [`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct ZIPFit
     βz::Vector{Float64}
@@ -1342,7 +1429,11 @@ struct ZIPFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
 end
+# Pre-offset compat tier: no stored training offset.
+ZIPFit(βz, βc, Λc, loglik, converged, iterations) =
+    ZIPFit(βz, βc, Λc, loglik, converged, iterations, nothing)
 
 function Base.show(io::IO, f::ZIPFit)
     p, K = size(f.Λc)
@@ -1351,9 +1442,42 @@ function Base.show(io::IO, f::ZIPFit)
           f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+# Offset-aware warm start for the count / positive part. The start of the count-part
+# intercept `βc0` is a (log or logit) mean of the positive responses, which already contains
+# the offset, and `Zc` is the residual the loadings' SVD start sees. Take each trait's mean
+# offset over its positive cells out of `βc0`, and the offset out of `Zc`, so the start is
+# the offset-free start. A constant offset c then leaves the optimiser's path exactly the
+# no-offset path shifted by -c, so the maximum is reached at the same logLik (the absorption
+# identity); without this the start sat c away from the optimum and some data converged to
+# a different local optimum. `nothing` leaves both untouched.
+function _tp_offset_warmstart!(βc0::AbstractVector, Zc::AbstractMatrix, Y::AbstractMatrix, offset)
+    offset === nothing && return βc0
+    p, n = size(Y)
+    # The named fitters normalise `offset` to p×n before they get here; this guards the
+    # helper itself, because an unchecked `offset[t, j]` read of the wrong shape reaches
+    # memory the vector does not own (a NaN start, a throw, or a wrong converged fit).
+    size(offset) == (p, n) || throw(ArgumentError(
+        "offset must be a $(p)×$(n) matrix (traits × units) here; got " *
+        "$(_describe_offset(offset)). Pass a $(p)×$(n) matrix, or use fit_gllvm, which also " *
+        "accepts a scalar, a length-$(p) vector and the 1×$(n) / $(p)×1 matrices."))
+    for t in 1:p
+        s = 0.0; c = 0
+        for j in 1:n
+            Y[t, j] > 0 && (s += offset[t, j]; c += 1)
+        end
+        sh = c == 0 ? 0.0 : s / c
+        βc0[t] -= sh
+        for j in 1:n
+            Y[t, j] > 0 && (Zc[t, j] += sh - offset[t, j])
+        end
+    end
+    return βc0
+end
+
 # Shared warm start for zero-inflated count fits: structural-zero logits from the
-# excess-zero fraction, count log-mean from the positive counts, SVD loadings.
-function _zi_warmstart(Y::AbstractMatrix, K::Integer)
+# excess-zero fraction, count log-mean from the positive counts, SVD loadings (offset-aware
+# through `_tp_offset_warmstart!`).
+function _zi_warmstart(Y::AbstractMatrix, K::Integer; offset = nothing)
     p, n = size(Y)
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
@@ -1371,6 +1495,7 @@ function _zi_warmstart(Y::AbstractMatrix, K::Integer)
         βz0[t] = log(excess / (1 - excess))
     end
     Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 0.5)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -1411,11 +1536,18 @@ Fit a zero-inflated Poisson GLLVM by L-BFGS over `[βz; βc; vec(Λc)]` (Λz=0).
 excess-zero fraction + positive-count log-means + SVD loadings.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
-family the observed count-part weight is not yet specialised, so both selectors
-currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
-DeltaGamma is the only two-part family whose observed weight is implemented).
-Exposing the kwarg is the measurement prerequisite for closing that gap.
+`:fisher`); the mode search does not depend on it. `:observed` is the exact
+second derivative of the ZIP log-density, as gllvmTMB's Laplace uses (#739); before
+that fix both selectors gave the Fisher-weight objective, whose maximiser sits
+elsewhere and whose logLik was below gllvmTMB's `zi_poisson()` on simulated data.
+Where the observed curvature goes negative the site precision can approach
+singularity, so a site whose smallest eigenvalue is below `ZI_LAPLACE_EIGMIN_FLOOR`
+is a failed evaluation (as on the `zi_poisson()` route), and an optimum within 10%
+of the floor is reported `converged = false`. `:fisher` is unchanged and unguarded.
+On such data the observed surface keeps rising as the site precision approaches
+singularity, so there is no interior maximum to report (gllvmTMB's `zi_poisson()`
+also fails there; #1006). `hessian = :fisher` gives a converged Fisher-weight Laplace
+fit, whose `loglik` is on that different surface.
 """
 function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         offset = nothing,
@@ -1423,15 +1555,18 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zip_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zip_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zip_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
-    βz0, βc0, Λc0 = _zi_warmstart(Y, K)
+    βz0, βc0, Λc0 = _zi_warmstart(Y, K; offset = offset)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
+        _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -zip_marginal_loglik_laplace(Y, Λc, βz, βc; offsetc = offset, hessian = hessian,
                                          maxiter = newton_maxiter, tol = newton_tol)
@@ -1443,6 +1578,21 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
                          autodiff = :finite)
+    # #739: the observed surface has a Laplace breakdown wall (the eigenvalue floor), and
+    # L-BFGS from the warm start can stall against it far from the maximum. The Fisher
+    # optimum sits close to the observed one, so restart from it and keep the better end.
+    if hessian === :observed && !_nll_failed(Optim.minimum(res)) && !(Optim.converged(res) &&
+                                  _zip_min_site_eigen(Y, unpack_lambda(Optim.minimizer(res)[(2p + 1):(2p + rr)], p, K),
+                                                      Optim.minimizer(res)[1:p], Optim.minimizer(res)[(p + 1):(2p)],
+                                                      offset, newton_maxiter, newton_tol) >= 1.1 * ZI_LAPLACE_EIGMIN_FLOOR)
+        ff = fit_zip_gllvm(Y; K = K, offset = offset, hessian = :fisher, g_tol = g_tol,
+                           iterations = iterations, newton_maxiter = newton_maxiter,
+                           newton_tol = newton_tol)
+        θf = vcat(ff.βz, ff.βc, pack_lambda(ff.Λc))
+        res2 = Optim.optimize(negll, θf, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
+                              autodiff = :finite)
+        Optim.minimum(res2) < Optim.minimum(res) && (res = res2)
+    end
     # #573: never end below the nested Poisson fit (see `_zi_nested_guard`).
     pf = try fit_poisson_gllvm(Y; K = K, offset = offset) catch; nothing end
     if pf !== nothing
@@ -1452,8 +1602,45 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     θ̂ = Optim.minimizer(res)
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
-    return ZIPFit(βz, βc, Λc, _fit_verdict(res)...)
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_zip_gllvm")
+    # #739: an optimum at the Laplace breakdown guard is not a usable log-likelihood, and
+    # Optim reports it converged (a line search into the 1e12 sentinel is a zero step).
+    if conv && hessian === :observed
+        me = _zip_min_site_eigen(Y, Λc, βz, βc, offset, newton_maxiter, newton_tol)
+        if me < 1.1 * ZI_LAPLACE_EIGMIN_FLOOR
+            conv = false
+            @warn "fit_zip_gllvm: the optimum sits at the Laplace breakdown guard (smallest " *
+                  "site precision eigenvalue $(round(me; sigdigits = 3)), floor " *
+                  "$(ZI_LAPLACE_EIGMIN_FLOOR)); reported as not converged. The observed-curvature " *
+                  "Laplace likelihood still rises toward a singular site precision, so it has no " *
+                  "interior maximum on these data (gllvmTMB zi_poisson() shares this surface; #1006). " *
+                  "`hessian = :fisher` fits the Fisher-weight Laplace, which has no such wall."
+        end
+    end
+    return ZIPFit(βz, βc, Λc, ll, conv, iters, _stored_offset(offset))
 end
+
+# Smallest per-site Laplace precision eigenvalue I + Λc'(W_obs .* Λc) at given parameters
+# (-Inf if a site's mode search fails). `fam` is `ZIPoisson()` or `ZINB(r)`.
+function _zi_min_site_eigen(fam, Y, Λc, βz, βc, offset, maxiter, tol)
+    p, n = size(Y); Λz = zeros(p, size(Λc, 2))
+    m = Inf
+    size(Λc, 2) == 0 && return m               # K = 0: no latent precision to guard (eigmin throws on 0x0)
+    for s in 1:n
+        oc = offset === nothing ? nothing : view(offset, :, s)
+        y = view(Y, :, s)
+        ẑ, ok = _twopart_mode_search(fam, y, Λz, Λc, βz, βc;
+                                     offsetc = oc, maxiter = maxiter, tol = tol)
+        ok || return -Inf
+        ηc = _clamp_eta.(βc .+ (oc === nothing ? 0.0 : oc) .+ Λc * ẑ)
+        W = [_tp_observed_Wc_z(fam, y[t], βz[t], ηc[t], NaN) for t in 1:p]
+        m = min(m, eigmin(Symmetric(Λc' * (W .* Λc) + I)))
+    end
+    return m
+end
+_zip_min_site_eigen(Y, Λc, βz, βc, offset, maxiter, tol) =
+    _zi_min_site_eigen(ZIPoisson(), Y, Λc, βz, βc, offset, maxiter, tol)
 
 """
     ZIPCovFit
@@ -1533,6 +1720,7 @@ function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3
         Λc = unpack_lambda(θ[(2p + 2q + 1):(2p + 2q + rr)], p, K)
         Oz = _build_offset(X_fit, γz)
         Oc = _build_offset(X_fit, γc)
+        _eta_above_clamp(βc, Oc) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -zip_marginal_loglik_laplace(Y, Λc, βz, βc;
                                          offsetz = Oz, offsetc = Oc, hessian = hessian,
@@ -1553,8 +1741,11 @@ function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3
     Λĉ = unpack_lambda(θ̂[(2p + 2q + 1):(2p + 2q + rr)], p, K)
     γẑ = collect(Float64, _expand_fixed_zero(γz_free, γ_fixed_mask))
     γĉ = collect(Float64, _expand_fixed_zero(γc_free, γ_fixed_mask))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βĉ, _build_offset(X_fit, γc_free);
+                            caller = "fit_zip_gllvm_cov")
     return ZIPCovFit(βẑ, γẑ, βĉ, γĉ, collect(Bool, γ_fixed_mask), Λĉ,
-                     _fit_verdict(res)...)
+                     ll, conv, iters)
 end
 
 # ---------------------------------------------------------------------------
@@ -1589,6 +1780,23 @@ function _tp_pieces(f::ZINB, y, ηz, ηc)
     end
 end
 
+# Observed count curvature -∂² log f / ∂(η^c)² for the zero-inflated NB2 (#932). A positive
+# count is NB2, so it is rμ(r+y)/(r+μ)². At y = 0, log f = log(π + (1-π)p0) with p0 = (r/(r+μ))^r;
+# with u = rμ/(r+μ) (so ∂log p0/∂η^c = -u, ∂u/∂η^c = r²μ/(r+μ)²) and g = (1-π)p0/P0 the posterior
+# share of count-process zeros, ∂g/∂η^c = -g(1-g)u, so the curvature is g(u' - (1-g)u²): negative
+# for moderate μ, hence the eigenvalue floor. As r → ∞ it is the ZIP weight gμ(1 - μ(1-g)).
+function _tp_observed_Wc_z(f::ZINB, y, ηz, ηc, Wc)
+    μ = exp(ηc); r = f.r
+    y > 0 && return r * μ * (r + y) / (r + μ)^2
+    π = inv(one(ηz) + exp(-ηz))
+    p0 = (r / (r + μ))^r
+    g = (one(π) - π) * p0 / (π + (one(π) - π) * p0)
+    u = r * μ / (r + μ)
+    du = r^2 * μ / (r + μ)^2
+    return g * (du - (one(g) - g) * u^2)
+end
+_tp_eigmin_floor(::ZINB) = ZI_LAPLACE_EIGMIN_FLOOR
+
 """
     zinb_marginal_loglik_laplace(Y, Λc, βz, βc, r; Λz=nothing, kwargs...) -> Float64
 
@@ -1608,6 +1816,8 @@ end
 
 Result of [`fit_zinb_gllvm`](@ref): `βz`, `βc`, `Λc`, dispersion `r`, `loglik`,
 `converged`, `iterations`.
+`offset` is the p×n training offset on the count / positive-part predictor `η^c` (`nothing`
+when the fit had none); [`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct ZINBFit
     βz::Vector{Float64}
@@ -1617,7 +1827,11 @@ struct ZINBFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
 end
+# Pre-offset compat tier: no stored training offset.
+ZINBFit(βz, βc, Λc, r, loglik, converged, iterations) =
+    ZINBFit(βz, βc, Λc, r, loglik, converged, iterations, nothing)
 
 function Base.show(io::IO, f::ZINBFit)
     p, K = size(f.Λc)
@@ -1632,11 +1846,14 @@ end
 Fit a zero-inflated NB2 GLLVM by L-BFGS over `[βz; βc; vec(Λc); log r]` (Λz=0).
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
-`:fisher`); the mode search does not depend on it. NOTE (2026-08-28): for this
-family the observed count-part weight is not yet specialised, so both selectors
-currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
-DeltaGamma is the only two-part family whose observed weight is implemented).
-Exposing the kwarg is the measurement prerequisite for closing that gap.
+`:fisher`); the mode search does not depend on it. `:observed` is the exact
+second derivative of the ZINB log-density, as gllvmTMB's Laplace uses (#932); before that
+fix both selectors gave the Fisher-weight objective, whose maximiser over-estimates the
+zero-inflation logit by about +0.16 at π = 0.2, and does not move with `n`. Where the
+observed curvature goes negative the site precision can approach singularity, so a site whose
+smallest eigenvalue is below `ZI_LAPLACE_EIGMIN_FLOOR` is a failed evaluation (as on the
+`zi_nbinom2()` route), and an optimum within 10% of the floor is reported
+`converged = false`. `:fisher` is unchanged and unguarded.
 """
 function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         offset = nothing,
@@ -1644,16 +1861,19 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zinb_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zinb_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zinb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
-    βz0, βc0, Λc0 = _zi_warmstart(Y, K)
+    βz0, βc0, Λc0 = _zi_warmstart(Y, K; offset = offset)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0), log(10.0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
         r = exp(θ[2p + rr + 1])
+        _eta_above_clamp(βc, offset) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -zinb_marginal_loglik_laplace(Y, Λc, βz, βc, r; offsetc = offset, hessian = hessian,
                                           maxiter = newton_maxiter, tol = newton_tol)
@@ -1675,7 +1895,24 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
     r = exp(θ̂[2p + rr + 1])
-    return ZINBFit(βz, βc, Λc, r, _fit_verdict(res)...)
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_zinb_gllvm")
+    # #932: as for ZIP (#739), an optimum at the Laplace breakdown guard is not a usable
+    # log-likelihood, and Optim reports it converged (a line search into the 1e12 sentinel is a
+    # zero step).
+    if conv && hessian === :observed
+        me = _zi_min_site_eigen(ZINB(r), Y, Λc, βz, βc, offset, newton_maxiter, newton_tol)
+        if me < 1.1 * ZI_LAPLACE_EIGMIN_FLOOR
+            conv = false
+            @warn "fit_zinb_gllvm: the optimum sits at the Laplace breakdown guard (smallest " *
+                  "site precision eigenvalue $(round(me; sigdigits = 3)), floor " *
+                  "$(ZI_LAPLACE_EIGMIN_FLOOR)); reported as not converged. The observed-curvature " *
+                  "Laplace likelihood still rises toward a singular site precision, so it has no " *
+                  "interior maximum on these data. `hessian = :fisher` fits the Fisher-weight " *
+                  "Laplace, which has no such wall."
+        end
+    end
+    return ZINBFit(βz, βc, Λc, r, ll, conv, iters, _stored_offset(offset))
 end
 
 """
@@ -1736,14 +1973,18 @@ with `γ=0` and `log r = log(10)`.
 `X` is `(p, n, q)`. `γ_fixed` optionally zeros selected covariate columns for
 **both** parts (same contract as [`fit_zip_gllvm_cov`](@ref)). `θ_init` is an
 optional packed start `[βz; γz; βc; γc; pack(Λc); log r]` (same length as the
-free packed vector). Twin light RCall Δ is out of scope (twin ZINB cut).
-Per-trait `r` is **not** the default.
+free packed vector); every entry must be finite. Twin light RCall Δ is out of
+scope (twin ZINB cut). Per-trait `r` is **not** the default.
+
+`iterations <= 0` evaluates the Laplace objective at the start vector and
+returns immediately with `converged = false` and `iterations = 0`. That path
+is a shared-start / transport check, not a fitted optimum: no L-BFGS step
+runs and no gradient is tested.
 
 `hessian` selects the two-part Laplace log-det curvature (`:observed` default /
 `:fisher`); the mode search does not depend on it. As for the no-covariate
-fitter, the observed count-part weight is not yet specialised for this family,
-so both selectors currently produce the identical objective (the
-`TWOPART_KNOWN_OPEN` census gap).
+fitter, `:observed` is the exact ZINB curvature with the eigenvalue floor (#932); unlike
+`fit_zinb_gllvm`, this fitter does not flag an optimum at the floor as not converged.
 """
 function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3},
         K::Integer, γ_fixed = nothing, θ_init = nothing, hessian::Symbol = :observed,
@@ -1768,6 +2009,8 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         θin = collect(Float64, θ_init)
         length(θin) == nθ || throw(ArgumentError(
             "θ_init length ($(length(θin))) must equal $nθ = 2p+2q+rr+1"))
+        all(isfinite, θin) || throw(ArgumentError(
+            "fit_zinb_gllvm_cov: θ_init contains non-finite values"))
         θin
     end
     function negll(θ)
@@ -1779,6 +2022,7 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         r = exp(θ[2p + 2q + rr + 1])
         Oz = _build_offset(X_fit, γz)
         Oc = _build_offset(X_fit, γc)
+        _eta_above_clamp(βc, Oc) && return 1e12   # #869: η-clamp plateau (log-link count part)
         v = try
             -zinb_marginal_loglik_laplace(Y, Λc, βz, βc, r; hessian = hessian,
                                          offsetz = Oz, offsetc = Oc,
@@ -1789,7 +2033,8 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         return isfinite(v) ? v : 1e12
     end
     # iterations ≤ 0: evaluate at θ0 only (shared-start / transport checks; no
-    # second LBFGS wander on the shared-r ridge).
+    # second LBFGS wander on the shared-r ridge). No optimiser ran, so
+    # `converged` cannot be true — `_fit_verdict` also refuses a sentinel nll.
     if iterations <= 0
         θ̂ = θ0
         nll0 = negll(θ̂)
@@ -1801,8 +2046,11 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
         r̂ = exp(θ̂[2p + 2q + rr + 1])
         γẑ = collect(Float64, _expand_fixed_zero(γz_free, γ_fixed_mask))
         γĉ = collect(Float64, _expand_fixed_zero(γc_free, γ_fixed_mask))
+        ll, conv, iters = _fit_verdict(nll0, false, 0)
+        conv = _eta_cap_verdict(conv, LogLink(), βĉ, _build_offset(X_fit, γc_free);
+                                caller = "fit_zinb_gllvm_cov")
         return ZINBCovFit(βẑ, γẑ, βĉ, γĉ, collect(Bool, γ_fixed_mask), Λĉ, r̂,
-                          -nll0, true, 0)
+                          ll, conv, iters)
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
@@ -1816,8 +2064,11 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
     r̂ = exp(θ̂[2p + 2q + rr + 1])
     γẑ = collect(Float64, _expand_fixed_zero(γz_free, γ_fixed_mask))
     γĉ = collect(Float64, _expand_fixed_zero(γc_free, γ_fixed_mask))
+    ll, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, LogLink(), βĉ, _build_offset(X_fit, γc_free);
+                            caller = "fit_zinb_gllvm_cov")
     return ZINBCovFit(βẑ, γẑ, βĉ, γĉ, collect(Bool, γ_fixed_mask), Λĉ, r̂,
-                      _fit_verdict(res)...)
+                      ll, conv, iters)
 end
 
 # ---------------------------------------------------------------------------
@@ -1891,6 +2142,8 @@ end
 Result of [`fit_zib_gllvm`](@ref): structural-zero logits `βz`, count success-logit
 intercepts `βc`, count loadings `Λc`, the shared number of trials `N`, `loglik`,
 `converged`, `iterations`.
+`offset` is the p×n training offset on the count / positive-part predictor `η^c` (`nothing`
+when the fit had none); [`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct ZIBFit
     βz::Vector{Float64}
@@ -1900,7 +2153,11 @@ struct ZIBFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    offset::Union{Nothing,Matrix{Float64}}   # training count offset (p×n); `nothing` = none
 end
+# Pre-offset compat tier: no stored training offset.
+ZIBFit(βz, βc, Λc, N, loglik, converged, iterations) =
+    ZIBFit(βz, βc, Λc, N, loglik, converged, iterations, nothing)
 
 function Base.show(io::IO, f::ZIBFit)
     p, K = size(f.Λc)
@@ -1912,7 +2169,7 @@ end
 # Warm start for the zero-inflated binomial fit: success-logit intercept from the
 # positive-part success fraction, structural-zero logit from the excess-zero share
 # (over the binomial-zero rate), SVD loadings of the logit residuals.
-function _zib_warmstart(Y::AbstractMatrix, N::Integer, K::Integer)
+function _zib_warmstart(Y::AbstractMatrix, N::Integer, K::Integer; offset = nothing)
     p, n = size(Y)
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     _logit(x) = (xx = clamp(x, 1e-3, 1 - 1e-3); log(xx / (1 - xx)))
@@ -1930,6 +2187,7 @@ function _zib_warmstart(Y::AbstractMatrix, N::Integer, K::Integer)
         βz0[t] = log(excess / (1 - excess))
     end
     Zc = [Y[t, j] > 0 ? _logit(Y[t, j] / N) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    _tp_offset_warmstart!(βc0, Zc, Y, offset)
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -1959,11 +2217,13 @@ function fit_zib_gllvm(Y::AbstractMatrix{<:Real}; K::Integer, N::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
+                               caller = "fit_zib_gllvm", maskable = false)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zib_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zib_gllvm", Y, _tp_count_ok, "integer counts 0..N")
     rr = rr_theta_len(p, K)
-    βz0, βc0, Λc0 = _zib_warmstart(Y, N, K)
+    βz0, βc0, Λc0 = _zib_warmstart(Y, N, K; offset = offset)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
@@ -1982,7 +2242,7 @@ function fit_zib_gllvm(Y::AbstractMatrix{<:Real}; K::Integer, N::Integer,
     θ̂ = Optim.minimizer(res)
     βz = θ̂[1:p]; βc = θ̂[(p + 1):(2p)]
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
-    return ZIBFit(βz, βc, Λc, Int(N), _fit_verdict(res)...)
+    return ZIBFit(βz, βc, Λc, Int(N), _fit_verdict(res)..., _stored_offset(offset))
 end
 
 """

@@ -1,0 +1,67 @@
+# Twin fixture for namespace rows export/extract_Gamma and export/extract_coevolution_modules
+# (gllvmTMB P1). Generated once by gen_cross_lineage_p1.R, which also writes the two CSVs
+# (sha256 recorded). Do not hand-edit; regenerate from the script. Matrices are written
+# column-major (R's as.vector), with their row and column trait names alongside.
+gllvmtmb_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+gllvmtmb_version = "0.7.1"
+r_version = "R version 4.6.0 (2026-04-24)"
+
+[fit]
+# Gaussian, unit = "site", trait = "trait"; K = make_cross_kernel(A_H, A_P, W, rho = 0.6)
+formula = "value ~ 0 + trait + kernel_latent(species, K = K, d = 3, name = \"cross\", unique = FALSE)"
+level = "cross"
+d = 3
+rho = 0.59999999999999998
+data_file = "cross_lineage_p1_data.csv"
+data_sha256 = "27769dbdd617dda5cead7548ffb48de68f454bb31d2ac42656f8f38676282431"
+K_file = "cross_lineage_p1_K.csv"
+K_sha256 = "3bae382ccc6aeb709d716dd61330ff1ce33d0c78cb5da175dffa9d35f3e5ae54"
+n_host = 8
+n_partner = 8
+n_site = 64
+species = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"]
+trait_names = ["h_size", "h_defence", "p_size", "p_attack"]
+# gllvmTMB fits K + jitter * I (measured from tmb_data$Ainv_phy_rr)
+K_jitter = 1e-08
+converged = true
+pd_hessian = true
+r_gradient_max = 4.4120625695161845e-05
+loglik = -198.91409653930219
+# b_fix: trait intercepts, in trait order
+beta = [0.3105437124598594, -0.21485069279651836, 0.47985214460626846, -0.023944634620876769]
+# exp(log_sigma_eps): the residual SD
+sigma_eps = 0.41685713490425486
+# extract_Sigma(fit, level = "cross", part = "shared", link_residual = "none")$Sigma, 4 x 4
+Sigma_shared = [0.69990041655054813, 0.26972288515572079, 0.49709791632173772, -0.19524064760283885, 0.26972288515572079, 0.78328145478780897, -0.2331515812779219, 0.33854063528816286, 0.49709791632173772, -0.2331515812779219, 0.80351975416223731, -0.20754514000213661, -0.19524064760283885, 0.33854063528816286, -0.20754514000213661, 0.50133294316487109]
+
+[gamma]
+# extract_Gamma(fit, level = "cross", row_traits = host, col_traits = partner), 2 x 2
+row_traits = ["h_size", "h_defence"]
+col_traits = ["p_size", "p_attack"]
+Gamma = [0.49709791632173772, -0.2331515812779219, -0.19524064760283885, 0.33854063528816286]
+# extract_Gamma(fit, level = "cross", row_traits = row_perm, col_traits = col_perm), 2 x 3
+row_perm = ["h_defence", "h_size"]
+col_perm = ["p_attack", "h_size", "p_size"]
+Gamma_perm = [0.33854063528816286, -0.19524064760283885, 0.26972288515572079, 0.69990041655054813, -0.2331515812779219, 0.49709791632173772]
+
+[modules]
+# extract_coevolution_modules(fit, level = "cross", row_traits = host, col_traits = partner)
+row_traits = ["h_size", "h_defence"]
+col_traits = ["p_size", "p_attack"]
+# $R, 2 x 2 (rows host, columns partner)
+R = [0.71956389411724919, -0.35743253702513561, -0.33112831171784607, 0.57700586066012016]
+module = ["module_1", "module_2"]
+singular_value = [1, 0.29683655148691135]
+squared_share = [0.91902309385887959, 0.080976906141120464]
+# $row_axes$loading and $col_axes$loading (trait fastest, module slowest, as R's tables)
+row_axes_trait = ["h_size", "h_defence", "h_size", "h_defence"]
+row_axes_module = ["module_1", "module_1", "module_2", "module_2"]
+row_axes_loading = [-0.7690364930903657, 0.63920487505593393, 0.63920487505593393, 0.76903649309036581]
+col_axes_trait = ["p_size", "p_attack", "p_size", "p_attack"]
+col_axes_module = ["module_1", "module_1", "module_2", "module_2"]
+col_axes_loading = [-0.7818435138564539, 0.62347471467621929, 0.62347471467621929, 0.7818435138564539]
+# the same call with n_modules = 1
+n1_singular_value = [1]
+n1_squared_share = [0.91902309385887959]
+n1_row_axes_loading = [-0.7690364930903657, 0.63920487505593393]
+n1_col_axes_loading = [-0.7818435138564539, 0.62347471467621929]

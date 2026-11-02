@@ -40,8 +40,8 @@ Fields:
   (`nobs(fit, Y; mask)`, R's `p·n`); `NaN` (R's `NA`) when `n − k − 1 ≤ 0`. Reported
   only: it is not a selection criterion here.
 - `converged::Vector{Bool}` — whether the optimiser reported convergence for each
-  accepted fit (R's `conv`). A fit that did not converge is still accepted, and
-  can still be chosen, unless the sweep ran with `require_converged = true`.
+  accepted fit (R's `conv`). A fit that did not converge is still accepted and
+  stays in the table, but cannot win `best_k` (#759).
 - `pd_hessian::Vector{Union{Missing,Bool}}` — R's `pdHess`: `true` when the Wald
   observed information at the optimum is usable (finite, factorisable, positive
   variances; the flag [`confint`](@ref) reports as `pd_hessian`), `false` when it
@@ -64,9 +64,11 @@ the same labels in the same order: a marker (`*` on the chosen row), `d` (= `K`)
 rounded to three decimals and flags print as `TRUE`/`FALSE`/`NA`, as R does. `BIC` is
 the `log(p·n)` BIC (`bic`), R's BIC, whatever criterion chose the row.
 
-Where Julia differs from R: R leaves a rank that did not converge, or whose Hessian is
-confirmed not positive definite, out of the selection (the row stays in the table);
-`select_lv` keeps such a rank selectable and only reports `conv` and `pdHess`.
+Where Julia differs from R: R also leaves a rank whose Hessian is confirmed not
+positive definite out of the selection (the row stays in the table); `select_lv`
+still keeps such a rank selectable and only reports `pdHess`. A rank that did
+not converge, or whose criterion is non-finite, stays in the table but cannot
+win `best_k`.
 """
 struct LVSelection
     K::Vector{Int}
@@ -263,9 +265,10 @@ Gaussian data add 0.01 s at `p = 6`, `n = 150`, 0.9 s at `p = 20`, `n = 150` and
 about 9 to 10 times the fitting time (+3.5 s at `p = 10`, `n = 100`; +36 s at `p = 20`,
 `n = 150`).
 
-None of the three columns changes which `K` is chosen, and `criterion` has no `:aicc`.
-Unlike R, `select_lv` keeps a rank that did not converge, or whose Hessian is not
-positive definite, eligible; read `converged` and `pd_hessian` before trusting the choice.
+`aicc` and `pd_hessian` do not change which `K` is chosen, and `criterion` has no `:aicc`.
+A rank that did not converge, or whose criterion is non-finite, stays in the table
+but cannot win `best_k`. Unlike R, a rank whose Hessian is not positive definite
+remains eligible; read `pd_hessian` before trusting the choice.
 
 The chosen `K` is itself an estimate: intervals and tests computed on
 `sel.best` are conditional on it and do not include uncertainty about `K`.
@@ -288,6 +291,22 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    ratio_max::Real = 25.0, require_converged::Bool = false,
                    binary_ridge::Real = 2.0, pd_hessian::Bool = false,
                    _fitter = fit_gllvm, kwargs...)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
+        requested = kwargs[:optimizer]
+        _optimizer_method(requested, Optim.LBFGS(); route = "select_lv")
+        family isa Union{Normal,Poisson,NegativeBinomial} ||
+            _refuse_optimizer(requested, "select_lv", "this response family")
+        _fitter === fit_gllvm || _refuse_optimizer(requested, "select_lv", "a custom fitter")
+        (get(kwargs, :grouping, nothing) === nothing && get(kwargs, :phylo, nothing) === nothing &&
+         get(kwargs, :row_eff, :none) === :none && !get(kwargs, :pervar, false)) ||
+            _refuse_optimizer(requested, "select_lv", "grouped, phylogenetic, row-effect, or pervar fits")
+        _aghq_request(get(kwargs, :aghq, false)) === :off ||
+            _refuse_optimizer(requested, "select_lv", "AGHQ fits")
+        family isa Normal || !haskey(kwargs, :X) ||
+            _refuse_optimizer(requested, "select_lv", "non-Gaussian covariate fits")
+        family isa Poisson && get(kwargs, :disp_group, nothing) !== nothing &&
+            _refuse_optimizer(requested, "select_lv", "grouped Poisson dispersion")
+    end
     criterion in (:aic, :bic, :bic_sites) ||
         throw(ArgumentError("criterion must be :aic, :bic or :bic_sites; got :$criterion"))
     mask = get(kwargs, :mask, nothing)
@@ -393,7 +412,11 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                          join(("K=$(a.K) $(a.status) $(a.message)" for a in attempts), "; "))
 
     crit = criterion === :aic ? aics : criterion === :bic ? bics : bicns
-    ibest = argmin(crit)
+    eligible = findall(i -> convs[i] && isfinite(crit[i]), eachindex(crit))
+    isempty(eligible) && error("select_lv: no accepted K in 1:$Kmax has a finite $criterion " *
+                               "among converged fits; attempts: " *
+                               join(("K=$(a.K) $(a.status) $(a.message)" for a in attempts), "; "))
+    ibest = eligible[argmin(crit[eligible])]
 
     return LVSelection(Ks, nps, lls, aics, bics, bicns, aiccs, convs, pds, Ks[ibest], fits[ibest],
                        attempts, criterion)

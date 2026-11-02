@@ -131,6 +131,20 @@ end
     @test d === nothing && occursin("ALIASES maps R nbinom2", why) && occursin("not Julia-only", why) && kind == "alias_twin"
 end
 
+@testset "C6 signed hold pending route evidence" begin
+    @test Set(HOLD_PENDING_NAMES) == Set(["NBFit", "Ordinal", "TweedieFit", "ZIB", "ZINegBin",
+        "fit_animal_latent_gllvm", "fit_kernel_latent_gllvm", "gllvm", "link_residual"])
+    for name in HOLD_PENDING_NAMES
+        d, basis, kind = decide(F(name = name, doc = true, pages = ["docs/src/api.md"]))
+        @test d == "HOLD_PENDING_EVIDENCE" && kind == ""
+        @test occursin("held pending route-specific fit or behavioural evidence", basis)
+    end
+    @test decide(F(name = "unapproved_hold", doc = true, pages = ["docs/src/api.md"]))[1] == "KEPT_AS_JULIA_EXTRA"
+    text = render([("NBFit", "HOLD_PENDING_EVIDENCE", "maintainer directed this exact name to remain held")])
+    @test occursin("\"ref\": \"docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md\"", text)
+    @test occursin("\"signed_on\": \"2026-10-17\"", text)
+end
+
 @testset "C6 guard: the ALIASES guard follows the object (twin_aliases)" begin
     # StudentTFamily is the same object as StudentT, which ALIASES maps to R student
     d, why, kind = decide(F(name = "StudentTFamily", doc = true, pages = ["docs/src/api.md"],
@@ -158,7 +172,7 @@ end
     # no docstring, no mention: still held, not excluded
     @test decide(F(name = "p2", cls = cls))[1] === nothing
     # both reasons are reported, the user-tool reason first
-    d, why, kind = decide(F(name = "GroupingTerm", cls = cls, mentions = ["docs/src/grouped-models.md"]))
+    d, why, kind = decide(F(name = "some_grouping_type", cls = cls, mentions = ["docs/src/grouped-models.md"]))
     @test d === nothing && kind == "user_tool" && occursin("grouped-models.md", why) && occursin("PROPOSED", why)
     # an unmarked internal class is not held by this guard
     @test decide(F(name = "k", cls = "hand-coded analytic-gradient kernel; engine internal"))[1] == "EXCLUDED_INTERNAL_HELPER"
@@ -177,22 +191,64 @@ end
 end
 
 @testset "C6 guard: the named review list (NAMED_HOLDS)" begin
-    @test Set(keys(NAMED_HOLDS)) == Set(["em_fit_phylo", "em_fit_phylo_squarem", "em_observed_information",
-        "ZI_LAPLACE_EIGMIN_FLOOR", "random_balanced_tree", "estep_edge_moments", "AnBSparseSolver", "solve_AnB",
-        "build_AnB_sparse", "Q_times_x", "precision_logdet_check", "shrinkage_factor"])
+    @test Set(keys(NAMED_HOLDS)) == Set(["random_balanced_tree", "shrinkage_factor"])
     em = "EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family"
-    for n in ("em_fit_phylo", "em_fit_phylo_squarem", "em_observed_information")
-        d, why, kind = decide(F(name = n, cls = em, doc = true, pages = ["docs/src/api.md"]))
-        @test d === nothing && kind == "em_user_fitter" && occursin("docstring", why)
-    end
-    # em_fa has the same class but is not on the list: it stays excluded
+    # em_fa has the ^em_ class and is neither held nor signed: it stays excluded
     @test decide(F(name = "em_fa", cls = em, doc = true, pages = ["docs/src/api.md"]))[1] == "EXCLUDED_INTERNAL_HELPER"
-    for n in ("ZI_LAPLACE_EIGMIN_FLOOR", "random_balanced_tree", "AnBSparseSolver", "shrinkage_factor")
+    for n in ("random_balanced_tree", "shrinkage_factor")
         d, _, kind = decide(F(name = n, doc = true, pages = ["docs/src/api.md"]))
         @test d === nothing && kind == "low_level"                         # the rule alone would KEEP these
     end
     # the same facts under another name are KEPT
     @test decide(F(name = "some_other_helper", doc = true, pages = ["docs/src/api.md"]))[1] == "KEPT_AS_JULIA_EXTRA"
+end
+
+# Maintainer ruling 2026-10-05 (vault D-319): only the 23 high-confidence names of
+# c6-proposed-decisions-2026-10-05.md are signed; they win over the rule and every guard.
+@testset "C6 signed overrides (maintainer ruling 2026-10-05, D-319)" begin
+    @test length(SIGNED_OVERRIDES) == 23
+    @test isdisjoint(keys(SIGNED_OVERRIDES), keys(NAMED_HOLDS))
+    @test isdisjoint(keys(SIGNED_OVERRIDES), HOLD_PENDING_NAMES)
+    @test count(v -> v[1] == "EXCLUDED_INTERNAL_HELPER", values(SIGNED_OVERRIDES)) == 7
+    @test count(v -> v[1] == "KEPT_AS_JULIA_EXTRA", values(SIGNED_OVERRIDES)) == 16
+    em = "EM/SQUAREM alternative-solver internals; gllvmTMB's TMB path never uses this solver family"
+    # the ^em_ internal class no longer excludes the signed EM fitters
+    for n in ("em_fit_phylo", "em_fit_phylo_squarem", "em_observed_information")
+        d, b, kind = decide(F(name = n, cls = em, doc = true, pages = ["docs/src/api.md"]))
+        @test d == "KEPT_AS_JULIA_EXTRA" && kind == "" && startswith(b, "maintainer ruling 2026-10-05 (D-319)")
+    end
+    # a re-export guard does not hold a signed StatsAPI generic
+    @test decide(F(name = "coeftable", owner = "StatsAPI", doc = true))[1] == "KEPT_AS_JULIA_EXTRA"
+    # a signed EXCLUDED name needs no internal class
+    @test decide(F(name = "ZI_LAPLACE_EIGMIN_FLOOR", doc = true, pages = ["docs/src/api.md"]))[1] == "EXCLUDED_INTERNAL_HELPER"
+    # medium- and low-confidence names of the proposal are not signed
+    for n in ("observed_mask", "StatsAPI", "fit_gllvm", "ZIB", "welch_t", "random_balanced_tree")
+        @test !haskey(SIGNED_OVERRIDES, n)
+    end
+    # every signed KEPT basis cites an existing docs/src page
+    for (n, (d, b)) in SIGNED_OVERRIDES
+        d == "KEPT_AS_JULIA_EXTRA" || continue
+        pages = [m.match for m in eachmatch(r"docs/src/[A-Za-z0-9_./-]+\.md", b)]
+        @test !isempty(pages) && all(p -> isfile(joinpath(ROOT, p)), pages)
+    end
+end
+
+@testset "C6 exact-name approvals (maintainer ruling 2026-10-17)" begin
+    @test Set(keys(APPROVED_C6_DECISIONS)) == APPROVED_C6_NAMES
+    @test length(APPROVED_C6_EXTRAS) == 17
+    @test length(APPROVED_C6_SCOPED) == 11
+    @test isempty(intersect(APPROVED_C6_NAMES, union(keys(SIGNED_OVERRIDES), HOLD_PENDING_NAMES)))
+    for n in APPROVED_C6_EXTRAS
+        @test APPROVED_C6_DECISIONS[n]["decision"] == "KEPT_AS_JULIA_EXTRA"
+        @test occursin("2026-10-17-p1-c6-and-c3-c4-contract-approval.md", APPROVED_C6_DECISIONS[n]["basis"])
+    end
+    for n in APPROVED_C6_SCOPED
+        item = APPROVED_C6_DECISIONS[n]
+        @test item["decision"] == "SCOPED_R_TWIN"
+        @test item["ruling"]["ref"] == HOLD_RULING_REF
+        @test item["ruling"]["signed_on"] == HOLD_RULING_SIGNED_ON
+        @test haskey(item, "counterpart") && haskey(item, "scope") && !isempty(item["receipt_ids"])
+    end
 end
 
 @testset "C6 resolve_objects: one object, one verdict" begin
@@ -265,7 +321,10 @@ end
                  "other than api.md and low-level-reference.md, or in README.md",
                  "(6) it would be EXCLUDED but its internal class is marked PROPOSED (unsigned)",
                  "(7) it would be KEPT but its own ledger class says R has it",
-                 "(8) it is on the named review list of this script (NAMED_HOLDS)")
+                 "(8) it is on the named review list of this script (NAMED_HOLDS)",
+                 "The 28 exact names in c6-approved-decisions-2026-10-17.toml apply the maintainer's signed extra or scoped-twin decisions without broadening their scope",
+                 "The nine names in HOLD_PENDING_NAMES instead receive the explicit 2026-10-17 maintainer disposition HOLD_PENDING_EVIDENCE",
+                 "decision accounting only, makes no twin or parity claim, and admits no scoreboard row")
         @test occursin(must, CRITERION)
     end
     for n in keys(NAMED_HOLDS)                                                       # every named hold is in the text
@@ -288,8 +347,8 @@ end
     @test cls["totally_unclassed_name"] == ("", String[])
     # the REML class says "internal" about R's knob: not an internal class for the Julia name
     @test occursin("internal control knob", cls["gaussian_reml_loglik"][1]) && !is_internal_class(cls["gaussian_reml_loglik"][1])
-    # the ledger's ^em_ class is internal; it is the named hold that overrides it
-    @test is_internal_class(cls["em_fit_phylo"][1]) && haskey(NAMED_HOLDS, "em_fit_phylo")
+    # the ledger's ^em_ class is internal; the signed override (D-319) is what overrides it
+    @test is_internal_class(cls["em_fit_phylo"][1]) && haskey(SIGNED_OVERRIDES, "em_fit_phylo")
     @test says_r_has_it(cls["link_residual"][1])
     @test is_internal_class(cls["gaussian_marginal_loglik_sparse_phy"][1])
 end
@@ -315,6 +374,10 @@ end
 
 import GLLVModels                                                            # for object identity; no exports pulled in
 
+@testset "C6 census matches live exports" begin
+    @test exports_in_inputs() == exports_now()
+end
+
 @testset "C6 object identity (===) over names(GLLVModels)" begin
     exported = exports_now()
     twins = object_twins(exported)
@@ -334,11 +397,13 @@ end
     @test isempty(dropped_in_src())                                          # no docstring dropped anywhere in src/
     entries = Dict{String,Tuple{String,String}}()
     for l in eachline(OUT)
-        m = match(r"^  \"(.*)\": \{\"decision\": \"([A-Z_]+)\", \"basis\": \"(.*)\"\},?$", l)
-        m === nothing || (entries[unescape_u(m.captures[1])] = (m.captures[2], replace(m.captures[3], "\\\"" => "\"")))
+        m = match(r"^  \"(.*)\": \{\"decision\": \"([A-Z_]+)\", \"basis\": \"((?:\\.|[^\"])*)\"", l)
+        m === nothing || (entries[unescape_u(m.captures[1])] =
+            (m.captures[2], replace(m.captures[3], "\\\"" => "\"", "\\\\" => "\\")))
     end
     @test !isempty(entries)
-    @test Set(d for (d, _) in values(entries)) <= Set(["KEPT_AS_JULIA_EXTRA", "EXCLUDED_INTERNAL_HELPER"])
+    @test Set(d for (d, _) in values(entries)) <= Set(["KEPT_AS_JULIA_EXTRA", "EXCLUDED_INTERNAL_HELPER",
+        "SCOPED_R_TWIN", "HOLD_PENDING_EVIDENCE"])
     gap = Set(gap_names())
     @test all(in(gap), keys(entries))                                        # every decision names a reverse-gap item
     cls = ledger_classes(sort!(collect(keys(entries))))
@@ -346,6 +411,22 @@ end
     texts["README.md"] = read(joinpath(ROOT, "README.md"), String)
     docs_src = r"docs/src/[A-Za-z0-9_./-]+\.md"
     for (n, (d, b)) in entries
+        if d == "HOLD_PENDING_EVIDENCE"
+            @test n in HOLD_PENDING_NAMES
+            @test occursin("no twin or parity claim", b)
+            @test occursin("no scoreboard row admitted", b)
+            line = only(filter(l -> occursin("\"$n\":", l), readlines(OUT)))
+            @test occursin("\"ruling\": {\"ref\": \"$HOLD_RULING_REF\", \"signed_by\": \"Shinichi Nakagawa\", \"signed_on\": \"$HOLD_RULING_SIGNED_ON\"}", line)
+            continue
+        end
+        if haskey(APPROVED_C6_DECISIONS, n)
+            @test (d, b) == (APPROVED_C6_DECISIONS[n]["decision"], APPROVED_C6_DECISIONS[n]["basis"])
+            continue
+        end
+        if haskey(SIGNED_OVERRIDES, n)                                       # signed one by one (D-319)
+            @test (d, b) == (SIGNED_OVERRIDES[n][1], SIGNED_RULING * SIGNED_OVERRIDES[n][2])
+            continue
+        end
         c, als = cls[n]
         @test isempty(als)                                                   # never an ALIASES twin
         @test !haskey(NAMED_HOLDS, n)                                        # never a name held by the review
@@ -364,12 +445,15 @@ end
     end
     # the REML kernel is KEPT, not excluded (its class names R's internal knob, not the Julia name)
     @test entries["gaussian_reml_loglik"][1] == "KEPT_AS_JULIA_EXTRA"
-    # the names the final review held stay out of the file
-    for n in ("StudentTFamily", "StudentT", "em_fit_phylo", "fit_em_phylo", "em_fit_phylo_squarem", "fit_phylo_squarem",
-              "em_observed_information", "GroupingTerm", "bridge_capabilities", "lognormal_marginal_loglik",
-              "GllvmModel", "welch_t", "compare_fits_Sigma_table", "link_residual", "ZIB", "ZI_LAPLACE_EIGMIN_FLOOR")
-        @test !haskey(entries, n)
+    # prior unsigned names remain excluded; the nine later maintainer holds are emitted with their own ruling.
+    for n in APPROVED_C6_NAMES
+        @test haskey(entries, n)
     end
+    @test all(n -> haskey(entries, n) && entries[n][1] == "HOLD_PENDING_EVIDENCE",
+              HOLD_PENDING_NAMES)
+    # the signed names are in the file with their signed decision
+    @test all(n -> haskey(entries, n) && entries[n][1] == SIGNED_OVERRIDES[n][1], keys(SIGNED_OVERRIDES))
+    @test length(entries) == length(gap) == 381
     # decided names that share an object agree on the decision (the guard held the others)
     twins = object_twins(exports_now())
     for (n, (d, _)) in entries, t in get(twins, n, String[])

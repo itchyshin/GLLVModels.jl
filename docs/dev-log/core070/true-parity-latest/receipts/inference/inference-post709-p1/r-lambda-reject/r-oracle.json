@@ -1,0 +1,40 @@
+{
+  "schema": "core070-inference-lambda-reject-r-oracle/v1",
+  "r_call": "confint(fit, parm = \"Lambda\", level = 0.95, method = <m>)",
+  "fixture": {
+    "p": 5,
+    "n": 80,
+    "K": 2,
+    "seed": 42,
+    "lambda_constraint": "Lambda[1, 2] pinned to 0 (unit tier)"
+  },
+  "calls": {
+    "fisher-z": {
+      "method": "fisher-z",
+      "raised": true,
+      "error_class": "simpleError;error;condition",
+      "message": "'arg' should be one of “wald”, “wald_asym”, “profile”, “bootstrap”",
+      "n_rows": 0,
+      "finite": false,
+      "columns": []
+    },
+    "bogus": {
+      "method": "bogus",
+      "raised": true,
+      "error_class": "simpleError;error;condition",
+      "message": "'arg' should be one of “wald”, “wald_asym”, “profile”, “bootstrap”",
+      "n_rows": 0,
+      "finite": false,
+      "columns": []
+    },
+    "wald": {
+      "method": "wald",
+      "raised": false,
+      "error_class": "",
+      "message": "",
+      "n_rows": 10,
+      "finite": true,
+      "columns": ["parameter", "estimate", "lower", "upper", "method", "loading_scale", "pd_hessian", "ci_status"]
+    }
+  }
+}

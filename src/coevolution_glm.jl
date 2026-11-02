@@ -118,6 +118,10 @@ function coevolution_glm_marginal_loglik(family, Y::AbstractMatrix, N::AbstractM
         "hessian must be :fisher or :observed; got :$hessian"))
     T, n = size(Y)
     size(Λ, 1) == T || throw(ArgumentError("size(Λ,1)=$(size(Λ,1)) must equal size(Y,1)=$T."))
+    size(N) == (T, n) ||
+        throw(ArgumentError("size(N)=$(size(N)) must equal size(Y)=$((T, n))."))
+    length(β) == T ||
+        throw(ArgumentError("length(β)=$(length(β)) must equal size(Y,1)=$T."))
     (size(K_star, 1) == n && size(K_star, 2) == n) ||
         throw(ArgumentError("K_star must be n × n = $n × $n; got $(size(K_star))."))
     σ²_phy > 0 || return -Inf
@@ -274,6 +278,10 @@ function fit_coevolution_glm(Y::AbstractMatrix, K_star::AbstractMatrix;
 
     mask = _resolve_obs_mask(nothing, Y)                     # nothing if fully observed
     Yc = _sanitize_missing(Y, zero(eltype(skipmissing(Y))))  # placeholder for masked cells
+    if N !== nothing
+        size(N) == (T, n) ||
+            throw(ArgumentError("size(N)=$(size(N)) must equal size(Y)=$((T, n))."))
+    end
     Ntr = N === nothing ? ones(Float64, T, n) : Matrix{Float64}(N)
     nd = _spde_disp_len(family)
 

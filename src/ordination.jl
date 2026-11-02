@@ -85,6 +85,10 @@ fit does not store the data. With `rotate=true` (default) the canonical PRINCIPA
 rotation is applied (see [`ordination`](@ref)); other keywords (`X`, `N`, ...) are
 forwarded to `ordination`.
 
+The defaults differ from gllvmTMB: `rotate=true` returns principal-rotated
+coordinates, while R's `ordiplot()` defaults to `rotate = "none"`; pass
+`rotate=false` for the unrotated scores and loadings that R returns.
+
 You plot with any backend, e.g.
 
 ```julia

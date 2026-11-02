@@ -39,18 +39,30 @@ Status of a scoreboard row (first rule that applies):
                       status field (behavioural_receipt_problem lists them), and the row's source_id
                       is one the ruling covers (the 59 listed inference rows,
                       BEHAVIOURAL_INFERENCE_SOURCE_IDS, or one of four named C1 rows,
-                      BEHAVIOURAL_NAMED_SOURCE_IDS) and any comparison block in a cited receipt holds.
+                      BEHAVIOURAL_NAMED_SOURCE_IDS, or one of the 14 rows of the 2026-10-05 extension,
+                      BEHAVIOURAL_EXTENDED_SOURCE_IDS) and any comparison block in a cited receipt holds.
                       Never emitted for a data, grouping or realistic-size row.
   BEHAVIOURAL-UNVERIFIED
                       evidence_tier "behavioural" but the rule above does not hold (reason given).
   DISPOSITION-UNVERIFIED / NEEDS-SURFACE / <disposition>
-                      a non-null disposition that is not a valid signature.
+                      a non-null disposition that is not a valid signature. It never becomes a status
+                      word the assembler itself writes (RESERVED_STATUS_WORDS): after trimming and
+                      upper-casing, a disposition equal to `EVIDENCED`, `EVIDENCED-BEHAVIOURAL`,
+                      `DISPOSITION-SIGNED` without a signature, or any other such word is
+                      DISPOSITION-UNVERIFIED, and so is one that is not a string, is blank, or carries a
+                      `|` or a line break (disposition_status). Text containing NEEDS_JULIA_SURFACE reads
+                      NEEDS-SURFACE; any other plain string is copied and is not done.
   NOT-MEASURED        no receipt and no non-binding receipt cited at all.
   otherwise           the row's evidence_tier, collated into a bucket by TIER_BUCKET below
                       (the tier string itself is copied verbatim into the notes column).
 
 An evidence_tier missing from TIER_BUCKET fails the run: a new tier needs a human to decide
 which bucket it reads as, rather than this tool guessing.
+
+Rulings of 2026-10-05 (maintainer ruling 2026-10-05, D-319; GATES.md): ported from the checker are the 14-row
+extension of the behavioural list (BEHAVIOURAL_EXTENDED_SOURCE_IDS), the bridge readback split
+(BRIDGE_READBACK_ROW_PREFIX), boundary-context cases (boundary_context) and convergence parity
+(convergence_parity_problem). The checker's C4 direct-engine test reads the scoreboard only and has no port here.
 
 Integer equality (itchyshin/GLLVModels.jl#684 item 1): a numeric comparison case with
 "kind": "integer_equality" needs safe-integer r_value and julia_value (magnitude below 2^53) and
@@ -60,15 +72,21 @@ Visible text: a behaviour label, an equivalence class's canonical, labels and ba
 ruling ref must contain at least one character in Unicode category L, N, P or S (is_visible, the
 checker's isVisible). Strings of only whitespace or format characters (U+FEFF, U+200B, U+0085) are empty.
 
-Reverse-gap decisions (itchyshin/GLLVModels.jl#684 item 3): an optional reverse-gap-decisions.json
-(schema in GATES.md) is read by build_reverse_gap. Each decision is copied, with its basis and the
-ruling, onto the matching item, whose status becomes "decided". A decision naming no reverse-gap
-item fails the run (stale). Nothing here is a signature: the file carries the ruling. The tool refuses
-to copy a ruling it does not recognise (C6_RULINGS: only #684 item 3, dated 2026-10-02, covering
-KEPT_AS_JULIA_EXTRA and EXCLUDED_INTERNAL_HELPER), a signer outside the allow-list, a decision word
-the ruling does not cover, an empty criterion, a generator that is not a file in the tree, a basis with
-no visible character, or a KEPT_AS_JULIA_EXTRA basis that cites no docs/src/... file that exists; the
-checker's C6 judges the same.
+Reverse-gap decisions: an optional reverse-gap-decisions.json (schema in GATES.md) is read by
+build_reverse_gap. Each decision is copied, with its basis and item ruling, onto the matching item.
+Ordinary decisions set status "decided"; HOLD_PENDING_EVIDENCE sets status "held" and is permitted
+only for the nine explicitly approved names. That hold is C6 decision accounting only: it carries no
+twin fields and never admits a scoreboard row. A decision naming no reverse-gap item fails the run
+(stale). Nothing here is a signature: the file carries the ruling. The tool refuses a ruling it does
+not recognise (C6_RULINGS). The 2026-10-17 SCOPED_R_TWIN rule additionally requires a pinned R counterpart,
+source locations, bounded route/estimand scope, exclusions, and receipt identifiers bound to executable
+P1 rows; the general rule does not sign any individual name. The tool also refuses a signer outside
+the allow-list, a decision word
+the ruling does not cover, an empty criterion, a generator that is not a file in the tree (an absolute path,
+a path with a ".." segment anywhere, a directory), a basis with
+no visible character, or a KEPT_AS_JULIA_EXTRA basis that does not cite, exactly as docs/src/<path>.md, an
+existing .md file under docs/src (every token of the basis that contains "docs/src" must be such a path;
+kept_basis_problem has the rule); the checker's C6 judges the same.
 
 Reverse gap: a Julia export has a gllvmTMB counterpart when its name equals an R export or S3 generic
 name after removing "_" and "." and lower-casing (tools/parity_ledger.py norm()), or is the Julia side
@@ -131,13 +149,20 @@ IN_BEHAVIOUR_EQUIVALENCE = "behaviour-equivalence.json"
 BEHAVIOUR_KINDS = ("route", "refusal", "error_class", "printed_fields")
 # The checker's C6_DECISION_VOCAB (keep in step).
 C6_DECISION_VOCAB = ("KEPT_AS_JULIA_EXTRA", "PORT_TO_MATCH_R", "DEPRECATE_AND_REMOVE",
-                     "RENAME_TO_AVOID_COLLISION", "EXCLUDED_INTERNAL_HELPER")
-# The checker's C6_RULINGS (keep in step): the only signature accepted on a reverse-gap decision is
-# itchyshin/GLLVModels.jl#684 item 3, signed 2026-10-02, and it covers exactly these two words.
+                     "RENAME_TO_AVOID_COLLISION", "EXCLUDED_INTERNAL_HELPER", "SCOPED_R_TWIN",
+                     "HOLD_PENDING_EVIDENCE")
+C6_HELD_NAMES = ("NBFit", "Ordinal", "TweedieFit", "ZIB", "ZINegBin",
+                 "fit_animal_latent_gllvm", "fit_kernel_latent_gllvm", "gllvm", "link_residual")
+# The checker's C6_RULINGS (keep in step): #684 item 3 covers the two original words; the 2026-10-17
+# decision record supports exact SCOPED_R_TWIN scopes with receipts and an exact-name hold disposition.
 C6_RULINGS = {
     "itchyshin/GLLVModels.jl#684 item 3": {
         "signed_on": "2026-10-02",
         "words": ("KEPT_AS_JULIA_EXTRA", "EXCLUDED_INTERNAL_HELPER"),
+    },
+    "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md": {
+        "signed_on": "2026-10-17",
+        "words": ("SCOPED_R_TWIN", "HOLD_PENDING_EVIDENCE"),
     },
 }
 # Scope of the behavioural tier (the checker's BEHAVIOURAL_INFERENCE_SOURCE_IDS and
@@ -173,6 +198,17 @@ BEHAVIOURAL_NAMED_SOURCE_IDS = (
     "model-comparison/print.anova.gllvmTMB_multi",
     "model-comparison/update.gllvmTMB_multi",
 )
+# Extension signed 2026-10-05 (maintainer ruling 2026-10-05 (D-319), GATES.md "Rulings of 2026-10-05"): item A (7 aghq
+# control rows, inference/CI-ROUTE-009), N6 (the 5 iSDM rows reachable through R's public door) and N10
+# (check_auto_residual). The checker's BEHAVIOURAL_EXTENDED_SOURCE_IDS (keep in step, a test fails on drift).
+BEHAVIOURAL_EXTENDED_SOURCE_IDS = (
+    "aghq/AGHQ-CTRL-AUTO", "aghq/AGHQ-CTRL-FALSE", "aghq/AGHQ-CTRL-NINE", "aghq/AGHQ-CTRL-NULL",
+    "aghq/AGHQ-CTRL-ONE", "aghq/AGHQ-CTRL-TRUE", "aghq/AGHQ-CTRL-TWO",
+    "inference/CI-ROUTE-009",
+    "isdm/ISDM-COUNT", "isdm/ISDM-EXTRA-SOURCE", "isdm/ISDM-MISSING-IN-TRAIT", "isdm/ISDM-MISSING-SOURCE",
+    "isdm/ISDM-WRAPPER-LAW",
+    "postfit/POSTFIT-SURFACE-check_auto_residual",
+)
 
 # evidence_tier (verbatim from the maps) -> scoreboard status bucket. Collation only: each
 # tier string was written by the PR that measured the row; this table only groups them.
@@ -200,6 +236,11 @@ STATUS_ORDER = [
     "PARTIAL", "NEEDS-SURFACE", "NON-NUMERIC", "NON-DISCRIMINATING", "FAIL", "NOT-MEASURED",
     "NO-TIER", "DISPOSITION-UNVERIFIED",
 ]
+# Every word this tool itself writes into the Status column: the statuses derive_status emits (STATUS_ORDER
+# lists them all) and the buckets TIER_BUCKET maps a tier to. A row's `disposition` is free text from the case
+# map; it is copied into the Status column only when it is none of these (disposition_status), because the
+# checker reads three of them (DONE in tools/true_parity_check.mjs) as done and X2 counts them.
+RESERVED_STATUS_WORDS = frozenset(STATUS_ORDER) | frozenset(TIER_BUCKET.values())
 
 # --- checker rules, ported from tools/true_parity_check.mjs (keep in step) -------------------
 
@@ -337,7 +378,8 @@ MAX_SAFE_INTEGER = 2 ** 53 - 1
 
 
 def behavioural_eligible_source_id(sid):
-    return isinstance(sid, str) and (sid in BEHAVIOURAL_INFERENCE_SOURCE_IDS or sid in BEHAVIOURAL_NAMED_SOURCE_IDS)
+    return isinstance(sid, str) and (sid in BEHAVIOURAL_INFERENCE_SOURCE_IDS or sid in BEHAVIOURAL_NAMED_SOURCE_IDS
+                                     or sid in BEHAVIOURAL_EXTENDED_SOURCE_IDS)
 
 
 def _is_int(x):
@@ -473,7 +515,8 @@ def behavioural_receipt_problem(row, root, index, cites=None):
     if not paths:
         return "no receipt"
     if not behavioural_eligible_source_id(row.get("source_id")):
-        return "source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows only)"
+        return ("source_id not covered by itchyshin/GLLVModels.jl#684 item 2 (the 59 listed inference rows and four named C1 rows) "
+                "or by its extension in maintainer ruling 2026-10-05 (D-319) (14 listed rows)")
     ids = as_list(row.get("executable_case_ids"))
     if not ids:
         return "no executable_case_ids"
@@ -582,6 +625,115 @@ def comparison_block_problem(cmp_, p, covered):
     return None
 
 
+# Maintainer ruling 2026-10-05 (D-319), ruling 1: the checker's BRIDGE_READBACK_ROW_PREFIX (keep in step, a test fails on
+# drift). A live_bridge_readback receipt binds a numeric row only for these rows, and only on the row's own cases.
+BRIDGE_READBACK_ROW_PREFIX = {
+    "namespace/S3method/fitted,gllvmTMB_julia": "P1-BRIDGE-READBACK-FITTED-",
+    "namespace/S3method/predict,gllvmTMB_julia": "P1-BRIDGE-READBACK-PREDICT-",
+    "namespace/S3method/residuals,gllvmTMB_julia": "P1-BRIDGE-READBACK-RESIDUALS-",
+    "namespace/export/gllvm_julia_fit": "P1-BRIDGE-READBACK-GJF-",
+}
+
+
+def bridge_readback_problem(row, p):
+    """The checker's bridgeReadbackProblem: None, or why a live_bridge_readback receipt cannot bind this row."""
+    sid = row.get("source_id")
+    if sid not in BRIDGE_READBACK_ROW_PREFIX:
+        return (f"bridge readback {p} binds only fitted, predict and residuals for gllvmTMB_julia (and gllvm_julia_fit); "
+                "the other methods copy Julia's value and close by signed disposition (maintainer ruling 2026-10-05 (D-319), ruling 1)")
+    prefix = BRIDGE_READBACK_ROW_PREFIX[sid]
+    off = [i for i in as_list(row.get("executable_case_ids")) if not (isinstance(i, str) and i.startswith(prefix))]
+    if off:
+        return (f"bridge readback binds {sid} only on its own cases ({prefix}*), not {','.join(map(str, off))} "
+                "(maintainer ruling 2026-10-05 (D-319), ruling 1)")
+    return None
+
+
+# Maintainer ruling 2026-10-05 (D-319), N1: the checker's BOUNDARY_CONTEXT_KINDS and boundaryContext (keep in step).
+# evidence_kind -> (verdict, required case-id suffix or None). A not-executed bridge case is not context.
+BOUNDARY_CONTEXT_KINDS = {
+    "r_public_bridge_boundary": ("R_BOUNDARY_UNCHANGED", "-PUBLIC-R-BRIDGE"),
+    "r_only_formula_grammar": ("R_ONLY_PASS", None),
+}
+
+
+def boundary_context(row, root):
+    """(ids, problem): the validated boundary-context case ids of a numeric row (N1), or why they are refused."""
+    ctx = row.get("boundary_context_case_ids")
+    if ctx is None:
+        return set(), None
+    exe = as_list(row.get("executable_case_ids"))
+    if not isinstance(ctx, list) or not ctx or not all(isinstance(x, str) and x for x in ctx):
+        return set(), "boundary_context_case_ids must be a non-empty array of case ids"
+    if len(set(ctx)) != len(ctx):
+        return set(), "boundary_context_case_ids lists a case id twice"
+    if len(set(exe)) != len(exe):
+        return set(), "executable_case_ids lists a case id twice"
+    not_exec = [i for i in ctx if i not in exe]
+    if not_exec:
+        return set(), "boundary context case ids not in executable_case_ids: " + ",".join(not_exec)
+    if len(ctx) >= len(exe):
+        return set(), "every executable case is boundary context; at least one case must bind numerically"
+    rps = (row.get("evidence") or {}).get("boundary_context_receipts") or []
+    if not isinstance(rps, list) or not rps:
+        return set(), "no evidence.boundary_context_receipts"
+    by_case = {}
+    for p in rps:
+        if not isinstance(p, str) or not (root / p).is_file():
+            return set(), f"boundary context receipt {p} does not resolve to a file"
+        try:
+            j = json.loads((root / p).read_text())
+        except ValueError:
+            return set(), f"boundary context receipt {p} is not JSON"
+        if not isinstance(j, dict) or not isinstance(j.get("case_id"), str):
+            return set(), f"boundary context receipt {p} has no case_id"
+        by_case[j["case_id"]] = (p, j)
+    for cid in ctx:
+        if cid not in by_case:
+            return set(), f"boundary context case {cid} has no receipt under evidence.boundary_context_receipts"
+        p, j = by_case[cid]
+        kind = j.get("evidence_kind")
+        if not isinstance(kind, str) or kind not in BOUNDARY_CONTEXT_KINDS:
+            return set(), f"boundary context case {cid}: evidence_kind {json.dumps(kind)} is not an admission-only or PUBLIC-R-BRIDGE boundary kind ({p})"
+        verdict, suffix = BOUNDARY_CONTEXT_KINDS[kind]
+        if j.get("verdict") != verdict:
+            return set(), f"boundary context case {cid}: verdict {json.dumps(j.get('verdict'))} is not {verdict} for {kind} ({p})"
+        if suffix and not cid.endswith(suffix):
+            return set(), f"boundary context case {cid}: a {kind} case must be a {suffix} case"
+        if "comparison" in j:
+            return set(), f"boundary context case {cid}: its receipt carries a comparison block, so it is compared, not context ({p})"
+    return set(ctx), None
+
+
+# Maintainer ruling 2026-10-05 (D-319), N9: the checker's convergenceParityProblem (keep in step).
+CONVERGENCE_GRADIENT_BOUND = 1e-5
+CONVERGENCE_POINTS = ("returned", "newton_polished")
+
+
+def convergence_parity_problem(cp, p):
+    """None when a receipt's convergence_parity block holds (both engines at gradient max-abs <= 1e-5), else why not."""
+    def why(m):
+        return f"convergence parity (maintainer ruling 2026-10-05 (D-319), N9): {m} in {p}"
+    if not isinstance(cp, dict):
+        return why("convergence_parity is not an object")
+    gb = cp.get("gradient_bound")
+    if isinstance(gb, bool) or not isinstance(gb, (int, float)) or gb != CONVERGENCE_GRADIENT_BOUND:
+        return why(f"gradient_bound {json.dumps(gb)} is not 1e-5")
+    if cp.get("compared_point") not in CONVERGENCE_POINTS:
+        return why(f"compared_point {json.dumps(cp.get('compared_point'))} is not returned or newton_polished")
+    eng = cp.get("engines")
+    if not isinstance(eng, dict):
+        return why("no engines block")
+    for side in ("R", "julia"):
+        e = eng.get(side)
+        g = e.get("max_abs_gradient") if isinstance(e, dict) else None
+        if not _fin(g) or g < 0:
+            return why(f"{side} max_abs_gradient {json.dumps(g)} is not a finite number >= 0")
+        if g > CONVERGENCE_GRADIENT_BOUND:
+            return why(f"{side} max_abs_gradient {g} > 1e-5")
+    return None
+
+
 def numeric_receipt_problem(row, root, waive_status=False):
     """None when the row binds numerically, else why not. waive_status=True skips only the
     receipt status fields (what a valid receipt_status_exception waives in the checker)."""
@@ -596,6 +748,14 @@ def numeric_receipt_problem(row, root, waive_status=False):
             continue
         if not isinstance(j, dict):
             continue
+        if j.get("evidence_kind") == "live_bridge_readback":
+            bp = bridge_readback_problem(row, p)
+            if bp:
+                return bp
+        if "convergence_parity" in j:
+            cp = convergence_parity_problem(j["convergence_parity"], p)
+            if cp:
+                return cp
         if not_passed is None:
             for obj, pre in ((j, ""), (j.get("comparison") if isinstance(j.get("comparison"), dict) else None, "comparison.")):
                 if obj is None:
@@ -614,9 +774,17 @@ def numeric_receipt_problem(row, root, waive_status=False):
         blocks += 1
     if blocks == 0:
         return "no comparison block in any receipt"
-    missing = [i for i in as_list(row.get("executable_case_ids")) if i not in covered]
+    ctx, ctx_problem = boundary_context(row, root)
+    if ctx_problem:
+        return f"boundary context (maintainer ruling 2026-10-05 (D-319), N1): {ctx_problem}"
+    exe = as_list(row.get("executable_case_ids"))
+    missing = [i for i in exe if i not in covered and i not in ctx]
     if missing:
         return "case ids not compared: " + ",".join(missing)
+    # N1: context never binds a row on its own (checker numericReceiptStatus, keep in step).
+    if ctx and not any(i not in ctx and i in covered for i in exe):
+        return ("boundary context (maintainer ruling 2026-10-05 (D-319), N1): no executable case outside "
+                "boundary_context_case_ids is covered by a comparison")
     return None if waive_status else not_passed
 
 
@@ -698,6 +866,50 @@ def scoreboard_id(sid: str, clause=None) -> str:
     return s
 
 
+def disposition_status(disp):
+    """(status, reason) for a row whose disposition is not null and not DISPOSITION-SIGNED.
+
+    The disposition is free text from the case map and becomes the Status column, so it must never read as
+    a status this tool or the checker trusts. After trimming (JS trim() and Python strip(), the union of the
+    two sets) and upper-casing, a disposition equal to any RESERVED_STATUS_WORDS entry is DISPOSITION-UNVERIFIED:
+    `EVIDENCED`, `EVIDENCED-BEHAVIOURAL`, `DISPOSITION-SIGNED` without a signature, and the rest. So is a
+    disposition that is not a string, is blank, or carries a table delimiter or line break (a `|` would shift
+    the columns the checker splits the row into). Text containing NEEDS_JULIA_SURFACE reads NEEDS-SURFACE; any
+    other plain string is copied as it is, and the checker does not count it done."""
+    if not isinstance(disp, str):
+        return "DISPOSITION-UNVERIFIED", f"disposition is not a string ({type(disp).__name__})"
+    key = js_trim(cell(disp)).upper()
+    if not key:
+        return "DISPOSITION-UNVERIFIED", "disposition is blank"
+    if key in RESERVED_STATUS_WORDS:
+        return "DISPOSITION-UNVERIFIED", f"disposition {cell(disp)} is a reserved status word, not a signature"
+    if "|" in disp or "\n" in disp or "\r" in disp:
+        return "DISPOSITION-UNVERIFIED", "disposition contains a table delimiter or line break"
+    return ("NEEDS-SURFACE" if "NEEDS_JULIA_SURFACE" in disp else cell(disp)), f"disposition {disp}"
+
+
+def is_c4_row(row):
+    """True when the row's scoreboard id is selected by the checker's C4 rule (isRD)."""
+    sid = row.get("source_id")
+    if not isinstance(sid, str):
+        return False
+    return bool(CLAUSE_ID["C4"].search(re.sub(r"[^A-Za-z0-9_-]+", "-", sid).strip("-")))
+
+
+def direct_engine_receipt(p: Path) -> bool:
+    """The checker's directEngineReceipt (keep in step). Maintainer ruling 2026-10-05 (D-319), C4: an EVIDENCED
+    real-data row must cite a run of both engines on the data, a JSON receipt whose `engines` block holds a
+    non-empty `R` and a non-empty `julia` object. Without this an EVIDENCED C4 row could reach the scoreboard while
+    the checker counts it not done."""
+    try:
+        j = json.loads(p.read_text())
+    except (OSError, ValueError):
+        return False
+    eng = j.get("engines") if isinstance(j, dict) else None
+    return (isinstance(eng, dict) and isinstance(eng.get("R"), dict) and len(eng["R"]) > 0
+            and isinstance(eng.get("julia"), dict) and len(eng["julia"]) > 0)
+
+
 def derive_status(row, root, equiv=None, cites=None):
     """Returns (status, reason). Never writes to row.
 
@@ -724,6 +936,8 @@ def derive_status(row, root, equiv=None, cites=None):
         if not as_list(row.get("executable_case_ids")):
             return "NUMERIC-UNVERIFIED", "no executable_case_ids"
         prob = numeric_receipt_problem(row, root)
+        if prob is None and is_c4_row(row) and not any(direct_engine_receipt(root / p) for p in paths):
+            prob = "C4_NOT_A_DIRECT_ENGINE_RUN"
         if prob is None:
             return "EVIDENCED", ""
         # A maintainer-signed receipt_status_exception waives a failed status field only (the
@@ -741,7 +955,7 @@ def derive_status(row, root, equiv=None, cites=None):
         prob = behavioural_receipt_problem(row, root, equiv if equiv is not None else behaviour_equivalence(root), cites)
         return ("EVIDENCED-BEHAVIOURAL", "") if prob is None else ("BEHAVIOURAL-UNVERIFIED", prob)
     if disp is not None:
-        return ("NEEDS-SURFACE" if "NEEDS_JULIA_SURFACE" in str(disp) else str(disp)), f"disposition {disp}"
+        return disposition_status(disp)
     if not paths and not nonbinding_paths(row):
         return "NOT-MEASURED", "no receipt cited"
     if tier not in TIER_BUCKET:
@@ -807,7 +1021,8 @@ def render_scoreboard(table, counts, inputs, dups, fixtures) -> str:
         "maps, and nothing here is a signature. A row reads `EVIDENCED` only when it binds under the",
         "checker's own C1 numeric rule; `EVIDENCED-BEHAVIOURAL` only when it binds under the checker's",
         "behavioural rule (itchyshin/GLLVModels.jl#684 item 2: a refusal, route, error class or printed",
-        "summary, for the listed inference rows and four named C1 rows only; it is not numeric evidence);",
+        "summary, for the listed inference rows, four named C1 rows and the 14 rows of maintainer ruling",
+        "2026-10-05 (D-319) only; it is not numeric evidence);",
         "and `DISPOSITION-SIGNED` only when the map row carries a valid maintainer signature. PR #533's",
         "`case-map.json` rows are not in this table (not tracked here).",
         "",
@@ -911,22 +1126,35 @@ def namespace_receipt_counterparts(root: Path, ledger: Path):
     return out
 
 
-# A documented Julia extra must be documented: the basis cites at least one docs/src/... file (no `..` or
-# dot-leading segment) and every cited docs/src file exists. The checker's DOCS_SRC_RE, same text. Lookarounds,
-# not \b, so both engines read the same text (Python's \b is Unicode-aware, JS's is not).
-DOCS_SRC_RE = re.compile(r"(?<![A-Za-z0-9_])docs/src/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:md|jl|toml|json|txt)(?![A-Za-z0-9_])")
+# A documented Julia extra must be documented: the basis names at least one page under docs/src, and every page it
+# names is an existing .md file written exactly as docs/src/<path>.md. The basis is read as tokens, as the checker
+# reads it: it is split at ASCII whitespace and at ( ) [ ] { } < > " ' ` , ; : ! ? # (so "docs/src/a.md#sec" and
+# "(docs/src/a.md)" name docs/src/a.md), trailing dots are dropped, and every token that contains "docs/src" must
+# then BE a page path: it starts with docs/src/, has no "..", "." or dot-leading segment and no empty one, ends in
+# .md, and has nothing after it. So "page.md.bak", "page.md~", "./docs/src/page.md", a URL, a directory and an
+# existing .json, .txt, .jl or .toml file are not citations, and a malformed citation beside a good one fails too.
+# The checker's DOCS_SRC_SPLIT_RE and DOCS_SRC_PAGE_RE, the same text (the delimiter set is explicit ASCII so both
+# engines split the same way; \x22 \x27 \x60 are the quote, apostrophe and backtick).
+DOCS_SRC_SPLIT_RE = re.compile(r"[ \t\n\r\f\v()\[\]{}<>\x22\x27\x60,;:!?#]+")
+DOCS_SRC_PAGE_RE = re.compile(r"^docs/src/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.md$")
 
 
-def docs_src_paths(basis):
-    return sorted(set(DOCS_SRC_RE.findall(basis)))
+def docs_src_citations(basis):
+    """(pages, malformed): the tokens of `basis` that contain "docs/src", split into exact page paths and the rest."""
+    tokens = sorted({t.rstrip(".") for t in DOCS_SRC_SPLIT_RE.split(basis)} - {""})
+    tokens = [t for t in tokens if "docs/src" in t]
+    return ([t for t in tokens if DOCS_SRC_PAGE_RE.fullmatch(t)], [t for t in tokens if not DOCS_SRC_PAGE_RE.fullmatch(t)])
 
 
 def kept_basis_problem(basis, root: Path):
     """The checker's keptBasisProblem, resolved against the tree under `root`."""
-    paths = docs_src_paths(basis)
-    if not paths:
-        return "KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file"
-    dangling = [q for q in paths if not (root / q).is_file()]
+    pages, malformed = docs_src_citations(basis)
+    not_exact = "not an exact docs/src/<path>.md page"
+    if not pages:
+        return "KEPT_AS_JULIA_EXTRA basis must cite a docs/src/... file" + (f"; {not_exact}: {','.join(malformed)}" if malformed else "")
+    if malformed:
+        return f"KEPT_AS_JULIA_EXTRA basis cites {','.join(malformed)}, which is {not_exact}"
+    dangling = [q for q in pages if not (root / q).is_file()]
     if dangling:
         return f"KEPT_AS_JULIA_EXTRA basis cites {','.join(dangling)}, which does not exist in the tree"
     return None
@@ -964,7 +1192,10 @@ def load_reverse_gap_decisions(root: Path, ledger: Path):
     gen = d.get("generator")
     if not isinstance(gen, str) or not gen.strip():
         raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: generator must be a non-empty string")
-    # The generator is the committed script that produced the file: it must be a file inside the tree.
+    # The generator is the committed script that produced the file: it must be a file inside the tree, named
+    # without a ".." segment anywhere (a "tools/../tools/gen.py" that resolves back into the tree is refused too).
+    if ".." in re.split(r"[\\/]", gen):
+        raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: generator {json.dumps(gen)} is not a file in the tree (a path with a '..' segment is refused)")
     gpath = (root / gen)
     try:
         inside = not Path(gen).is_absolute() and gpath.resolve().is_relative_to(root.resolve())
@@ -977,15 +1208,132 @@ def load_reverse_gap_decisions(root: Path, ledger: Path):
     for name, v in decisions.items():
         if not isinstance(v, dict) or v.get("decision") not in C6_DECISION_VOCAB:
             raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: decision must be one of {'|'.join(C6_DECISION_VOCAB)}")
-        if v["decision"] not in known["words"]:
-            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: decision {v['decision']} is not covered by {ruling['ref']} (covers {'|'.join(known['words'])})")
+        item_ruling = v.get("ruling", ruling)
+        if not isinstance(item_ruling, dict) or not all(k in item_ruling for k in ("ref", "signed_by", "signed_on")):
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: item ruling must carry ref, signed_by and signed_on")
+        item_ref = item_ruling["ref"]
+        item_known = C6_RULINGS.get(item_ref) if isinstance(item_ref, str) else None
+        if item_known is None:
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: ruling ref {json.dumps(item_ref)} is not a recognised signed ruling")
+        item_sig = signature_problem(item_ruling["signed_by"], item_ruling["signed_on"])
+        if item_sig is not None:
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: item ruling signature rejected ({item_sig})")
+        if js_trim(item_ruling["signed_on"]) != item_known["signed_on"]:
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: ruling signed_on {json.dumps(item_ruling['signed_on'])} is not the date of {item_ref} ({item_known['signed_on']})")
+        if v["decision"] not in item_known["words"]:
+            raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: decision {v['decision']} is not covered by {item_ref} (covers {'|'.join(item_known['words'])})")
         if not is_visible(v.get("basis")):
             raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: basis must be a non-empty string")
         if v["decision"] == "KEPT_AS_JULIA_EXTRA":
             why = kept_basis_problem(v["basis"], root)
             if why:
                 raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: {why}")
+        if v["decision"] == "SCOPED_R_TWIN":
+            if "ruling" not in v or item_ref != "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md":
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: SCOPED_R_TWIN requires its explicit approved rule ruling")
+            if not (root / item_ref).is_file():
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: SCOPED_R_TWIN approval record {item_ref} is missing")
+        if v["decision"] == "HOLD_PENDING_EVIDENCE":
+            if name not in C6_HELD_NAMES:
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE name is not in the approved hold name set")
+            if "ruling" not in v or item_ref != "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md":
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE requires its explicit maintainer ruling")
+            if not (root / item_ref).is_file():
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE approval record {item_ref} is missing")
+            if any(key in v for key in ("counterpart", "scope", "receipt_ids")):
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE cannot carry twin scope or receipt fields")
+            if "no twin or parity claim" not in v["basis"] or "no scoreboard row" not in v["basis"]:
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {name}: HOLD_PENDING_EVIDENCE basis must state no twin/parity claim and no scoreboard row admission")
     return ruling, decisions
+
+
+# Exact counterpart/scope/receipt/ruling contracts signed on 2026-10-17.
+# Keep in step with the canonical Node checker; a general rule signs no new names.
+C6_APPROVED_SCOPE_SHA256 = {
+    "BetaBinom": "9cd3b96b383762cbb5b55d7d4614beedb0e4fb8b735eab9aa59d26b9710264c5",
+    "NB1": "ba276a261732c8125bcd33765ff1db054139fcab46b4ac98d2e3b5e36d7cb7fc",
+    "StudentT": "b6321a8f647f1ee2a646c6951bb85011b1b01f04b391e55bf19b13136d544279",
+    "StudentTFamily": "e571e8fa54d7a51b2d9504cdd2cf8d96cbdb9ab65895285d82820908852b5e46",
+    "TruncatedNegBin2": "174a5994c47565f760dc413a5a76a660f6de077db824011cb7b918679bea31c3",
+    "bridge_fit": "5b5c1f8e067571073f71038d0263fbb63201e19d0fe854a2ff39a77903fb3222",
+    "fit_animal_dep_gllvm": "fb8bd42aeaa88c3d3ea79ee37c8f542fe52837967513cb4b6a6efa3e2186788e",
+    "fit_dep_gllvm": "c0baa3610de08e061b21bb117e93a2faccc6c51b03fccd2debcb57b7129e0125",
+    "fit_gllvm": "a666827b39c386b01a5ef76d48ea5d3d4f354fb22f71d0d5baaaed8716193488",
+    "fit_kernel_dep_gllvm": "33475a40838b1a5fc85d26dada32b69f80bc65c0468cd1f3a07ae227e349c756",
+    "fit_kernel_indep_gllvm": "13dcb057d0794cb3b806f1825025db2817708ec402d8b13a68c5b2338c5427b8"
+}
+
+
+def approved_scope_problem(name: str, item: dict) -> str | None:
+    expected = C6_APPROVED_SCOPE_SHA256.get(name)
+    if expected is None:
+        return "SCOPED_R_TWIN name is not an exact approved Julia export"
+    contract = {k: item.get(k) for k in ("counterpart", "scope", "receipt_ids", "ruling")}
+    digest = hashlib.sha256(json.dumps(contract, sort_keys=True, ensure_ascii=False,
+                                      separators=(",", ":")).encode("utf-8")).hexdigest()
+    return None if digest == expected else "SCOPED_R_TWIN contract differs from the exact approved scope"
+
+
+def scoped_twin_problem(item: dict, root: Path, case_rows: list[dict]) -> str | None:
+    counterpart = item.get("counterpart")
+    if not isinstance(counterpart, dict):
+        return "SCOPED_R_TWIN requires a counterpart object"
+    if not is_visible(counterpart.get("r_function")):
+        return "SCOPED_R_TWIN requires counterpart.r_function"
+    if counterpart.get("r_commit") != P1_SHA:
+        return f"SCOPED_R_TWIN counterpart.r_commit must equal pinned P1 {P1_SHA}"
+    rloc = counterpart.get("r_source")
+    if not isinstance(rloc, str) or re.fullmatch(r"R/[^:\s]+:\d+(?:-\d+)?", rloc) is None:
+        return "SCOPED_R_TWIN requires counterpart.r_source as R/path:line[-line]"
+    jloc = counterpart.get("julia_source")
+    if not isinstance(jloc, str) or re.fullmatch(r"src/[^:\s]+:\d+(?:-\d+)?", jloc) is None:
+        return "SCOPED_R_TWIN requires counterpart.julia_source as src/path:line[-line]"
+    if not (root / jloc.split(":", 1)[0]).is_file():
+        return f"SCOPED_R_TWIN Julia source {jloc} does not resolve at the ref"
+    scope = item.get("scope")
+    if not isinstance(scope, dict):
+        return "SCOPED_R_TWIN requires a scope object"
+    for key in ("public_route", "family_link", "data", "estimand"):
+        if not is_visible(scope.get(key)):
+            return f"SCOPED_R_TWIN requires scope.{key}"
+    for key in ("outputs", "exclusions"):
+        value = scope.get(key)
+        if not isinstance(value, list) or not value or not all(is_visible(x) for x in value):
+            return f"SCOPED_R_TWIN requires a non-empty string array scope.{key}"
+    receipt_ids = item.get("receipt_ids")
+    if not isinstance(receipt_ids, list) or not receipt_ids or not all(is_visible(x) for x in receipt_ids):
+        return "SCOPED_R_TWIN requires non-empty receipt_ids"
+    if len(set(receipt_ids)) != len(receipt_ids):
+        return "SCOPED_R_TWIN receipt_ids must be unique"
+    for receipt_id in receipt_ids:
+        bound = False
+        for row in case_rows:
+            if receipt_id not in as_list(row.get("executable_case_ids")):
+                continue
+            if row.get("measured_against") != P1_SHA or row.get("evidence_tier") not in ("numeric", "behavioural"):
+                continue
+            paths = receipt_paths(row)
+            if not paths:
+                continue
+            safe_existing = True
+            for rel in paths:
+                if not isinstance(rel, str) or not is_visible(rel) or Path(rel).is_absolute() or ".." in Path(rel).parts:
+                    safe_existing = False
+                    break
+                try:
+                    resolved = (root / rel).resolve()
+                    if not resolved.is_relative_to(root.resolve()) or not resolved.is_file():
+                        safe_existing = False
+                        break
+                except (OSError, ValueError):
+                    safe_existing = False
+                    break
+            if safe_existing:
+                bound = True
+                break
+        if not bound:
+            return f"SCOPED_R_TWIN receipt id {receipt_id} has no executable P1 numeric or behavioural row with a resolving receipt"
+    return None
 
 
 def norm_name(s: str) -> str:
@@ -993,7 +1341,7 @@ def norm_name(s: str) -> str:
     return re.sub(r"[_.]", "", s).lower()
 
 
-def build_reverse_gap(root: Path, ledger: Path):
+def build_reverse_gap(root: Path, ledger: Path, case_rows: list[dict]):
     p = root / ledger / IN_REVERSE_GAP
     if not p.is_file():
         raise Fail(f"missing input {ledger / IN_REVERSE_GAP} (run --refresh-reverse-gap-inputs)")
@@ -1024,10 +1372,18 @@ def build_reverse_gap(root: Path, ledger: Path):
         dec = decisions.get(it["name"])
         if dec is None:
             continue
-        it["status"] = "decided"
+        if dec["decision"] == "SCOPED_R_TWIN":
+            why = scoped_twin_problem(dec, root, case_rows) or approved_scope_problem(it["name"], dec)
+            if why:
+                raise Fail(f"{IN_REVERSE_GAP_DECISIONS}: {it['name']}: {why}")
+        it["status"] = "held" if dec["decision"] == "HOLD_PENDING_EVIDENCE" else "decided"
         it["decision"] = dec["decision"]
         it["basis"] = dec["basis"]
-        it["ruling"] = OrderedDict((k, ruling[k]) for k in ("ref", "signed_by", "signed_on"))
+        item_ruling = dec.get("ruling", ruling)
+        it["ruling"] = OrderedDict((k, item_ruling[k]) for k in ("ref", "signed_by", "signed_on"))
+        if dec["decision"] == "SCOPED_R_TWIN":
+            for key in ("counterpart", "scope", "receipt_ids"):
+                it[key] = dec[key]
     return items
 
 
@@ -1056,7 +1412,7 @@ def generate(root: Path, ledger: Path, extra: list[Path]):
     return {
         OUT_SCOREBOARD: md,
         OUT_CASEMAP: json.dumps(cm, indent=1) + "\n",
-        OUT_REVERSE_GAP: json.dumps(build_reverse_gap(root, ledger), indent=1) + "\n",
+        OUT_REVERSE_GAP: json.dumps(build_reverse_gap(root, ledger, rows), indent=1) + "\n",
     }
 
 

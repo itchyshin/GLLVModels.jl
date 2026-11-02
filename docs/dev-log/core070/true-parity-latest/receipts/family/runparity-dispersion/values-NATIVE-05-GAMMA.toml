@@ -2,8 +2,8 @@ case_id = "NATIVE-05-GAMMA"
 
 [[values]]
 label = "logLik"
-julia = -917.4461930186757
+julia = -917.4461930186761
 test = "@test jl_logL ≈ r.logLik rtol = 1e-6"
 rtol = 1.0e-6
-r = -917.4461930392694
+r = -917.4461930392698
 atol = 0.0

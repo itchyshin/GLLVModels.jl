@@ -122,6 +122,7 @@ function _phylo_beta_xlv_mode(Y, beta, Lambda, alpha_lv, phi,
     eps = zeros(Float64, n, K)
     u = zeros(Float64, size(Q, 1))
     local H
+    mode_found = false
 
     for _ in 1:maxiter
         grad, H = _phylo_beta_xlv_grad_hessian(
@@ -160,8 +161,14 @@ function _phylo_beta_xlv_mode(Y, beta, Lambda, alpha_lv, phi,
             step *= 0.5
         end
         accepted || return nothing, nothing, nothing
-        step * max_delta < tol && break
+        if step * max_delta < tol
+            mode_found = true
+            break
+        end
     end
+    # `maxiter` exhausted: (eps, u) is not the mode, so a Laplace value built from it
+    # would depend on `maxiter`. Report it as a failed search, like a non-SPD Hessian.
+    mode_found || return nothing, nothing, nothing
 
     _, H = _phylo_beta_xlv_grad_hessian(Y, beta, Lambda, alpha_lv, phi,
                                          mean_eta, Q, leaf_pos, eps, u;
@@ -380,8 +387,11 @@ function _phylo_beta_xlv_constrained_refit(nll::Function,
     end
     return (nll = val_c, theta = collect(theta_c), effect = b_c,
             constraint_error = abs(b_c - target),
-            converged = last_res !== nothing &&
-                        (Optim.converged(last_res) || abs(b_c - target) <= 1e-3))
+            # `converged` is the refit's own verdict (#752). Meeting the
+            # constraint says nothing about the other parameters, so
+            # feasibility is `constraint_error`, a separate field. Same rule
+            # as the Poisson/binomial/NB/gamma xlv refits.
+            converged = last_res !== nothing && Optim.converged(last_res))
 end
 
 function _phylo_beta_xlv_profile_eta_realized(fit, Y::AbstractMatrix,

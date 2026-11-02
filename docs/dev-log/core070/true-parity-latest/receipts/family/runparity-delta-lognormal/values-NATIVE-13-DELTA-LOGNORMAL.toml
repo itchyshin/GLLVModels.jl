@@ -2,8 +2,8 @@ case_id = "NATIVE-13-DELTA-LOGNORMAL"
 
 [[values]]
 label = "logLik"
-julia = -744.4500530971085
+julia = -744.4500530971086
 test = "@test native.loglik≈r.logLik rtol=1e-6"
 rtol = 1.0e-6
-r = -744.4500530972399
+r = -744.4500530973186
 atol = 0.0

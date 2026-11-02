@@ -119,8 +119,7 @@ function _grouped_gaussian_nll(Y::AbstractMatrix{<:Real},
     for B in trait_covariances
         B isa AbstractMatrix{<:Real} && size(B) == (p, p) ||
             throw(DimensionMismatch("each trait covariance must be traits by traits"))
-        eltype(B) === Float64 && all(isfinite, B) && issymmetric(B) ||
-            throw(ArgumentError("trait covariances must be finite Float64 and exactly symmetric"))
+        B = _symmetric_admit(Matrix{Float64}(B), "trait covariance")
         factor = try
             cholesky(Symmetric(B))
         catch err

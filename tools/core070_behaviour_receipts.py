@@ -19,10 +19,33 @@ of both engines for one route, refusal or error class, and its basis cites the P
 the Julia function that implement the same behaviour. A label in no class stands for itself, and no
 entry here relies on that: both labels of every entry are listed in one class.
 
-The 7 aghq/AGHQ-CTRL-* rows and inference/CI-ROUTE-009 are not in the frozen list. Their receipts
-keep a behaviour block as non-binding evidence, their rows stay at paired_control_categorical_pass
-and partial_non_numeric_case, and each carries a one-line note that binding them needs the
-maintainer to confirm that ruling 2 covers them.
+Post-#709 (W2-1). Rows whose Julia side was an internal function, a MethodError or the Wald fall-through are
+re-measured through Julia's public confint(fit, y; parm, method) in inference/inference-post709-p1 (run at
+RUN_POST709, tools/core070_inference_post709_batch.jl; verifier tools/core070_verify_inference_post709_batch.py), and
+the Lambda refusal has one live R observation (tools/core070_inference_lambda_reject_p1.R). Those rows now bind (the
+reasons `not_exported`, `public_route_differs`, `no_valid_method_control` and `refusal_not_observed` no longer occur),
+except CI-ROUTE-015 (R's default is profile, Julia's is Wald). A refusal row binds only with a valid-method control
+on each side, and its class is one (target, method) pair with the labels read from the raw files.
+
+Signed rulings of 2026-10-05 (vault D-319; LOOP/lanes/true-parity-latest/signed-rulings-2026-10-05.md in the lane kit).
+The rows they touch take their Julia side from inference/inference-rulings-p1 (run at RUN_RULINGS,
+tools/core070_inference_rulings_batch.jl; verifier tools/core070_verify_inference_rulings_batch.py):
+
+  ruling C   CI-ROUTE-023, 030, 037. Julia's public confint now withdraws the profile for communality, rho and
+             proportion (src/confint.jl). R's side is the dispatch row (method profile goes to .confint_<q>) plus the
+             guard row of the same parm that observes gllvmTMB_nonlinear_profile_withdrawn (086, 087, 088). Each binds
+             with a refusal class of its own, "<q>:profile-withdrawn" (the G7 label), never the bad-method class.
+  ruling 3   CI-ROUTE-029. R's default for rho (fisher-z) and Julia's default (:wald, the Fisher-z interval) are one
+             route: class "rho:fisher-z".
+  alias      CI-ROUTE-034. R's explicit method fisher-z and Julia's method = :fisher_z, which returns exactly the
+             :wald result; same class.
+  ruling B   the default and fallback rows (015, 043, 046, 055, 058, 061, 065, 067, 068, 070) keep no behaviour
+             entry: R and Julia do different things there, and the rows close by a signed disposition written by
+             tools/core070_inference_p1_receipts.py, which reads the same run.
+
+The 7 aghq/AGHQ-CTRL-* rows and inference/CI-ROUTE-009 joined the frozen list by maintainer ruling 2026-10-05
+(D-319), item A (BEHAVIOURAL_EXTENDED_SOURCE_IDS in tools/true_parity_assemble.py), so their behaviour blocks now bind
+their rows when the case-map generators re-derive them. OUT_OF_SCOPE_NOTE is kept for any row still outside the list.
 
 Raw artefacts read (all tracked under docs/dev-log/core070/true-parity-latest/receipts/):
 
@@ -63,9 +86,10 @@ thing, even if the two labels look alike:
              Julia's side is GLLVM.profile_ci_derived / GLLVM.bootstrap_ci_derived, which are not
              exported, so a Julia user cannot make the request. Same treatment as the DEFAULT rows
              CI-ROUTE-022, 029 and 036, where the harness chose the function.
-  withdrawn  R routes `profile` for communality, rho or proportion to a function that, at P1, raises
-             gllvmTMB_nonlinear_profile_withdrawn (the same probe records the guard row), while Julia
-             returns a profile interval.
+  withdrawn  (before the rulings run) R routes `profile` for communality, rho or proportion to a function
+             that, at P1, raises gllvmTMB_nonlinear_profile_withdrawn (the same probe records the guard
+             row), while Julia returned a profile interval. Since ruling C Julia withdraws it too, and
+             these rows bind through the rulings run.
   default    The row asked for the DEFAULT method and R's default is profile, but the Julia harness
              called an explicit profile function. Julia's own default is Wald, so Julia's default was
              not exercised and is not the same route. The same holds for a DEFAULT row whose Julia call
@@ -97,11 +121,17 @@ EQUIV_PATH = OUT / "behaviour-equivalence.json"
 INF = f"{LEDGER}/receipts/inference"
 AGHQ = f"{LEDGER}/receipts/aghq"
 SURF = f"{LEDGER}/receipts/postfit/surface-conversion-p1"
+FIRST7 = f"{LEDGER}/receipts/first-seven-behaviour/derived"
 FIXTURE = "test/parity/fixtures/core070_inference_routes.tsv"
 P1_SHA = "9539352f66f2db2cc26b1c393e67212a359b60c9"
 RUN_JULIA = "61c5eda48"      # glvmodels_commit of the wave2 and wave4 inference receipts
 RUN_SURF = "681c4c3ca"       # run commit of the wave5 surface-conversion receipts (PR #569)
 RUN_AGHQ = "fd92b6551"       # glvmodels_commit of the aghq control receipts
+RUN_POST709 = "f58de0eb1"    # glvmodels_commit of the post-#709 inference run (inference-post709-p1)
+POST709 = f"{INF}/inference-post709-p1"
+RUN_RULINGS = "1a80133a7"    # glvmodels_commit of the rulings run (inference-rulings-p1, vault D-319)
+RULINGS = f"{INF}/inference-rulings-p1"
+SIGNED = "signed rulings of 2026-10-05 (vault D-319)"
 RULING = "itchyshin/GLLVModels.jl#684 item 2"
 
 TIER_TEXT = (f"behavioural, counted under {RULING}: for every executable case id both engines' raw output gives the "
@@ -146,19 +176,18 @@ CLASSES = [
     # --- Wald, derived quantities (Julia picks the method by function name) ---
     cls("route", "communality:wald", [".confint_communality:wald"], ["communality:wald_derived"],
         f"R: .confint_communality wald branch ({RZ}:941, :969); Julia: communality_wald_ci "
-        f"(src/confint_derived_wald.jl:375 at {RUN_JULIA}), a logit-scale Wald interval. The Julia call is an explicit "
-        f"function chosen by name, so only rows that ask for wald by name use this class."),
+        f"(src/confint_derived_wald.jl:375 at {RUN_JULIA}), a logit-scale Wald interval. The 61c5eda48 run called that "
+        f"function by name; since #709 the public confint(fit, y; parm=\"communality[t]\"), with the default method "
+        f"(:wald) or method=:wald, reaches it (src/confint.jl:777-806 at {RUN_POST709}), which is how CI-ROUTE-022 is measured."),
     cls("route", "proportion:wald", [".confint_proportion:wald"], ["proportion:wald_derived"],
         f"R: .confint_proportion wald branch ({RZ}:1188, :1207); Julia: icc_wald_ci "
-        f"(src/confint_derived_wald.jl:395 at {RUN_JULIA}), a logit-scale Wald interval for a proportion. The Julia call is an explicit "
-        f"function chosen by name, so only rows that ask for wald by name use this class."),
+        f"(src/confint_derived_wald.jl:395 at {RUN_JULIA}), a logit-scale Wald interval for a proportion. The 61c5eda48 run "
+        f"called that function by name; since #709 the public confint(fit, y; parm=\"proportion:<component>[t]\"), with the "
+        f"default method (:wald) or method=:wald, reaches it (src/confint.jl:777-806 at {RUN_POST709}), which is how "
+        f"CI-ROUTE-036 is measured."),
     cls("route", "phylo_signal:wald", [".confint_phylo_signal:wald"], ["phylo_signal:wald_derived"],
         f"R: .confint_phylo_signal wald branch ({RZ}:894, :916); Julia: phylo_signal_wald_ci "
         f"(src/confint_derived_wald.jl:412 at {RUN_JULIA}), a logit-scale Wald interval."),
-    cls("route", "rho:fisher-z", [".confint_rho:fisher-z"], ["rho:wald_derived"],
-        f"R: .confint_rho with method fisher-z calls extract_correlations(method = \"fisher-z\") ({RZ}:1034, :1061); "
-        f"Julia: correlation_wald_ci (src/confint_derived_wald.jl:358 at {RUN_JULIA}), a Fisher-z transformed Wald "
-        f"interval. The Julia call is an explicit function chosen by name."),
     # --- profile ---
     cls("route", "lambda:profile", [".confint_lambda:profile"], ["lambda:profile"],
         f"R: .confint_lambda profile branch calls loading_profile ({RZ}:372-393); Julia: profile_ci(fit, "
@@ -174,7 +203,45 @@ CLASSES = [
     cls("route", "lambda:bootstrap", [".confint_lambda:bootstrap"], ["lambda:bootstrap"],
         f"R: .confint_lambda bootstrap branch calls .loading_ci_bootstrap ({RZ}:346-368); Julia: bootstrap_ci(fit; "
         f"parms=\"Lambda_B[1,1]\", y) (src/confint_bootstrap.jl:258 at {RUN_JULIA}); both refit simulated data."),
-    # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both (non-binding: outside the frozen scope) ---
+    # --- post-#709 public confint(fit, y; parm, method) routes (W2-1) ---
+    cls("route", "phylo_signal:profile", [".confint_phylo_signal:profile"], ["phylo_signal:profile"],
+        f"R: .confint_phylo_signal profile branch calls profile_ci_phylo_signal ({RZ}:910); Julia: confint(fit, y; "
+        f"parm=\"phylo_signal[t]\", method=:profile) calls profile_ci_phylo_signal (src/confint.jl:823 at {RUN_POST709}); "
+        f"both profile the phylogenetic signal of the requested trait."),
+    cls("route", "phylo_signal:bootstrap", [".confint_phylo_signal:bootstrap"], ["phylo_signal:bootstrap"],
+        f"R: .confint_phylo_signal bootstrap branch calls .phylo_signal_bootstrap_ci ({RZ}:920-927); Julia: confint(fit, "
+        f"y; parm=\"phylo_signal[t]\", method=:bootstrap) calls bootstrap_ci_derived (src/confint.jl:841 at {RUN_POST709}); "
+        f"both refit simulated data."),
+    cls("route", "communality:bootstrap", [".confint_communality:bootstrap"], ["communality:bootstrap"],
+        f"R: .confint_communality bootstrap branch calls .communality_bootstrap_ci ({RZ}:994); Julia: confint(fit, y; "
+        f"parm=\"communality[t]\", method=:bootstrap) calls bootstrap_ci_derived (src/confint.jl:841 at {RUN_POST709}); "
+        f"both refit simulated data. The estimand is gllvmTMB's aligned extract_communality on one side and "
+        f"communality(fit) on the other; the class is about the route, not the number."),
+    cls("route", "rho:bootstrap", [".confint_rho:bootstrap"], ["rho:bootstrap"],
+        f"R: .confint_rho with method bootstrap calls extract_correlations(method = \"bootstrap\") ({RZ}:1061-1076); "
+        f"Julia: confint(fit, y; parm=\"rho[i,j]\", method=:bootstrap) calls bootstrap_ci_derived "
+        f"(src/confint.jl:841 at {RUN_POST709}); both refit simulated data. The estimand is gllvmTMB's aligned "
+        f"extract_correlations on one side and correlation(fit) on the other; the class is about the route."),
+    cls("route", "proportion:bootstrap", [".confint_proportion:bootstrap"], ["proportion:bootstrap"],
+        f"R: .confint_proportion bootstrap branch calls .proportions_bootstrap_ci ({RZ}:1213); Julia: confint(fit, y; "
+        f"parm=\"proportion:<component>[t]\", method=:bootstrap) calls bootstrap_ci_derived "
+        f"(src/confint.jl:841 at {RUN_POST709}); both refit simulated data. The estimand is gllvmTMB's aligned "
+        f"extract_proportions on one side and proportions(fit; component) on the other; the class is about the route."),
+    cls("route", "sigma:bootstrap", [".confint_sigma:bootstrap"],
+        ["sigma_B:bootstrap", "sigma_W:bootstrap", "sigma_phy:bootstrap"],
+        f"R: .confint_sigma sends method bootstrap to .confint_sigma_bootstrap ({RZ}:1803-1805); Julia: confint(fit, y; "
+        f"parm=\"sigma_*[t]\", method=:bootstrap, Σ_phy) calls bootstrap_ci on the structured fit "
+        f"(src/confint.jl:598 at {RUN_POST709}) since #709, where before it returned the Wald interval; both refit "
+        f"simulated data."),
+    # --- ruling 3 and the fisher_z alias (vault D-319): R's fisher-z and Julia's Fisher-z Wald are one route ---
+    cls("route", "rho:fisher-z", [".confint_rho:fisher-z"], ["rho:wald_derived"],
+        f"R: .confint_rho with method fisher-z, R's default for rho ({RZ}:1693), calls extract_correlations(method = "
+        f"\"fisher-z\"), a Fisher-z transformed Wald interval; Julia: confint(fit, y; parm=\"rho[i,j]\") with the default "
+        f"method :wald, or method = :fisher_z (an alias that returns exactly the :wald result, src/confint.jl:840 at "
+        f"{RUN_RULINGS}), computes the transformed Wald interval with transform :fisher_z (src/confint.jl:858). Signed as one route under {SIGNED}: "
+        f"ruling 3 for the default (CI-ROUTE-029) and the fisher_z alias for the explicit request (CI-ROUTE-034). "
+        f"R's own method = \"wald\" for rho is a different route ('.confint_rho:wald') and is not in this class."),
+    # --- CI-ROUTE-009: profile interval for two-level repeatability is withdrawn in both (in scope since 2026-10-05, item A) ---
     cls("refusal", "icc:profile-withdrawn",
         ["A profile interval for canonical full-covariance repeatability is not currently available."],
         ["A profile interval for canonical full-covariance two-level repeatability is not currently available."],
@@ -182,7 +249,7 @@ CLASSES = [
         f"Julia: repeatability_ci throws TwoLevelRepeatabilityProfileWithdrawn for method=:profile "
         f"(src/twolevel.jl:605-612 at {RUN_SURF}). Both refuse the same request, name the same reason (the old "
         f"profile estimated only a diagonal-companion ratio) and point to wald or bootstrap."),
-    # --- aghq request normalisation (non-binding: outside the frozen scope) ---
+    # --- aghq request normalisation (in scope since 2026-10-05, item A) ---
     cls("route", "aghq:off", ["FALSE"], ["off"],
         f"R: .gllvmTMB_normalize_aghq maps NULL and FALSE to FALSE, the Laplace approximation (R/gllvmTMB.R:2492); "
         f"Julia: _aghq_request maps false and nothing to :off (src/families/aghq_fit_info.jl:38 at {RUN_AGHQ})."),
@@ -207,9 +274,11 @@ def equivalence_doc():
     return {"schema": 1, "pin": "P1",
             "citation_note": (f"R file:line citations are at gllvmTMB P1 ({P1_SHA[:9]}). Julia file:line citations are at "
                               f"the commit that ran the cited receipt ({RUN_JULIA} for the inference rows, {RUN_AGHQ} "
-                              "for the aghq rows, " + RUN_SURF + " for CI-ROUTE-009), not at current main: src has "
+                              "for the aghq rows, " + RUN_SURF + " for CI-ROUTE-009, " + RUN_POST709 + " for the "
+                              "post-#709 public-confint rows, " + RUN_RULINGS + " for the rows under the signed rulings of "
+                              "2026-10-05), not at current main: src has "
                               "changed since, so the lines may have moved."),
-            "classes": CLASSES}
+            "classes": all_classes()}
 
 
 # ---------------------------------------------------------------------------
@@ -261,8 +330,337 @@ def target_of(case_id):
 
 
 # ---------------------------------------------------------------------------
+# The post-#709 run (inference-post709-p1): Julia's PUBLIC confint(fit, y; parm, method), run at a clean commit,
+# plus one live P1 R observation for the Lambda refusal. Rows it covers take their Julia side from it, not from
+# the 61c5eda48 run (which called internal functions, or hit a MethodError). The R side stays what it was: the P1
+# route probe and the P1 remainder oracle, plus the new Lambda oracle.
+# ---------------------------------------------------------------------------
+_P709 = None
+R_REFUSAL_KEY = {"icc": "icc_reject", "phylo_signal": "phylo_reject", "communality": "communality_reject",
+                 "rho": "rho_reject", "proportion": "proportion_reject"}
+# R's valid-method control for each refusal target: the route probe row that sends a VALID method to the same
+# estimand's endpoint (a stub of the endpoint, not a fit). Lambda has a live control (r-lambda-reject).
+R_CONTROL_ROW = {"icc": "CI-ROUTE-010", "phylo_signal": "CI-ROUTE-017", "communality": "CI-ROUTE-024",
+                 "rho": "CI-ROUTE-031", "proportion": "CI-ROUTE-038"}
+R_CONTROL_ENDPOINT = {"icc": ".confint_icc", "phylo_signal": ".confint_phylo_signal",
+                      "communality": ".confint_communality", "rho": ".confint_rho", "proportion": ".confint_proportion"}
+def post709():
+    """The tracked raw files of the post-#709 run, checked once: clean run commit, PASS, the Lambda oracle."""
+    global _P709
+    if _P709 is None:
+        rc = load(ROOT / POST709 / "run-commit.json")
+        if rc.get("dirty") != [] or not str(rc.get("glvmodels_commit", "")).startswith(RUN_POST709):
+            raise SystemExit(f"{POST709}/run-commit.json is not a clean run at {RUN_POST709}: {rc}")
+        jr = load(ROOT / POST709 / "inference-post709-results.json")
+        ro = load(ROOT / POST709 / "r-lambda-reject/r-oracle.json")
+        if jr["status"] != "PASS":
+            raise SystemExit("the post-#709 Julia run is not PASS")
+        _P709 = {"cases": {c["source_id"]: c for c in jr["cases"]}, "r_lambda": ro["calls"]}
+    return _P709
+
+
+def post709_reads():
+    return reads(f"{POST709}/inference-post709-results.json", f"{POST709}/receipt.json",
+                 f"{POST709}/run-commit.json", f"{POST709}/verify.txt",
+                 f"{POST709}/r-lambda-reject/r-oracle.json", f"{POST709}/r-lambda-reject/receipt.json")
+
+
+_RUL = None
+
+
+def rulings():
+    """The tracked raw files of the rulings run, checked once: clean run commit at RUN_RULINGS, PASS."""
+    global _RUL
+    if _RUL is None:
+        rc = load(ROOT / RULINGS / "run-commit.json")
+        if rc.get("dirty") != [] or not str(rc.get("glvmodels_commit", "")).startswith(RUN_RULINGS):
+            raise SystemExit(f"{RULINGS}/run-commit.json is not a clean run at {RUN_RULINGS}: {rc}")
+        jr = load(ROOT / RULINGS / "inference-rulings-results.json")
+        if jr["status"] != "PASS":
+            raise SystemExit("the rulings Julia run is not PASS")
+        _RUL = {"cases": {c["source_id"]: c for c in jr["cases"]}}
+    return _RUL
+
+
+def rulings_reads():
+    return reads(f"{RULINGS}/inference-rulings-results.json", f"{RULINGS}/receipt.json",
+                 f"{RULINGS}/run-commit.json", f"{RULINGS}/verify.txt")
+
+
+def rulings_entry(case_id, sid, rprobe, fixture):
+    """None unless `sid` is a ruling-C, ruling-3 or alias row; else ("entry", dict)."""
+    c = rulings()["cases"].get(sid)
+    if c is None or c["group"] not in ("withdrawn_profile", "fisher_z_alias") and sid != "inference/CI-ROUTE-029":
+        return None
+    n = sid.split("/")[-1]
+    method, target = fixture[n]["method"], target_of(case_id)
+    if c["case_id"] != case_id or c["requested_method"] != method or c["target"] != target:
+        raise SystemExit(f"{sid}: the rulings record ({c['case_id']}, {c['target']}, {c['requested_method']}) does not "
+                         f"match the row ({case_id}, {target}, {method})")
+    ib = f"{INF}/inference-batch-p1"
+    src_j = f"{RULINGS}/inference-rulings-results.json#{n}"
+    src_r = f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}"
+    r = rprobe[n]
+    if r["pass"] != "TRUE":
+        raise SystemExit(f"{sid}: a failed probe; not writing behaviour")
+    if c["group"] == "withdrawn_profile":
+        g = WITHDRAWN_GUARD[target]
+        gr, ctl = rprobe[g], rprobe[WITHDRAWN_CONTROL_ROW[target]]
+        if r["actual"] != f".confint_{target}:profile" or gr["pass"] != "TRUE" or \
+                "gllvmTMB_nonlinear_profile_withdrawn" not in gr["actual_class"]:
+            raise SystemExit(f"{sid}: R's dispatch row or guard row {g} does not show the withdrawn profile")
+        if not ctl["actual"].startswith(f".confint_{target}:") or ctl["pass"] != "TRUE":
+            raise SystemExit(f"{sid}: R control row {WITHDRAWN_CONTROL_ROW[target]} is not a valid method")
+        jc = c["control"]
+        if c["outcome"] != "error" or c["error_type"] != "ArgumentError" or "withdrawn" not in c["error_message"] or \
+                jc["outcome"] != "result" or jc["finite"] is not True:
+            raise SystemExit(f"{sid}: Julia did not withdraw the profile with a working :wald control")
+        return "entry", {
+            "case_id": case_id, "source_id": sid, "kind": "refusal", "r_observed": first_sentence(gr["actual"]),
+            "julia_observed": c["error_message"], "requested_method": method, "julia_call": c["julia_call"],
+            "julia_error_type": c["error_type"],
+            "r_dispatch": {"route": r["actual"], "source": src_r,
+                           "note": (f"the dispatcher sends method profile to .confint_{target}; guard row {g} (same parm, "
+                                    f"method profile) observes that function's gllvmTMB_nonlinear_profile_withdrawn "
+                                    f"error, so R refuses this request")},
+            "r_control": {"kind": "route_probe_stub", "call": f"probe row {WITHDRAWN_CONTROL_ROW[target]}",
+                          "result": f"routes to {ctl['actual']}",
+                          "source": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{WITHDRAWN_CONTROL_ROW[target]}"},
+            "julia_control": {"call": jc["call"], "result": f"{jc['route_tag']} interval", "source": src_j},
+            "ruling": f"{SIGNED}, ruling C",
+            "r_source": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{g}", "julia_source": src_j}
+    if c["outcome"] != "result" or c["route_tag"] != "wald_derived" or c["identical_to_wald"] is not True:
+        raise SystemExit(f"{sid}: Julia's rho result is not the :wald Fisher-z interval")
+    if r["actual"] != ".confint_rho:fisher-z":
+        raise SystemExit(f"{sid}: R's route is {r['actual']!r}, not fisher-z")
+    entry = {"case_id": case_id, "source_id": sid, "kind": "route", "r_observed": r["actual"],
+             "julia_observed": f"{target}:{c['route_tag']}", "requested_method": method, "julia_call": c["julia_call"],
+             "julia_result_method": c["result_method"], "julia_transform": c.get("transform"),
+             "julia_identical_to_wald": c["identical_to_wald"],
+             "ruling": f"{SIGNED}, " + ("ruling 3 (the rho default)" if n == "CI-ROUTE-029"
+                                        else "the fisher_z method alias"),
+             "r_source": src_r, "julia_source": src_j}
+    return "entry", entry
+
+
+def r_refusal(target, method):
+    """(label, source) of R's real refusal of `method` for `target`, or the Lambda match.arg refusal."""
+    if target == "lambda":
+        r = post709()["r_lambda"][method]
+        if not r["raised"]:
+            raise SystemExit(f"R did not refuse Lambda method {method!r}")
+        return first_sentence(r["message"]), f"{POST709}/r-lambda-reject/r-oracle.json#calls.{method}"
+    ro = load(ROOT / f"{INF}/inference-remainder-p1/r-oracle.json")
+    r = ro[R_REFUSAL_KEY[target]][method]
+    if not (r["raised"] and r["matches"]):
+        raise SystemExit(f"R did not give its validated refusal of {method!r} for {target}")
+    return first_sentence(r["message"]), f"{INF}/inference-remainder-p1/r-oracle.json#{R_REFUSAL_KEY[target]}.{method}"
+
+
+def refusal_classes():
+    """One refusal class per (target, method) pair measured in the post-#709 run, labels read from the raw files:
+    R's first message sentence and Julia's full ArgumentError message. The Lambda rows share one class, because R's
+    match.arg message does not name the method (so its two refusals carry one R label)."""
+    out = []
+    cases = post709()["cases"]
+    derived = [(sid, c) for sid, c in sorted(cases.items()) if c["kind"] == "refusal" and c["target"] != "lambda" and c.get("reported", True)]
+    basis_t = {
+        "icc": (f"{RZ}:880", "icc", "wald, bootstrap"),
+        "phylo_signal": (f"{RZ}:929", "phylo_signal", "profile, wald, bootstrap"),
+        "communality": (f"{RZ}:1013", "communality", "wald, bootstrap"),
+        "rho": (f"{RZ}:1088", "rho", "fisher-z, wald, bootstrap"),
+        "proportion": (f"{RZ}:1222", "proportion", "wald, bootstrap")}
+    for sid, c in derived:
+        t, m = c["target"], c["requested_method"]
+        line, name, avail = basis_t[t]
+        rlab, _ = r_refusal(t, m)
+        parm_txt = re.search(r'parm="([^"]+)"', c["julia_call"]).group(1)
+        live = ("; a live R valid-method call errors on this fixture for fit-structure reasons (a single-tier fit "
+                "has no two-level or phylogenetic block), which is why the control is a route-probe stub"
+                if t in ("icc", "phylo_signal", "communality") else "")
+        out.append(cls(
+            "refusal", f"{t}:refuse:{m}", [rlab], [c["error_message"]],
+            f"R: .confint_{t} aborts for method {m!r}, which is outside its supported set "
+            f"({avail}), and the message names the method and the estimand ({line}); Julia: confint(fit, y; "
+            f"parm=\"{parm_txt}\", method=Symbol(\"{m}\")) throws "
+            f"ArgumentError from _confint_check_method for a method outside :wald, :profile, :bootstrap "
+            f"(src/confint.jl:451, :781 at {RUN_POST709}), naming the method, the parm and the available methods. Both "
+            f"refuse the same request; each is paired with a valid-method control (R: the route probe sends wald to the "
+            f"same endpoint; Julia: the same call with :wald returns an interval). The supported sets differ outside "
+            f"this request (R withdrew profile for icc, communality, rho and proportion and accepts fisher-z for rho; "
+            f"Julia at {RUN_POST709} computed a profile and refused fisher-z; since the {SIGNED} it withdraws the communality, rho "
+            f"and proportion profile and accepts :fisher_z for rho), and the class does not cover those. Fit differs: R refuses on a "
+            f"single-tier non-phylo fit, Julia on a phylo fit; both refusals are fit-independent by dispatch order "
+            f"({RZ}:1643-1712; Julia checks the method before any estimator runs){live}"))
+    lam = [(sid, c) for sid, c in sorted(cases.items()) if c["kind"] == "refusal" and c["target"] == "lambda"]
+    rlabs = {r_refusal("lambda", c["requested_method"])[0] for _, c in lam}
+    if len(rlabs) != 1:
+        raise SystemExit(f"expected one R label for the Lambda refusals, got {rlabs}")
+    out.append(cls(
+        "refusal", "lambda:refuse-unsupported-method", sorted(rlabs), [c["error_message"] for _, c in lam],
+        f"R: confint.gllvmTMB_multi validates method with match.arg over wald, wald_asym, profile, bootstrap "
+        f"({RZ}:1717), so fisher-z and bogus are refused before any estimator runs and the message lists the "
+        f"supported set without naming the method (hence one R label for both rows); Julia: confint(fit, y; "
+        f"parm=\"Lambda_B[1,1]\", method=Symbol(\"fisher-z\") or :bogus) throws ArgumentError from "
+        f"_confint_check_method (src/confint.jl:451, :500 at {RUN_POST709}). Both refuse the same two requests. "
+        f"Controls: R, a live confint(parm = \"Lambda\", method = \"wald\") on a confirmatory fit returned an interval "
+        f"(P1 refuses per-entry Wald on an unconstrained fit, so the control fit pins one loading); Julia, method=:wald on "
+        f"the Lambda_B term returned an interval. The supported sets differ outside these requests (R accepts "
+        f"wald_asym, Julia refuses it), and the class does not cover that."))
+    return out
+
+
+WITHDRAWN_GUARD = {"communality": "CI-ROUTE-086", "rho": "CI-ROUTE-087", "proportion": "CI-ROUTE-088"}
+WITHDRAWN_R_LINES = {"communality": f"{RZ}:964-968", "rho": f"{RZ}:1055-1060", "proportion": f"{RZ}:1202-1206"}
+WITHDRAWN_CONTROL_ROW = {"communality": "CI-ROUTE-024", "rho": "CI-ROUTE-031", "proportion": "CI-ROUTE-038"}
+
+
+def withdrawn_classes():
+    """Ruling C (the G7 label): one refusal class per withdrawn quantity, labels read from the raw files. R: the first
+    sentence of the guard row's gllvmTMB_nonlinear_profile_withdrawn message. Julia: the full ArgumentError message of
+    the rulings run. Distinct from every bad-method class (Julia's message says 'withdrawn', not 'is not available')."""
+    rprobe = {r["id"]: r for r in read_tsv(ROOT / f"{INF}/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv")}
+    out = []
+    for sid, c in sorted(rulings()["cases"].items()):
+        if c["group"] != "withdrawn_profile":
+            continue
+        t = c["target"]
+        g = rprobe[WITHDRAWN_GUARD[t]]
+        out.append(cls(
+            "refusal", f"{t}:profile-withdrawn", [first_sentence(g["actual"])], [c["error_message"]],
+            f"R: confint.gllvmTMB_multi forwards method profile to .confint_{t}, which aborts with class "
+            f"gllvmTMB_nonlinear_profile_withdrawn ({WITHDRAWN_R_LINES[t]}): the penalty-based constrained-refit "
+            f"prototype is withdrawn pending an exact constraint solver. Julia: confint(fit, y; parm, method=:profile) "
+            f"throws ArgumentError from _confint_profile_withdrawn (src/confint.jl:681 at {RUN_RULINGS}), saying the same "
+            f"profile is withdrawn and pointing to wald or bootstrap. Withdrawn in Julia under {SIGNED}, ruling C. A "
+            f"refusal class of its own (the G7 label), separate from the bad-method refusal class."))
+    return out
+
+
+def all_classes():
+    out = CLASSES + refusal_classes() + withdrawn_classes()
+    # D-319 N6/N10 permits these exact six public-door rows in the behavioural
+    # tier. Build classes only from measured labels that are identical on both
+    # sides; a mismatch never creates a class.
+    for p in sorted((ROOT / FIRST7).glob("*.json")) if (ROOT / FIRST7).is_dir() else []:
+        rec = load(p)
+        if rec.get("reference_commit") != P1_SHA or rec.get("verdict") != "PASS":
+            continue
+        label = rec.get("r_observed")
+        if not label or label != rec.get("julia_observed"):
+            continue
+        sid = rec.get("source_id")
+        kind = "error_class" if rec.get("raw_observations", {}).get("R", {}).get("outcome") == "ERROR" else "route"
+        out.append(cls(kind, label, [label], [label],
+            f"Measured identical public-door behaviour for {sid}; P1 raw R and Julia outputs are preserved in "
+            f"{FIRST7}/{p.name}. Included by signed D-319 N6/N10."))
+    unique = {}
+    for c in out:
+        key = (c["kind"], c["canonical"])
+        if key not in unique:
+            unique[key] = c
+        elif unique[key]["r"] != c["r"] or unique[key]["julia"] != c["julia"]:
+            raise SystemExit(f"conflicting behaviour class {key}")
+    return list(unique.values())
+
+
+# ---------------------------------------------------------------------------
 # derivation, one function per raw source. Each returns (entries, not_bound, read_from).
 # ---------------------------------------------------------------------------
+def post709_entry(case_id, sid, rprobe, fixture):
+    """None when the post-#709 run does not cover `sid`; else ("entry", dict) or ("not_bound", dict)."""
+    c = post709()["cases"].get(sid)
+    if c is None:
+        return None
+    n = sid.split("/")[-1]
+    fx = fixture[n]
+    method, target = fx["method"], target_of(case_id)
+    if c["case_id"] != case_id or c["requested_method"] != method or c["target"] != target:
+        raise SystemExit(f"{sid}: the post-#709 record ({c['case_id']}, {c['target']}, {c['requested_method']}) does not "
+                         f"match the row ({case_id}, {target}, {method})")
+    ib = f"{INF}/inference-batch-p1"
+    src_j = f"{POST709}/inference-post709-results.json#{n}"
+    src_r = f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{n}"
+    if c["kind"] == "route":
+        r = rprobe[n]
+        if r["pass"] != "TRUE" or c["outcome"] != "result":
+            raise SystemExit(f"{sid}: a failed probe or a Julia error; not writing behaviour")
+        r_label, j_label = r["actual"], f"{target}:{c['route_tag']}"
+        ev = {"r": src_r, "julia": src_j}
+        if method == "DEFAULT" and r["actual"].endswith(":profile"):
+            return "not_bound", {
+                "source_id": sid, "reason": "default",
+                "text": (f"The row asks for the DEFAULT method. R's default for this parm is profile (probe route "
+                         f"{r['actual']!r}); Julia's public default is Wald (confint(fit, y; parm) with no method gave a "
+                         f"{c['route_tag']} result reporting method {c['result_method']!r}, {c['julia_call']}). Not the "
+                         f"same default route."),
+                "evidence": ev}
+        if r["actual"].endswith(":profile") and target in ("communality", "rho", "proportion"):
+            guards = [g for g, f in fixture.items() if f["stage"] == "guard" and f["parm"] == fx["parm"]
+                      and f["method"] == "profile"]
+            if len(guards) != 1 or "gllvmTMB_nonlinear_profile_withdrawn" not in rprobe[guards[0]]["actual_class"]:
+                raise SystemExit(f"{sid}: expected one withdrawn guard row for parm {fx['parm']}, found {guards}")
+            g = guards[0]
+            ev["r"] = f"{src_r},{g}"
+            return "not_bound", {
+                "source_id": sid, "reason": "withdrawn",
+                "text": (f"R's dispatcher forwards method profile to {r['actual'].split(':')[0]}, but that function raises "
+                         f"gllvmTMB_nonlinear_profile_withdrawn at P1; the same probe observed that error on guard row {g} "
+                         f"(parm {fx['parm']}, method profile). Julia's public confint returned a profile interval "
+                         f"({c['julia_call']}; src/confint.jl:826, the penalty-based route #709 documents as exploratory). "
+                         f"R refuses, Julia computes: not the same behaviour."),
+                "evidence": ev}
+        if c["result_method"] not in ("", "wald" if method == "DEFAULT" else method):
+            raise SystemExit(f"{sid}: Julia reports method {c['result_method']!r} for a request of {method!r}")
+        return "entry", {"case_id": case_id, "source_id": sid, "kind": "route", "r_observed": r_label,
+                         "julia_observed": j_label, "requested_method": method, "julia_call": c["julia_call"],
+                         "julia_result_method": c["result_method"], "r_source": src_r, "julia_source": src_j}
+    # refusal: R's real refusal, Julia's ArgumentError, and a valid-method control on each side
+    if c["outcome"] != "error" or c["error_type"] != "ArgumentError" or f":{method}" not in c["error_message"]:
+        raise SystemExit(f"{sid}: Julia did not refuse {method!r} with an ArgumentError that names it")
+    if c.get("control_outcome") != "result" or c.get("control_finite") is not True:
+        raise SystemExit(f"{sid}: no valid-method control on the Julia side")
+    r_label, r_src = r_refusal(target, method)
+    parm_txt = re.search(r'parm="([^"]+)"', c["julia_call"]).group(1)
+    if not r_label.strip():
+        raise SystemExit(f"{sid}: empty R refusal label")
+    if target == "lambda":
+        if not r_label.startswith("'arg' should be one of"):
+            raise SystemExit(f"{sid}: R's Lambda refusal is not the match.arg error: {r_label!r}")
+    elif f'"{method}"' not in r_label:
+        raise SystemExit(f"{sid}: R's refusal text does not name the method {method!r}: {r_label!r}")
+    if f"parm {parm_txt};" not in c["error_message"]:
+        raise SystemExit(f"{sid}: Julia's refusal does not name the parm {parm_txt!r}")
+    if c.get("control_route_tag") not in ("wald_derived", "wald_packed") or c.get("control_result_method") not in ("wald", ""):
+        raise SystemExit(f"{sid}: Julia's control is not a Wald result")
+    if target == "lambda":
+        w = post709()["r_lambda"]["wald"]
+        if w["raised"] or not w["finite"]:
+            raise SystemExit(f"{sid}: R's valid-method control (wald) did not return an interval")
+        r_control = {"kind": "live_call", "call": "confint(fit, parm = \"Lambda\", method = \"wald\")",
+                     "result": f"interval, {w['n_rows']} rows", "source": f"{POST709}/r-lambda-reject/r-oracle.json#calls.wald"}
+        r_call = "confint(fit, parm = \"Lambda\", level = 0.95, method = <m>)"
+    else:
+        row = R_CONTROL_ROW[target]
+        rc = rprobe[row]
+        if rc["pass"] != "TRUE" or not rc["actual"].startswith(R_CONTROL_ENDPOINT[target] + ":") or \
+                not (rc["actual"].endswith(":wald") or rc["actual"].endswith(":fisher-z")):
+            raise SystemExit(f"{sid}: R control row {row} is {rc['actual']!r}, not a valid method at {R_CONTROL_ENDPOINT[target]}")
+        r_control = {"kind": "route_probe_stub", "call": f"probe row {row}", "result": f"routes to {rc['actual']}",
+                     "source": f"{ib}/r-crosscheck/p1-route-probe-results.tsv#{row}"}
+        r_call = None
+    entry = {"case_id": case_id, "source_id": sid, "kind": "refusal", "r_observed": r_label,
+             "julia_observed": c["error_message"], "requested_method": method, "julia_call": c["julia_call"],
+             "julia_error_type": c["error_type"],
+             "r_control": r_control,
+             "julia_control": {"call": c["control_call"], "result": f"{c['control_route_tag']} interval",
+                               "source": src_j},
+             "r_source": r_src, "julia_source": src_j}
+    if r_call:
+        entry["r_call"] = r_call
+    return "entry", entry
+
+
 def wave2(case_id, rec):
     ib = f"{INF}/inference-batch-p1"
     jres = {c["source_id"]: c for c in load(ROOT / ib / "inference-batch-results.json")["cases"]}
@@ -270,6 +668,7 @@ def wave2(case_id, rec):
     fixture = {r["id"]: r for r in read_tsv(ROOT / FIXTURE)}
     target = target_of(case_id)
     entries, not_bound = [], []
+    used_post709 = used_rulings = False
     for pr in rec["per_row"]:
         sid = pr["source_id"]
         n = sid.split("/")[-1]
@@ -283,6 +682,16 @@ def wave2(case_id, rec):
         if r["pass"] != "TRUE" or not j["ok"]:
             raise SystemExit(f"{sid}: raw artefact records a failed probe; not writing behaviour")
         method = fx["method"]
+        rul = rulings_entry(case_id, sid, rprobe, fixture)
+        if rul is not None:
+            entries.append(rul[1])
+            used_rulings = True
+            continue
+        p709 = post709_entry(case_id, sid, rprobe, fixture)
+        if p709 is not None:
+            (entries if p709[0] == "entry" else not_bound).append(p709[1])
+            used_post709 = True
+            continue
         if "falling back" in r["messages"]:
             not_bound.append({
                 "source_id": sid, "reason": "fallback",
@@ -380,6 +789,10 @@ def wave2(case_id, rec):
             continue
         entries.append(entry)
     rf = reads(f"{ib}/inference-batch-results.json", f"{ib}/r-crosscheck/p1-route-probe-results.tsv", FIXTURE)
+    if used_post709:
+        rf.update(post709_reads())
+    if used_rulings:
+        rf.update(rulings_reads())
     return entries, not_bound, rf
 
 
@@ -391,12 +804,18 @@ def wave4(case_id, rec):
     key = {"icc": "icc_reject", "phylo_signal": "phylo_reject", "communality": "communality_reject",
            "rho": "rho_reject", "proportion": "proportion_reject"}[target]
     jc = rj["cases"][case_id]["methods"]
-    not_bound = []
+    rprobe = {r["id"]: r for r in read_tsv(ROOT / f"{INF}/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv")}
+    entries, not_bound, used_post709 = [], [], False
     for sid in rec["source_ids"]:
         n = sid.split("/")[-1]
         method = fixture[n]["method"]
         if method not in ro[key] or method not in jc:
             raise SystemExit(f"{sid}: method {method} is not in the raw oracle for {case_id}")
+        p709 = post709_entry(case_id, sid, rprobe, fixture)
+        if p709 is not None:
+            (entries if p709[0] == "entry" else not_bound).append(p709[1])
+            used_post709 = True
+            continue
         r, j = ro[key][method], jc[method]
         r_label = first_sentence(r["message"]) if r["raised"] and r["matches"] else "no-error-raised"
         j_label = j["julia_error_kind"] or "no-error-raised"
@@ -412,7 +831,11 @@ def wave4(case_id, rec):
             "evidence": {"r": f"{rb}/r-oracle.json#{key}.{method}",
                          "julia": f"{rb}/julia-results.json#{case_id}.methods.{method}",
                          "contract": f"{LEDGER}/inference-batch-contract-p1.json"}})
-    return [], not_bound, reads(f"{rb}/r-oracle.json", f"{rb}/julia-results.json", FIXTURE)
+    rf = reads(f"{rb}/r-oracle.json", f"{rb}/julia-results.json", FIXTURE,
+               f"{INF}/inference-batch-p1/r-crosscheck/p1-route-probe-results.tsv")
+    if used_post709:
+        rf.update(post709_reads())
+    return entries, not_bound, rf
 
 
 def wave5(case_id, rec):
@@ -455,10 +878,65 @@ DERIVE = {"routing_control_flow": wave2, "reject_error_class": wave4, "paired_re
           "paired_control_categorical": aghq}
 CASE_DIRS = [f"{INF}/cases", f"{AGHQ}/cases"]
 
+FIRST7_SOURCE_IDS = {
+    "postfit/POSTFIT-SURFACE-check_auto_residual",
+    "isdm/ISDM-COUNT", "isdm/ISDM-EXTRA-SOURCE", "isdm/ISDM-MISSING-IN-TRAIT",
+    "isdm/ISDM-MISSING-SOURCE", "isdm/ISDM-WRAPPER-LAW",
+}
+
+
+def first7(case_id, rec):
+    """Derive the signed first-seven behaviour from raw public-call labels."""
+    sids = rec.get("source_ids") or ([rec["source_id"]] if rec.get("source_id") else [])
+    sid = next((s for s in sids if s in FIRST7_SOURCE_IDS), None)
+    if sid is None:
+        return [], [], {}
+    p = ROOT / FIRST7 / (sid.split("/", 1)[1] + ".json")
+    if not p.is_file():
+        return [], [], {}
+    raw = load(p)
+    if raw.get("reference_commit") != P1_SHA or raw.get("source_id") != sid:
+        raise SystemExit(f"{p}: source id or P1 pin mismatch")
+    import first_seven_behaviour_derive as F7
+    raw_dir = Path((raw.get("provenance") or {}).get("raw_directory", ""))
+    if not raw_dir.parts or raw_dir.is_absolute() or ".." in raw_dir.parts:
+        raise SystemExit(f"{p}: raw provenance must name a repo-relative directory")
+    d = ROOT / raw_dir
+    meta = load(d / "run.json")
+    if meta != raw.get("provenance"):
+        raise SystemExit(f"{p}: provenance differs from the retained run metadata")
+    checked_meta = dict(meta, r_output_path=str(d / "r-public.tsv"), julia_output_path=str(d / "julia-public.tsv"))
+    fresh, _ = F7.derive(F7.tsv(d / "r-public.tsv", "R"), F7.tsv(d / "julia-public.tsv", "Julia"), checked_meta)
+    checked_meta.pop("r_output_path", None); checked_meta.pop("julia_output_path", None)
+    if fresh[sid] != raw or raw.get("case_id") != case_id:
+        raise SystemExit(f"{p}: sidecar differs from raw re-derivation or frozen case id")
+    rf, jf = raw.get("r_observed"), raw.get("julia_observed")
+    inputs = [p, d / "run.json", d / "r-public.tsv", d / "julia-public.tsv", ROOT / "tools/first_seven_behaviour_derive.py"]
+    reads = {str(x.relative_to(ROOT)): sha(x) for x in inputs}
+    if raw.get("verdict") != "PASS" or rf != jf:
+        return [], [{"source_id": sid, "reason": "public_route_differs",
+                     "text": f"P1 public-door labels differ: R={rf!r}; Julia={jf!r}. "
+                             "The exact calls and raw outputs are in the cited receipt.",
+                     "evidence": {"receipt": f"{FIRST7}/{p.name}"}}], reads
+    kind = "error_class" if raw.get("raw_observations", {}).get("R", {}).get("outcome") == "ERROR" else "route"
+    entry = {"case_id": case_id, "source_id": sid, "kind": kind,
+             "r_observed": rf, "julia_observed": jf,
+             "r_source": f"{FIRST7}/{p.name}#raw_observations.R",
+             "julia_source": f"{FIRST7}/{p.name}#raw_observations.Julia",
+             "r_call": raw.get("raw_observations", {}).get("R", {}).get("call"),
+             "julia_call": raw.get("raw_observations", {}).get("Julia", {}).get("call"),
+             "ruling": "D-319 N6/N10"}
+    return [entry], [], reads
+
 
 def derive_block(case_id, rec):
     """The behaviour block and not-bound list for one case receipt, or None when the receipt has no
     behavioural evidence to give (the numeric and structural cases)."""
+    if rec.get("evidence_kind") == "public_door_behaviour" or any(
+            s in FIRST7_SOURCE_IDS for s in (rec.get("source_ids") or [rec.get("source_id")])):
+        entries, not_bound, rf = first7(case_id, rec)
+        block = {"pin": "P1", "ruling": RULING, "read_from": rf, "cases": entries} if entries else None
+        return block, not_bound
     fn = DERIVE.get(rec.get("evidence_kind"))
     if fn is None:
         return None
@@ -472,6 +950,19 @@ def tracked_receipts():
     for d in CASE_DIRS:
         for p in sorted((ROOT / d).glob("*.json")):
             out[p.stem] = (p, load(p))
+    # Add only the six owned public-door case receipts, and only once the
+    # independently derived raw sidecar exists. This keeps pre-measurement
+    # --check identical to the existing baseline.
+    for sid in sorted(FIRST7_SOURCE_IDS):
+        sidecar = ROOT / FIRST7 / (sid.split("/", 1)[1] + ".json")
+        if not sidecar.is_file():
+            continue
+        folder = "postfit" if sid.startswith("postfit/") else "isdm"
+        pdir = ROOT / LEDGER / "receipts" / folder / "cases"
+        for p in sorted(pdir.glob("*.json")):
+            rec = load(p)
+            if sid in (rec.get("source_ids") or [rec.get("source_id")]):
+                out[p.stem] = (p, rec)
     return out
 
 
@@ -523,9 +1014,8 @@ OUT_OF_SCOPE_NOTE = (f"Not bound: behaviour block kept as non-binding evidence o
                      f"but this row is not in the frozen scope of {RULING}; binding it needs the maintainer to confirm "
                      f"ruling 2 covers it.")
 NOT_BOUND_ROW_NOTES = {
-    "public_route_differs": ("Not bound behaviourally: Julia's public confint(fit, Y; parm, method = :bootstrap) on this "
-                             "structured fit returns a Wald interval, so the request does not take the same route as "
-                             "R's; the harness called bootstrap_ci directly (receipt behaviour_not_bound)."),
+    "public_route_differs": ("Not bound behaviourally: Julia's public confint does not take the route R takes for this "
+                             "request (receipt behaviour_not_bound)."),
     "not_exported": ("Not bound behaviourally: Julia's side is the unexported GLLVM.profile_ci_derived / "
                      "GLLVM.bootstrap_ci_derived, so a Julia user cannot make this request; the harness called an "
                      "internal function (receipt behaviour_not_bound)."),
@@ -556,13 +1046,21 @@ def _annotate(row, paths):
                 _add_note(row, OUT_OF_SCOPE_NOTE)
 
 
+ROUTE_ONLY_ROWS = {"018", "025", "032", "039", "045", "048", "057", "060", "063"}
+ROUTE_ONLY_NOTE = ("route only; estimands not compared (R aligned extract_* vs Julia communality(fit) etc.; n_boot "
+                   "small)")
+
+
 def overlay_row(row, counts):
     """Flip `row` to evidence_tier behavioural when its cited receipts' behaviour blocks bind it under the
     assembler's port of the checker's rule (frozen scope, class identity, entries scoped by source_id where a
     case id has several citers). Moves evidence.non_binding_receipts to evidence.receipt, sets the tier text,
     and nothing else. Updates `counts` (tier count down, `behavioural` up). Returns True if flipped.
     A row that is not flipped gets a one-line note when this tool records why (see _annotate)."""
-    if row.get("evidence_tier") not in OVERLAY_TIERS or row.get("measured_against") != P1_SHA:
+    eligible = row.get("evidence_tier") in OVERLAY_TIERS or (
+        row.get("source_id") in FIRST7_SOURCE_IDS and
+        row.get("evidence_tier") == "needs_surface_r_side_measured")
+    if not eligible or row.get("measured_against") != P1_SHA:
         return False
     paths = list((row.get("evidence") or {}).get("non_binding_receipts") or [])
     if not paths or not all((ROOT / p).is_file() for p in paths):
@@ -572,6 +1070,8 @@ def overlay_row(row, counts):
     if asm.behavioural_receipt_problem(cand, ROOT, asm.behaviour_equivalence(ROOT), citers()) is not None:
         _annotate(row, paths)
         return False
+    if str(row.get("source_id", "")).split("-")[-1] in ROUTE_ONLY_ROWS:
+        _add_note(row, ROUTE_ONLY_NOTE)
     counts[row["evidence_tier"]] -= 1
     counts["behavioural"] = counts.get("behavioural", 0) + 1
     row["evidence_tier"] = "behavioural"
@@ -611,7 +1111,8 @@ def check_problems():
         if tr[cid][1] != new:
             problems.append(f"{path.relative_to(ROOT)}: behaviour block differs from the re-derivation")
     for cid, (path, rec) in tr.items():
-        if "behaviour" in rec and rec.get("evidence_kind") not in DERIVE:
+        if "behaviour" in rec and rec.get("evidence_kind") not in DERIVE and not any(
+                sid in FIRST7_SOURCE_IDS for sid in (rec.get("source_ids") or [rec.get("source_id")])):
             problems.append(f"{path.relative_to(ROOT)}: behaviour block on a receipt this tool does not derive")
     return problems
 
@@ -622,7 +1123,7 @@ def write():
     for cid, (path, new) in derive_all().items():
         path.write_text(dump(new))
         n += 1
-    print("equivalence classes", len(CLASSES), "receipts written", n)
+    print("equivalence classes", len(all_classes()), "receipts written", n)
 
 
 def main():

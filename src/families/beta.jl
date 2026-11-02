@@ -54,6 +54,8 @@ beta_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix, β::Abstract
 Result of [`fit_beta_gllvm`](@ref): intercepts `β` (length p), loadings `Λ` (p×K),
 the estimated precision `φ` (Var = μ(1−μ)/(1+φ)), the `link`, the maximised Laplace
 `loglik`, the optimiser `converged` flag, and `iterations`.
+`offset` is the p×n training offset the fit was made with (`nothing` when it had none);
+[`predict`](@ref), [`getLV`](@ref) and `residuals` use it by default.
 """
 struct BetaFit
     β::Vector{Float64}
@@ -66,7 +68,12 @@ struct BetaFit
     alpha_lv::Union{Nothing, Matrix{Float64}}
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+BetaFit(β, Λ, φ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
+    BetaFit(β, Λ, φ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -171,6 +178,8 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
+                               caller = "fit_beta_gllvm")
     rr = rr_theta_len(p, K)
     # `hessian` selects the log-det curvature ONLY (the mode search is always
     # Fisher-scored — see families/laplace.jl). Default = the family's registered
@@ -207,7 +216,8 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = _sanitize_missing(Y, 0.5)                   # in-(0,1) placeholder
+    _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm")
+    Yc  = _sanitize_unobserved(Y, msk, 0.5)           # in-(0,1) placeholder
 
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
@@ -300,11 +310,12 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         cursor += rr
         φ̂ = exp(θ̂[cursor + 1])
         return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)...,
-                       alpha_hat, collect(Float64, θ̂), hessian)
+                       alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
         φ̂ = exp(θ̂[p + rr + 1])
-        return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian)
+        return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., nothing, Float64[], hessian,
+                       _stored_offset(offset))
     end
 end

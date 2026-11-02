@@ -12,9 +12,10 @@
 #   * pdHess = isTRUE(fit$sd_report$pdHess); NA when sdreport() was skipped.
 #   * Printed with round(., 3), the marker "*" on the selected row, TRUE/FALSE/NA.
 # R EXCLUDES a rank that did not converge or has a confirmed non-PD Hessian from
-# the selection; Julia's select_lv keeps such ranks selectable (the known twin
-# difference, GATES.md "select_lv"). This file pins that Julia behaviour so a
-# change of it is deliberate.
+# the selection (the row stays in the table). Julia now also excludes a
+# non-converged or non-finite-criterion rank from best_k (#759) while keeping
+# the row. A confirmed non-PD Hessian remains selectable (the remaining twin
+# difference, GATES.md "select_lv").
 #
 # The expected printed lines below were produced by running R's own
 # print.data.frame on the same numbers (R 4.6.0), not typed from memory.
@@ -88,17 +89,19 @@ _selpr_show(sel) = sprint(show, MIME("text/plain"), sel)
         @test selm.aicc[2] ≈ selm.aic[2] + 2 * 12 * 13 / (18 - 12 - 1)
     end
 
-    @testset "conv: per-rank convergence flag; an unconverged rank stays selectable" begin
+    @testset "conv: per-rank convergence flag; an unconverged rank stays in the table but cannot win" begin
         Y = ones(6, 20)
         # K = 2 did not report convergence and has the lowest AIC.
         fit = _selpr_fitter([-300.0, -200.0, -199.5], [8, 14, 19]; conv = [true, false, true])
         sel = select_lv(Y; Kmax = 3, criterion = :aic, _fitter = fit)
         @test sel.converged == [true, false, true]
-        @test sel.best_k == 2                            # selection rule unchanged
-        @test sel.best_k == sel.K[argmin(sel.aic)]
-        # the printed row for K = 2 says FALSE
-        row2 = filter(l -> occursin(r"^ \* 2 ", l), split(_selpr_show(sel), '\n'))
+        @test sel.best_k == 3                            # #759: unconverged K cannot win
+        @test sel.K[argmin(sel.aic)] == 2                # raw AIC still prefers K=2
+        # the printed row for K = 2 says FALSE and is not marked selected
+        lines = split(_selpr_show(sel), '\n')
+        row2 = filter(l -> occursin(r"^   2 ", l), lines)
         @test length(row2) == 1 && occursin("FALSE", only(row2))
+        @test any(l -> occursin(r"^ \* 3 ", l), lines)
     end
 
     @testset "pdHess: opt-in; NA when not computed; a non-PD rank is kept (twin fence)" begin

@@ -18,11 +18,11 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/receipt.json": "a847d6053ca6f545b781140c670a9957a2d3e110a4cf023fd53f2251b73b8ce8",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/julia-results.json": "b7feaf01340e4208541208db1bc151cf5f7d4b42934210127797f9f333f4d7b1",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/r-oracle.json": "cd2173ddff7e25375255c978d4b43e2c1b99ebbb02c98ad400818e2f116898c5",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/receipt.json": "965e0d95dc4696745bf490b18e4a0f14d038f5b9bc114fe55f43b15166d336c8",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/julia-results.json": "4b65fe6309805b0c33559a84b1762f5d69898496c96b5ab2056e9ed16bddddcb",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/r-oracle.json": "0a9d1ba1ee25b1190a0baa849c9dbf823a73261fd7c9049949d8f39029484101",
     "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/results.tsv": "dddb56993514de9bab25e7d3d136a74551e71be79ce02b12e78b24b2687c19f4",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/run-commit.json": "2e16587a479233a6fe0bf80655a1c208a68a479877cb18647134d745a22f4edd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
     "docs/dev-log/core070/true-parity-latest/receipts/family/family-links-p1/verify.txt": "313bff8416947e121fd173e7863ed0070bf4af8f14585c29e09d5bd9ec28a60d",
     "docs/dev-log/core070/true-parity-latest/family-links-batch-contract-p1.json": "103d6aaf8703c2b56d948dc6b12687df50590b06e4eb8a27ab457182e7169e56"
   },
@@ -33,45 +33,45 @@
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "7506185ccbb6ebbd484219a860b35d989301a8cf",
+  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "cb2652e717f377a7319187e971d6e983653b4896",
-  "host": "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
+  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
     "pin": "P1",
     "cases": [
       {
         "case_id": "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL",
         "quantity": "logLik",
-        "max_abs_diff": 3.061472853005398e-09,
+        "max_abs_diff": 3.0606770451413468e-09,
         "tolerance": 0.0001,
         "tolerance_rule": "docs/dev-log/core070/true-parity-latest/family-links-batch-contract-p1.json case tolerance (<=1e-4 absolute, carried verbatim from P0)",
         "n_values": 1,
-        "r_value": -307.8958232820914,
-        "julia_value": -307.8958232790299,
+        "r_value": -307.89582328209053,
+        "julia_value": -307.89582327902986,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       },
       {
         "case_id": "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL",
         "quantity": "trait intercepts",
-        "max_abs_diff": 5.279038420041848e-06,
+        "max_abs_diff": 5.279425618509581e-06,
         "tolerance": 0.0001,
         "tolerance_rule": "docs/dev-log/core070/true-parity-latest/family-links-batch-contract-p1.json case tolerance (<=1e-4 absolute, carried verbatim from P0)",
         "n_values": 4,
         "r_value": [
-          0.05633183051990242,
-          -0.17547638504050758,
-          0.0752106824601297,
-          0.13527942817737978
+          0.056331830746201184,
+          -0.17547638517870948,
+          0.07521068262751546,
+          0.13527942826275938
         ],
         "julia_value": [
-          0.05632971741292612,
-          -0.17548013740857263,
-          0.07520941857043906,
-          0.13528470721579983
+          0.05632971757298772,
+          -0.17548013769825904,
+          0.07520941831840712,
+          0.1352847076883779
         ],
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true

@@ -1,0 +1,2 @@
+self-test: 12 Julia, 6 R and 5 source-pin mutations rejected
+CORE070_INFERENCE_POST709_BATCH_VERIFIED

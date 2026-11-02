@@ -210,6 +210,7 @@ stay off the closed ends of `(1, 2)`. `aghq_control` is as for Poisson. `hessian
 """
 function fit_tweedie_gllvm_grouped_aghq(Y::AbstractMatrix;K::Integer,group=nothing,power=nothing,
         power_group::Symbol=:shared,aghq=:auto,aghq_control=(;),kwargs...)
+    kwargs=_entry_offset_kwargs(kwargs,Y,"fit_tweedie_gllvm_grouped_aghq")
     request=_aghq_request(aghq);request===:off && throw(ArgumentError("fit_tweedie_gllvm_grouped_aghq needs aghq != false; call fit_tweedie_gllvm_grouped"))
     c=_aghq_controls(aghq_control)
     c=_aghq_controls(merge(c,(mode_maxiter=get(kwargs,:newton_maxiter,c.mode_maxiter),mode_tol=get(kwargs,:newton_tol,c.mode_tol))))

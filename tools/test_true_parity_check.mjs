@@ -18,7 +18,7 @@
 // control that merely fails is not enough; it must fail for the stated reason.
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { mkdtempSync, rmSync, cpSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
@@ -344,13 +344,13 @@ for (const [fixture, why] of [
     assert.match(stdout, /isdm\/CAP-ISDM-1FO-PREDICT-EXPORT:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
   });
 }
-// The reviewer's mutation, on the real row and its real receipts: namespace/S3method/coef,
-// gllvmTMB_multi relabelled "numeric" in an otherwise faithful copy. Before this fix it printed
-// C1_MET and C8_MET; it must now be NOT_MET on both.
-test('numeric tier: the real coef,gllvmTMB_multi row relabelled "numeric" is NOT_MET on C1 and C8', () => {
+// The reviewer's mutation, on a real registration row and its real receipts: namespace/export/
+// extract_phylo_signal relabelled "numeric" in an otherwise faithful copy. It must be NOT_MET on C1 and C8.
+// (Repointed from S3method/coef,gllvmTMB_multi, which now binds on a numeric receipt; maintainer OK, D-319, W1-1.)
+test('numeric tier: the real extract_phylo_signal row relabelled "numeric" is NOT_MET on C1 and C8', () => {
   const cmPath = 'docs/dev-log/core070/true-parity-latest/case-map-namespace.json';
   const cm = JSON.parse(readFileSync(join(REPO_ROOT, cmPath), 'utf8'));
-  const row = cm.rows.find((r) => r.source_id === 'namespace/S3method/coef,gllvmTMB_multi');
+  const row = cm.rows.find((r) => r.source_id === 'namespace/export/extract_phylo_signal');
   assert.ok(row, 'real row not found in case-map-namespace.json');
   const dir = mkdtempSync(join(tmpdir(), 'true-parity-mut-'));
   try {
@@ -666,6 +666,7 @@ function runTree(mutate, mode) {
     cpSync(join(FIXTURES, 'base'), dir, { recursive: true });
     const readJ = (rel) => JSON.parse(readFileSync(join(dir, L, rel), 'utf8'));
     const writeJ = (rel, v) => { mkdirSync(dirname(join(dir, L, rel)), { recursive: true }); writeFileSync(join(dir, L, rel), JSON.stringify(v, null, 1)); };
+    writeJ('case-map-assembled.json', readJ('case-map.json'));
     mutate({ dir, readJ, writeJ });
     try {
       return { stdout: execFileSync('node', [CHECKER, mode], { encoding: 'utf8', env: { ...process.env, PARITY_REF: 'FS', PARITY_FS_ROOT: dir } }), code: 0 };
@@ -917,7 +918,11 @@ test('behavioural: a behavioural label cannot ride on another row numeric receip
 test('behavioural scope: a row outside the frozen list (59 inference rows, four named rows) does not bind, even with a valid block', () => {
   for (const sid of ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'postfit/POSTFIT-SURFACE-extract_proportions', 'data/RD-01', 'inference2/CI-ROUTE-001', 'x/inference/CI-ROUTE-001',
     // the four inference rows #684 item 2 does not name (two numeric, two partial): a prefix rule admitted them
-    'inference/CI-ROUTE-008', 'inference/CI-ROUTE-009', 'inference/CI-ROUTE-010', 'inference/CI-ROUTE-011',
+    // (CI-ROUTE-009 joined the scope in the 2026-10-05 extension; the other three stay out)
+    'inference/CI-ROUTE-008', 'inference/CI-ROUTE-010', 'inference/CI-ROUTE-011',
+    // near misses of the 2026-10-05 extension: an unlisted aghq id, the iSDM rows that close by signed disposition, a truncated name
+    'aghq/AGHQ-CTRL-THREE', 'aghq/AGHQ-AUTO-K-BINOMIAL', 'isdm/ISDM-WRONG-ID', 'isdm/ISDM-WRONG-LINK', 'isdm/ISDM-NO-TRAITS', 'isdm/ISDM-LEGACY',
+    'postfit/POSTFIT-SURFACE-check_auto', 'postfit/POSTFIT-SURFACE-check_auto_residual ',
     // a bare prefix, a path trick, a new unlisted inference id, a gap in the numbering, whitespace and case variants of a listed id
     'inference/', 'inference/../isdm/X', 'inference/CI-ROUTE-999', 'inference/CI-ROUTE-005', 'inference/CI-ROUTE-001 ', ' inference/CI-ROUTE-001', 'Inference/CI-ROUTE-001']) {
     const m = ({ readJ, writeJ }) => { bTree({ row: { source_id: sid } })({ readJ, writeJ }); };
@@ -938,6 +943,39 @@ test('behavioural scope: each of the four named C1 rows binds like an inference 
     assert.match(c1.stdout, /bound_behavioural=1 /, sid);
     assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, sid);
   }
+});
+// Maintainer ruling 2026-10-05 (D-319): items A (7 aghq control rows, CI-ROUTE-009), N6 (5 iSDM rows) and N10
+// (check_auto_residual) extend the frozen list by 14 explicit ids.
+const EXTENDED_2026_10_05 = ['aghq/AGHQ-CTRL-AUTO', 'aghq/AGHQ-CTRL-FALSE', 'aghq/AGHQ-CTRL-NINE', 'aghq/AGHQ-CTRL-NULL',
+  'aghq/AGHQ-CTRL-ONE', 'aghq/AGHQ-CTRL-TRUE', 'aghq/AGHQ-CTRL-TWO', 'inference/CI-ROUTE-009',
+  'isdm/ISDM-COUNT', 'isdm/ISDM-EXTRA-SOURCE', 'isdm/ISDM-MISSING-IN-TRAIT', 'isdm/ISDM-MISSING-SOURCE', 'isdm/ISDM-WRAPPER-LAW',
+  'postfit/POSTFIT-SURFACE-check_auto_residual'];
+test('behavioural scope (2026-10-05 extension): each of the 14 extended rows binds with a matching block, and fails on a mismatch', () => {
+  assert.equal(EXTENDED_2026_10_05.length, 14);
+  for (const sid of EXTENDED_2026_10_05) {
+    const m = bTree({ row: { source_id: sid } });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound_behavioural=1 /, sid);
+    assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, sid);
+    // In scope is not bound: a mismatched label still fails.
+    const bad = runTree(bTree({ row: { source_id: sid }, receipt: bReceipt({}, {}, [bCase({ r_observed: 'refused', julia_observed: 'accepted' })]) }), 'C1');
+    assert.match(bad.stdout, /C1_NOT_MET$/m, sid);
+    assert.match(bad.stdout, /differ after canonicalisation/, sid);
+  }
+});
+// Maintainer ruling 2026-10-05 (D-319), ruling 3: the tracked table pairs R's default fisher-z route for rho with Julia's
+// default (rho:wald_derived). R's own plain "wald" for rho is a different interval and must not match.
+test('ruling 3 (tracked table): R fisher-z matches Julia rho:wald_derived for rho; R wald does not', () => {
+  const real = JSON.parse(readFileSync(join(REPO_ROOT, L, 'behaviour-equivalence.json'), 'utf8'));
+  const run29 = (r) => runTree(bTree({ row: { source_id: 'inference/CI-ROUTE-029' }, equivalence: real,
+    receipt: bReceipt({}, {}, [bCase({ r_observed: r, julia_observed: 'rho:wald_derived' })]) }), 'C1');
+  const ok = run29('.confint_rho:fisher-z');
+  assert.match(ok.stdout, /C1_MET$/m, ok.stdout);
+  assert.match(ok.stdout, /bound_behavioural=1 /);
+  const bad = run29('.confint_rho:wald');
+  assert.match(bad.stdout, /C1_NOT_MET$/m);
+  assert.match(bad.stdout, /R ".confint_rho:wald" vs Julia "rho:wald_derived" differ after canonicalisation \(R: no class; Julia: class "rho:fisher-z"\)/);
 });
 test('behavioural scope: a cited receipt whose own comparison is out of tolerance does not bind a relabelled row', () => {
   const bad = { pin: 'P1', cases: [{ case_id: 'CASE-B', quantity: 'q', r_value: 1, julia_value: 99, tolerance: 1e-6 }] };
@@ -1047,6 +1085,44 @@ test('scoreboard: BEHAVIOURAL-UNVERIFIED is not done; plain EVIDENCED reports do
   assert.match(bad.stdout, /done_behavioural=0$/m);
   assert.match(runBoard('EVIDENCED', 'X2').stdout, /done=6 not_done=none done_behavioural=0$/m);
 });
+// Follow-up to the review of #687: the assembler writes "not bound; cited: ..." in the receipt cell of every row it
+// did not bind, and a disposition once became a Status word on such a row ("EVIDENCED" with a receipt that exists).
+// The checker reads the Status word alone, so it also refuses a done word on a row the assembler wrote as not bound.
+function runBoardCell(status, receiptCell, mode, id = 'inference-CI-ROUTE-001') {
+  return runTree(({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, `${readFileSync(sb, 'utf8')}| ${id} | routing | ${status} | ${receiptCell} | fixture |\n`);
+  }, mode);
+}
+for (const status of ['EVIDENCED', 'EVIDENCED-BEHAVIOURAL', 'DISPOSITION-SIGNED']) {
+  test(`scoreboard: ${status} on a row whose receipt cell says "not bound" is not done (X2 and C2), though the cited path exists`, () => {
+    const cell = `not bound; cited: ${RECEIPT_CELL}`;
+    const x2 = runBoardCell(status, cell, 'X2');
+    assert.match(x2.stdout, /X2_NOT_MET$/m, x2.stdout);
+    assert.match(x2.stdout, /inference-CI-ROUTE-001:STATUS_NOT_BOUND/);
+    assert.match(x2.stdout, /done=5 not_done=inference-CI-ROUTE-001:STATUS_NOT_BOUND done_behavioural=0$/m);
+    const c2 = runBoardCell(status, cell, 'C2');
+    assert.match(c2.stdout, /C2_NOT_MET$/m, c2.stdout);
+    assert.match(c2.stdout, /inference-CI-ROUTE-001:STATUS_NOT_BOUND/);
+  });
+}
+test('scoreboard: the same done word with a bound receipt cell is still done, so only "not bound" rows are refused', () => {
+  for (const status of ['EVIDENCED', 'EVIDENCED-BEHAVIOURAL']) {
+    const r = runBoardCell(status, RECEIPT_CELL, 'X2');
+    assert.match(r.stdout, /X2_MET$/m, r.stdout);
+  }
+  const signed = runBoardCell('DISPOSITION-SIGNED', 'Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-09-27', 'X2', 'inference-CI-ROUTE-001');
+  assert.match(signed.stdout, /X2_MET$/m, signed.stdout);
+});
+test('scoreboard: the not-bound refusal is anchored, so "not bound" later in a bound receipt cell leaves the row done', () => {
+  const r = runBoardCell('EVIDENCED', `${RECEIPT_CELL} (an older copy was not bound)`, 'X2');
+  assert.match(r.stdout, /X2_MET$/m, r.stdout);
+});
+test('scoreboard: a status that is not a done word stays not done whatever its receipt cell says', () => {
+  const r = runBoardCell('NOT-MEASURED', `not bound; cited: ${RECEIPT_CELL}`, 'X2');
+  assert.match(r.stdout, /X2_NOT_MET$/m);
+  assert.match(r.stdout, /inference-CI-ROUTE-001:NOT_DONE/);
+});
 test('scoreboard: an EVIDENCED-BEHAVIOURAL row with no receipt path is not done', () => {
   const r = runTree(({ dir }) => {
     const sb = join(dir, L, 'scoreboard.md');
@@ -1058,6 +1134,18 @@ test('scoreboard: an EVIDENCED-BEHAVIOURAL row with no receipt path is not done'
 
 // Ruling 3: C6 decisions. The base fixture's two items now carry a basis and a ruling.
 const RULING = { ref: 'itchyshin/GLLVModels.jl#684 item 3', signed_by: 'Shinichi Nakagawa', signed_on: '2026-10-02' };
+const SCOPED_TWIN_RULING = {
+  ref: 'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md',
+  signed_by: 'Shinichi Nakagawa', signed_on: '2026-10-17',
+};
+const HELD_PENDING_RULING = {
+  ref: 'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md',
+  signed_by: 'Shinichi Nakagawa', signed_on: '2026-10-17',
+};
+const HELD_PENDING_NAMES = [
+  'NBFit', 'Ordinal', 'TweedieFit', 'ZIB', 'ZINegBin',
+  'fit_animal_latent_gllvm', 'fit_kernel_latent_gllvm', 'gllvm', 'link_residual',
+];
 function c6Items(items) {
   return ({ dir }) => writeFileSync(join(dir, L, 'reverse-gap.json'), JSON.stringify(items));
 }
@@ -1068,8 +1156,166 @@ test('C6: EXCLUDED_INTERNAL_HELPER with a basis and the maintainer ruling is a v
   const r = runTree(c6Items([helper(), helper({ source_id: 'julia-export/x2' }), kept()]), 'C6');
   assert.match(r.stdout, /C6_MET$/m, r.stdout);
   assert.match(r.stdout, /invalid_decision=none /);
-  assert.match(r.stdout, /unsigned_decision=none decision_counts=KEPT_AS_JULIA_EXTRA:1,PORT_TO_MATCH_R:0,DEPRECATE_AND_REMOVE:0,RENAME_TO_AVOID_COLLISION:0,EXCLUDED_INTERNAL_HELPER:2$/m);
+  assert.match(r.stdout, /unsigned_decision=none decision_counts=KEPT_AS_JULIA_EXTRA:1,PORT_TO_MATCH_R:0,DEPRECATE_AND_REMOVE:0,RENAME_TO_AVOID_COLLISION:0,EXCLUDED_INTERNAL_HELPER:2,SCOPED_R_TWIN:0,HOLD_PENDING_EVIDENCE:0$/m);
 });
+test('C6: signed HOLD_PENDING_EVIDENCE applies only to the nine held names and makes no twin claim', () => {
+  for (const name of HELD_PENDING_NAMES) {
+    const r = runTree(({ dir, ...rest }) => {
+      const approval = join(dir, HELD_PENDING_RULING.ref);
+      mkdirSync(dirname(approval), { recursive: true });
+      writeFileSync(approval, 'Shinichi approved the nine exact names to remain held pending route evidence.\n');
+      c6Items([helper({
+        source_id: `julia-export/${name}`, name, decision: 'HOLD_PENDING_EVIDENCE',
+        status: 'held', basis: 'held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted',
+        ruling: HELD_PENDING_RULING,
+      })])({ dir, ...rest });
+    }, 'C6');
+    assert.equal(r.code, 0, `${name}: ${r.stdout}`);
+    assert.match(r.stdout, /C6_MET$/m, `${name}: ${r.stdout}`);
+    assert.match(r.stdout, /HOLD_PENDING_EVIDENCE:1/);
+  }
+});
+test('C6: HOLD_PENDING_EVIDENCE cannot dispose an unapproved name', () => {
+  const r = runTree(({ dir, ...rest }) => {
+    const approval = join(dir, HELD_PENDING_RULING.ref);
+    mkdirSync(dirname(approval), { recursive: true });
+    writeFileSync(approval, 'Shinichi approved only the nine exact held names.\n');
+    c6Items([helper({ name: 'another_name', decision: 'HOLD_PENDING_EVIDENCE',
+      status: 'held', basis: 'pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING })])({ dir, ...rest });
+  }, 'C6');
+  assert.match(r.stdout, /C6_NOT_MET$/m);
+  assert.match(r.stdout, /HOLD_PENDING_EVIDENCE/);
+});
+test('C6: HOLD_PENDING_EVIDENCE requires held status, the present approval record, and no twin evidence fields', () => {
+  const malformed = [
+    { item: helper({ name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'decided', basis: 'held pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING }) },
+    { item: helper({ name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'held', basis: 'held pending evidence', ruling: HELD_PENDING_RULING }) },
+    { item: helper({ name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'held', basis: 'held pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING, receipt_ids: ['C'] }) },
+    { item: helper({ source_id: 'julia-export/other', name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'held', basis: 'held pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING }) },
+    { item: helper({ name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'held', basis: 'held pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING }), approval: false },
+  ];
+  for (const { item, approval = true } of malformed) {
+    const r = runTree(({ dir, ...rest }) => {
+      if (approval) {
+        const approvalPath = join(dir, HELD_PENDING_RULING.ref);
+        mkdirSync(dirname(approvalPath), { recursive: true });
+        writeFileSync(approvalPath, 'Shinichi approved only the nine exact held names.\n');
+      }
+      c6Items([item])({ dir, ...rest });
+    }, 'C6');
+    assert.match(r.stdout, /C6_NOT_MET$/m);
+    assert.match(r.stdout, /HOLD_PENDING_EVIDENCE/);
+  }
+});
+const scopedTwin = (over = {}) => helper({
+  decision: 'SCOPED_R_TWIN', basis: 'bounded executable P1 twin; see receipts and source fields',
+  ruling: SCOPED_TWIN_RULING,
+  counterpart: {
+    r_function: 'betabinomial', r_commit: P1_FULL, r_source: 'R/family.R:10-20',
+    julia_source: 'src/test.jl:1-2',
+  },
+  scope: {
+    public_route: 'fit_beta_binomial_gllvm', family_link: 'beta-binomial/logit',
+    data: 'pinned fixture beta-binomial-p1', estimand: 'fixed effects and dispersion',
+    outputs: ['beta', 'dispersion'], exclusions: ['other families', 'other links'],
+  },
+  receipt_ids: ['CASE-1'],
+  ...over,
+});
+test('C6: exact approved scopes pass and unsigned names or contract changes fail', () => {
+  const gap = JSON.parse(readFileSync(join(REPO_ROOT, L, 'reverse-gap.json'), 'utf8'));
+  const scoped = gap.filter(item => item.decision === 'SCOPED_R_TWIN');
+  assert.equal(scoped.length, 11);
+  const tmp = mkdtempSync(join(tmpdir(), 'c6-exact-approval-'));
+  const path = join(tmp, 'reverse-gap.json');
+  function checked(items) {
+    writeFileSync(path, JSON.stringify(items));
+    return execFileSync('node', [CHECKER, 'C6'], {
+      encoding: 'utf8', cwd: REPO_ROOT,
+      env: { ...process.env, PARITY_PIN: 'P1', PARITY_REF: 'FS', PARITY_FS_ROOT: REPO_ROOT,
+        PARITY_REVERSE_GAP: relative(REPO_ROOT, path) },
+    });
+  }
+  try {
+    assert.match(checked(gap), /C6_MET$/m);
+    for (const original of scoped) {
+      const edits = [item => { item.name = 'unsigned_' + item.name; item.source_id = `julia-export/${item.name}`; }];
+      for (const field of ['public_route', 'family_link', 'data', 'estimand', 'outputs', 'exclusions']) {
+        edits.push(item => { item.scope[field] = Array.isArray(item.scope[field]) ? ['unsigned expansion'] : 'unsigned expansion'; });
+      }
+      edits.push(item => { item.receipt_ids = [...item.receipt_ids].reverse(); item.receipt_ids.push(item.receipt_ids[0]); });
+      edits.push(item => { item.counterpart.r_function += ' unsigned expansion'; });
+      edits.push(item => { item.ruling.signed_on = '2026-10-18'; });
+      for (const mutate of edits) {
+        const items = structuredClone(gap), item = items.find(x => x.name === original.name);
+        mutate(item);
+        assert.match(checked(items), /C6_NOT_MET$/m, original.name);
+      }
+    }
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+});
+
+test('C6: a general rule does not authorize a fabricated scoped twin', () => {
+  const r = runTree(({ dir, ...rest }) => {
+    const rulePath = join(dir, SCOPED_TWIN_RULING.ref);
+    mkdirSync(dirname(rulePath), { recursive: true });
+    writeFileSync(rulePath, 'Approved general SCOPED_R_TWIN evidence rule.\n');
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'src/test.jl'), '# fixture source\n');
+    c6Items([scopedTwin()])({ dir, ...rest });
+  }, 'C6');
+  assert.equal(r.code, 0, r.stdout);
+  assert.match(r.stdout, /C6_NOT_MET$/m, r.stdout);
+  assert.match(r.stdout, /name is not an exact approved Julia export/);
+});
+test('C6: assembled receipt presence does not authorize a fabricated scoped twin', () => {
+  const r = runTree(({ dir, readJ, writeJ, ...rest }) => {
+    const rulePath = join(dir, SCOPED_TWIN_RULING.ref);
+    mkdirSync(dirname(rulePath), { recursive: true });
+    writeFileSync(rulePath, 'Approved general SCOPED_R_TWIN evidence rule.\n');
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'src/test.jl'), '# fixture source\n');
+    const assembled = readJ('case-map.json');
+    writeJ('case-map-assembled.json', assembled);
+    writeJ('case-map.json', { ...assembled, rows: [] });
+    c6Items([scopedTwin()])({ dir, readJ, writeJ, ...rest });
+  }, 'C6');
+  assert.equal(r.code, 0, r.stdout);
+  assert.match(r.stdout, /C6_NOT_MET$/m, r.stdout);
+  assert.match(r.stdout, /name is not an exact approved Julia export/);
+});
+test('C6: SCOPED_R_TWIN is refused when its approval record is absent at the ref', () => {
+  const r = runTree(({ dir, ...rest }) => {
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'src/test.jl'), '# fixture source\n');
+    c6Items([scopedTwin()])({ dir, ...rest });
+  }, 'C6');
+  assert.equal(r.code, 0, r.stdout);
+  assert.match(r.stdout, /C6_NOT_MET$/m);
+  assert.match(r.stdout, /SCOPED_R_TWIN approval record .* does not resolve at the ref/);
+});
+for (const [name, item] of [
+  ['no counterpart', scopedTwin({ counterpart: undefined })],
+  ['no Julia source', scopedTwin({ counterpart: { r_function: 'betabinomial', r_source: 'R/family.R:10-20' } })],
+  ['no R source', scopedTwin({ counterpart: { r_function: 'betabinomial', julia_source: 'src/families/betabinomial.jl:10-20' } })],
+  ['no route', scopedTwin({ scope: { ...scopedTwin().scope, public_route: '' } })],
+  ['no data scope', scopedTwin({ scope: { ...scopedTwin().scope, data: '' } })],
+  ['no estimand', scopedTwin({ scope: { ...scopedTwin().scope, estimand: '' } })],
+  ['no claimed outputs', scopedTwin({ scope: { ...scopedTwin().scope, outputs: [] } })],
+  ['no explicit exclusions', scopedTwin({ scope: { ...scopedTwin().scope, exclusions: [] } })],
+  ['no receipt identifiers', scopedTwin({ receipt_ids: [] })],
+  ['a receipt identifier with no P1 numeric or behavioural row', scopedTwin({ receipt_ids: ['NOT-A-CASE'] })],
+  ['duplicate receipt identifiers', scopedTwin({ receipt_ids: ['NATIVE-09-BETABINOMIAL', 'NATIVE-09-BETABINOMIAL'] })],
+  ['the old ruling', scopedTwin({ ruling: RULING })],
+]) {
+  test(`C6: SCOPED_R_TWIN with ${name} is unsigned and does not bind`, () => {
+    const r = runTree(c6Items([item]), 'C6');
+    assert.equal(r.code, 0, r.stdout);
+    assert.match(r.stdout, /C6_NOT_MET$/m, r.stdout);
+    assert.match(r.stdout, /invalid_decision=none /);
+    assert.match(r.stdout, /unsigned_decision=julia-export\/internal_thing\(/);
+  });
+}
 for (const [name, item, why] of [
   ['a decided item with no ruling', helper({ ruling: undefined }), /unsigned_decision=julia-export\/internal_thing\(no ruling\)/],
   ['a ruling without a ref', helper({ ruling: { ...RULING, ref: '' } }), /\(ruling without a ref\)/],
@@ -1111,6 +1357,18 @@ test('C6 scope: both covered words stay valid with the pinned ref and date', () 
   const r = runTree(c6Items([helper(), kept({ source_id: 'julia-export/x' })]), 'C6');
   assert.match(r.stdout, /C6_MET$/m, r.stdout);
 });
+// A ruling ref is looked up by own property: C6_RULINGS is an object literal, so `ref in C6_RULINGS` would accept the
+// names every object inherits and then crash on `.words.has` (exit 1, no verdict). Each of these must be reported as an
+// unrecognised ruling with the verdict C6_NOT_MET and exit 0.
+test('C6 scope: a ruling ref that is an inherited Object.prototype name is not a recognised ruling (own-property lookup)', () => {
+  for (const ref of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf', 'isPrototypeOf']) {
+    const r = runTree(c6Items([helper({ ruling: { ...RULING, ref } })]), 'C6');
+    assert.equal(r.code, 0, `${ref}: exit ${r.code}, stdout ${r.stdout}`);
+    assert.match(r.stdout, /C6_NOT_MET$/m, ref);
+    assert.match(r.stdout, /invalid_decision=none /, ref);
+    assert.match(r.stdout, new RegExp(`\\(ruling ref "${ref}" is not a recognised signed ruling\\)`), ref);
+  }
+});
 test('C6: an unknown decision word still fails (EXCLUDED_HELPER, and a case variant)', () => {
   for (const word of ['EXCLUDED_HELPER', 'excluded_internal_helper', 'EXCLUDED_INTERNAL_HELPER ']) {
     const r = runTree(c6Items([helper({ decision: word })]), 'C6');
@@ -1124,18 +1382,188 @@ test('C6: an undecided item (decision null) still fails, as before', () => {
   assert.match(r.stdout, /invalid_decision=julia-export\/undecided:null /);
 });
 
+// --- Maintainer ruling 2026-10-05 (D-319), ruling 1: bridge readback binds fitted, predict and residuals only, each on
+// its own cases. brTree() adds one numeric row citing receipts/br.json (evidence_kind live_bridge_readback). ---
+function brTree({ sid = 'namespace/S3method/fitted,gllvmTMB_julia', caseId = 'P1-BRIDGE-READBACK-FITTED-RESPONSE', kind = 'live_bridge_readback' } = {}) {
+  return ({ readJ, writeJ }) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({ source_id: sid, classification: 'compatibility_adapter', executable_case_ids: [caseId],
+      evidence: { receipt: `${L}/receipts/br.json` }, measured_against: P1_FULL, disposition: null, evidence_tier: 'numeric' });
+    writeJ('case-map.json', cm);
+    writeJ('receipts/br.json', { evidence_kind: kind, verdict: 'PASS',
+      comparison: { pin: 'P1', cases: [{ case_id: caseId, quantity: 'q', r_value: 1, julia_value: 1, tolerance: 1e-12 }] } });
+  };
+}
+test('bridge readback: fitted, predict and residuals bind on their own readback cases', () => {
+  for (const [sid, caseId] of [['namespace/S3method/fitted,gllvmTMB_julia', 'P1-BRIDGE-READBACK-FITTED-LINK'],
+    ['namespace/S3method/predict,gllvmTMB_julia', 'P1-BRIDGE-READBACK-PREDICT-LINK'],
+    ['namespace/S3method/residuals,gllvmTMB_julia', 'P1-BRIDGE-READBACK-RESIDUALS-PEARSON']]) {
+    const c1 = runTree(brTree({ sid, caseId }), 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${sid}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=3 bound_numeric=3\b/, sid);
+    assert.match(runTree(brTree({ sid, caseId }), 'C8').stdout, /C8_MET$/m, sid);
+  }
+});
+test('bridge readback: coef, logLik, summary, confint and simulate relabelled numeric on the readback receipt do not bind', () => {
+  for (const [sid, caseId] of [['namespace/S3method/coef,gllvmTMB_julia', 'P1-BRIDGE-READBACK-COEF-ALPHA'],
+    ['namespace/S3method/logLik,gllvmTMB_julia', 'P1-BRIDGE-READBACK-LOGLIK-VALUE'],
+    ['namespace/S3method/summary,gllvmTMB_julia', 'P1-BRIDGE-READBACK-SUMMARY-SIGMA'],
+    ['namespace/S3method/confint,gllvmTMB_julia', 'P1-BRIDGE-READBACK-CONFINT-X'],
+    ['namespace/S3method/simulate,gllvmTMB_julia', 'P1-BRIDGE-READBACK-SIMULATE-X'],
+    ['isdm/CAP-ISDM-1FO-PREDICT-EXPORT-2', 'P1-BRIDGE-READBACK-FITTED-LINK']]) {
+    const m = brTree({ sid, caseId });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, sid);
+    assert.match(c1.stdout, /binds only fitted, predict and residuals for gllvmTMB_julia/, sid);
+    const c8 = runTree(m, 'C8');
+    assert.match(c8.stdout, /C8_NOT_MET$/m, sid);
+    assert.match(c8.stdout, /NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/, sid);
+  }
+});
+test('bridge readback: fitted cannot borrow another method readback case', () => {
+  const c1 = runTree(brTree({ caseId: 'P1-BRIDGE-READBACK-COEF-ALPHA' }), 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /only on its own cases \(P1-BRIDGE-READBACK-FITTED-\*\), not P1-BRIDGE-READBACK-COEF-ALPHA/);
+});
+test('bridge readback: a receipt of another evidence kind is not affected by the rule', () => {
+  const c1 = runTree(brTree({ sid: 'namespace/S3method/coef,gllvmTMB_julia', caseId: 'P1-COEF-TWIN', kind: 'numeric_r_vs_julia' }), 'C1');
+  assert.match(c1.stdout, /C1_MET$/m, c1.stdout);
+});
+
+// --- Maintainer ruling 2026-10-05 (D-319), N1: admission-only and PUBLIC-R-BRIDGE boundary cases are non-binding
+// context. bcTree() adds a numeric row with a compared case and one context case. ---
+function bcTree({ ctxId = 'CASE-N-PUBLIC-R-BRIDGE', ctxReceipt = { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' },
+  rowOver = {}, writeCtx = true } = {}) {
+  return ({ readJ, writeJ }) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({ source_id: 'covariance/COV-N', classification: 'required_core', executable_case_ids: ['CASE-N', ctxId],
+      boundary_context_case_ids: [ctxId],
+      evidence: { receipt: `${L}/receipts/rn.json`, boundary_context_receipts: [`${L}/receipts/ctx.json`] },
+      measured_against: P1_FULL, disposition: null, evidence_tier: 'numeric', ...rowOver });
+    writeJ('case-map.json', cm);
+    writeJ('receipts/rn.json', { verdict: 'PASS', comparison: { pin: 'P1', cases: [{ case_id: 'CASE-N', quantity: 'loglik', r_value: 1, julia_value: 1, tolerance: 1e-6 }] } });
+    if (writeCtx) writeJ('receipts/ctx.json', { case_id: ctxId, ...ctxReceipt });
+  };
+}
+test('N1 boundary context: a PUBLIC-R-BRIDGE refusal and an admission-only case are context; the row binds on the rest', () => {
+  for (const [ctxId, rec] of [['CASE-N-PUBLIC-R-BRIDGE', { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' }],
+    ['CASE-N-FORMULA', { evidence_kind: 'r_only_formula_grammar', verdict: 'R_ONLY_PASS' }]]) {
+    const m = bcTree({ ctxId, ctxReceipt: rec });
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${rec.evidence_kind}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=3 bound_numeric=3\b/, rec.evidence_kind);
+    assert.match(runTree(m, 'C8').stdout, /C8_MET$/m, rec.evidence_kind);
+  }
+});
+test('N1 boundary context: without the field the uncompared case still blocks the row (unchanged rule)', () => {
+  const c1 = runTree(bcTree({ rowOver: { boundary_context_case_ids: undefined } }), 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m);
+  assert.match(c1.stdout, /case ids not compared: CASE-N-PUBLIC-R-BRIDGE/);
+});
+for (const [name, opts, why] of [
+  ['a context receipt of another kind (a numeric twin)', { ctxReceipt: { evidence_kind: 'numeric_r_vs_julia', verdict: 'PASS' } }, /evidence_kind "numeric_r_vs_julia" is not an admission-only or PUBLIC-R-BRIDGE boundary kind/],
+  ['a boundary kind with the wrong verdict', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'PASS' } }, /verdict "PASS" is not R_BOUNDARY_UNCHANGED/],
+  // N1 covers an R refusal recorded by a receipt; a bridge case nobody ran is not context.
+  ['a not-executed PUBLIC-R-BRIDGE case', { ctxReceipt: { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' } }, /evidence_kind "not_executed" is not an admission-only or PUBLIC-R-BRIDGE boundary kind/],
+  ['a bridge kind on a case that is not a PUBLIC-R-BRIDGE case', { ctxId: 'CASE-N-NATIVE', ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' } }, /a r_public_bridge_boundary case must be a -PUBLIC-R-BRIDGE case/],
+  ['a context receipt that carries a comparison block', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', comparison: { pin: 'P1', cases: [] } } }, /carries a comparison block, so it is compared, not context/],
+  ['every case set aside as context', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE'] } }, /every executable case is boundary context/],
+  // The duplicate-id hole: the context id listed twice passes the count test while no case outside the context list
+  // is compared (rn.json compares CASE-N, which this row no longer lists).
+  ['a context id repeated in executable_case_ids', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE', 'CASE-N-PUBLIC-R-BRIDGE'] } }, /executable_case_ids lists a case id twice/],
+  ['a context id that is not an executable case', { rowOver: { boundary_context_case_ids: ['CASE-OTHER-PUBLIC-R-BRIDGE'] } }, /not in executable_case_ids: CASE-OTHER-PUBLIC-R-BRIDGE/],
+  ['a context receipt that does not exist', { writeCtx: false }, /boundary context receipt .*ctx\.json does not resolve to a file/],
+  ['no boundary_context_receipts', { rowOver: { evidence: { receipt: `${L}/receipts/rn.json` } } }, /no evidence\.boundary_context_receipts/],
+]) {
+  test(`N1 boundary context: ${name} does not bind`, () => {
+    const m = bcTree(opts);
+    const c1 = runTree(m, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, name);
+    assert.match(c1.stdout, /numeric_label_without_numeric_receipt=covariance\/COV-N\(boundary context \(maintainer ruling 2026-10-05 \(D-319\), N1\): /, name);
+    assert.match(c1.stdout, why, name);
+    assert.match(runTree(m, 'C8').stdout, /covariance\/COV-N:NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/, name);
+  });
+}
+
+// --- Maintainer ruling 2026-10-05 (D-319), N9: a receipt's convergence_parity block must show both engines at
+// gradient max-abs <= 1e-5. cpTree() adds the block to the base numeric receipt r1.json. ---
+function cpTree(cp) {
+  return ({ readJ, writeJ }) => { const r1 = readJ('receipts/r1.json'); r1.convergence_parity = cp; writeJ('receipts/r1.json', r1); };
+}
+const cpBlock = (rg, jg, over = {}) => ({ gradient_bound: 1e-5, compared_point: 'newton_polished',
+  engines: { R: { max_abs_gradient: rg }, julia: { max_abs_gradient: jg } }, ...over });
+test('N9 convergence parity: both engines at or below 1e-5 bind (the ordinal pre-run numbers, and exactly 1e-5)', () => {
+  for (const cp of [cpBlock(4.709e-7, 2.365e-6), cpBlock(1e-5, 1e-5), cpBlock(0, 0, { compared_point: 'returned' })]) {
+    const c1 = runTree(cpTree(cp), 'C1');
+    assert.match(c1.stdout, /C1_MET$/m, `${JSON.stringify(cp)}\n${c1.stdout}`);
+    assert.match(c1.stdout, /bound=2 bound_numeric=2\b/);
+  }
+});
+for (const [name, cp, why] of [
+  ["R stopped early (the ordinal row's unpolished 4.3e-4)", cpBlock(4.314e-4, 7.822e-6), /R max_abs_gradient 0\.0004314 > 1e-5/],
+  ['Julia above the bound', cpBlock(4.7e-7, 2e-5), /julia max_abs_gradient 0\.00002 > 1e-5/],
+  ['a looser declared bound (1e-4)', cpBlock(4.7e-7, 2.4e-6, { gradient_bound: 1e-4 }), /gradient_bound 0\.0001 is not 1e-5/],
+  ['a missing Julia gradient', { gradient_bound: 1e-5, compared_point: 'returned', engines: { R: { max_abs_gradient: 1e-7 } } }, /julia max_abs_gradient undefined is not a finite number >= 0/],
+  ['an unknown compared point', cpBlock(1e-7, 1e-7, { compared_point: 'best_of_both' }), /compared_point "best_of_both" is not returned or newton_polished/],
+  ['a negative gradient', cpBlock(-1e-7, 1e-7), /R max_abs_gradient -1e-7 is not a finite number >= 0/],
+  ['a block that is not an object', 'converged', /convergence_parity is not an object/],
+]) {
+  test(`N9 convergence parity: ${name} does not bind`, () => {
+    const c1 = runTree(cpTree(cp), 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, name);
+    assert.match(c1.stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(convergence parity \(maintainer ruling 2026-10-05 \(D-319\), N9\): /, name);
+    assert.match(c1.stdout, why, name);
+    assert.match(runTree(cpTree(cp), 'C8').stdout, /C8_NOT_MET$/m, name);
+  });
+}
+
+// --- Maintainer ruling 2026-10-05 (D-319), C4: the clause accepts direct-engine runs (no bridge leg). An EVIDENCED
+// real-data row must cite a receipt that records both engines. ---
+test('C4 direct engine: an EVIDENCED RD row whose receipt records both engines is done (base fixture)', () => {
+  assert.match(runTree(() => {}, 'C4').stdout, /C4 real-data workflows rows=1 done=1 not_done=none/);
+});
+for (const [name, rd1] of [
+  ['no engines block', { case_id: 'RD1', result: 'PASS' }],
+  ['only the R engine', { case_id: 'RD1', result: 'PASS', engines: { R: { engine: 'R gllvmTMB' } } }],
+  ['engines as an array', { case_id: 'RD1', result: 'PASS', engines: [{ R: {} }, { julia: {} }] }],
+  ['empty engine blocks', { case_id: 'RD1', result: 'PASS', engines: { R: {}, julia: {} } }],
+]) {
+  test(`C4 direct engine: an EVIDENCED RD row whose receipt has ${name} is not done (C4 and X2)`, () => {
+    const m = ({ writeJ }) => writeJ('receipts/rd1.json', rd1);
+    const c4 = runTree(m, 'C4');
+    assert.match(c4.stdout, /C4_NOT_MET$/m, name);
+    assert.match(c4.stdout, /RD-1:C4_NOT_A_DIRECT_ENGINE_RUN/, name);
+    assert.match(runTree(m, 'X2').stdout, /RD-1:C4_NOT_A_DIRECT_ENGINE_RUN/, name);
+  });
+}
+test('C4 direct engine: a properly signed RD disposition row is done without a run', () => {
+  const m = ({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/\| RD-1 \|([^|]*)\| EVIDENCED \|[^|]*\|/, '| RD-1 |$1| DISPOSITION-SIGNED | Disposition: outside_boundary; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 |'));
+  };
+  assert.match(runTree(m, 'C4').stdout, /C4_MET$/m);
+});
+test('C4 direct engine: the rule does not touch rows outside C4 (a C3 row with a plain receipt stays done)', () => {
+  assert.match(runTree(() => {}, 'C3').stdout, /C3_MET$/m);
+});
+
 // --- Fix round on PR #687 (three adversarial reviews). Each control below fails on the head before the
 // round (6f546fb00) for the reason it names, and passes after. ---
 
 // Scope: the behavioural tier is a frozen list, not a prefix. Scoreboard side: the same list, by scoreboard id.
 test('behavioural scope (scoreboard): EVIDENCED-BEHAVIOURAL on CI-ROUTE-008..011, a new inference id or a bare prefix is not done', () => {
-  for (const id of ['inference-CI-ROUTE-008', 'inference-CI-ROUTE-009', 'inference-CI-ROUTE-010', 'inference-CI-ROUTE-011', 'inference-CI-ROUTE-999', 'inference']) {
+  for (const id of ['inference-CI-ROUTE-008', 'inference-CI-ROUTE-010', 'inference-CI-ROUTE-011', 'inference-CI-ROUTE-999', 'inference',
+    'aghq-AGHQ-CTRL-THREE', 'isdm-ISDM-WRONG-ID', 'isdm-ISDM-LEGACY']) {
     const r = runBoard('EVIDENCED-BEHAVIOURAL', 'X2', id);
     assert.match(r.stdout, /X2_NOT_MET$/m, id);
     assert.match(r.stdout, new RegExp(`${id}:BEHAVIOURAL_NOT_ALLOWED_FOR_THIS_ROW`), id);
     assert.match(r.stdout, /done_behavioural=0$/m, id);
   }
   assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', 'inference-CI-ROUTE-084').stdout, /X2_MET$/m);
+  // The 2026-10-05 extension, by scoreboard id.
+  for (const id of ['inference-CI-ROUTE-009', 'aghq-AGHQ-CTRL-AUTO', 'isdm-ISDM-WRAPPER-LAW', 'postfit-POSTFIT-SURFACE-check_auto_residual']) {
+    assert.match(runBoard('EVIDENCED-BEHAVIOURAL', 'X2', id).stdout, /X2_MET$/m, id);
+  }
 });
 
 // Label collision: compare class identity, not canonical strings (external review F8a, F8b, F8e, F8f).
@@ -1367,6 +1795,87 @@ test('C6: a KEPT_AS_JULIA_EXTRA basis citing existing docs/src files binds; so d
   }
   assert.match(runTree(c6Items([helper({ basis: 'internal; no docstring' })]), 'C6').stdout, /C6_MET$/m);
 });
+// Review of #687 follow-up 3: the cited page is matched exactly. It is an existing .md file written as
+// docs/src/<path>.md: nothing before docs/src (a "./", a "../", a directory, a URL), nothing after ".md" (".bak", "x", "~",
+// "/"), no ".." or "." segment, and no file type other than .md (an existing .json, .txt, .jl or .toml is not a page).
+// Every token of the basis that contains "docs/src" must be such a path, so a bogus citation beside a good one fails too.
+const EXACT_TREE = ({ dir }) => {
+  for (const [rel, body] of [['docs/src/assets/x.json', '{}'], ['docs/src/notes.txt', 'n'], ['docs/src/code.jl', 'x = 1'], ['docs/src/cfg.toml', 'a = 1'],
+    ['docs/src/real.md.bak', 'old'], ['docs/src/sub/deep.md', '# deep']]) {
+    mkdirSync(dirname(join(dir, rel)), { recursive: true });
+    writeFileSync(join(dir, rel), body);
+  }
+};
+const NOT_EXACT = (x) => new RegExp(`not an exact docs/src/<path>\\.md page: ${x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+for (const [name, basis, why] of [
+  ['a .bak suffix on an existing page (the .bak file does not exist)', 'see docs/src/gllvmtmb-parity.md.bak', NOT_EXACT('docs/src/gllvmtmb-parity.md.bak')],
+  ['a .bak file that exists', 'docs/src/real.md.bak', NOT_EXACT('docs/src/real.md.bak')],
+  ['an .mdx suffix', 'docs/src/gllvmtmb-parity.mdx', NOT_EXACT('docs/src/gllvmtmb-parity.mdx')],
+  ['a tilde suffix', 'docs/src/gllvmtmb-parity.md~', NOT_EXACT('docs/src/gllvmtmb-parity.md~')],
+  ['a trailing slash', 'docs/src/gllvmtmb-parity.md/', NOT_EXACT('docs/src/gllvmtmb-parity.md/')],
+  ['an existing .json file under docs/src', 'docs/src/assets/x.json', NOT_EXACT('docs/src/assets/x.json')],
+  ['an existing .txt file under docs/src', 'see docs/src/notes.txt', NOT_EXACT('docs/src/notes.txt')],
+  ['an existing .jl file under docs/src', 'see docs/src/code.jl', NOT_EXACT('docs/src/code.jl')],
+  ['an existing .toml file under docs/src', 'see docs/src/cfg.toml', NOT_EXACT('docs/src/cfg.toml')],
+  ['a "./" prefix', './docs/src/gllvmtmb-parity.md', NOT_EXACT('./docs/src/gllvmtmb-parity.md')],
+  ['a "../" prefix', '../docs/src/gllvmtmb-parity.md', NOT_EXACT('../docs/src/gllvmtmb-parity.md')],
+  ['a directory prefix', 'other/docs/src/gllvmtmb-parity.md', NOT_EXACT('other/docs/src/gllvmtmb-parity.md')],
+  ['an absolute prefix', '/abs/docs/src/gllvmtmb-parity.md', NOT_EXACT('/abs/docs/src/gllvmtmb-parity.md')],
+  ['a letter before docs', 'xdocs/src/gllvmtmb-parity.md', NOT_EXACT('xdocs/src/gllvmtmb-parity.md')],
+  ['a URL', 'https://example.org/docs/src/gllvmtmb-parity.md', NOT_EXACT('//example.org/docs/src/gllvmtmb-parity.md')],
+  ['a ".." segment that resolves back to an existing page', 'docs/src/../src/gllvmtmb-parity.md', NOT_EXACT('docs/src/../src/gllvmtmb-parity.md')],
+  ['a ".." segment after a directory', 'docs/src/sub/../gllvmtmb-parity.md', NOT_EXACT('docs/src/sub/../gllvmtmb-parity.md')],
+  ['a "." segment', 'docs/src/./gllvmtmb-parity.md', NOT_EXACT('docs/src/./gllvmtmb-parity.md')],
+  ['a doubled slash', 'docs/src//gllvmtmb-parity.md', NOT_EXACT('docs/src//gllvmtmb-parity.md')],
+  ['the directory only', 'see docs/src/', NOT_EXACT('docs/src/')],
+  ['a no-break space after the page', 'docs/src/gllvmtmb-parity.md' + String.fromCharCode(0xa0), /must cite a docs\/src\/\.\.\. file; not an exact/],
+]) {
+  test(`C6 exact page: a KEPT_AS_JULIA_EXTRA basis with ${name} is unsigned_decision and fails`, () => {
+    const r = runTree(({ dir, ...rest }) => { EXACT_TREE({ dir }); c6Items([kept({ basis })])({ dir, ...rest }); }, 'C6');
+    assert.equal(r.code, 0, r.stdout);
+    assert.match(r.stdout, /C6_NOT_MET$/m, basis);
+    assert.match(r.stdout, /invalid_decision=none /);
+    assert.match(r.stdout, /unsigned_decision=julia-export\/doc\(KEPT_AS_JULIA_EXTRA basis (?:must cite a docs\/src\/\.\.\. file|cites )/, r.stdout);
+    assert.match(r.stdout, why, r.stdout);
+  });
+}
+test('C6 exact page: a good citation beside a malformed one still fails, naming the malformed one', () => {
+  for (const basis of ['docs/src/gllvmtmb-parity.md and docs/src/gone.md.bak', 'docs/src/gllvmtmb-parity.md and ./docs/src/gllvmtmb-parity.md', 'docs/src/ and docs/src/gllvmtmb-parity.md']) {
+    const r = runTree(({ dir, ...rest }) => { EXACT_TREE({ dir }); c6Items([kept({ basis })])({ dir, ...rest }); }, 'C6');
+    assert.match(r.stdout, /C6_NOT_MET$/m, basis);
+    assert.match(r.stdout, /KEPT_AS_JULIA_EXTRA basis cites [^()]*, which is not an exact docs\/src\/<path>\.md page\)/, `${basis}: ${r.stdout}`);
+  }
+});
+test('C6 exact page: pages are still accepted when the path stands alone, in punctuation or markdown, or with a fragment or line number', () => {
+  for (const basis of [
+    'docs/src/gllvmtmb-parity.md', '(docs/src/gllvmtmb-parity.md)', '`docs/src/gllvmtmb-parity.md`', 'docs/src/gllvmtmb-parity.md:12',
+    'see docs/src/gllvmtmb-parity.md.', '[extras](docs/src/gllvmtmb-parity.md#x)', 'docs/src/gllvmtmb-parity.md;docs/src/sub/deep.md',
+    'docs/src/sub/deep.md', 'documented in\ndocs/src/gllvmtmb-parity.md\nand elsewhere', 'a "docs/src/gllvmtmb-parity.md" b', "'docs/src/gllvmtmb-parity.md'",
+  ]) {
+    const r = runTree(({ dir, ...rest }) => { EXACT_TREE({ dir }); c6Items([kept({ basis })])({ dir, ...rest }); }, 'C6');
+    assert.match(r.stdout, /C6_MET$/m, `${JSON.stringify(basis)}: ${r.stdout}`);
+  }
+});
+test('C6 exact page: the exact-path rule holds in git mode too (git cat-file at the ref)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'true-parity-c6exact-'));
+  try {
+    cpSync(join(FIXTURES, 'base'), dir, { recursive: true });
+    EXACT_TREE({ dir });
+    writeFileSync(join(dir, L, 'reverse-gap.json'), JSON.stringify([
+      kept(), kept({ source_id: 'julia-export/bak', basis: 'docs/src/gllvmtmb-parity.md.bak' }),
+      kept({ source_id: 'julia-export/json', basis: 'docs/src/assets/x.json' }), kept({ source_id: 'julia-export/dotslash', basis: './docs/src/gllvmtmb-parity.md' }),
+    ]));
+    execFileSync('git', ['init', '-q'], { cwd: dir });
+    execFileSync('git', ['-c', 'user.email=t@t.invalid', '-c', 'user.name=t', 'add', '-A'], { cwd: dir });
+    execFileSync('git', ['-c', 'user.email=t@t.invalid', '-c', 'user.name=t', 'commit', '-q', '-m', 'fixture'], { cwd: dir });
+    const r = runGit(dir, 'C6');
+    assert.match(r.stdout, /C6_NOT_MET$/m);
+    for (const id of ['bak', 'json', 'dotslash']) assert.match(r.stdout, new RegExp(`julia-export/${id}\\(KEPT_AS_JULIA_EXTRA basis must cite a docs/src/\\.\\.\\. file; not an exact`), id);
+    assert.doesNotMatch(r.stdout, /julia-export\/doc\(/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode too (resolved with git cat-file at the ref)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'true-parity-c6git-'));
   try {
@@ -1412,6 +1921,10 @@ test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode to
       // The C6 decisions file names the script that wrote it and, for a documented Julia extra, the docs/src
       // pages that render it; the assembler requires both in the tree.
       cpSync(join(REPO_ROOT, 'docs', 'src'), join(tmp, 'docs', 'src'), { recursive: true });
+      cpSync(join(REPO_ROOT, 'src'), join(tmp, 'src'), { recursive: true });
+      const approvalRecord = join('docs', 'dev-log', 'decisions', '2026-10-17-p1-c6-and-c3-c4-contract-approval.md');
+      mkdirSync(dirname(join(tmp, approvalRecord)), { recursive: true });
+      cpSync(join(REPO_ROOT, approvalRecord), join(tmp, approvalRecord));
       const decisionsPath = join(REPO_ROOT, LEDGER_REL, 'reverse-gap-decisions.json');
       if (existsSync(decisionsPath)) {
         const gen = JSON.parse(readFileSync(decisionsPath, 'utf8')).generator;

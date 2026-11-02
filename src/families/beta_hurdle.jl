@@ -213,10 +213,11 @@ function residuals(fit::BetaHurdleFit, Y::AbstractMatrix{<:Real};
             d = Beta(μ * φ, (1 - μ) * φ)
             yc = clamp(float(Y[t, s]), 1e-6, 1 - 1e-6)
             u  = (1 - πt) + πt * cdf(d, yc)
+            cu = πt * ccdf(d, yc)
+            R[t, s] = _ds_z(u, u, cu, cu, 1.0)
         else
-            u = (1 - πt) * rand(rng)
+            R[t, s] = _ds_z(0.0, 1 - πt, 1.0, πt, rand(rng); lmass = log1p(-πt))
         end
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
     end
     return R
 end
