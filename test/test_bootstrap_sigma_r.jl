@@ -1019,7 +1019,11 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         @test !f0.converged && f0.n_iter == 500                      # pins the cause (stock cap)
         _, refit = GLLVModels._bsig_setup(f0, 1, nothing, nb_, Xb, nothing)
         fb = _quiet(() -> refit(Yb))                                  # the driver's built-in refit
-        @test fb.converged
+        # Not gated on fb.converged: the refit needs ~1750 of its 2000 iterations on a flat ridge, so whether the
+        # relative f_tol test fires before the cap depends on the platform's floating-point path (observed to fail
+        # intermittently on Julia 1.13 CI, never on 1.10 or on Totoro with Julia 1.12). What the testset pins is that
+        # the built-in refit options are active (n_iter beyond the stock 500) and that the fit reaches R's optimum.
+        @test fb.n_iter > f0.n_iter
         @test fb.logLik >= f0.logLik
         @test isapprox(fb.logLik, -1422.97095347239; atol = 1e-4)     # the external (R) optimum
     end
