@@ -49,6 +49,82 @@ driver covers only the `Sigma` entries at GLLVModels.jl's single site-level tier
 accepted-and-ignored. The driver makes `O(p²)` bootstrap runs. This is
 practical for a small number of responses and expensive for many responses.
 
+## `bootstrap_Sigma_r`: the pinned-R bootstrap behaviour
+
+`bootstrap_Sigma_r` follows R's `bootstrap_Sigma()` (gllvmTMB commit
+`9539352f6`) more closely than the legacy `bootstrap_Sigma` above. It is a
+different estimand and a separate function; the legacy driver is unchanged
+and no decision has been made about replacing it. One batch of `n_boot`
+datasets is simulated from the fit, each is refit once, and every requested
+summary (`Sigma`, `R`, `communality`, `ICC`) is read from that one refit.
+Bounds are type-7 percentiles of the finite draws. The result is a
+`BootstrapSigmaR`.
+
+Supported fit classes:
+
+- `GllvmFit` with no W tier, no pins, no phylogenetic block and no retained
+  Gaussian record: tier `:B` only (`Sigma_B`, `R_B`, `communality_B`).
+- `TwoLevelFit` (pass `individual`): tiers `:B` and `:W`, plus `ICC_site`.
+- `PrecisionMultivariateFit`: tier `:phy` only (`Sigma_phy`, `R_phy`,
+  `communality_phy`); the tier excludes the residual variance, as in R.
+- `JointPhyloGroupedGaussianFit`: tier `:phy` only, refused unless the original
+  fit converged and its phylogenetic, ordinary and residual covariance
+  components are identified (see below).
+
+Everything else (other fit classes, `K_W > 0` on a `GllvmFit`, a `GllvmFit`
+with a phylogenetic block, `n_cores > 1`) throws an `ArgumentError`. `cross_corr` is always
+skipped. A replicate whose refit throws or does not converge is counted in
+`n_failed` and left out of the percentiles. Defaults mirror R: `n_boot = 999`,
+`conf = 0.95`, `progress = true`; these defaults still need maintainer
+agreement.
+
+A runnable walk-through (call, fields, bounds, warnings, refusals) is on the
+[worked example page](bootstrap-sigma-r-example.md).
+
+Caveats:
+
+- No output has been compared with R. The behaviour target is R's source,
+  not an R run.
+- For a `GllvmFit` with `has_diag = true` and `K_W == 0`, tier `B` is the
+  identified total `sigma_y_site(fit)`, which includes the residual
+  variance. That this equals R's unit tier rests on a Julia comment in
+  `extractors.jl`, and is unverified against R.
+- For `has_diag = false`, `communality_B` is exactly 1 with a zero-width
+  interval.
+- The capability row stays unbound: no row, score or tolerance changes.
+
+### The `:phy` tier for `JointPhyloGroupedGaussianFit`
+
+Each replicate redraws the phylogenetic effect and, for every ordinary
+grouping term, one independent draw per group through the stored incidence
+matrix; loadings, fixed effects and variances are held at the fit. The
+phylogenetic part of the response is the only tier reported:
+`Sigma_phy = LL' + diag(unique)` contains neither the residual variance nor any
+ordinary-term variance. B and W are dropped with an `@info`: R would report B/W
+tiers for a comparable multi-tier fit, but how this class's ordinary terms map
+to R's B/W has not been verified, so Julia does not bootstrap them.
+
+Deviations from R, all reported on the result (`result.diagnostics`):
+
+- A replicate counts as failed (in `n_failed`, excluded from the percentiles)
+  when the refit throws, does not converge, or is not component-identified.
+  R's rule is convergence only, so failure rates are not comparable with R's.
+- A converged replicate with a non-positive-definite Hessian is kept, as in R.
+  The number of such replicates is reported, and a warning is issued when the
+  original fit's Hessian is not positive definite. In the pre-run these
+  replicates were 0% to 71% of the converged ones (33.7% and 71.4% in the two
+  explicit-unique fixtures), and they often have a variance on its boundary, so
+  percentile ends can be truncated there.
+
+Evidence is structural plus a Julia descriptive pre-run only: six fixtures, one
+seed each, 200 replicates, in which 0% to 2.5% of replicates failed. With 200
+replicates a count of 5 does not exclude a true failure rate above 5%. The
+fixture refits used `g_tol` between 1e-5 and 2e-4 and at most 200 iterations.
+No output has been compared with R; there is no R parity claim. Several
+configurations are untested in a real refit: more than one ordinary term, rank
+above 1, `:unit_obs` and `:cluster2` terms, covariates beyond trait intercepts,
+larger and unbalanced trees.
+
 ## `standard_errors`: an eager wrapper
 
 `standard_errors(fit, Y)` is a thin wrapper around `confint(fit; y=Y, ...)`,
@@ -86,6 +162,8 @@ forwarding call and is documented here for migration.
 ```@docs
 latent_score_sd
 bootstrap_Sigma
+bootstrap_Sigma_r
+BootstrapSigmaR
 standard_errors
 tmbprofile_wrapper
 profile_curve_targets
