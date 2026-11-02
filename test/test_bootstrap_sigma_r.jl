@@ -372,6 +372,36 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         @test log.n[] == n_ok                                   # no refusal triggered a refit
     end
 
+    @testset "10b. guard and result-shape gaps (mutation review 2026-11-02)" begin
+        stubf = (yb; kw...) -> fit
+        err(g) = try g(); nothing catch e; e end
+        # more groups than nindiv is refused (the guard is `==`, not `>=`); fewer is covered in tests 12 and 21
+        t30 = _mk2()
+        e = err(() -> _bsig(t30; individual = repeat(1:31, inner = 3), n_boot = 2, seed = 1, progress = false,
+                            _refit = (yb, i; kw...) -> t30))
+        @test e isa ArgumentError && occursin("has 31 groups but the fit has nindiv = 30", e.msg)
+        # control: exactly nindiv groups is accepted
+        @test _quiet(() -> _bsig(t30; individual = _IND, n_boot = 2, seed = 1, progress = false,
+                                 _refit = (yb, i; kw...) -> t30)).n_boot == 2
+        # a fit whose only phylogenetic part is the unique variance (K_phy = 0) is refused too
+        Σp = Matrix(0.5I(p)) + fill(0.3, p, p)
+        fpu = fit_gaussian_gllvm(y; K = 1, K_phy = 0, has_phy_unique = true, Σ_phy = Σp)
+        @test fpu.model.has_phy_unique && fpu.model.K_phy == 0
+        e = err(() -> _bsig(fpu; y = y, n_boot = 2, seed = 1, progress = false, _refit = stubf))
+        @test e isa ArgumentError && occursin("phylogenetic", e.msg)
+        # boot_median is an empty NamedTuple by design (docstring), for both fit classes
+        r = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 1, progress = false, _refit = stubf))
+        @test r.boot_median == NamedTuple() && isempty(r.boot_median)
+        r2 = _quiet(() -> _bsig(t30; individual = _IND, what = :Sigma, n_boot = 3, seed = 1, progress = false,
+                                _refit = (yb, i; kw...) -> t30))
+        @test r2.boot_median == NamedTuple()
+        # coverage_ceiling = (n_boot - 1) / (n_boot + 1) for a TwoLevelFit as well
+        @test r2.coverage_ceiling ≈ 2 / 4
+        r3 = _quiet(() -> _bsig(t30; individual = _IND, what = :Sigma, n_boot = 9, seed = 1, progress = false,
+                                _refit = (yb, i; kw...) -> t30))
+        @test r3.coverage_ceiling ≈ 8 / 10
+    end
+
     @testset "11. simulator draws have the fitted covariance (empirical, large n)" begin
         # GllvmFit: batch covariance within MC tolerance of ΛΛ' + σ_eps^2 I (hand-built, not _derived_site_cov)
         ys = Matrix{Float64}[]
@@ -379,7 +409,7 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
                            _refit = (yb; kw...) -> (push!(ys, copy(yb)); fit)))
         A = fit.pars.Λ * fit.pars.Λ' + fit.pars.σ_eps^2 * I
         Yall = hcat(ys...)
-        @test maximum(abs, cov(Yall') .- A) < 0.05
+        @test maximum(abs, cov(Yall') .- A) < 0.02                 # clean max ~0.004; a +2% scale (+4% variance) gives ~0.034
         @test maximum(abs, mean(Yall, dims = 2)) < 0.05            # zero mean with no X
         # a non-trivial control: the covariance is NOT ΛΛ' alone
         @test maximum(abs, cov(Yall') .- fit.pars.Λ * fit.pars.Λ') > 0.15
@@ -399,6 +429,14 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         @test maximum(abs, cross .- (t2.Σ_B .+ t2.Σ_W)) > 0.2     # control: distinguishes B from B + W
     end
 
+    @testset "11b. real-refit calibration: replicate Sigma_B is centred on the fitted Sigma_B (not on a rescaled one)" begin
+        # built-in refit (no stub), n_sites = 2000 so the finite-sample bias of the MLE is negligible.
+        # Measured 2026-11-02: clean trace ratio - 1 about +0.01 at n_boot = 30; a +2% simulator scale gives about +0.04.
+        rc = _quiet(() -> _bsig(fit; n_sites = 2000, what = :Sigma, n_boot = 200, seed = 3, keep_draws = true, progress = false))
+        @test rc.n_failed == 0
+        tr_draws = mean(tr(d.Sigma_B) for d in rc.draws)
+        @test abs(tr_draws / tr(rc.point_est.Sigma_B) - 1) < 0.02
+    end
     @testset "12. TwoLevelFit (stretch): tiers, ICC, order, stubs" begin
         f = _mk2(1.0, 1.7)
         stub = (yb, i; kw...) -> _mk2(1.0, 1.7)
@@ -964,7 +1002,10 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         # n_sites between 2 and p: accepted, and the all-NaN outcome is announced
         rn, lgn = _logged(() -> _bsig(fit; n_sites = 3, what = :Sigma, n_boot = 3, seed = 1, progress = false), min_level = Logging.Warn)
         @test size(rn.ci_lower.Sigma_B) == (p, p) && rn.n_boot == 3
-        @test (rn.n_failed > 0) == any(occursin("were lost", m) for m in _warns(lgn))   # loss, if any, is announced
+        # 3 sites < p = 4: the refit of every replicate is not converged, so all 3 are failed, every bound is NaN, and
+        # the loss is announced (measured on this fixture and seed 2026-11-02)
+        @test rn.n_failed == 3 && all(isnan, rn.ci_lower.Sigma_B) && all(isnan, rn.ci_upper.Sigma_B)
+        @test any(occursin("3 of 3 replicates were lost", m) && occursin("3 failed refits", m) for m in _warns(lgn))
     end
     @testset "25. has_diag K=2 built-in refit reaches the optimum, not the 500-iteration cap" begin
         # Replicate 65 of bootstrap seed 101 on the has_diag K=2 fixture (n = 200 units, p = 6, trait intercepts).
@@ -978,7 +1019,11 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         @test !f0.converged && f0.n_iter == 500                      # pins the cause (stock cap)
         _, refit = GLLVModels._bsig_setup(f0, 1, nothing, nb_, Xb, nothing)
         fb = _quiet(() -> refit(Yb))                                  # the driver's built-in refit
-        @test fb.converged
+        # Not gated on fb.converged: the refit needs ~1750 of its 2000 iterations on a flat ridge, so whether the
+        # relative f_tol test fires before the cap depends on the platform's floating-point path (observed to fail
+        # intermittently on Julia 1.13 CI, never on 1.10 or on Totoro with Julia 1.12). What the testset pins is that
+        # the built-in refit options are active (n_iter beyond the stock 500) and that the fit reaches R's optimum.
+        @test fb.n_iter > f0.n_iter
         @test fb.logLik >= f0.logLik
         @test isapprox(fb.logLik, -1422.97095347239; atol = 1e-4)     # the external (R) optimum
     end
