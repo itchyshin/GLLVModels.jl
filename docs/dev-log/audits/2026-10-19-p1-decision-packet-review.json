@@ -1,0 +1,19 @@
+{
+  "time_utc": "2026-10-19T14:52:52.994859+00:00",
+  "packet_sha256": "78f2a517e6da7438bc5559c5a12e73690a2460e5412b475b9ecc1fd2a6736f0e",
+  "audit_sha256": "805461b8e43c2c6e5d506af9fb4c6d16cd055e60cd646f99ea6e74af64957b5b",
+  "reviewer": "f_audit_final_review",
+  "verdict": "PASS for source-backed coverage and scope of exact13 rows",
+  "coverage": "Exact13 IDs; all13 primary source fingerprints independently verified against baseline d9afa090; all local links resolve; audit binds current packet.",
+  "limits": [
+    "Not final P1 panel",
+    "No fresh fit or runtime evidence",
+    "Packet not landed in repo"
+  ],
+  "historical_packet_status": "Packet ending says recheck pending; this later detached receipt resolves that state without changing the audited packet hash.",
+  "filed_packet_sha256": "47065903efd0222613b39b0082e328a346715f3ac39a0720a550383214863045",
+  "filed_audit_sha256": "7d36b0aae4a374aabc4754af1b32e3e60bb7fe76348b6454676b8354b8816ccf",
+  "filed_changes": "Packet links and measured checkpoint/main status; source audit removes bold label openers and two uses of harness. Scientific source fingerprints retained.",
+  "filed_review": "PASS bounded exact-file recheck by Gauss; exact13, scientific fields and fingerprints preserved; all16 Markdown links resolve; not final P1 panel",
+  "filed_review_hashes_verified": true
+}

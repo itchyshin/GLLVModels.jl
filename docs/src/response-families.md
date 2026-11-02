@@ -682,16 +682,18 @@ Note that you must supply `η` yourself: `LognormalFit` defines no `getLV`,
 `predict`, or `link_residual` method, so latent scores and fitted linear
 predictors are not extracted from the fit object on this engine.
 
-**Surface limits.** There is no Wald confidence-interval route —
-`LognormalFit` is not in the native `confint` family union — and the R bridge
-rejects CI requests loudly, requiring `ci_method = "none"`. On the bridge,
+**Surface limits.** Natively, `confint(fit, Y; method)` covers `LognormalFit`,
+but the R bridge rejects CI requests loudly, requiring `ci_method = "none"`. On the bridge,
 lognormal is a **no-X** family: fixed-effect `X`, `X_lv`, and missing-response
 masks are all fenced as follow-ups, and bridge `scores` come back empty with
 `Sigma` / `correlation` assembled from the shared block `ΛΛᵀ` alone
 (communality `1`). `fit_lognormal_gllvm` itself declares no `X` keyword; it
 forwards remaining keywords to `fit_gaussian_gllvm`, but no test exercises an
 X-covariate route through the lognormal entry point, so treat it as
-unsupported.
+unsupported. It refuses `mask` and `lambda_constraint`: a `LognormalFit` does not
+record pins, so its intervals would treat pinned loadings as parameters. Fit a
+confirmatory model to the centred `log(Y)` with `fit_gaussian_gllvm(...;
+lambda_constraint = M)` instead.
 
 ### Tweedie — `fit_tweedie_gllvm`
 
@@ -1120,6 +1122,7 @@ fit = fit_zip_gllvm(Y;             K = 2)   # counts; structural zero × Poisson
 fit = fit_zip_gllvm_cov(Y; X = X,  K = 2)   # ZIP + shared site-X (separate γz/γc; Λz=0)
 fit = fit_zinb_gllvm(Y;            K = 2)   # counts; structural zero × NB2, shared r
 fit = fit_zinb_gllvm_cov(Y; X = X, K = 2)   # ZINB + shared site-X (separate γz/γc; Λz=0; shared r)
+# iterations ≤ 0 evaluates the start only and returns converged = false
 fit = fit_zib_gllvm(Y;             K = 2, N = N)  # binomial counts; structural zero × Binomial(N, μ)
 fit = fit_gllvm(Y; family = OrderedBeta(), K = 2)          # proportions; 0/1 masses + Beta interior
 fit = fit_gllvm(Y; family = OrderedBeta(0.0, 2.0, 3.0), K = 2)  # same — marker tags never read

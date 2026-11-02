@@ -184,7 +184,7 @@ is refused by name. The default is still `method = :wald`.
 | `parm` | quantity | `:wald` | `:profile` | `:bootstrap` |
 |--------|----------|---------|------------|--------------|
 | `"communality[t]"` | `communality(fit)[t]` | `communality_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
-| `"icc[t]"`, `"repeatability[t]"` | `extract_ICC_site(fit)[t]` | `icc_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"icc[t]"`, `"repeatability[t]"` | `extract_ICC_site(fit)[t]` | `icc_wald_ci` (logit) | withdrawn (refused) | `bootstrap_ci_derived` |
 | `"rho[i,j]"`, `"correlation[i,j]"` | `correlation(fit)[i,j]` | `correlation_wald_ci` (Fisher-z) | `profile_ci_derived` | `bootstrap_ci_derived` |
 | `"proportion:<component>[t]"` | `proportions(fit; component)[t]` | `icc_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
 | `"phylo_signal[t]"` | `phylo_signal(fit)[t]` | `phylo_signal_wald_ci` (logit) | `profile_ci_phylo_signal` | `bootstrap_ci_derived` |
@@ -203,7 +203,9 @@ rho and proportion; the profile route here is the existing penalty-based
 `profile_ci_derived` and is exploratory. A fit made with `lambda_constraint`
 pins takes `method = :wald` only, and its Wald intervals use the covariance of
 the free parameters, as gllvmTMB's `cov.fixed` does: a pinned loading has
-`se = 0` and `lower = upper = estimate`. See [`confint`](@ref) for the keywords.
+`se = 0` and `lower = upper = estimate`. If that information is not positive
+definite, every SE and bound is `NaN`, the pinned loadings' included, as in
+gllvmTMB's `loading_ci()`. See [`confint`](@ref) for the keywords.
 
 ### Confirmatory fits and `loading_profile` (D3 Stage 1)
 

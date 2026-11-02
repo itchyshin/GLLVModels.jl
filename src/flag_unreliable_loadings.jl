@@ -29,8 +29,9 @@ Wald intervals on the raw loading scale (R's default `method = "wald"`,
 parameters: pinned loadings are not parameters, so their rows and columns are
 removed before the information is inverted, as in R's `sd_report\$cov.fixed`. A
 pinned entry has `se = 0` and `lower = upper = estimate`. If the reduced
-information is not positive definite, `se`, `lower` and `upper` are `NaN`,
-`pd_hessian = false`, and every `unreliable` is `missing` (R returns `NA`). Only
+information is not positive definite, `se`, `lower` and `upper` are `NaN` in every
+row, the pinned rows included, `pd_hessian = false`, and every `unreliable` is
+`missing` (R's `loading_ci()` returns `NA` for every row). Only
 `level = :unit`, the shared tier, is available, because `lambda_constraint` fits
 have no other loading tier.
 
@@ -98,8 +99,10 @@ function flag_unreliable_loadings(fit::GllvmFit, y::AbstractMatrix;
     for k in 1:K, i in 1:p
         r += 1
         est = Λ[i, k]
+        # A pinned entry is exact, but like R's loading_ci() it gets se 0 only when the
+        # free information is positive definite; otherwise every row is NaN (#794).
         se = if pinned[i, k]
-            0.0
+            pd ? 0.0 : NaN
         elseif pd
             v = V[pos[_lambda_b_theta_index(fit, i, k)], pos[_lambda_b_theta_index(fit, i, k)]]
             v > 0 ? sqrt(v) : NaN

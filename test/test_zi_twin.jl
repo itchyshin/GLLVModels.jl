@@ -203,17 +203,18 @@ end
             end
         end
 
-        # Why the R names do not route to Julia's own ZIPoisson fitter: its Laplace
-        # log-det uses the Fisher count weight, so at R's optimum its marginal is not
-        # R's logLik. If that gap is ever closed, this test fails and the R name can be
-        # re-pointed at the existing route.
+        # Julia's own ZIPoisson Laplace log-det used the Fisher count weight, so at R's
+        # optimum its marginal was not R's logLik (gap > 1e-4), which is why the R names
+        # route to their own fitter. #739 moved it to the observed count curvature, so
+        # the gap is closed (measured 4.3e-9). The R names still use their own route;
+        # re-pointing them at the existing route is a separate decision.
         fx = fixture["zi_poisson"]; r = fx["r_reference"]
         Y, _ = _load_zi_csv(joinpath(_ZI_FIXTURE_DIR, fx["data_file"]), p, Int(fx["n_unit"]))
         ll_fisher = zip_marginal_loglik_laplace(Float64.(Y), reshape(Float64.(r["Lambda_B"]), p, 1),
                                                 Float64.(r["logit_zi"]), Float64.(r["beta"]))
         gap = abs(ll_fisher - Float64(r["loglik"]))
         @info "existing ZIPoisson route at R's optimum" gap
-        @test gap > 1e-4
+        @test gap < 1e-6
     end
 end
 

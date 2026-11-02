@@ -273,11 +273,16 @@ function _profile_refit_with_fixed(fit::GllvmFit, i::Integer, c::Real,
         return (NaN, false, θ_red0)
     end
 
-    nll_min = Optim.minimum(res)
-    if !isfinite(nll_min)
+    # `ok` is the refit's own verdict (#762): a finite minimum from an
+    # iteration-capped LBFGS run is too low, which inflates the deviance and
+    # narrows the interval while `profile_ci` still labels it `:profile`. Same
+    # rule as `_family_profile_refit` (#504); a failed refit gives NaN so the
+    # bracket treats it as failed.
+    ll_c, converged, _ = _fit_verdict(res)
+    if !(converged && isfinite(ll_c))
         return (NaN, false, θ_red0)
     end
-    return (-nll_min, true, Optim.minimizer(res))
+    return (ll_c, true, Optim.minimizer(res))
 end
 
 # Bracket-then-root-find on one side (lower if Δ_init < 0, upper if > 0).

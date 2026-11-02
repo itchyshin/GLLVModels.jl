@@ -488,6 +488,7 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
+    Λ0 = _lower_triangular_loadings(Λ0)   # #865: pack_lambda truncates the SVD's upper triangle
     θ0 = has_disp ? vcat(β0, zeros(q), pack_lambda(Λ0), log(_cov_disp_init(family))) :
                     vcat(β0, zeros(q), pack_lambda(Λ0))
     function negll(θ)

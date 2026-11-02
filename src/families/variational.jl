@@ -127,6 +127,7 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, n = size(Y)
+    _check_response_support(:count, Y, nothing; caller = "fit_poisson_gllvm_va")
     rr = rr_theta_len(p, K)
     link = LogLink()
 

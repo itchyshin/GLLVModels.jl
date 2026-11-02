@@ -300,6 +300,7 @@ function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
+    _check_response_support(:binomial, Y, nothing; caller = "fit_binomial_gllvm_va", N = Nm)
     rr = rr_theta_len(p, K)
 
     # warm start: empirical link-scale intercepts + SVD (PPCA-like) loadings

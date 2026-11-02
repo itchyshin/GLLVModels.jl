@@ -10,14 +10,17 @@ from __future__ import annotations
 import copy
 import json
 import re
+import hashlib
 import shutil
 import sys
 import tempfile
+import subprocess
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import core070_behaviour_receipts as B  # noqa: E402
+import first_seven_behaviour_derive as F7  # noqa: E402
 
 A = B.assembler()
 ROOT = B.ROOT
@@ -65,6 +68,28 @@ SIGMA_B = "CORE070-INFERENCE-SIGMA-B-CI-METHOD-ROUTE"
 @test
 def tracked_receipts_and_table_are_current():
     assert B.check_problems() == [], B.check_problems()
+
+
+@test
+def raw_source_patch_is_checked_against_launch_commit():
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.invalid"], check=True)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "P1 test"], check=True)
+        (repo / "src").mkdir()
+        source = repo / "src" / "model.jl"
+        source.write_text("model = 1\n")
+        subprocess.run(["git", "-C", str(repo), "add", "src/model.jl"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-qm", "launch source"], check=True)
+        launch = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], check=True,
+                                capture_output=True, text=True).stdout.strip()
+        patch = b""  # The captured checkout was clean at launch.
+        source.write_text("model = 2\n")
+        subprocess.run(["git", "-C", str(repo), "add", "src/model.jl"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-qm", "later source change"], check=True)
+        assert F7.julia_source_patch_problem(repo, launch, patch) is None
+        assert F7.julia_source_patch_problem(repo, launch, b"tampered") is not None
 
 
 @test
@@ -392,15 +417,20 @@ def every_entry_is_scoped_and_both_labels_are_listed_in_one_class():
     label equal to a canonical, and every entry carries source_id (case ids are shared across rows)."""
     index = A.behaviour_equivalence(ROOT)
     seen = 0
+    first_seven_seen = set()
     for cid, (path, rec) in B.tracked_receipts().items():
         for e in (rec.get("behaviour") or {}).get("cases", []):
             seen += 1
+            if e.get("source_id") in B.FIRST7_SOURCE_IDS:
+                first_seven_seen.add(e["source_id"])
             assert e.get("source_id"), f"{path.name}: entry without source_id"
             for a, b in zip(A.as_list(e["r_observed"]), A.as_list(e["julia_observed"])):
                 rc, jc = A._label_class(index, e["kind"], "r", a), A._label_class(index, e["kind"], "julia", b)
                 assert rc is not None and jc is not None, f"{e['source_id']}: {a!r} / {b!r} not both listed in a class"
                 assert rc[1] == jc[1], f"{e['source_id']}: {a!r} and {b!r} are in different classes"
-    assert seen == 57, seen  # 49 bound inference rows + CI-ROUTE-009 + 7 aghq control rows
+    expected = set(B.FIRST7_SOURCE_IDS)
+    assert first_seven_seen == expected, first_seven_seen
+    assert seen == 63, seen  # Existing 57 entries plus the residual and five ISDM rows
 
 
 @test
@@ -443,6 +473,324 @@ def the_writers_citers_count_every_row_that_lists_a_case_id():
 def citation_note_claims_no_rerun():
     note = B.equivalence_doc()["citation_note"]
     assert "re-run" not in note and "rerun" not in note and "review" not in note, note
+
+
+@test
+def first_seven_positive_control_and_signed_extra_source_mismatch():
+    F7.self_test()
+
+
+@test
+def first_seven_raw_reader_rejects_incomplete_case_sets():
+    with tempfile.TemporaryDirectory() as t:
+        p = Path(t) / "raw.tsv"
+        p.write_text("case_id\toutcome\tclass\tactual\tmessage\tengine\tpin\n"
+                     "CORE070-FIRST7-ISDM-COUNT\tERROR\tArgumentError\t\tbad\tJulia\tP1\n")
+        try:
+            F7.tsv(p, "Julia")
+        except ValueError as e:
+            assert "exactly the six" in str(e)
+        else:
+            raise AssertionError("incomplete raw fixture was accepted")
+
+
+@test
+def first_seven_extra_source_keeps_the_early_r_guard_distinct():
+    cid = "CORE070-FIRST7-ISDM-EXTRA-SOURCE"
+    r = {"outcome": "ERROR", "class": "simpleError", "actual": "",
+         "message": "length(family) must match the number of distinct levels"}
+    j = {"outcome": "ERROR", "class": "ArgumentError", "actual": "",
+         "message": "Unknown source: unknown"}
+    assert F7.label(cid, r, "R") == "guard:family-length"
+    assert F7.label(cid, j, "Julia") == "guard:unknown-source"
+    assert F7.label(cid, r, "R") != F7.label(cid, j, "Julia")
+
+
+@test
+def first_seven_refuses_wrong_calls_and_wrapper_success():
+    row = {"outcome": "RETURN", "class": "IsdmSources", "actual": "returned",
+           "message": "", "call": "isdm_sources(count=Poisson(), detect=logit)"}
+    assert F7.label("CORE070-FIRST7-ISDM-WRAPPER-LAW", row, "Julia") == "wrapper-law:wrong-outcome"
+    assert "isdm_sources" in row["call"]
+    assert F7.CALL_FRAGMENTS["CORE070-FIRST7-ISDM-WRAPPER-LAW"] == "isdm_sources"
+
+
+@test
+def first_seven_panel_crosses_every_trait_source_and_unit():
+    # Execute only the data-construction spans. No package loading or fit.
+    import subprocess, os
+    r = (ROOT / "tools/first_seven_behaviour_R.R").read_text()
+    j = (ROOT / "tools/first_seven_behaviour_J.jl").read_text()
+    rpanel = r[r.index("panel <- function()"):r.index("\npanel_input_rows <- function")]
+    jpanel = j[j.index("function panel()"):j.index("\nformula =")]
+    rcode = rpanel + '\nd <- panel(); cat(paste(paste(d$trait, d$isdm_source, as.character(d$cell_id), sprintf("%.8f", d$value), sprintf("%.8f", d$log_support), sep="\\t"), collapse="\\n"), "\\n", sep="")'
+    jcode = 'using Printf\n' + jpanel + '\nd=panel(); for i in eachindex(d.value); println(join((d.trait[i], d.isdm_source[i], d.unit[i], @sprintf("%.8f", d.value[i]), @sprintf("%.8f", d.log_support[i])), Char(9))); end'
+    env = os.environ.copy(); env.update(OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1", JULIA_NUM_THREADS="4")
+    rscript = "/usr/local/bin/Rscript" if Path("/usr/local/bin/Rscript").exists() else "Rscript"
+    rrows = subprocess.check_output([rscript, "--vanilla", "-e", rcode], text=True, env=env).splitlines()
+    julia = shutil.which("julia") or str(Path.home() / ".juliaup/bin/julia")
+    jrows = subprocess.check_output([julia, "--startup-file=no", "-e", jcode], text=True, env=env).splitlines()
+    cells = [(t, source, unit) for t in ("a", "b") for source in ("count", "detect") for unit in ("u1", "u2")]
+    expected = ["\t".join((t, source, unit, f"{1+i%4 if source == 'count' else i%2:.8f}", f"{0.05+(i-1)*0.05:.8f}")) for i,(t,source,unit) in enumerate(cells, 1)]
+    assert rrows == jrows == expected
+    # These controls would reject the original trait/source-confounded panel.
+    assert len({tuple(row.split("\t")[:3]) for row in rrows}) == 8
+
+
+@test
+def first_seven_provenance_gate_rejects_tampered_library_identity():
+    d = (ROOT / "tools/first_seven_behaviour_derive.py").read_text()
+    assert "loaded marker/NAMESPACE/installed tree differs" in d
+    assert "Julia raw runner digest differs" in d
+    assert "wrong public call" in d
+    case_hash = hashlib.sha256(b"case fixture").hexdigest()
+    assert not F7.matching_fixture_hashes(
+        {"case-a": {"fixture_sha256": case_hash}},
+        {"case-a": {"fixture_sha256": hashlib.sha256(b"other fixture").hexdigest()}})
+
+
+@test
+def first_seven_fixture_hashes_are_required_and_compared_case_by_case():
+    rrows, jrows = {}, {}
+    hashes = {cid: hashlib.sha256(cid.encode()).hexdigest() for cid in F7.CASES}
+    for cid, digest in hashes.items():
+        rrows[cid] = {"fixture_sha256": digest}
+        jrows[cid] = {"fixture_sha256": digest}
+    assert F7.matching_fixture_hashes(rrows, jrows)
+
+    # Reusing one base-panel hash across all rows must fail even though each
+    # engine's set of hashes happens to agree.
+    shared = hashlib.sha256(b"base iSDM panel only").hexdigest()
+    for rows in (rrows, jrows):
+        for row in rows.values():
+            row["fixture_sha256"] = shared
+    assert not F7.matching_fixture_hashes(rrows, jrows)
+
+    for cid, digest in hashes.items():
+        rrows[cid]["fixture_sha256"] = digest
+        jrows[cid]["fixture_sha256"] = digest
+    jrows["CORE070-FIRST7-ISDM-EXTRA-SOURCE"]["fixture_sha256"] = hashlib.sha256(
+        b"unpaired mutation").hexdigest()
+    assert not F7.matching_fixture_hashes(rrows, jrows)
+    del jrows["CORE070-FIRST7-ISDM-EXTRA-SOURCE"]["fixture_sha256"]
+    assert not F7.matching_fixture_hashes(rrows, jrows)
+
+
+@test
+def first_seven_check_auto_fixture_uses_paired_trait_means_and_data():
+    # Run only pure fixture constructors from the two runners. No fit starts.
+    import os, subprocess
+    r = (ROOT / "tools/first_seven_behaviour_R.R").read_text()
+    j = (ROOT / "tools/first_seven_behaviour_J.jl").read_text()
+    rhelper = r[r.index("diagnostic_fixture <- function"):r.index("\n# Full trait")]
+    jhelper = j[j.index("function diagnostic_fixture()"):j.index("\nfunction panel()")]
+    rcode = rhelper + '''
+f <- diagnostic_fixture()
+for (t in seq_len(nrow(f$Y))) cat(paste(sprintf("%.8f", f$Y[t,]), collapse="\\t"), "\\n", sep="")
+cat(paste(sprintf("%.8f", f$X[,1]), collapse="\\t"), "\\n", sep="")
+for (t in seq_len(nrow(f$ordinal))) cat(paste(as.integer(f$ordinal[t,]), collapse="\\t"), "\\n", sep="")
+'''
+    jcode = 'using Printf\n' + jhelper + '''
+f = diagnostic_fixture()
+for t in axes(f.Y,1); println(join((@sprintf("%.8f", f.Y[t,j]) for j in axes(f.Y,2)), Char(9))); end
+println(join((@sprintf("%.8f", f.X[j,1]) for j in axes(f.X,1)), Char(9)))
+for t in axes(f.ordinal,1); println(join((string(f.ordinal[t,j]) for j in axes(f.ordinal,2)), Char(9))); end
+println(join(size(f.trait_X), "x"))
+for t in axes(f.trait_X,1), q in axes(f.trait_X,3)
+    println(join((string(f.trait_X[t,j,q]) for j in axes(f.trait_X,2)), Char(9)))
+end
+'''
+    env = os.environ.copy()
+    env.update(OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1", JULIA_NUM_THREADS="4")
+    rscript = "/usr/local/bin/Rscript" if Path("/usr/local/bin/Rscript").exists() else "Rscript"
+    rrows = subprocess.check_output([rscript, "--vanilla", "-e", rcode],
+                                    text=True, env=env).splitlines()
+    julia = shutil.which("julia") or str(Path.home() / ".juliaup/bin/julia")
+    jrows = subprocess.check_output([julia, "--startup-file=no", "-e", jcode],
+                                    text=True, env=env).splitlines()
+    assert rrows == jrows[:len(rrows)]
+    design_rows = jrows[len(rrows):]
+    assert design_rows[0] == "2x12x2"
+    expected_design = []
+    for trait in range(2):
+        for column in range(2):
+            expected_design.append("\t".join(["1.0" if trait == column else "0.0"] * 12))
+    assert design_rows[1:] == expected_design
+    assert "fit_gaussian_gllvm(diagnostic.Y; K=1, X=diagnostic.trait_X)" in j
+    assert "trait_X = zeros(Float64, 2, n, 2)" in j
+    assert "trait_X[t, :, t] .= 1.0" in j
+    assert "0 + trait + latent(0 + trait | cell_id" in r
+
+    # Hashes must encode each model and its actual case-specific input, and
+    # both runtimes must serialize those inputs identically.
+    rhelpers = r[r.index("diagnostic_fixture <- function"):r.index("\nf <- value ~")]
+    rhash_code = '''
+core070_sha256_file <- function(path) {
+  sub("[[:space:]].*$", "", system2("shasum", c("-a", "256", path), stdout=TRUE)[[1]])
+}
+''' + rhelpers + '''
+d <- panel(); diagnostic <- diagnostic_fixture()
+unknown <- d; unknown$isdm_source[1L] <- "unknown"
+missing_trait <- subset(d, !(trait == "a" & isdm_source == "detect"))
+missing_source <- subset(d, isdm_source == "count")
+h <- case_fixture_hashes(d, diagnostic, unknown, missing_trait, missing_source)
+cat(paste(names(h), unname(h), sep="\\t", collapse="\\n"), "\\n", sep="")
+'''
+    jhelpers = j[j.index("function diagnostic_fixture()"):j.index("\nformula =")]
+    jhash_code = 'using SHA, Printf\nconst IDS = ["CORE070-FIRST7-CHECK-AUTO-RESIDUAL", "CORE070-FIRST7-ISDM-COUNT", "CORE070-FIRST7-ISDM-EXTRA-SOURCE", "CORE070-FIRST7-ISDM-MISSING-IN-TRAIT", "CORE070-FIRST7-ISDM-MISSING-SOURCE", "CORE070-FIRST7-ISDM-WRAPPER-LAW"]\n' + jhelpers + '''
+d=panel(); diagnostic=diagnostic_fixture()
+unknown=merge(d, (isdm_source=["unknown"; d.isdm_source[2:end]],))
+keep_trait=.!((d.trait .== "a") .& (d.isdm_source .== "detect")); missing_trait=(; (k => getproperty(d,k)[keep_trait] for k in propertynames(d))...)
+keep_source=d.isdm_source .== "count"; missing_source=(; (k => getproperty(d,k)[keep_source] for k in propertynames(d))...)
+h=case_fixture_hashes(d, diagnostic, unknown, missing_trait, missing_source)
+for id in IDS; println(id, Char(9), h[id]); end
+'''
+    r_hashes = subprocess.check_output([rscript, "--vanilla", "-e", rhash_code], text=True, env=env).splitlines()
+    j_hashes = subprocess.check_output([julia, "--startup-file=no", "-e", jhash_code], text=True, env=env).splitlines()
+    assert r_hashes == j_hashes
+    assert len({line.split("\t")[1] for line in r_hashes}) == len(F7.CASES)
+
+
+@test
+def first_seven_finalize_snapshots_loaded_deriver_and_rejects_stale_copy():
+    original_run = subprocess.run
+    calls = []
+
+    def fake_git_show(args, **kwargs):
+        calls.append(args[-1])
+        return subprocess.CompletedProcess(args, 0, stdout=f"fixture:{args[-1]}".encode())
+
+    try:
+        F7.subprocess.run = fake_git_show
+        with tempfile.TemporaryDirectory() as td:
+            raw = Path(td)
+            snapshots = F7.snapshot_runners(raw / "runner-snapshots", "fixture-commit")
+            meta = {"raw_directory": str(raw), "runner_snapshots": snapshots,
+                    "runner_sha256": {key: item["sha256"] for key, item in snapshots.items()}}
+
+            derive_snapshot = raw / snapshots["derive"]["path"]
+            assert derive_snapshot.read_bytes() == F7.EXECUTED_DERIVER_SOURCE
+            assert snapshots["derive"]["sha256"] == hashlib.sha256(F7.EXECUTED_DERIVER_SOURCE).hexdigest()
+            assert calls == ["fixture-commit:tools/first_seven_behaviour_R.R",
+                             "fixture-commit:tools/first_seven_behaviour_J.jl"]
+            assert F7.retained_runner_hashes(meta) == {
+                key: item["sha256"] for key, item in snapshots.items()}
+
+            derive_snapshot.write_bytes(derive_snapshot.read_bytes() + b"\n# stale")
+            try:
+                F7.retained_runner_hashes(meta)
+            except ValueError as e:
+                assert "derive runner snapshot is missing or has the wrong digest" in str(e)
+            else:
+                raise AssertionError("mismatched deriver snapshot was accepted")
+    finally:
+        F7.subprocess.run = original_run
+
+
+@test
+def first_seven_fixture_derivation_keeps_positive_and_mismatch_rows_separate():
+    # Synthetic, runner-shaped observations only. These fixtures test the
+    # parser and derivation; they are never emitted as measured receipts.
+    rrows, jrows = {}, {}
+    for cid in F7.CASES:
+        rrows[cid] = {"case_id": cid, "outcome": "RETURN", "class": "fit", "actual": "returned",
+                      "message": "", "call": "public R call", "engine": "R", "pin": "P1",
+                      "package_version": "0.7.1", "oracle_build": "totoro", "openblas_threads": "1",
+                      "omp_threads": "1", "r_version": "4.4", "host": "fixture"}
+        jrows[cid] = {"case_id": cid, "outcome": "RETURN", "class": "IsdmFit", "actual": "true",
+                      "message": "", "call": "public Julia call", "engine": "Julia", "pin": "P1",
+                      "julia_threads": "4", "openblas_threads": "1", "omp_threads": "1",
+                      "glvmodels_commit": "fixture-commit", "julia_version": "fixture", "host": "fixture"}
+    auto = "CORE070-FIRST7-CHECK-AUTO-RESIDUAL"
+    rrows[auto].update(actual="coherent", message="ordinal-probit control status=warn")
+    jrows[auto].update(actual="true", message="ordinal-probit control flagged")
+    extra = "CORE070-FIRST7-ISDM-EXTRA-SOURCE"
+    rrows[extra].update({"outcome": "ERROR", "class": "simpleError", "actual": "",
+                         "message": "length(family) must match the number of distinct levels"})
+    jrows[extra].update({"outcome": "ERROR", "class": "ArgumentError", "actual": "",
+                         "message": "Unknown source: unknown"})
+    wrapper = "CORE070-FIRST7-ISDM-WRAPPER-LAW"
+    for rows in (rrows, jrows):
+        rows[wrapper].update({"outcome": "ERROR", "class": "ArgumentError", "actual": "refused",
+                              "message": "REFUSED: isdm_sources refuses logit law"})
+    for rows in (rrows, jrows):
+        for row in rows.values(): row["public_positive_control"] = "mixed-source-accepted"
+        rows["CORE070-FIRST7-ISDM-COUNT"].update(actual="all-count-nonmixed")
+        rows["CORE070-FIRST7-ISDM-MISSING-IN-TRAIT"].update(outcome="ERROR", message="Response family/link cannot currently vary across rows within a trait.")
+        rows["CORE070-FIRST7-ISDM-MISSING-SOURCE"].update(outcome="ERROR", message="length(family) must match the number of distinct levels")
+    source = json.loads((ROOT / F7.R_SOURCE).read_text())
+    build = json.loads((ROOT / F7.R_BUILD).read_text())
+    commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], check=True,
+                            capture_output=True, text=True).stdout.strip()
+    tree = subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{commit}:src"], check=True,
+                          capture_output=True, text=True).stdout.strip()
+    launch_src_diff = subprocess.run(
+        ["git", "-C", str(ROOT), "diff", "--binary", commit, "--", "src"],
+        check=True, capture_output=True).stdout
+    current_src_diff_sha = hashlib.sha256(launch_src_diff).hexdigest()
+    fixture_hashes = {cid: hashlib.sha256(("fixture:" + cid).encode()).hexdigest() for cid in F7.CASES}
+    for cid, row in rrows.items():
+        row.update(source_marker_sha256=build["marker_sha256"],
+                   source_tree_sha256=source["source_tree_sha256"],
+                   installed_tree_sha256=build["installed_tree_sha256"],
+                   namespace_sha256=source["namespace_sha256"], fixture_sha256=fixture_hashes[cid],
+                   runner_sha256=F7.digest(ROOT / "tools/first_seven_behaviour_R.R"))
+    for cid, row in jrows.items():
+        row.update(runner_sha256=F7.digest(ROOT / "tools/first_seven_behaviour_J.jl"),
+                   fixture_sha256=fixture_hashes[cid], package_source="src/GLLVModels.jl",
+                   src_diff_sha256=current_src_diff_sha)
+    jrows = {cid: {**row, "glvmodels_commit": commit} for cid, row in jrows.items()}
+    with tempfile.TemporaryDirectory() as td:
+        raw_dir = Path(td)
+        rp, jp = raw_dir / "r.tsv", raw_dir / "j.tsv"
+        rp.write_text("fixture only\n"); jp.write_text("fixture only\n")
+        (raw_dir / "julia-src.patch").write_bytes(launch_src_diff)
+        (raw_dir / "runner-snapshots").mkdir()
+        runner_hashes = {}
+        snapshots = {}
+        for key, name in (("R", "first_seven_behaviour_R.R"), ("Julia", "first_seven_behaviour_J.jl"),
+                          ("derive", "first_seven_behaviour_derive.py")):
+            snapshot = raw_dir / "runner-snapshots" / name
+            source_bytes = (F7.EXECUTED_DERIVER_SOURCE if key == "derive"
+                            else (ROOT / "tools" / name).read_bytes())
+            snapshot.write_bytes(source_bytes)
+            runner_hashes[key] = hashlib.sha256(source_bytes).hexdigest()
+            snapshots[key] = {"path": f"runner-snapshots/{name}", "sha256": runner_hashes[key]}
+        meta = {"reference_commit": F7.PIN, "r_output_path": str(rp), "julia_output_path": str(jp),
+            "raw_directory": str(raw_dir), "julia_src_patch": "julia-src.patch",
+            "julia_src_patch_sha256": current_src_diff_sha, "runner_snapshots": snapshots,
+            "r_output_sha256": F7.digest(rp), "julia_output_sha256": F7.digest(jp),
+            "r_source_sha256": source["source_tree_sha256"], "r_source_receipt_sha256": F7.digest(ROOT / F7.R_SOURCE),
+            "r_oracle_build_sha256": F7.digest(ROOT / F7.R_BUILD),
+            "r_installed_tree_sha256": build["installed_tree_sha256"], "julia_commit": commit,
+            "julia_src_tree": tree, "thread_caps": {"r_openblas": "1", "r_omp": "1", "julia_threads": "4",
+                "julia_openblas": "1", "julia_omp": "1"},
+            "runner_sha256": runner_hashes,
+            "fixture_sha256": {"R": fixture_hashes, "Julia": fixture_hashes},
+            "r_version": "4.4", "r_host": "fixture", "julia_version": "fixture", "julia_host": "fixture"}
+        receipts, eq = F7.derive(rrows, jrows, meta)
+        # Both engines returning the malformed extra-source fit is agreement,
+        # but it violates the signed public-door contract and must not pass.
+        wrong_return = {cid: dict(row) for cid, row in rrows.items()}
+        wrong_return_julia = {cid: dict(row) for cid, row in jrows.items()}
+        for rows in (wrong_return, wrong_return_julia):
+            rows[extra].update(outcome="RETURN", actual="returned", message="")
+        wrong_receipts, _ = F7.derive(wrong_return, wrong_return_julia, meta)
+        assert wrong_receipts["isdm/ISDM-EXTRA-SOURCE"]["verdict"] == "MISMATCH"
+        stale_rows = {cid: {**row, "src_diff_sha256": hashlib.sha256(b"stale launch source").hexdigest()}
+                      for cid, row in jrows.items()}
+        try:
+            F7.derive(rrows, stale_rows, meta)
+        except ValueError as e:
+            assert "Julia raw source patch differs" in str(e)
+        else:
+            raise AssertionError("stale Julia source-diff evidence was accepted")
+        self = receipts["isdm/ISDM-EXTRA-SOURCE"]
+        assert self["verdict"] == "MISMATCH"
+        assert not any(c["canonical"] == "guard:unknown-source" for c in eq["classes"])
+        assert receipts["isdm/ISDM-WRAPPER-LAW"]["verdict"] == "PASS"
+        assert receipts["isdm/ISDM-WRAPPER-LAW"]["case_id"] == "CORE070-ISDM-WRAPPER-LAW-PAIRED-CONTROL"
+        assert all(rec["verdict"] == "PASS" for sid,rec in receipts.items() if sid != "isdm/ISDM-EXTRA-SOURCE")
 
 
 def main():

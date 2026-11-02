@@ -154,6 +154,7 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:positive, Y, _resolve_obs_mask(mask, Y); caller = "fit_exponential_gllvm")
     # Validated up front: the objective below wraps its body in a try/catch that turns
     # any throw into a large penalty, which would launder a typo'd symbol into a
     # converged-looking garbage fit.
@@ -165,12 +166,14 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     rr = rr_theta_len(p, K)
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = _sanitize_missing(Y, 1.0)                   # positive placeholder
+    Yc  = _sanitize_unobserved(Y, msk, 1.0)                   # positive placeholder
 
     Zemp = log.(max.(Yc, 1e-6))
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_exponential_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)

@@ -1,0 +1,15 @@
+{
+  "status": "retained pinned R measurement; R not rerun for this Julia recapture",
+  "source_raw_directory": "docs/dev-log/core070/true-parity-latest/receipts/first-seven-behaviour/raw-2026-10-18-v4",
+  "source_run_json_sha256": "131425468fd54a9c5dc408b77934720bdcecc7351b468a83665fd147ca4d62cc",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "files": {
+    "r-public.tsv": "dc444071c8dfd3c15f9f26e6a816787260fef782b2c480c64f37255111c242fb",
+    "r.stdout.log": "3ddd777dc7b365ca5bc97ef07da9aaf21860dcba8052290f2b0dfc2d3a96e35f",
+    "r.stderr.log": "db702a1f9fe75181dbe3560435e59ce17fe2cc8e41ab2bd8c310cb6760673cc5",
+    "r-env.txt": "0d4e28f272ec0f14f077e89c1c43c6c72a06d4b578bf15a67ba5251687ad6949",
+    "r.time.log": "ec5a211f6d90d9607dbfff318d3e0d068b1834929d1f9e743167af7ac3569e76",
+    "retained-r-run-status.txt": "2c15bb70571e939b9b39a47c056dba1d11695a48a547944db3fad9e448835145"
+  },
+  "excluded": "historical local-only Julia output/source commit is not reused"
+}

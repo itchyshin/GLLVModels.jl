@@ -143,3 +143,58 @@ end
     @test vp.loglik == -Inf
     @test vp.reason === :objective_failure
 end
+
+@testset "phylo xlv Gamma and NB2 mode search flags a maxiter exit (#747)" for family in (:gamma, :nb)
+    # A Newton search that runs out of iterations has not found the mode, so it must report
+    # a failed search (marginal = -Inf), not a Laplace value that depends on `maxiter`.
+    # Relation, not seed outcome: maxiter = 1 cannot reach tol = 1e-9 from the zero start.
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    d = _xlv_v_data(family, MersenneTwister(1000), 30)
+    p = phy.n_leaves
+    Lam = reshape(fill(0.4, p), p, 1)
+    alpha = reshape([0.5], 1, 1)
+    marg(; kw...) = family === :gamma ?
+        GLLVModels._phylo_gamma_xlv_marginal_loglik(d.Y, d.beta, Lam, alpha, 2.5, 0.5, phy, d.X; kw...) :
+        GLLVModels._phylo_nb_xlv_marginal_loglik(d.Y, d.beta, Lam, alpha, 2.0, 0.5, phy, d.X; kw...)
+    @test marg() > -Inf
+    @test isfinite(marg())
+    @test marg(maxiter = 1) == -Inf
+end
+
+# A matrix whose element access throws InterruptException, to check the guards rethrow it.
+struct _XlvInterruptY <: AbstractMatrix{Int}
+    sz::Tuple{Int,Int}
+end
+Base.size(m::_XlvInterruptY) = m.sz
+Base.getindex(::_XlvInterruptY, ::Int, ::Int) = throw(InterruptException())
+
+@testset "phylo xlv NB2, binomial and Gamma guards rethrow InterruptException (#947)" begin
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    p, n, K, q = 6, 30, 1, 1
+    X = reshape(collect(range(-1.0, 1.0; length = n)), n, 1)
+    rr = GLLVModels.rr_theta_len(p, K)
+    Yi = _XlvInterruptY((p, n))
+    Ni = _XlvInterruptY((p, n))
+    @test_throws InterruptException GLLVModels._phylo_nb_xlv_nll_guarded(
+        zeros(p + q * K + rr + 2), Yi, p, K, phy, X; q_lv = q)
+    @test_throws InterruptException GLLVModels._phylo_binomial_xlv_nll_guarded(
+        zeros(p + q * K + rr + 1), Yi, Ni, p, K, phy, X; q_lv = q)
+    @test_throws InterruptException GLLVModels._phylo_gamma_xlv_nll_guarded(
+        zeros(p + q * K + rr + 2), Yi, p, K, phy, X; q_lv = q)
+    # The sentinel behaviour for ordinary errors is unchanged.
+    Yg = [1.0 + 0.1 * ((t + s) % 6) for t in 1:p, s in 1:n]
+    th = zeros(p + q * K + rr + 2); th[end] = 1000.0
+    @test GLLVModels._phylo_gamma_xlv_nll_guarded(th, Yg, p, K, phy, X; q_lv = q) == 1e12
+end
+
+@testset "phylo binomial xlv: default start works without beta_init (#943)" begin
+    # The default beta start called an undefined `logit`, so a call without `beta_init`
+    # threw UndefVarError before the optimiser ran. Only finiteness is asserted: the
+    # optimiser path differs across platforms.
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    d = _xlv_v_data(:binomial, MersenneTwister(1000), 30)
+    fit = GLLVModels._fit_phylo_binomial_xlv(d.Y, d.N, phy; K = 1, X_lv = d.X,
+                                             iterations = 20)
+    @test isfinite(fit.loglik)
+    @test length(fit.beta) == phy.n_leaves
+end

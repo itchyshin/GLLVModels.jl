@@ -18,7 +18,7 @@
 // control that merely fails is not enough; it must fail for the stated reason.
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { mkdtempSync, rmSync, cpSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
@@ -666,6 +666,7 @@ function runTree(mutate, mode) {
     cpSync(join(FIXTURES, 'base'), dir, { recursive: true });
     const readJ = (rel) => JSON.parse(readFileSync(join(dir, L, rel), 'utf8'));
     const writeJ = (rel, v) => { mkdirSync(dirname(join(dir, L, rel)), { recursive: true }); writeFileSync(join(dir, L, rel), JSON.stringify(v, null, 1)); };
+    writeJ('case-map-assembled.json', readJ('case-map.json'));
     mutate({ dir, readJ, writeJ });
     try {
       return { stdout: execFileSync('node', [CHECKER, mode], { encoding: 'utf8', env: { ...process.env, PARITY_REF: 'FS', PARITY_FS_ROOT: dir } }), code: 0 };
@@ -1133,6 +1134,18 @@ test('scoreboard: an EVIDENCED-BEHAVIOURAL row with no receipt path is not done'
 
 // Ruling 3: C6 decisions. The base fixture's two items now carry a basis and a ruling.
 const RULING = { ref: 'itchyshin/GLLVModels.jl#684 item 3', signed_by: 'Shinichi Nakagawa', signed_on: '2026-10-02' };
+const SCOPED_TWIN_RULING = {
+  ref: 'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md',
+  signed_by: 'Shinichi Nakagawa', signed_on: '2026-10-17',
+};
+const HELD_PENDING_RULING = {
+  ref: 'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md',
+  signed_by: 'Shinichi Nakagawa', signed_on: '2026-10-17',
+};
+const HELD_PENDING_NAMES = [
+  'NBFit', 'Ordinal', 'TweedieFit', 'ZIB', 'ZINegBin',
+  'fit_animal_latent_gllvm', 'fit_kernel_latent_gllvm', 'gllvm', 'link_residual',
+];
 function c6Items(items) {
   return ({ dir }) => writeFileSync(join(dir, L, 'reverse-gap.json'), JSON.stringify(items));
 }
@@ -1143,8 +1156,166 @@ test('C6: EXCLUDED_INTERNAL_HELPER with a basis and the maintainer ruling is a v
   const r = runTree(c6Items([helper(), helper({ source_id: 'julia-export/x2' }), kept()]), 'C6');
   assert.match(r.stdout, /C6_MET$/m, r.stdout);
   assert.match(r.stdout, /invalid_decision=none /);
-  assert.match(r.stdout, /unsigned_decision=none decision_counts=KEPT_AS_JULIA_EXTRA:1,PORT_TO_MATCH_R:0,DEPRECATE_AND_REMOVE:0,RENAME_TO_AVOID_COLLISION:0,EXCLUDED_INTERNAL_HELPER:2$/m);
+  assert.match(r.stdout, /unsigned_decision=none decision_counts=KEPT_AS_JULIA_EXTRA:1,PORT_TO_MATCH_R:0,DEPRECATE_AND_REMOVE:0,RENAME_TO_AVOID_COLLISION:0,EXCLUDED_INTERNAL_HELPER:2,SCOPED_R_TWIN:0,HOLD_PENDING_EVIDENCE:0$/m);
 });
+test('C6: signed HOLD_PENDING_EVIDENCE applies only to the nine held names and makes no twin claim', () => {
+  for (const name of HELD_PENDING_NAMES) {
+    const r = runTree(({ dir, ...rest }) => {
+      const approval = join(dir, HELD_PENDING_RULING.ref);
+      mkdirSync(dirname(approval), { recursive: true });
+      writeFileSync(approval, 'Shinichi approved the nine exact names to remain held pending route evidence.\n');
+      c6Items([helper({
+        source_id: `julia-export/${name}`, name, decision: 'HOLD_PENDING_EVIDENCE',
+        status: 'held', basis: 'held pending route-specific fit or behavioural evidence; no twin or parity claim; no scoreboard row admitted',
+        ruling: HELD_PENDING_RULING,
+      })])({ dir, ...rest });
+    }, 'C6');
+    assert.equal(r.code, 0, `${name}: ${r.stdout}`);
+    assert.match(r.stdout, /C6_MET$/m, `${name}: ${r.stdout}`);
+    assert.match(r.stdout, /HOLD_PENDING_EVIDENCE:1/);
+  }
+});
+test('C6: HOLD_PENDING_EVIDENCE cannot dispose an unapproved name', () => {
+  const r = runTree(({ dir, ...rest }) => {
+    const approval = join(dir, HELD_PENDING_RULING.ref);
+    mkdirSync(dirname(approval), { recursive: true });
+    writeFileSync(approval, 'Shinichi approved only the nine exact held names.\n');
+    c6Items([helper({ name: 'another_name', decision: 'HOLD_PENDING_EVIDENCE',
+      status: 'held', basis: 'pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING })])({ dir, ...rest });
+  }, 'C6');
+  assert.match(r.stdout, /C6_NOT_MET$/m);
+  assert.match(r.stdout, /HOLD_PENDING_EVIDENCE/);
+});
+test('C6: HOLD_PENDING_EVIDENCE requires held status, the present approval record, and no twin evidence fields', () => {
+  const malformed = [
+    { item: helper({ name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'decided', basis: 'held pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING }) },
+    { item: helper({ name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'held', basis: 'held pending evidence', ruling: HELD_PENDING_RULING }) },
+    { item: helper({ name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'held', basis: 'held pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING, receipt_ids: ['C'] }) },
+    { item: helper({ source_id: 'julia-export/other', name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'held', basis: 'held pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING }) },
+    { item: helper({ name: 'NBFit', decision: 'HOLD_PENDING_EVIDENCE', status: 'held', basis: 'held pending evidence; no twin or parity claim; no scoreboard row admitted', ruling: HELD_PENDING_RULING }), approval: false },
+  ];
+  for (const { item, approval = true } of malformed) {
+    const r = runTree(({ dir, ...rest }) => {
+      if (approval) {
+        const approvalPath = join(dir, HELD_PENDING_RULING.ref);
+        mkdirSync(dirname(approvalPath), { recursive: true });
+        writeFileSync(approvalPath, 'Shinichi approved only the nine exact held names.\n');
+      }
+      c6Items([item])({ dir, ...rest });
+    }, 'C6');
+    assert.match(r.stdout, /C6_NOT_MET$/m);
+    assert.match(r.stdout, /HOLD_PENDING_EVIDENCE/);
+  }
+});
+const scopedTwin = (over = {}) => helper({
+  decision: 'SCOPED_R_TWIN', basis: 'bounded executable P1 twin; see receipts and source fields',
+  ruling: SCOPED_TWIN_RULING,
+  counterpart: {
+    r_function: 'betabinomial', r_commit: P1_FULL, r_source: 'R/family.R:10-20',
+    julia_source: 'src/test.jl:1-2',
+  },
+  scope: {
+    public_route: 'fit_beta_binomial_gllvm', family_link: 'beta-binomial/logit',
+    data: 'pinned fixture beta-binomial-p1', estimand: 'fixed effects and dispersion',
+    outputs: ['beta', 'dispersion'], exclusions: ['other families', 'other links'],
+  },
+  receipt_ids: ['CASE-1'],
+  ...over,
+});
+test('C6: exact approved scopes pass and unsigned names or contract changes fail', () => {
+  const gap = JSON.parse(readFileSync(join(REPO_ROOT, L, 'reverse-gap.json'), 'utf8'));
+  const scoped = gap.filter(item => item.decision === 'SCOPED_R_TWIN');
+  assert.equal(scoped.length, 11);
+  const tmp = mkdtempSync(join(tmpdir(), 'c6-exact-approval-'));
+  const path = join(tmp, 'reverse-gap.json');
+  function checked(items) {
+    writeFileSync(path, JSON.stringify(items));
+    return execFileSync('node', [CHECKER, 'C6'], {
+      encoding: 'utf8', cwd: REPO_ROOT,
+      env: { ...process.env, PARITY_PIN: 'P1', PARITY_REF: 'FS', PARITY_FS_ROOT: REPO_ROOT,
+        PARITY_REVERSE_GAP: relative(REPO_ROOT, path) },
+    });
+  }
+  try {
+    assert.match(checked(gap), /C6_MET$/m);
+    for (const original of scoped) {
+      const edits = [item => { item.name = 'unsigned_' + item.name; item.source_id = `julia-export/${item.name}`; }];
+      for (const field of ['public_route', 'family_link', 'data', 'estimand', 'outputs', 'exclusions']) {
+        edits.push(item => { item.scope[field] = Array.isArray(item.scope[field]) ? ['unsigned expansion'] : 'unsigned expansion'; });
+      }
+      edits.push(item => { item.receipt_ids = [...item.receipt_ids].reverse(); item.receipt_ids.push(item.receipt_ids[0]); });
+      edits.push(item => { item.counterpart.r_function += ' unsigned expansion'; });
+      edits.push(item => { item.ruling.signed_on = '2026-10-18'; });
+      for (const mutate of edits) {
+        const items = structuredClone(gap), item = items.find(x => x.name === original.name);
+        mutate(item);
+        assert.match(checked(items), /C6_NOT_MET$/m, original.name);
+      }
+    }
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+});
+
+test('C6: a general rule does not authorize a fabricated scoped twin', () => {
+  const r = runTree(({ dir, ...rest }) => {
+    const rulePath = join(dir, SCOPED_TWIN_RULING.ref);
+    mkdirSync(dirname(rulePath), { recursive: true });
+    writeFileSync(rulePath, 'Approved general SCOPED_R_TWIN evidence rule.\n');
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'src/test.jl'), '# fixture source\n');
+    c6Items([scopedTwin()])({ dir, ...rest });
+  }, 'C6');
+  assert.equal(r.code, 0, r.stdout);
+  assert.match(r.stdout, /C6_NOT_MET$/m, r.stdout);
+  assert.match(r.stdout, /name is not an exact approved Julia export/);
+});
+test('C6: assembled receipt presence does not authorize a fabricated scoped twin', () => {
+  const r = runTree(({ dir, readJ, writeJ, ...rest }) => {
+    const rulePath = join(dir, SCOPED_TWIN_RULING.ref);
+    mkdirSync(dirname(rulePath), { recursive: true });
+    writeFileSync(rulePath, 'Approved general SCOPED_R_TWIN evidence rule.\n');
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'src/test.jl'), '# fixture source\n');
+    const assembled = readJ('case-map.json');
+    writeJ('case-map-assembled.json', assembled);
+    writeJ('case-map.json', { ...assembled, rows: [] });
+    c6Items([scopedTwin()])({ dir, readJ, writeJ, ...rest });
+  }, 'C6');
+  assert.equal(r.code, 0, r.stdout);
+  assert.match(r.stdout, /C6_NOT_MET$/m, r.stdout);
+  assert.match(r.stdout, /name is not an exact approved Julia export/);
+});
+test('C6: SCOPED_R_TWIN is refused when its approval record is absent at the ref', () => {
+  const r = runTree(({ dir, ...rest }) => {
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'src/test.jl'), '# fixture source\n');
+    c6Items([scopedTwin()])({ dir, ...rest });
+  }, 'C6');
+  assert.equal(r.code, 0, r.stdout);
+  assert.match(r.stdout, /C6_NOT_MET$/m);
+  assert.match(r.stdout, /SCOPED_R_TWIN approval record .* does not resolve at the ref/);
+});
+for (const [name, item] of [
+  ['no counterpart', scopedTwin({ counterpart: undefined })],
+  ['no Julia source', scopedTwin({ counterpart: { r_function: 'betabinomial', r_source: 'R/family.R:10-20' } })],
+  ['no R source', scopedTwin({ counterpart: { r_function: 'betabinomial', julia_source: 'src/families/betabinomial.jl:10-20' } })],
+  ['no route', scopedTwin({ scope: { ...scopedTwin().scope, public_route: '' } })],
+  ['no data scope', scopedTwin({ scope: { ...scopedTwin().scope, data: '' } })],
+  ['no estimand', scopedTwin({ scope: { ...scopedTwin().scope, estimand: '' } })],
+  ['no claimed outputs', scopedTwin({ scope: { ...scopedTwin().scope, outputs: [] } })],
+  ['no explicit exclusions', scopedTwin({ scope: { ...scopedTwin().scope, exclusions: [] } })],
+  ['no receipt identifiers', scopedTwin({ receipt_ids: [] })],
+  ['a receipt identifier with no P1 numeric or behavioural row', scopedTwin({ receipt_ids: ['NOT-A-CASE'] })],
+  ['duplicate receipt identifiers', scopedTwin({ receipt_ids: ['NATIVE-09-BETABINOMIAL', 'NATIVE-09-BETABINOMIAL'] })],
+  ['the old ruling', scopedTwin({ ruling: RULING })],
+]) {
+  test(`C6: SCOPED_R_TWIN with ${name} is unsigned and does not bind`, () => {
+    const r = runTree(c6Items([item]), 'C6');
+    assert.equal(r.code, 0, r.stdout);
+    assert.match(r.stdout, /C6_NOT_MET$/m, r.stdout);
+    assert.match(r.stdout, /invalid_decision=none /);
+    assert.match(r.stdout, /unsigned_decision=julia-export\/internal_thing\(/);
+  });
+}
 for (const [name, item, why] of [
   ['a decided item with no ruling', helper({ ruling: undefined }), /unsigned_decision=julia-export\/internal_thing\(no ruling\)/],
   ['a ruling without a ref', helper({ ruling: { ...RULING, ref: '' } }), /\(ruling without a ref\)/],
@@ -1750,6 +1921,10 @@ test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode to
       // The C6 decisions file names the script that wrote it and, for a documented Julia extra, the docs/src
       // pages that render it; the assembler requires both in the tree.
       cpSync(join(REPO_ROOT, 'docs', 'src'), join(tmp, 'docs', 'src'), { recursive: true });
+      cpSync(join(REPO_ROOT, 'src'), join(tmp, 'src'), { recursive: true });
+      const approvalRecord = join('docs', 'dev-log', 'decisions', '2026-10-17-p1-c6-and-c3-c4-contract-approval.md');
+      mkdirSync(dirname(join(tmp, approvalRecord)), { recursive: true });
+      cpSync(join(REPO_ROOT, approvalRecord), join(tmp, approvalRecord));
       const decisionsPath = join(REPO_ROOT, LEDGER_REL, 'reverse-gap-decisions.json');
       if (existsSync(decisionsPath)) {
         const gen = JSON.parse(readFileSync(decisionsPath, 'utf8')).generator;

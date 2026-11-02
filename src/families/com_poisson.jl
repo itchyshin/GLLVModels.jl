@@ -431,20 +431,23 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_compoisson_gllvm")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized count matrix with a safe placeholder (0) in the masked cells.
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical log-rate intercepts (log of per-species (mean+0.5)) +
     # SVD (PPCA-like) loadings. Masked cells are overwritten with their row's
     # observed mean so neither the intercept nor the SVD sees the placeholder.
     Zemp = [log(max(float(Yc[t, i]) + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, nothing; mask = msk,
+                           caller = "fit_compoisson_gllvm")   # #874 (rate is always log)
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
