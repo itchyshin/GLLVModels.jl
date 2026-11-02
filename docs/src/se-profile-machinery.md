@@ -73,6 +73,9 @@ skipped. A replicate whose refit throws or does not converge is counted in
 `conf = 0.95`, `progress = true`; these defaults still need maintainer
 agreement.
 
+A runnable walk-through (call, fields, bounds, warnings, refusals) is on the
+[worked example page](bootstrap-sigma-r-example.md).
+
 Caveats:
 
 - No output has been compared with R. The behaviour target is R's source,
