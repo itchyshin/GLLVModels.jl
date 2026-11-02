@@ -2005,12 +2005,30 @@ end
         @test !any(occursin("boundary", w) for w in _warns(run(f)[2]))
         # relative, not absolute: a tiny variance on a tiny-scale trait is not flagged
         fs = _jpg_hand(phy4, sid4, (unit = u12,); beta = [0.4, -0.3], loading = 1e-6 .* L2, unique = nothing,
-                       ordvars = [[1e-7, 1e-7]], residual = [1e-6, 1e-6])
+                       ordvars = [[1e-10, 1e-10]], residual = [1e-6, 1e-6])
         @test !any(occursin("boundary", w) for w in _warns(run(fs)[2]))
         # two terms: only the small one is named
         f2 = mk((unit = u12, cluster = c12); ordvars = [[0.5, 0.3], [0.4, 1e-12]])
         ws = [w for w in _warns(run(f2)[2]) if occursin("boundary", w)]
         @test length(ws) == 1 && occursin("cluster", ws[1]) && occursin("trait 2", ws[1])
+        # both traits of one term tiny: still one warning for the term, listing both traits
+        fb = mk((unit = u12,); ordvars = [[1e-12, 1e-12]])
+        ws = [w for w in _warns(run(fb)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin("trait 1, 2", ws[1])
+        # different traits in different terms: each warning names only its own trait
+        fx = mk((unit = u12, cluster = c12); ordvars = [[1e-12, 0.3], [0.4, 1e-12]])
+        ws = [w for w in _warns(run(fx)[2]) if occursin("boundary", w)]
+        @test length(ws) == 2
+        wu = only(w for w in ws if occursin(":unit", w)); wc = only(w for w in ws if occursin(":cluster", w))
+        @test occursin("trait 1", wu) && !occursin("trait 2", wu) && occursin("trait 2", wc) && !occursin("trait 1", wc)
+        # the reference total includes the residual and every other ordinary term
+        fres = _jpg_hand(phy4, sid4, (unit = u12,); beta = [0.4, -0.3], loading = L2, unique = nothing,
+                         ordvars = [[1e-7, 0.3]], residual = [1000.0, 0.6])
+        ws = [w for w in _warns(run(fres)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin("trait 1", ws[1])
+        foth = mk((unit = u12, cluster = c12); ordvars = [[1e-7, 0.3], [1000.0, 0.4]])
+        ws = [w for w in _warns(run(foth)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin(":unit", ws[1])
         # the warning comes after validation: a refused call does not emit it
         fr = mk((unit = ones(Int, 12),); ordvars = [[1e-12, 0.3]])
         _, lgr = _logged(() -> err(() -> _bsig(fr; level = :phy, n_boot = 3, progress = false, _refit = stub(fr))))
