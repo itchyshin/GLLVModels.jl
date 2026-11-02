@@ -40,6 +40,7 @@ makedocs(;
             "Working with a fit" => "working-with-a-fit.md",
             "Covariance & Correlation" => "covariance-correlation.md",
             "Confidence intervals" => "confidence-intervals.md",
+            "Worked example: bootstrap_Sigma_r" => "bootstrap-sigma-r-example.md",
             "Diagnostics and model comparison" => "diagnostics.md",
         ],
         "Tested models and limits" => [
@@ -52,6 +53,7 @@ makedocs(;
             "Post-fit extractors" => "postfit-extractors.md",
             "Post-fit tables and prediction" => "postfit-tables.md",
             "Temporal covariance source" => "temporal.md",
+            "SE and profile machinery" => "se-profile-machinery.md",
         ],
     ],
     warnonly = false,
