@@ -1926,3 +1926,52 @@ end
     end
 end
 # END JPG-TIER
+
+# DRIVER-FIXES: refit warning flood (F1), String level/what (F4), `what` echo and refusal text (F5)
+@testset "bootstrap_Sigma_r driver fixes (warning flood, String level, what echo)" begin
+    phy8 = PrecisionPhy(GLLVModels.random_balanced_tree(8; branch_length = 0.35))
+    sid8 = repeat(1:8, inner = 2)
+    Y8 = _pmv_truth_data(MersenneTwister(20261103), phy8, sid8; beta = [0.4, -0.3],
+                         loading = reshape([0.8, -0.5], 2, 1), unique = [0.3, 0.2], residual = [0.1, 0.12])
+    fp = _quiet(() -> _PG.fit_precision_multivariate(Y8, phy8; rank = 1, mode = :explicitunique, species_id = sid8))
+    stub(f) = (Y, phy; kw...) -> f
+
+    @testset "F1 PMV refit warnings do not flood; the driver's own warnings stay" begin
+        r, lg = _logged(() -> _bsig(fp; level = :phy, n_boot = 3, seed = 1, progress = false),
+                        min_level = Logging.Warn)
+        @test r isa GLLVModels.BootstrapSigmaR
+        ws = _warns(lg)
+        @test length(ws) <= 5
+        @test !any(occursin("structurally non-identifiable", m) for m in ws)
+        @test any(occursin("below min_boot", m) for m in ws)          # the driver's own warning is kept
+        # a failed refit is still counted and announced by the driver
+        _, lg2 = _logged(() -> _bsig(fp; level = :phy, n_boot = 3, seed = 1, progress = false,
+                                     _refit = (Y, phy; kw...) -> error("boom")), min_level = Logging.Warn)
+        @test any(occursin("3 of 3 replicates were lost", m) for m in _warns(lg2))
+    end
+
+    @testset "F4 String / vector-of-String level and what are accepted" begin
+        ref = _quiet(() -> _bsig(fp; level = :phy, what = :Sigma, n_boot = 3, seed = 1, progress = false, _refit = stub(fp)))
+        for lv in ("phy", ["phy"], [:phy], :phy), wh in ("Sigma", ["Sigma"], [:Sigma])
+            r = _quiet(() -> _bsig(fp; level = lv, what = wh, n_boot = 3, seed = 1, progress = false, _refit = stub(fp)))
+            @test r.level == [:phy] && r.what == [:Sigma]
+            @test r.point_est.Sigma_phy == ref.point_est.Sigma_phy
+        end
+        e = try _bsig(fp; level = "nope", n_boot = 3, progress = false, _refit = stub(fp)); nothing catch ex; ex end
+        @test e isa ArgumentError && occursin("unknown level :nope", e.msg)
+        e = try _bsig(fp; level = :phy, what = "nope", n_boot = 3, progress = false, _refit = stub(fp)); nothing catch ex; ex end
+        @test e isa ArgumentError && occursin("unknown summary :nope", e.msg)
+    end
+
+    @testset "F5 what echoes the request; refusal for ICC / cross_corr alone names the right classes" begin
+        r = _quiet(() -> _bsig(fp; level = :phy, n_boot = 3, seed = 1, progress = false, _refit = stub(fp)))
+        @test :cross_corr in r.what                                   # documented: echoes the request, mirrors R
+        @test collect(keys(r.point_est)) == [:Sigma_phy, :R_phy, :communality_phy]   # authoritative list
+        for w in (:ICC, :cross_corr)
+            e = try _bsig(fp; level = :phy, what = w, n_boot = 3, progress = false, _refit = stub(fp)); nothing catch ex; ex end
+            @test e isa ArgumentError && !occursin("()", e.msg)
+            @test occursin("PrecisionMultivariateFit", e.msg) && occursin("TwoLevelFit", e.msg)
+            @test occursin("JointPhyloGroupedGaussianFit", e.msg)
+        end
+    end
+end
