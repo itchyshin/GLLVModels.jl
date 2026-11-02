@@ -24,6 +24,10 @@ communality is exactly 1 for every trait).
 ```@example bsig
 using GLLVModels, Distributions, Random, Statistics, Logging
 
+# Run a call with the log silenced, so that warnings are not interleaved with the
+# printed values. Section 5 shows the messages explicitly.
+quiet(f) = with_logger(f, NullLogger())
+
 Random.seed!(20261102)
 p, n, K = 6, 100, 2
 Λ_true = [0.9 0.0; 0.7 0.3; 0.5 0.6; 0.2 0.8; 0.0 0.7; 0.4 0.4]
@@ -31,7 +35,7 @@ p, n, K = 6, 100, 2
 y = Λ_true * randn(K, n) .+ sqrt.(ψ_true) .* randn(p, n)
 y .-= mean(y; dims = 2)
 
-fit = fit_gaussian_gllvm(y; K = K, has_diag = true)
+fit = quiet(() -> fit_gaussian_gllvm(y; K = K, has_diag = true))
 fit.converged
 ```
 
@@ -44,13 +48,15 @@ reports; do not interpret the split.
 ## 2. The call
 
 ```@example bsig
-res = bootstrap_Sigma_r(fit;
+res = quiet() do
+  bootstrap_Sigma_r(fit;
     n_boot   = 39,
     seed     = 1,                       # one seeded stream; same seed, same result
     progress = false,                   # otherwise one @info line per replicate
     level    = :unit,                   # a GllvmFit has one tier, called :unit (= :B)
     what     = (:Sigma, :R, :communality),
     n_sites  = n)                       # a GllvmFit does not store n; pass it (or y)
+end
 res
 ```
 
@@ -141,17 +147,19 @@ res.point_est.R_B[1, 2], res.ci_lower.R_B[1, 2], res.ci_upper.R_B[1, 2]
 
 ## 5. Warnings and messages
 
-Warnings go to the Julia log. The block below sends the log to a buffer so that
-it can be printed here. Three calls, each with different arguments:
+Warnings go to the Julia log. The block below uses a small logger that prints
+only the level and the message, so that they show up on this page. Two calls
+with different arguments:
 
 ```@example bsig
-function logged(f)
-    io = IOBuffer()
-    with_logger(ConsoleLogger(io, Logging.Info)) do
-        f()
-    end
-    print(String(take!(io)))
-end
+struct MessageLogger <: AbstractLogger end     # prints "Level: message" only
+Logging.min_enabled_level(::MessageLogger) = Logging.Info
+Logging.shouldlog(::MessageLogger, args...) = true
+Logging.catch_exceptions(::MessageLogger) = false
+Logging.handle_message(::MessageLogger, level, message, args...; kwargs...) =
+    println(level, ": ", message)
+
+logged(f) = with_logger(f, MessageLogger())
 
 logged() do
     # (a) default `level`: an @info names the tiers a GllvmFit does not have.
@@ -187,18 +195,18 @@ supported alternative where one exists.
 ```@example bsig
 function refusal(f)
     try
-        f()
+        quiet(f)
         "no error"
     catch e
         sprint(showerror, e)
     end
 end
 
-fitW = fit_gaussian_gllvm(y; K = 1, K_W = 1)          # a W tier
+fitW = quiet(() -> fit_gaussian_gllvm(y; K = 1, K_W = 1))          # a W tier
 M = fill(NaN, p, 1); M[1, 1] = 1.0
-fitpin = fit_gaussian_gllvm(y; K = 1, lambda_constraint = M)   # a pinned loading
+fitpin = quiet(() -> fit_gaussian_gllvm(y; K = 1, lambda_constraint = M))   # a pinned loading
 Yc = Float64.(rand(Poisson(3.0), p, n))
-fitpois = fit_gllvm(Yc; family = Poisson(), K = 1)    # a non-Gaussian fit
+fitpois = quiet(() -> fit_gllvm(Yc; family = Poisson(), K = 1))    # a non-Gaussian fit
 
 cases = [
     "K_W > 0"            => () -> bootstrap_Sigma_r(fitW; n_boot = 39, progress = false, n_sites = n),
