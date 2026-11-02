@@ -105,7 +105,26 @@ Measured:
 
 Estimate for the R side of the full run: 0.308 s x 999 = about 308 s per run, so 8 R runs take about 41 min (at the same load; the earlier note saw R fit time vary about 14-fold with load, so a range of 0.7 to 3 h cannot be excluded).
 
-Estimate for the Julia side: NOT grounded. No Julia bootstrap timing was measured in this pilot, and the check-log reports completed 199-replicate runs without timings. The Julia total therefore cannot be stated. Before signing, a Julia pilot of the same shape (n_boot = 20, B6 or a new dataset) is needed to turn this into a number; for scale, 8 Julia runs x 999 refits x t seconds is 2.2 h at t = 1 s and 6.7 h at t = 3 s, so the 3 h line is crossed at about t = 1.3 s. Under the repository's estimate-before-run rule, if the Julia pilot puts the total above 3 h, this plan goes to Shinichi with that number and a pre-run result before anything is committed. A run that overruns its estimate stops and reports.
+Julia pilot (added 2026-11-02, same day). Julia side, one run, of the registered shape: `PrecisionMultivariateFit`, 30 tips, d = 5, 2 replicates per species, `rank = 1`, `:explicitunique`, `residual_mode = :shared`. Dataset: `sim.jl` seed 1101 (ntip 30, reps 2), which is the first of the K = 4 registered datasets. Code: origin/main at `16a7f08df78abb49e3faa8c9811d6f371e4d981d` (a git archive; Manifest.toml sha256 `ba1f3285b0191304b17a003cb8baf07024b566c27c55caac6bb8913a3fea4c40`), Julia 1.12.6, one thread, `OPENBLAS_NUM_THREADS=1`, `taskset -c 0,1`, `nice`. Call: `bootstrap_Sigma_r(fit; n_boot = 20, level = :phy, what = [:Sigma, :communality], seed = 2001, progress = false)`. Timings exclude compilation (one warm-up fit and one n_boot = 2 call first). Totoro load average was 106 at the start of the timed part and 179 at the end (earlier readings that afternoon were about 290, and the R pilot ran at about 286), so the load was lower than in the R pilot. Script, log and output: `~/hsq_work/claude-n1-20261102/jpilot/` (`pilot.jl`, `pilot.out`, `pilot.err`).
+
+Measured:
+
+- Original Julia fit: 0.47 s (converged, Hessian positive definite). The first call took 24.3 s because of compilation.
+- 20 replicates, each refit timed by wrapping the refit function through the `_refit` argument: 17.8 s in total, per refit mean 0.728 s, median 0.753 s, max 1.099 s, min 0.331 s. `n_failed = 0`.
+- The same call without the wrapper, run straight after: 11.9 s in total, 0.597 s per refit, `n_failed = 0`. The two runs use the same seed and the same data, so the 18 percent gap between them is load and timing noise, not a different workload.
+- No warning flood in this configuration (d = 5, rank 1): the stderr file holds only the three expected n_boot < min_boot warnings. S1-F1 was seen at other (d, rank) settings.
+
+Extrapolation to n_boot = 999 (refit time only; the original fit adds under 1 s):
+
+| Per-refit time used | Per run | 8 Julia runs | Crosses 3 h? |
+|---|---|---|---|
+| 0.597 s (unwrapped call) | 9.9 min | 1.33 h | no |
+| 0.728 s (wrapped mean) | 12.1 min | 1.62 h | no |
+| 1.099 s (worst single refit, as if every refit were that slow) | 18.3 min | 2.44 h | no |
+
+Against R, per refit: 0.597 to 0.728 s for Julia against 0.308 s for R, so Julia is about 1.9 to 2.4 times slower per refit. This ratio is rough: the loads differed (R pilot about 286, Julia pilot 106 to 179), the datasets differed (B6 against seed 1101), and R's 0.308 s is one run of 20 refits. If load slows both engines in a similar way, the ratio could be larger than measured, not smaller.
+
+Estimate for the whole design. The 8 R runs were estimated above at about 41 min. Adding the 8 Julia runs gives about 2.0 h (unwrapped) to 2.3 h (wrapped mean), run one after the other on 2 cores or fewer. The 3 h line is not crossed on these numbers. The margin is not large: the draft's break-even was t = 1.3 s per Julia refit for the Julia side alone, and with the R side included it is about 1.1 s. The earlier note saw R fit time vary about 14-fold with load, and no Julia load sensitivity has been measured, so a total above 3 h under heavier load cannot be excluded. A run that overruns its estimate stops and reports (Section 7). What this pilot does not cover: one dataset, 20 refits, one load level, Julia 1.12.6 only (Section 2 requires a frozen version at launch), and no refits on the other three datasets or on a boundary fit, where refits may be slower or fail more often (S1-F6 reported failed refits mostly with `:explicitunique`).
 
 ## 9. Known limits of the design
 
