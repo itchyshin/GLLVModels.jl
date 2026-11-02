@@ -1,24 +1,34 @@
 # animal × dep — Gaussian matrix fitter (K_phy = p full-rank Λ_phy on Σ_animal).
 #
-# Twin estimand (Identity 2026-09-14; pin gllvmTMB animal_dep roxygen b4d5fee6):
-# full unstructured cross-trait additive-genetic covariance, documented parallel
-# to phylo_dep / animal_latent(d = T). Reuses fit_gaussian_gllvm J3 block.
-# No @formula animal_dep() sugar (formula v1 rejects FunctionTerm).
+# Row-relatedness model: the rows of Y are the individuals indexed by A and the
+# animal block is (Λ_phy Λ_phy') .* Σ_animal. This is NOT gllvmTMB's animal_dep,
+# which is Σ_trait ⊗ A; the Julia model with that covariance is
+# fit_kernel_dep_gllvm(Y, A, groups) (SourceCovariance :dep). Same path as
+# phylo_dep (#817). Reuses fit_gaussian_gllvm J3 block. No @formula
+# animal_dep() sugar (formula v1 rejects FunctionTerm).
 
 """
     fit_animal_dep_gllvm(Y, A; family = Normal(), Σ_animal = nothing, jitter = 1e-6, kwargs...)
 
-Standalone **animal × dep** Gaussian fit: full-rank relatedness trait loadings
-(`K_phy = p`, packed lower-triangular Λ_phy with `p(p + 1)/2` parameters) on a
-fixed p × p relatedness / GRM matrix passed as `Σ_phy` internally, with a
-minimal unit-tier factor (`K = 1`). Same estimand class as twin
-`animal_dep(0 + trait | id, A = A)` / `animal_latent(..., d = T)`.
+Standalone **row-relatedness** Gaussian fit: the `p` rows of `Y` are the
+individuals indexed by `A`, and the relatedness block of the row covariance is the
+Hadamard product `(Λ_phy Λ_phy') .* A`, with full-rank loadings (`K_phy = p`,
+packed lower-triangular Λ_phy with `p(p + 1)/2` parameters), a fixed p × p
+relatedness / GRM matrix passed as `Σ_phy` internally, and a minimal unit-tier
+factor (`K = 1`).
+
+This is **not** the estimand of gllvmTMB's `animal_dep(0 + trait | id, A = A)`.
+R's `animal_dep` puts traits and individuals on separate axes, with covariance
+`Σ_trait ⊗ A` (an unstructured trait covariance Kronecker the relatedness `A`).
+The Julia model with that covariance is
+[`fit_kernel_dep_gllvm`](@ref)`(Y, A, groups)`, with `Y` traits × units and
+`groups` mapping each unit to its row of `A`.
 
 This is a **Gaussian matrix** fitter. `@formula` `animal_dep()` syntax is not
 currently available.
 
 `A` must be a square p × p (precomputed) numerator-relationship or genomic-
-relationship matrix. `Y` is traits × sites with `size(Y, 1) == size(A, 1)`.
+relationship matrix. `Y` is individuals × sites with `size(Y, 1) == size(A, 1)`.
 When `Σ_animal` is omitted, [`relatedness_cov`](@ref)`(A; jitter = jitter)`
 validates and symmetrizes `A` for the engine.
 

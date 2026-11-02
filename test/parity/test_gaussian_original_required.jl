@@ -1,13 +1,16 @@
 # Original retained default-unique fixture; direct and formula cases share one execution.
 module Core070GaussianOriginalRequired
 using GLLVModels,RCall,Test,LinearAlgebra,Statistics,TOML,SHA
-using ..Main: _core070_receipt_dir, _core070_root, _parity_require_gllvmtmb!, core070_record_values!
+using ..Main: _CORE070_SOURCE, _core070_gaussian_random_contract,
+    _core070_receipt_dir, _core070_root, _parity_require_gllvmtmb!, core070_record_values!
 @assert realpath(pkgdir(GLLVModels))==realpath(_core070_root())
 _parity_require_gllvmtmb!()
 fixture=joinpath(@__DIR__,"fixtures/core070_gaussian_original.toml")
 reference=joinpath(@__DIR__,"fixtures/core070_gaussian_reference.R")
 output=_core070_receipt_dir()
 row=only(filter(x->x["id"]=="CORE070-AGHQ-K1-GAUSSIAN",TOML.parsefile(fixture)["cases"]))
+expected_random = _core070_gaussian_random_contract(
+    _CORE070_SOURCE[]["reference_commit"], _CORE070_SOURCE[]["gllvmTMB_version"])
 p=row["p"];n=row["n"];K=row["K"];seed=row["seed"];Y=reshape(row["responses"],p,n)
 @rput Y seed reference
 R"source($reference); rb <- .admission_run(Y,'gaussian','value ~ 0 + latent(0 + trait | site, d=1)',seed,FALSE)"
@@ -34,7 +37,7 @@ ngradient=GLLVModels.ForwardDiff.gradient(objective,ntheta)
 rconverged=rcopy(Bool,R"as.integer(rb$fit$opt$convergence)==0L")
 nh=fit.converged && all(isfinite,ngradient) && (maximum(abs,ngradient)<=1e-4 || maximum(abs,ngradient)/max(1,abs(fit.loglik))<=1e-6)
 rh=rconverged && all(isfinite,rgradient) && (maximum(abs,rgradient)<=1e-4 || maximum(abs,rgradient)/max(1,abs(rvalue))<=1e-6)
-record=Dict("fixture_sha256"=>bytes2hex(sha256(read(fixture))),"fixed_residual_sd"=>c,"native_unique_variances"=>fit.ψ²,"native_total_variances"=>fit.φ²,"r_parameter_names"=>names,"r_parameters"=>rtheta,"native_parameters_in_r_scale"=>ntheta,"native_loglik"=>fit.loglik,"r_loglik"=>-rvalue,"delta_loglik"=>abs(fit.loglik+rvalue),"point_value_delta"=>point_value_delta,"point_gradient_delta"=>point_gradient_delta,"r_endpoint_value_delta"=>abs(objective(rtheta)-rvalue),"native_endpoint_cross_delta"=>abs(fit.loglik+rcopy(Float64,R"cross")),"native_gradient_max"=>maximum(abs,ngradient),"r_gradient_max"=>maximum(abs,rgradient),"native_health"=>nh,"r_health"=>rh,"r_random"=>rcopy(Vector{String},R"rb$random"),"r_fixed_columns"=>rcopy(Int,R"ncol(rb$fit$tmb_obj$env$data$X_fix)"),"r_sigma_mapped"=>rcopy(Bool,R"!is.null(rb$fit$tmb_obj$env$map$log_sigma_eps)"),"native_dof"=>GLLVModels._nparams(fit))
+record=Dict("fixture_sha256"=>bytes2hex(sha256(read(fixture))),"fixed_residual_sd"=>c,"native_unique_variances"=>fit.ψ²,"native_total_variances"=>fit.φ²,"r_parameter_names"=>names,"r_parameters"=>rtheta,"native_parameters_in_r_scale"=>ntheta,"native_loglik"=>fit.loglik,"r_loglik"=>-rvalue,"delta_loglik"=>abs(fit.loglik+rvalue),"point_value_delta"=>point_value_delta,"point_gradient_delta"=>point_gradient_delta,"r_endpoint_value_delta"=>abs(objective(rtheta)-rvalue),"native_endpoint_cross_delta"=>abs(fit.loglik+rcopy(Float64,R"cross")),"native_gradient_max"=>maximum(abs,ngradient),"r_gradient_max"=>maximum(abs,rgradient),"native_health"=>nh,"r_health"=>rh,"expected_random_effects"=>expected_random,"r_random"=>rcopy(Vector{String},R"rb$random"),"r_fixed_columns"=>rcopy(Int,R"ncol(rb$fit$tmb_obj$env$data$X_fix)"),"r_sigma_mapped"=>rcopy(Bool,R"!is.null(rb$fit$tmb_obj$env$map$log_sigma_eps)"),"native_dof"=>GLLVModels._nparams(fit))
 open(io->TOML.print(io,record),joinpath(output,"gaussian-native.toml"),"w")
 println(record)
 const NATIVE_ID="CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL"
@@ -48,9 +51,9 @@ core070_record_values!("objective at the Julia optimum";julia=-fit.loglik,r=rcop
 core070_record_values!("logLik";julia=fit.loglik,r=-rvalue,atol=1e-3,case=NATIVE_ID,
     test="@test record[\"delta_loglik\"]<=1e-3")
 @testset "Original Gaussian default unique native pair" begin
- # Maintainer ruling 2026-10-05 (vault D-319): at P1 gllvmTMB reports only z_B as random
- # (gllvmTMB commit 853daf5f0); the earlier ["z_B","s_B"] expectation was stale.
- @test record["r_random"]==["z_B"]
+ # The frozen P0 source reports z_B and s_B; P1's 2026-10-05 maintainer ruling
+ # reports only z_B. Select the expected pair from exact commit and installed version.
+ @test record["r_random"]==expected_random
  @test record["r_fixed_columns"]==0 && record["r_sigma_mapped"]
  @test record["native_dof"]==length(rtheta)
  @test point_value_delta<=1e-6

@@ -58,7 +58,8 @@ function _spde_latent_rebuild(fit::SPDELatentFit,
     U = _spde_latent_mode(fam, Y, Ntr, fit.Λ, fit.β, fit.link, A, Qs;
                           maxiter = maxiter, tol = tol)
     if U === nothing
-        error("SPDE-latent mode-finder failed to converge (non-SPD Hessian). " *
+        error("SPDE-latent mode-finder did not converge (non-SPD Hessian, no non-decreasing " *
+              "step, or `maxiter` exhausted; raise `maxiter`). " *
               "The fit may be numerically ill-conditioned.")
     end
     return U, A, Qs

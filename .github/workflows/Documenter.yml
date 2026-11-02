@@ -37,6 +37,11 @@ jobs:
       - name: Build documentation
         env:
           GLLVM_DOCS_DEPLOY: "false"
+          # DocumenterVitepress decides the deploy folder at BUILD time and
+          # records it in docs/build/bases.txt. Without a token here the
+          # decision is all_ok = false, bases.txt is blank and the deploy job
+          # has nothing to publish (#719). No push happens in this job.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: julia --project=docs docs/make.jl
       # Generated HTML includes Documenter-expanded public docstrings, which a
       # Markdown-only scan cannot see. Do this before publishing the site.
@@ -83,9 +88,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+          # Pull requests from forks have no write token, so deploydocs
+          # legitimately skips them. Everything else must publish.
+          CAN_DEPLOY: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
+          set -o pipefail
+          if [ "$CAN_DEPLOY" = "true" ] && ! grep -q '[^[:space:]]' docs/build/bases.txt; then
+            echo "::error::docs/build/bases.txt is empty: the build job found no deployment base, so nothing would be published (#719)"
+            exit 1
+          fi
           for attempt in 1 2 3 4 5; do
-            julia --project=docs docs/deploy.jl && exit 0
+            if julia --project=docs docs/deploy.jl 2>&1 | tee deploy.log; then
+              # deploydocs returns normally when it skips; that must not be green.
+              if [ "$CAN_DEPLOY" = "true" ] && grep -q "Found no bases" deploy.log; then
+                echo "::error::deploydocs found no bases suitable for deployment; nothing was published (#719)"
+                exit 1
+              fi
+              exit 0
+            fi
             echo "deploy attempt $attempt failed (likely a gh-pages push race); retrying"
             sleep $(( 10 + RANDOM % 30 ))
           done

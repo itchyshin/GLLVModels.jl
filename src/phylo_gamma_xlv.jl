@@ -122,6 +122,7 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
     eps = zeros(Float64, n, K)
     u = zeros(Float64, size(Q, 1))
     local H
+    mode_found = false
 
     for _ in 1:maxiter
         grad, H = _phylo_gamma_xlv_grad_hessian(
@@ -160,8 +161,15 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
             step *= 0.5
         end
         accepted || return nothing, nothing, nothing
-        step * max_delta < tol && break
+        if step * max_delta < tol
+            mode_found = true
+            break
+        end
     end
+
+    # `maxiter` exhausted: (eps, u) is not the mode, so a Laplace value built from it
+    # would depend on `maxiter`. Report it as a failed search, like a non-SPD Hessian.
+    mode_found || return nothing, nothing, nothing
 
     # The Newton loop above ran on Fisher; this final assembly, at the CONVERGED
     # mode, is the one whose logdet enters the marginal.
@@ -256,6 +264,21 @@ function _phylo_gamma_xlv_nll_packed(theta::AbstractVector, Y::AbstractMatrix,
     return isfinite(ll) ? -ll : 1e12
 end
 
+# The objective `_fit_phylo_gamma_xlv` hands to Optim: any exception or non-finite value at a
+# line-search trial step becomes the sentinel; Ctrl-C is rethrown (#947).
+function _phylo_gamma_xlv_nll_guarded(theta::AbstractVector, Y::AbstractMatrix,
+        p::Integer, K::Integer, phy::AugmentedPhy, X_lv::AbstractMatrix;
+        q_lv::Integer, maxiter::Integer = 80, tol::Real = 1e-9)
+    v = try
+        _phylo_gamma_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
+                                    q_lv = q_lv, maxiter = maxiter, tol = tol)
+    catch e
+        e isa InterruptException && rethrow()
+        return 1e12
+    end
+    return isfinite(v) ? v : 1e12
+end
+
 function _phylo_gamma_xlv_theta0(Y::AbstractMatrix, K::Integer,
         X_lv::AbstractMatrix; beta_init = nothing, Lambda_init = nothing,
         alpha_lv_init = nothing, alpha_shape_init::Real = 2.0,
@@ -315,17 +338,10 @@ function _fit_phylo_gamma_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
                                      alpha_lv_init = alpha_lv_init,
                                      alpha_shape_init = alpha_shape_init,
                                      sigma2_phy_init = sigma2_phy_init)
-    nll = theta -> begin
-        v = try
-            _phylo_gamma_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
-                                        q_lv = q_lv,
-                                        maxiter = newton_maxiter,
-                                        tol = newton_tol)
-        catch
-            return 1e12
-        end
-        return isfinite(v) ? v : 1e12
-    end
+    nll = theta -> _phylo_gamma_xlv_nll_guarded(theta, Y, p, K, phy, X_lv;
+                                                q_lv = q_lv,
+                                                maxiter = newton_maxiter,
+                                                tol = newton_tol)
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(nll, theta0, ls,
                          Optim.Options(g_tol = g_tol, iterations = iterations);
@@ -333,11 +349,12 @@ function _fit_phylo_gamma_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
     theta_hat = Optim.minimizer(res)
     beta_hat, Lambda_hat, alpha_hat, alpha_shape_hat, sigma2_hat =
         _phylo_gamma_xlv_unpack_packed(theta_hat, p, K, q_lv)
+    verdict = _phylo_xlv_verdict(res, g_tol)
     return (beta = collect(beta_hat), Lambda = Matrix(Lambda_hat),
             alpha_lv = Matrix(alpha_hat), alpha_shape = alpha_shape_hat,
-            sigma2_phy = sigma2_hat, loglik = _fit_verdict(res)[1],
-            converged = _fit_verdict(res)[2], iterations = _fit_verdict(res)[3],
-            theta_packed = collect(theta_hat))
+            sigma2_phy = sigma2_hat, loglik = verdict.loglik,
+            converged = verdict.converged, iterations = verdict.iterations,
+            theta_packed = collect(theta_hat), stop_reason = verdict.reason)
 end
 
 function _phylo_gamma_xlv_profile_indices(indices, nb::Integer)

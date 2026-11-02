@@ -207,6 +207,26 @@ Source: `sim/results/e2e_wall_receipts_fdc43845.tsv` · after-task `2026-09-23-s
 
 Still gated (not in this table): ASReml ladder (needs paired receipt + Rose wording). Projected SelectedInversion.jl stays unwired (#378). Do not form Julia 1.10↔1.12 or Mac↔Totoro × from these abs walls.
 
+### 4.4 Selected-inverse winner by structure (SelectedInversion.jl stays bench-only)
+
+The fastest selected-inverse arm depends on the sparsity structure. Arms are our current Takahashi kernel, the H² SIMD kernel, and SelectedInversion.jl (SI), all on the same CHOLMOD factor, 1 Julia thread, 1 BLAS thread, identity bar 1e-10. Same-host ratios only (Julia-vs-Julia kernel walls; not a fit-wall claim).
+
+| Structure | Fill | Wall winner | SI vs ours | D-271 gate |
+|---|---|---|---|---|
+| Phylo (balanced tree precision, p_tips 1k to 100k) | ~2, simplicial | **ours** (GLLVM current; H² SIMD about 0.3 to 0.9× of it) | SI ~5 to 25× slower on Totoro (S_si/gllvm 0.04 to 0.21) | KEEP-OURS |
+| Halfsib animal (sparse MME, q 500 to 50k) | ~3.9, simplicial | **ours** and H² SIMD about tied (0.7 to 1.5×) | SI ~3 to 5× slower (S_si/gllvm 0.21 to 0.34) | KEEP-OURS |
+| Adversarial high-fill animal | ~474 | **SI** (~5.6 to 5.7× faster than H² SIMD on Totoro) | SI wins the wall, but stays under the 10× bar | KEEP-OURS (5.7× < 10×) |
+
+The third row is a wall result only: SI is faster there, but D-271 (optional `[weakdeps]` + `ext/` only after a 10× or larger kernel win at one BLAS thread, rtol 1e-10, at most 2 added packages) is not met, so the gate is still KEEP-OURS. SelectedInversion.jl stays bench-only: no package dependency, no production adopt (G0 option A, KEEP-OURS). Do not read the first two rows as licence for the third, or the reverse.
+
+Receipts (plain text paths, lane copies):
+
+- `~/local-scratch/lanes/GLLVM.jl-s9cov-20260921/docs/dev-log/tools/receipts/2026-09-24-gllvm-animal-phylo-size-ladder-results.md` (phylo and halfsib rows)
+- `~/local-scratch/lanes/GLLVM.jl-s9cov-20260921/docs/dev-log/plans/2026-09-24-algorithm-pick-G0.md` (decision and the fill ~474 animal cell)
+- DRM TSVs in `~/local-scratch/lanes/DRM.jl-shared-selinv-pilot-C-20260924/bench/results/`
+- H² bakeoff in `~/local-scratch/lanes/HSquared.jl-selinv-bakeoff-B-20260924/`
+- Adopt closeouts: #426 (this repo), DRModels.jl #771, HSquared.jl #353
+
 ---
 
 ## 5. Rose fences (standing)
@@ -273,3 +293,4 @@ Tracking issues for reader-facing follow-up in the R twins (verified open 2026-0
 | 2026-09-23 | Fir DRAC GLLVM `61148081` abs confirm (7/7); DRM Wave B Totoro slots 11–20 banked on #808 tip `e9d50a110`. Interim counts **20 / 20 / 20** (Wave A not yet in report slots). |
 | 2026-09-23 | Final counts after DRM #808 bank: Wave A Mac cells 21–28 added. Counts **20 / 28 / 20** = **68**. Merge SHA pending CI green. No invented ×. |
 | 2026-09-23 | DRM #808 MERGED `da8b3f871` (ci-ok green after Julia 1 shard 4/4). Report counts **20 / 28 / 20** on `main`. No invented ×. |
+| 2026-10-23 | §4.4: structure-dependent selected-inverse winner table (phylo, halfsib animal, high-fill animal); SelectedInversion.jl stays bench-only (KEEP-OURS, D-271 bar not met). Closes #466. |

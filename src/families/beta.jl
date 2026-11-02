@@ -216,7 +216,8 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = _sanitize_missing(Y, 0.5)                   # in-(0,1) placeholder
+    _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm")
+    Yc  = _sanitize_unobserved(Y, msk, 0.5)           # in-(0,1) placeholder
 
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)

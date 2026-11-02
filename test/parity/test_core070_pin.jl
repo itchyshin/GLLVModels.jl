@@ -8,7 +8,7 @@
 # directly:
 #   julia --project=. test/parity/test_core070_pin.jl
 
-using Test
+using Test, TOML
 
 const HERE = @__DIR__
 const ROOT = normpath(joinpath(HERE, "..", ".."))
@@ -16,6 +16,33 @@ const PIN_FILE = joinpath(HERE, "core070_pin.jl")
 const CONTRACT_FILE = joinpath(ROOT, "docs/dev-log/core070/frozen-r070-contract.toml")
 const P0_COMMIT = "b4d5fee64def88bc768dda1f1f77c29b295edd86"
 const P1_COMMIT = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+const P0_VERSION = "0.7.0"
+const P1_VERSION = "0.7.1"
+const PIN_TABLE = TOML.parsefile(joinpath(ROOT, "tools/core070_oracle_pins.toml"))
+
+function build_receipt_text(pin_name::AbstractString; version::Union{Nothing,AbstractString} = nothing)
+    pin = PIN_TABLE[pin_name]
+    fields = ["reference_commit" => pin["reference_commit"],
+              "source_tree_sha256" => pin["source_tree_sha256"],
+              "archive_sha256" => pin["archive_sha256"]]
+    version === nothing || push!(fields, "gllvmTMB_version" => String(version))
+    rows = ["  \"$key\": \"$value\"" for (key, value) in fields]
+    return "{\n" * join(rows, ",\n") * "\n}\n"
+end
+
+function check_build_receipt(pin::AbstractString, text::AbstractString)
+    path = tempname()
+    write(path, text)
+    try
+        return run_pin_script("""
+            include(raw"$PIN_FILE")
+            _core070_check_oracle_receipt(read(raw"$path", String), "synthetic-build.json", :build)
+            println("BUILD_VERSION_OK")
+            """; pin = pin)
+    finally
+        rm(path; force = true)
+    end
+end
 
 function run_pin_script(script::AbstractString; pin::Union{Nothing,AbstractString} = nothing,
                         oracle_build::Union{Nothing,AbstractString} = nothing)
@@ -57,6 +84,70 @@ end
         @test occursin("GLLVM_PARITY_PIN", r.stderr)
     end
 
+    @testset "Gaussian random-effect contract is selected by exact source and version" begin
+        script = """
+            include(raw"$PIN_FILE")
+            println(join(_core070_gaussian_random_contract("$P0_COMMIT", "$P0_VERSION"), ","))
+            println(join(_core070_gaussian_random_contract("$P1_COMMIT", "$P1_VERSION"), ","))
+            """
+        r = run_pin_script(script)
+        @test r.success
+        @test split(strip(r.stdout), "\n") == ["z_B,s_B", "z_B"]
+
+        for script in (
+            "include(raw\"$PIN_FILE\"); _core070_gaussian_random_contract(\"$P0_COMMIT\", \"$P1_VERSION\")",
+            "include(raw\"$PIN_FILE\"); _core070_gaussian_random_contract(\"$P1_COMMIT\", \"$P0_VERSION\")",
+            "include(raw\"$PIN_FILE\"); _core070_gaussian_random_contract(repeat(\"0\", 40), \"$P0_VERSION\")",
+        )
+            r = run_pin_script(script)
+            @test !r.success
+            @test occursin("Gaussian random-effect", r.stderr)
+        end
+    end
+
+    @testset "installed package version and marker must prove the selected oracle version" begin
+        for (pin, version, commit) in (("P0", P0_VERSION, P0_COMMIT), ("P1", P1_VERSION, P1_COMMIT))
+            valid = run_pin_script("""
+                include(raw"$PIN_FILE")
+                _core070_check_installed_package_version("$version", "$version")
+                println("INSTALLED_VERSION_OK $commit")
+                """; pin = pin)
+            @test valid.success
+            @test occursin("INSTALLED_VERSION_OK $commit", valid.stdout)
+        end
+        for (pin, expected, wrong) in (("P0", P0_VERSION, P1_VERSION), ("P1", P1_VERSION, P0_VERSION))
+            wrong_installed = run_pin_script("""
+                include(raw"$PIN_FILE")
+                _core070_check_installed_package_version("$expected", "$wrong")
+                """; pin = pin)
+            @test !wrong_installed.success
+            @test occursin("gllvmTMB version", wrong_installed.stderr)
+            missing_marker = run_pin_script("""
+                include(raw"$PIN_FILE")
+                _core070_check_installed_package_version(nothing, "$expected")
+                """; pin = pin)
+            @test !missing_marker.success
+            @test occursin("rebuild the pinned oracle", missing_marker.stderr)
+        end
+    end
+
+    @testset "build receipt version is required and must match its exact pin" begin
+        for (pin_name, version, commit) in (("P0", P0_VERSION, P0_COMMIT), ("P1", P1_VERSION, P1_COMMIT))
+            valid = check_build_receipt(pin_name, build_receipt_text(pin_name; version = version))
+            @test valid.success
+            @test occursin("BUILD_VERSION_OK", valid.stdout)
+
+            wrong = pin_name == "P0" ? P1_VERSION : P0_VERSION
+            wrong_version = check_build_receipt(pin_name, build_receipt_text(pin_name; version = wrong))
+            @test !wrong_version.success
+            @test occursin("gllvmTMB_version", wrong_version.stderr)
+
+            legacy = check_build_receipt(pin_name, build_receipt_text(pin_name))
+            @test !legacy.success
+            @test occursin("rebuild the pinned oracle", legacy.stderr)
+        end
+    end
+
     @testset "frozen-r070-contract.toml (P0) + P0 selection passes" begin
         r = run_pin_script("""
             include(raw"$PIN_FILE")
@@ -96,7 +187,7 @@ end
         @test strip(r1.stdout) == "docs/dev-log/core070/true-parity-latest/frozen-r070-contract-p1.toml"
     end
 
-    @testset "oracle receipt paths follow the pin; P1 receipts validate against P1 only" begin
+    @testset "legacy oracle build receipts fail closed until rebuilt with version metadata" begin
         script = """
             include(raw"$PIN_FILE")
             rel = _core070_oracle_receipts_rel()
@@ -107,8 +198,18 @@ end
             println(rel.build)
             """
         r1 = run_pin_script(script; pin = "P1")
-        @test r1.success
-        @test strip(r1.stdout) == "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json"
+        @test !r1.success
+        @test occursin("gllvmTMB_version", r1.stderr)
+        @test occursin("rebuild", r1.stderr)
+        source_only = run_pin_script("""
+            include(raw"$PIN_FILE")
+            rel = _core070_oracle_receipts_rel()
+            path = joinpath(raw"$ROOT", rel.source)
+            _core070_check_oracle_receipt(read(path, String), rel.source, :source)
+            println(rel.build)
+            """; pin = "P1")
+        @test source_only.success
+        @test strip(source_only.stdout) == "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json"
         # P0 selection keeps the historical .unlazy paths.
         r0 = run_pin_script("""include(raw"$PIN_FILE"); println(_core070_oracle_receipts_rel().build)"""; pin = "P0")
         @test r0.success
@@ -119,10 +220,8 @@ end
         script = """
             include(raw"$PIN_FILE")
             rel = _core070_oracle_receipts_rel()
-            for kind in (:build, :source)
-                path = joinpath(raw"$ROOT", getfield(rel, kind))
-                _core070_check_oracle_receipt(read(path, String), getfield(rel, kind), kind)
-            end
+            path = joinpath(raw"$ROOT", rel.source)
+            _core070_check_oracle_receipt(read(path, String), rel.source, :source)
             println(rel.build); println(rel.source)
             """
         t = run_pin_script(script; pin = "P1", oracle_build = "totoro")

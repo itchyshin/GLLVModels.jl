@@ -64,6 +64,9 @@ end
 # optimiser tries gives a log-pmf of -Inf, so each fitter ends on its failure
 # sentinel and reports converged = false, loglik = -Inf, at iteration 0. It is
 # data-driven, not RNG-driven, so it is the same on every Julia version.
+# The ungrouped fitter refuses y > N up front (#730), so that route uses a stubbed failed refit.
+_bb542_real_bad(route::Symbol) = route !== :ungrouped
+
 function _bb542_bad(Y, N)
     B = copy(Y)
     B[1, 1] = N[1, 1] + 5
@@ -90,7 +93,7 @@ end
         @test raw.θ == pack(fb)
     end
 
-    @testset "a failed refit is rejected ($route)" for (route, fit, ad, direct, pack) in routes
+    @testset "a failed refit is rejected ($route)" for (route, fit, ad, direct, pack) in filter(r -> _bb542_real_bad(r[1]), routes)
         Y_bad = _bb542_bad(Y, N)
         fb_bad = direct(Y_bad)
         @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
@@ -100,15 +103,27 @@ end
         @test !GM._bootstrap_refit_ok(raw_bad, length(ad.θ))[2]
     end
 
+    @testset "a failed refit (stub) is rejected ($route)" for (route, fit, ad, direct, pack) in filter(r -> !_bb542_real_bad(r[1]), routes)
+        raw_bad = (θ = copy(ad.θ), converged = false, loglik = -Inf)   # STUB: no in-support draw fails here
+        @test !GM._bootstrap_refit_ok(raw_bad, length(ad.θ))[2]
+    end
+
     @testset "end to end: n_converged counts only converged replicates ($route)" for (route, fit, ad, direct, pack) in routes
         # A stubbed `simulate` alternates the healthy original `Y` (whose refit
         # converges; deterministic warm start) with the failing draw, so
         # n_converged must land strictly between 0 and n_boot.
-        Y_bad = _bb542_bad(Y, N)
         m = length(ad.θ)
         n_boot = 6
-        ad_mixed = GM._FamilyCI(ad.θ, ad.nll, ad.names, ad.kinds,
-                                rng -> rand(rng) < 0.5 ? Y : Y_bad, ad.refit)
+        ad_mixed = if _bb542_real_bad(route)
+            Y_bad = _bb542_bad(Y, N)
+            GM._FamilyCI(ad.θ, ad.nll, ad.names, ad.kinds,
+                         rng -> rand(rng) < 0.5 ? Y : Y_bad, ad.refit)
+        else
+            bad_marker = fill(-1, size(Y))   # STUB: a sentinel draw, never passed to a fitter
+            GM._FamilyCI(ad.θ, ad.nll, ad.names, ad.kinds,
+                         rng -> rand(rng) < 0.5 ? Y : bad_marker,
+                         Yb_ -> Yb_ === bad_marker ? (θ = copy(ad.θ), converged = false, loglik = -Inf) : ad.refit(Yb_))
+        end
         result = GM._family_bootstrap(ad_mixed, collect(1:m), 0.95, n_boot, 7, false)
         @test 0 < result.n_converged < n_boot
     end

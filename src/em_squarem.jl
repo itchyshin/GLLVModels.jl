@@ -75,18 +75,20 @@ end
 end
 
 """
-    _em_map_phylo(θ, y, Σ_phy, p, K_B) -> θ'
+    _em_map_phylo(θ, y, Σ_phy, p, K_B) -> (θ', hit_floor)
 
 One plain-EM update (E-step then M-step) of `em_phylo.jl`, on the packed
 parameter `θ = [vec(Λ_B); σ_eps; σ_phy]`. This is the map G whose fixed point
 is the (dense) MLE; SQUAREM accelerates iteration of exactly this map.
+`hit_floor` is the M-step clamp flag from `_mstep_dense` (data-relative
+`σ_eps²` floor); callers must veto `converged` when it is true (#753).
 """
 function _em_map_phylo(θ::AbstractVector, y::AbstractMatrix,
                        Σ_phy::AbstractMatrix, p::Integer, K_B::Integer)
     Λ_B, σ_eps, σ_phy = _unpack_phylo(θ, p, K_B)
     ss = _estep_dense(y, Λ_B, σ_eps, σ_phy, Σ_phy)
-    Λ_B′, σ_eps′, σ_phy′ = _mstep_dense(y, ss)
-    return _pack_phylo(Λ_B′, σ_eps′, σ_phy′)
+    Λ_B′, σ_eps′, σ_phy′, hit_floor = _mstep_dense(y, ss)
+    return _pack_phylo(Λ_B′, σ_eps′, σ_phy′), hit_floor
 end
 
 @inline function _loglik_phylo(θ::AbstractVector, y::AbstractMatrix,
@@ -213,6 +215,7 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
     loglik_trace = Float64[]
     converged    = false
     cycles_run   = 0
+    sigma_eps_boundary = false
 
     # Score and record the starting point (matches em_fit_phylo's first trace
     # entry: the log-lik at the warm-start parameters).
@@ -223,8 +226,8 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
         cycles_run = cycle
 
         # --- two base EM steps -------------------------------------------------
-        θ1 = _em_map_phylo(θ,  yf, Σ_phy, p, K_B)
-        θ2 = _em_map_phylo(θ1, yf, Σ_phy, p, K_B)
+        θ1, hit1 = _em_map_phylo(θ,  yf, Σ_phy, p, K_B)
+        θ2, hit2 = _em_map_phylo(θ1, yf, Σ_phy, p, K_B)
         ll2 = _loglik_phylo(θ2, yf, Σ_phy, p, K_B)   # plain-EM log-lik this cycle
 
         # --- SQUAREM (order-3) extrapolation ----------------------------------
@@ -237,22 +240,36 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
             # No curvature / no movement: the two EM steps are the whole update.
             θ_cand = θ2
             ll_cand = ll2
+            hit_cand = hit2
         else
             α0 = -rn / vn                            # SqS3 steplength (≤ −1)
             α  = min(α0, -1.0)                       # never extrapolate "inward"
             θ_cand = θ2
             ll_cand = ll2
+            hit_cand = hit2
             # Backtrack α halfway toward −1 until the stabilised candidate is
             # in-domain AND does not lower the log-lik below the plain-EM value.
             for _ in 0:max_backtrack
                 θ′ = θ .- (2α) .* r .+ (α^2) .* v    # squared extrapolation
                 if _phylo_in_domain(θ′, p, K_B)
-                    θ_new = _em_map_phylo(θ′, yf, Σ_phy, p, K_B)  # stabilising EM
-                    ll_new = _loglik_phylo(θ_new, yf, Σ_phy, p, K_B)
-                    if isfinite(ll_new) && ll_new ≥ ll2 - 1e-9
-                        θ_cand  = θ_new
-                        ll_cand = ll_new
-                        break
+                    mapped = try
+                        _em_map_phylo(θ′, yf, Σ_phy, p, K_B)
+                    catch
+                        nothing
+                    end
+                    if mapped !== nothing
+                        θ_new, hit_new = mapped
+                        ll_new = try
+                            _loglik_phylo(θ_new, yf, Σ_phy, p, K_B)
+                        catch
+                            -Inf
+                        end
+                        if isfinite(ll_new) && ll_new ≥ ll2 - 1e-9
+                            θ_cand  = θ_new
+                            ll_cand = ll_new
+                            hit_cand = hit_new
+                            break
+                        end
                     end
                 end
                 α ≈ -1.0 && break                    # already at the safe value
@@ -273,8 +290,14 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
         end
 
         θ = θ_cand
+        # Latch every map in the cycle. An extrapolation that leaves the
+        # floor, or a later clamp-up to `eps()` on tiny y, must not clear
+        # a clamp that already happened.
+        sigma_eps_boundary = sigma_eps_boundary || hit1 || hit2 || hit_cand
+        # Increment test is the stop; the clamp veto keeps a floored σ_eps
+        # from looking like an interior MLE. Do not hard-code true.
         if abs(inc) < tol
-            converged = true
+            converged = !sigma_eps_boundary
             break
         end
         ll_prev = ll
@@ -313,8 +336,9 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
         # -- cheap screen: polish from θ_sq (catches mode (1) only) ----------
         if safety_polish_iters > 0
             θ_polish = θ
+            hit_polish = sigma_eps_boundary
             for _ in 1:safety_polish_iters
-                θ_polish = _em_map_phylo(θ_polish, yf, Σ_phy, p, K_B)
+                θ_polish, hit_polish = _em_map_phylo(θ_polish, yf, Σ_phy, p, K_B)
             end
             ll_polish = _loglik_phylo(θ_polish, yf, Σ_phy, p, K_B)
             needs_fallback = isfinite(ll_polish) && ll_polish > ll_sq + safety_tol
@@ -332,7 +356,8 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
             if isfinite(fb.logLik) && fb.logLik > ll_sq + safety_tol
                 return EMPhyloFit(fb.Λ_B, fb.σ_eps, fb.σ_phy, fb.logLik,
                                   fb.n_iter, fb.converged, fb.loglik_trace,
-                                  fb.blup_phy, fb.blup_phi, true)
+                                  fb.blup_phy, fb.blup_phi, true,
+                                  fb.sigma_eps_boundary)
             end
         elseif needs_fallback
             fb = em_fit_phylo(yf, K_B, Σ_phy;
@@ -345,11 +370,13 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
             if isfinite(fb.logLik) && fb.logLik > ll_polish
                 return EMPhyloFit(fb.Λ_B, fb.σ_eps, fb.σ_phy, fb.logLik,
                                   fb.n_iter, fb.converged, fb.loglik_trace,
-                                  fb.blup_phy, fb.blup_phi, true)
+                                  fb.blup_phy, fb.blup_phi, true,
+                                  fb.sigma_eps_boundary)
             end
             # θ_polish is the best candidate: fall through to the common tail,
             # which recomputes BLUPs and log-lik at θ.
             θ = θ_polish
+            sigma_eps_boundary = hit_polish
             fallback_used = true
         end
     end
@@ -376,9 +403,13 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
         blup_phi = -blup_phi
     end
 
+    if σ_eps^2 <= _sigma_eps2_data_floor(yf)
+        sigma_eps_boundary = true
+    end
+    converged = converged && !sigma_eps_boundary
     return EMPhyloFit(Matrix{Float64}(Λ_B), σ_eps, Vector{Float64}(σ_phy),
                       ll_final, cycles_run, converged, loglik_trace,
-                      blup_phy, blup_phi, fallback_used)
+                      blup_phy, blup_phi, fallback_used, sigma_eps_boundary)
 end
 
 """

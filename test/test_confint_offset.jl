@@ -643,10 +643,9 @@ end
         _, fitter, gen = b
         Y = gen(Z)
         f = fitter(Y; hessian = :fisher)
-        # the fit's own objective is the :fisher one; the adapter rebuilds the :observed one, so
-        # the log-likelihoods differ, yet this is the offset-free route main took
+        # the fit records its curvature, so the adapter rebuilds the fit's own :fisher objective (#778)
         ad = GM._family_ci(f, Y; objective = :laplace)
-        @test abs(-ad.nll(ad.θ) - f.loglik) > 1e-4
+        @test isapprox(-ad.nll(ad.θ), f.loglik; atol = 1e-6)
         @test _same_as_main(f, Y)
         # with an offset: accepted when it is passed, refused when dropped or wrong
         Yo = gen(O)
@@ -670,7 +669,7 @@ end
     msg = try confint(f, Y); "" catch e; e isa ArgumentError ? e.msg : rethrow() end
     @test !isempty(msg)
     # offset, N, X, mask, the variational objective, the curvature, a non-default link
-    for word in ("offset", "`N`", "`X`", "`mask`", "variational", "hessian = :fisher", "link")
+    for word in ("offset", "`N`", "`X`", "`mask`", "variational", "`hessian`", "link")
         @test occursin(word, msg)
     end
     # a wrong offset gets the same text (it is told what to pass, not only that something is off)

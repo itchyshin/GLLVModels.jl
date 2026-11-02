@@ -1,0 +1,420 @@
+# Exact-name decisions explicitly approved on 2026-10-17.
+# Approval: docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md.
+# This source does not admit scoreboard rows or make package-wide parity claims.
+
+[decisions."@formula"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/structured-term-fitting.md"
+
+[decisions."@formula".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."bridge_capabilities"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/gllvmtmb-parity.md"
+
+[decisions."bridge_capabilities".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."excess_kurtosis"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."excess_kurtosis".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."gaussian_marginal_loglik_sparse_phy"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."gaussian_marginal_loglik_sparse_phy".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."lognormal_marginal_loglik"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/response-families.md"
+
+[decisions."lognormal_marginal_loglik".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."observed_mask"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."observed_mask".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."ppca_init"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."ppca_init".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."qq_max_dev"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."qq_max_dev".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."rank_sum_z"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."rank_sum_z".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."spearman"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."spearman".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."truncated_nbinom2_marginal_loglik_laplace"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."truncated_nbinom2_marginal_loglik_laplace".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."truncated_nbinom2_pertrait_marginal_loglik_laplace"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."truncated_nbinom2_pertrait_marginal_loglik_laplace".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."welch_t"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."welch_t".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."GllvmModel"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."GllvmModel".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."StatsAPI"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/pitfalls.md"
+
+[decisions."StatsAPI".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."random_balanced_tree"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."random_balanced_tree".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."shrinkage_factor"]
+decision = "KEPT_AS_JULIA_EXTRA"
+basis = "maintainer approved 2026-10-17 in docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; no same-role gllvmTMB P1 export identified; cited user-facing documentation: docs/src/api.md"
+
+[decisions."shrinkage_factor".ruling]
+ref = "itchyshin/GLLVModels.jl#684 item 3"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-02"
+
+[decisions."bridge_fit"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["P1-BRIDGE-READBACK-GJF-FORMULA-ROUTE-LOGLIK", "P1-BRIDGE-READBACK-GJF-LOGLIK-TMB", "P1-BRIDGE-READBACK-GJF-DF-TMB", "P1-BRIDGE-READBACK-GJF-INTERCEPTS-TMB", "P1-BRIDGE-READBACK-GJF-LATENT-SIGMA-TMB", "P1-BRIDGE-READBACK-GJF-SIGMA-EPS-TMB"]
+
+[decisions."bridge_fit".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."bridge_fit".counterpart]
+r_function = "gllvm_julia_fit"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/julia-bridge.R:2618"
+julia_source = "src/bridge.jl:493"
+
+[decisions."bridge_fit".scope]
+public_route = "GLLVModels.jl bridge_fit on the exact route below"
+family_link = "Gaussian/log link identity on measured bridge formula route"
+data = "gllvm_julia_fit Gaussian formula route; p=6,n=200, complete observations and no X; formula ~0+trait+latent(0+trait|unit,d=2,unique=FALSE)"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["formula-route logLik", "logLik", "df", "trait intercepts", "ΛΛ′", "sigma_eps"]
+exclusions = ["other bridge routes, response families, X, missing responses"]
+
+[decisions."fit_animal_dep_gllvm"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["FIT-MODE-ANIMAL-DEP", "FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE"]
+
+[decisions."fit_animal_dep_gllvm".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."fit_animal_dep_gllvm".counterpart]
+r_function = "animal_dep"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/animal-keyword.R:325"
+julia_source = "src/animal_dep.jl:34-62"
+
+[decisions."fit_animal_dep_gllvm".scope]
+public_route = "GLLVModels.jl fit_animal_dep_gllvm on the exact route below"
+family_link = "Gaussian identity with animal dependency covariance"
+data = "Gaussian 36 sites × 3 traits; animal_dep(0+trait|species,A=C); native and formula SourceCovariance(C;mode=:dep)"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["logLik", "beta", "covariance"]
+exclusions = ["other families, public R bridge (refusal is boundary evidence only), other covariance routes"]
+
+[decisions."fit_dep_gllvm"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["FIT-MODE-ORD-DEP", "FIT-MODE-ORD-DEP-FORMULA-INTERFACE"]
+
+[decisions."fit_dep_gllvm".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."fit_dep_gllvm".counterpart]
+r_function = "dep"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/brms-sugar.R:1959"
+julia_source = "src/none_dep.jl:42-72"
+
+[decisions."fit_dep_gllvm".scope]
+public_route = "GLLVModels.jl fit_dep_gllvm on the exact route below"
+family_link = "Gaussian identity with ordination dependency covariance"
+data = "Gaussian 36 sites × 3 traits; native and formula dependency route"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["logLik", "beta", "total covariance U+σ²I"]
+exclusions = ["non-Gaussian families, public R bridge, separate identification of U versus σ²I"]
+
+[decisions."fit_gllvm"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["P1-JULIA-NB2-INTERCEPTS", "P1-JULIA-NB2-LAMBDA-LAMBDAT", "P1-JULIA-NB2-DISPERSION"]
+
+[decisions."fit_gllvm".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."fit_gllvm".counterpart]
+r_function = "gllvmTMB (family=nbinom2())"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/gllvmTMB.R:636"
+julia_source = "src/families/fit_gllvm.jl:464"
+
+[decisions."fit_gllvm".scope]
+public_route = "GLLVModels.jl fit_gllvm on the exact route below"
+family_link = "NB2/log link, per-trait dispersion, one-axis latent route"
+data = "NB2 only; p=6,n=200,K=1 one-axis fixture; logLik is checked by linked test"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["intercepts", "ΛΛ′", "per-trait dispersion", "logLik (linked test)"]
+exclusions = ["all other fit_gllvm families, options, and routes"]
+
+[decisions."fit_kernel_dep_gllvm"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["FIT-MODE-KERNEL-DEP", "FIT-MODE-KERNEL-DEP-FORMULA-INTERFACE"]
+
+[decisions."fit_kernel_dep_gllvm".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."fit_kernel_dep_gllvm".counterpart]
+r_function = "kernel_dep"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/kernel-keywords.R:117"
+julia_source = "src/kernel_dep.jl:38-68"
+
+[decisions."fit_kernel_dep_gllvm".scope]
+public_route = "GLLVModels.jl fit_kernel_dep_gllvm on the exact route below"
+family_link = "Gaussian identity with dependent kernel covariance"
+data = "Gaussian 36 sites × 3 traits; known kernel C"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["logLik", "beta", "covariance"]
+exclusions = ["non-Gaussian families, public R bridge refusal, other kernel modes"]
+
+[decisions."fit_kernel_indep_gllvm"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["FIT-MODE-KERNEL-INDEP", "FIT-MODE-KERNEL-COMMON", "FIT-MODE-KERNEL-INDEP-FORMULA-INTERFACE", "FIT-MODE-KERNEL-COMMON-FORMULA-INTERFACE"]
+
+[decisions."fit_kernel_indep_gllvm".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."fit_kernel_indep_gllvm".counterpart]
+r_function = "kernel_indep; kernel_scalar when common=TRUE"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/kernel-keywords.R:111"
+julia_source = "src/kernel_indep.jl:39-69"
+
+[decisions."fit_kernel_indep_gllvm".scope]
+public_route = "GLLVModels.jl fit_kernel_indep_gllvm on the exact route below"
+family_link = "Gaussian identity with independent or common kernel covariance"
+data = "Gaussian 36 sites × 3 traits; known kernel C; independent and common=TRUE shared-scalar routes"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["logLik", "beta", "covariance"]
+exclusions = ["other kernel modes, other families, public R bridge refusals"]
+
+[decisions."StudentT"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["CORE070-A6-STUDENTT-FIXED-DF-PAIRED"]
+
+[decisions."StudentT".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."StudentT".counterpart]
+r_function = "student"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/families.R:371"
+julia_source = "src/families/studentt.jl:57-74"
+
+[decisions."StudentT".scope]
+public_route = "GLLVModels.jl StudentT on the exact route below"
+family_link = "Student-t identity, fixed df=6"
+data = "Student-t; df fixed at 6 in both engines; per-trait sigma; p=5,n=250,K=1"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["paired logLik and parameter comparisons in the receipt"]
+exclusions = ["free df, other df, other families", "StudentTFamily is the same Julia object and shares this decision"]
+
+[decisions."StudentTFamily"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["CORE070-A6-STUDENTT-FIXED-DF-PAIRED"]
+
+[decisions."StudentTFamily".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."StudentTFamily".counterpart]
+r_function = "student"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/families.R:371"
+julia_source = "src/families/studentt.jl:57-74"
+
+[decisions."StudentTFamily".scope]
+public_route = "GLLVModels.jl StudentTFamily on the exact route below"
+family_link = "Student-t identity, fixed df=6"
+data = "Alias of StudentT; one underlying Julia object and one shared fixed-df=6 receipt"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["same paired logLik and parameter comparisons as StudentT", "no duplicate receipt or capability"]
+exclusions = ["free df, other df, other families", "StudentT shares this decision"]
+
+[decisions."TruncatedNegBin2"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["NATIVE-12-TRUNCATED-NB2", "CORE070-FAMILY-11-LOG-FORMULA-INTERFACE"]
+
+[decisions."TruncatedNegBin2".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."TruncatedNegBin2".counterpart]
+r_function = "truncated_nbinom2"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/families.R:336"
+julia_source = "src/families/truncated_nbinom2.jl:28-31"
+
+[decisions."TruncatedNegBin2".scope]
+public_route = "GLLVModels.jl TruncatedNegBin2 on the exact route below"
+family_link = "Truncated NB2/log link"
+data = "Zero-truncated NB2; native and formula routes; per-trait dispersion; p=5,n=120,K=1, seed 58; likelihood-level evidence"
+estimand = "R-vs-Julia comparison of the listed output quantities on the retained P1 fixture"
+outputs = ["logLik only"]
+exclusions = ["successful public bridge fit (none)", "outputs beyond logLik", "models outside measured native/formula cases"]
+
+[decisions."BetaBinom"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["CORE070-FAMILY-08-LOGIT-NATIVE-MODEL"]
+
+[decisions."BetaBinom".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."BetaBinom".counterpart]
+r_function = "betabinomial"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/families.R:703"
+julia_source = "src/families/beta_binomial.jl:53-57"
+
+[decisions."BetaBinom".scope]
+public_route = "GLLVModels.jl BetaBinom on the exact P1 family fixture"
+family_link = "beta-binomial with logit link and per-trait dispersion"
+data = "p=5,n=120,K=1,N=8,seed=56; no covariates"
+estimand = "R-vs-Julia log-likelihood comparison on the retained P1 fixture"
+outputs = ["logLik"]
+exclusions = ["other links, covariates, latent dimensions, or output quantities"]
+
+[decisions."NB1"]
+decision = "SCOPED_R_TWIN"
+basis = "maintainer approved 2026-10-17 exact scope; see docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md; scope is limited to the measured route and outputs below"
+receipt_ids = ["CORE070-FAMILY-15-LOG-NATIVE-MODEL"]
+
+[decisions."NB1".ruling]
+ref = "docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md"
+signed_by = "Shinichi Nakagawa"
+signed_on = "2026-10-17"
+
+[decisions."NB1".counterpart]
+r_function = "nbinom1"
+r_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
+r_source = "R/families.R:312"
+julia_source = "src/families/negbin1.jl:39-43"
+
+[decisions."NB1".scope]
+public_route = "GLLVModels.jl NB1 on the exact P1 family fixture"
+family_link = "NB1 log link with per-trait dispersion"
+data = "p=5,n=120,K=1,seed=55; no covariates"
+estimand = "R-vs-Julia log-likelihood comparison on the retained P1 fixture"
+outputs = ["logLik"]
+exclusions = ["other links, covariates, latent dimensions, or output quantities"]

@@ -63,12 +63,20 @@ Two p × p Cholesky factorisations handle this regardless of `n`.
 Build `Σ_phy` from a phylogenetic tree using `PhyloNetworks`, `Phylo`, or any
 package that returns a variance-covariance matrix on the tips.
 
-```julia
-using GLLVModels, PhyloNetworks     # PhyloNetworks not in GLLVModels.jl deps; install separately
+The block below is self-contained: `Σ_phy` is written out for the four-tip tree
+`((a:1,b:1):1,(c:1,d:1):1);` (covariance = shared root-to-ancestor path length).
+For a real tree, replace it with the `vcv` of the tree object from
+`PhyloNetworks` (not a GLLVModels.jl dependency; install separately).
 
-tree    = readTopology("my_tree.tre")
-Σ_phy   = vcv(tree)            # p × p tip covariance
-y       = ...                  # p × n trait matrix
+```julia
+using GLLVModels, Random
+Random.seed!(1)
+
+Σ_phy   = [2.0 1.0 0.0 0.0;
+           1.0 2.0 0.0 0.0;
+           0.0 0.0 2.0 1.0;
+           0.0 0.0 1.0 2.0]    # p × p tip covariance, p = 4
+y       = randn(4, 40)         # p × n trait matrix (illustrative noise)
 
 fit = fit_gaussian_gllvm(y;
     K              = 2,
@@ -92,8 +100,12 @@ using external tools (e.g. `kinship2`, `nadiv`, `rrBLUP`, PLINK `--make-grm`,
 ```julia
 using GLLVModels
 
-# A is a precomputed p × p relatedness / GRM matrix (from your pedigree tool)
-A      = ...
+# A is a precomputed p × p relatedness / GRM matrix (from your pedigree tool);
+# here a toy 4 × 4 matrix with two full-sib pairs. `y` is the matrix from section 1.
+A      = [1.0 0.5 0.0 0.0;
+          0.5 1.0 0.0 0.0;
+          0.0 0.0 1.0 0.5;
+          0.0 0.0 0.5 1.0]
 Σ_rel  = relatedness_cov(A)           # symmetrize + small jitter for SPD
 
 fit = fit_gaussian_gllvm(y;
@@ -137,8 +149,8 @@ kernel families are supported:
 ```julia
 using GLLVModels
 
-# coords is a p × 2 (or p × d) matrix of spatial coordinates
-coords  = ...
+# coords is a p × 2 (or p × d) matrix of spatial coordinates; `y` is from section 1
+coords  = [0.0 0.0; 50.0 0.0; 0.0 50.0; 50.0 50.0]
 Σ_sp    = spatial_cov(coords;
               kernel     = :matern,
               range      = 100.0,   # in coordinate units

@@ -106,7 +106,12 @@ fit        # rich summary in the REPL
 
 Everything above works for a binary fit — pass the integer response matrix:
 
+The family markers come from Distributions.jl, not GLLVModels.jl, and `Yb`
+here is the 0/1 matrix obtained by thresholding the `Y` simulated above:
+
 ```julia
+using Distributions                # Binomial() comes from Distributions
+Yb = Int.(Y .> 0)                  # p×n 0/1 response
 fitb = fit_gllvm(Yb; family = Binomial(), K = 2)
 getLV(fitb, Yb)                 # Laplace-mode scores
 predict(fitb, Yb)               # fitted probabilities

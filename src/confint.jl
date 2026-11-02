@@ -368,7 +368,11 @@ pinned loadings are not parameters: their rows and columns are removed from
 the observed information before it is inverted (R's `sd_report\$cov.fixed`),
 each pinned `Lambda_B[i,k]` is reported with `se = 0` and `lower = upper =
 estimate`, and `pd_hessian` refers to the free parameters. `vcov` gives the
-pinned entries zero rows and columns.
+pinned entries zero rows and columns. If the information of the free parameters
+fails the Cholesky test, every SE and bound is `NaN`, the pinned entries'
+included, as gllvmTMB's `loading_ci()` returns `NA` for every row when `pdHess`
+is `FALSE`; [`loading_ci`](@ref), [`raw_loading_wald_ci`](@ref) and
+[`flag_unreliable_loadings`](@ref) follow the same rule.
 
 When PERF lands with reverse-mode AD, the integration agent can swap the
 ForwardDiff.hessian call for the faster path; the public API stays
@@ -408,7 +412,7 @@ bootstrap refits would drop the pins.
 | `parm`                        | quantity                                      | `:wald` (transform)                    | `:profile`               | `:bootstrap` |
 |-------------------------------|-----------------------------------------------|----------------------------------------|--------------------------|--------------|
 | `"communality[t]"`            | `communality(fit)[t]`                         | [`communality_wald_ci`](@ref) (logit)  | withdrawn (refused)      | `bootstrap_ci_derived` |
-| `"icc[t]"` or `"repeatability[t]"` | [`extract_ICC_site`](@ref)`(fit)[t]`  | [`icc_wald_ci`](@ref) (logit)          | `profile_ci_derived`     | same |
+| `"icc[t]"` or `"repeatability[t]"` | [`extract_ICC_site`](@ref)`(fit)[t]`  | [`icc_wald_ci`](@ref) (logit)          | withdrawn (refused)      | `bootstrap_ci_derived` |
 | `"rho[i,j]"` or `"correlation[i,j]"` | `correlation(fit)[i,j]`                | [`correlation_wald_ci`](@ref) (Fisher-z; `:fisher_z` is the same interval) | withdrawn (refused) | same |
 | `"proportion:<component>[t]"` | `proportions(fit; component)[t]`              | [`icc_wald_ci`](@ref) (logit)          | withdrawn (refused)      | same |
 | `"phylo_signal[t]"`           | `phylo_signal(fit)[t]`                        | [`phylo_signal_wald_ci`](@ref) (logit) | `profile_ci_phylo_signal` | same |
@@ -434,8 +438,10 @@ an alias of `:wald`: it returns the same Fisher-z interval, field for field.
 gllvmTMB 9539352f6, which withdrew those profile intervals (condition class
 `gllvmTMB_nonlinear_profile_withdrawn`) pending an exact constraint solver: the
 ArgumentError says the profile is withdrawn and points to `:wald` or `:bootstrap`.
-The penalty-based `profile_ci_derived` route that served them stays available as
-an exploratory internal function, and it still serves `icc` here.
+It is refused for `icc` too (#827), as gllvmTMB withdraws the repeatability profile
+(`gllvmTMB_repeatability_profile_withdrawn`, the refusal that the two-level
+[`repeatability_ci`](@ref) already makes). The penalty-based `profile_ci_derived`
+route that served them stays available as an exploratory internal function.
 
 ```julia
 fit = fit_gaussian_gllvm(y; K = 2)
@@ -544,6 +550,7 @@ end
 # `bootstrap_ci`, `bootstrap_ci_derived`, `profile_ci_derived`), which are public and
 # would otherwise refit a pinned fit without its pins (refs #794).
 function _check_unpinned_refit(fit::GllvmFit, fname::AbstractString)
+    _check_optimizer_refit(fit, fname)
     isempty(_lambda_constraint_pinned_theta_indices(fit)) && return nothing
     throw(ArgumentError(
         "$fname is not available for a fit with lambda_constraint pins: its refits " *
@@ -563,6 +570,9 @@ function _confint_gaussian(fit::GllvmFit, y, level::Real, parm, X, Σ_phy,
                                                    method, kw, parm)
     label = _confint_fit_label(fit)
     _confint_check_method(method, label, parm)
+    if method in (:profile, :bootstrap)
+        _check_optimizer_refit(fit, "confint(method=:$method)")
+    end
     if _has_gaussian_record(fit)
         _confint_check_kwargs(kw, _CONFINT_RECORD_KWARGS, (), label, method)
         data = y === nothing ? fit.integration.data.responses : y
@@ -693,30 +703,34 @@ const _CONFINT_DERIVED_KINDS = Dict(
 
 # Methods each derived quantity can use. To refuse one of them, remove it here.
 # gllvmTMB 9539352f6 withdrew the profile interval for communality, rho and
-# proportion (condition class gllvmTMB_nonlinear_profile_withdrawn), so those
-# kinds refuse :profile with the withdrawn message below. `:fisher_z` is accepted
+# proportion (condition class gllvmTMB_nonlinear_profile_withdrawn), and its
+# repeatability profile (gllvmTMB_repeatability_profile_withdrawn; #827 applies it to
+# icc), so those kinds refuse :profile with the withdrawn message below. `:fisher_z` is accepted
 # for rho only, as an alias of :wald (both are the Fisher-z interval).
 const _CONFINT_DERIVED_METHODS = (communality = (:wald, :bootstrap),
-                                  icc = (:wald, :profile, :bootstrap),
+                                  icc = (:wald, :bootstrap),
                                   rho = (:wald, :fisher_z, :bootstrap),
                                   proportion = (:wald, :bootstrap),
                                   phylo_signal = (:wald, :profile, :bootstrap))
 
 # The quantity name R's withdrawn-profile message uses, for each kind whose profile
 # is withdrawn (R/z-confint-gllvmTMB.R:964-968, :1055-1060, :1202-1206 at 9539352f6).
-const _CONFINT_PROFILE_WITHDRAWN = (communality = "communality", rho = "correlations",
-                                    proportion = "variance proportions")
+const _CONFINT_PROFILE_WITHDRAWN = (communality = "communality", icc = "icc (repeatability)",
+                                    rho = "correlations", proportion = "variance proportions")
 
 function _confint_profile_withdrawn(kind::Symbol, parm)
     what = getproperty(_CONFINT_PROFILE_WITHDRAWN, kind)
     alt = kind === :rho ? "method = :wald (the Fisher-z interval; :fisher_z is the same)" :
                           "method = :wald"
+    why = kind === :icc ?
+        "gllvmTMB withdrew the repeatability profile (a defensible profile interval " *
+        "for it is not available), and this route follows it" :
+        "gllvmTMB withdrew its penalty-based constrained-refit profile pending an " *
+        "exact constraint solver and diagnostic contract, and this route follows it"
     throw(ArgumentError(
         "confint: nonlinear profile intervals for $what are withdrawn (parm " *
-        "$(_confint_parm_label(parm))). gllvmTMB withdrew its penalty-based " *
-        "constrained-refit profile pending an exact constraint solver and diagnostic " *
-        "contract, and this route follows it. Request $alt or method = :bootstrap, and " *
-        "report the method's limitations."))
+        "$(_confint_parm_label(parm))). $why. Request $alt or method = :bootstrap, " *
+        "and report the method's limitations."))
 end
 
 # `proportions(fit; component)` names. gllvmTMB's `shared_unit` / `unique_unit` are not
