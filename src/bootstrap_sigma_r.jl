@@ -51,6 +51,30 @@ function Base.show(io::IO, r::BootstrapSigmaR)
           ", n_failed=", r.n_failed, ", conf=", r.conf, ", ci_method=", r.ci_method, ")")
 end
 
+function Base.show(io::IO, ::MIME"text/plain", r::BootstrapSigmaR)
+    show(io, r)
+    println(io)
+    fmt(x) = isfinite(x) ? string(round(x; sigdigits = 4)) : "NaN"
+    for k in keys(r.point_est)
+        pe = r.point_est[k]; lo = r.ci_lower[k]; hi = r.ci_upper[k]
+        if pe isa AbstractVector
+            neff = haskey(r.n_effective, k) ? r.n_effective[k] : nothing
+            println(io, "  ", k, " (estimate [lower, upper], n_effective):")
+            for i in eachindex(pe)
+                println(io, "    [", i, "] ", fmt(pe[i]), " [", fmt(lo[i]), ", ", fmt(hi[i]), "]",
+                        neff === nothing ? "" : ", n_effective = " * string(neff[i]))
+            end
+        else
+            println(io, "  ", k, " (", join(size(pe), "x"), " matrix; diagonal estimate [lower, upper]):")
+            for i in 1:min(size(pe)...)
+                println(io, "    [", i, ",", i, "] ", fmt(pe[i, i]), " [", fmt(lo[i, i]), ", ", fmt(hi[i, i]), "]")
+            end
+        end
+    end
+    r.n_failed > 0 && println(io, "  ", r.n_failed, " of ", r.n_boot, " replicates failed (excluded).")
+    print(io, "  Full matrices: r.point_est, r.ci_lower, r.ci_upper.")
+end
+
 const _BSIG_LEVELS_ALL = (:unit, :unit_obs, :phy, :B, :W)
 const _BSIG_WHAT_ALL = (:Sigma, :R, :communality, :ICC, :cross_corr)
 
@@ -145,6 +169,16 @@ function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
         X !== nothing ? size(X, 2) :
         y !== nothing ? size(y, 2) :
         _bsig_refuse("needs n_sites. Pass one of `y = ...`, `X = ...`, or `n_sites = ...`.")
+    y === nothing || ndims(y) == 2 || _bsig_refuse(
+        "`y` must be a p x n matrix (p = $p traits); got a $(ndims(y))-d array.")
+    n >= 2 || _bsig_refuse("n_sites must be >= 2; got $n")
+    y === nothing || size(y, 1) == p || _bsig_refuse(
+        "`y` has $(size(y, 1)) rows but the fit has p = $p traits; `y` must be p x n " *
+        "(did you pass n x p?). Only size(y, 2) is used; its values are ignored.")
+    X === nothing || ndims(X) == 3 || _bsig_refuse(
+        "`X` must be a p x n_sites x q array (as passed to fit_gaussian_gllvm); got $(ndims(X))-d.")
+    X === nothing || size(X, 2) == n || _bsig_refuse(
+        "`X` has $(size(X, 2)) sites but n_sites = $n; they must agree.")
     q = fit.pars.β === nothing ? 0 : length(fit.pars.β)
     Xm = _mean_X(fit, X, n)
     q > 0 && Xm === nothing && _bsig_refuse(
@@ -162,9 +196,20 @@ function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
         end
         return Ys
     end
+    # Built-in refit only (a user `_refit` keeps its own controls). A has_diag / K_W fit has a flat
+    # ridge (sigma2_B, sigma2_W and sigma_eps^2 enter only as a sum), and a Heywood draw runs along
+    # it: at the stock 500 iterations / f_tol = 0, LBFGS hits the cap in about 0.4% of fixture-c
+    # replicates (logLik 1e-3 to 2e-3 below the optimum, dropped as 'failed'). Needing ~600-1800
+    # iterations, they converge with a relative objective test, as R's nlminb does. Measured: 0 of
+    # 1998 refits fail, logLik within 1e-4 of R, and it is not slower than stock (mean 60 vs 77 ms).
+    # f_tol = 1e-10 stops too early (logLik up to 1.3e-3 low); do not loosen it. Never applied to
+    # phylo fits (a relative f_tol stopped those early); they are refused in v1 anyway.
+    # DEVIATION from the pinned-R behaviour (optimizer settings), see the PR description.
+    refit_opts = (_refit === nothing && (m.has_diag || m.K_W > 0)) ?
+        (iterations = 2000, f_tol = 1e-12) : NamedTuple()
     refit = Y -> refit_fn(Y; K = m.K, K_W = m.K_W, has_diag = m.has_diag,
                           K_phy = m.K_phy, has_phy_unique = m.has_phy_unique,
-                          Σ_phy = nothing, X = Xm)
+                          Σ_phy = nothing, X = Xm, refit_opts...)
     return simulate, refit
 end
 
@@ -173,9 +218,12 @@ function _bsig_setup(fit::TwoLevelFit, n_boot::Int, individual, center::Bool, _r
         "a TwoLevelFit needs `individual` (the fit stores only nindiv).")
     p = size(fit.Λ_B, 1)
     K_B = size(fit.Λ_B, 2); K_W = size(fit.Λ_W, 2)
+    length(individual) >= 2 || _bsig_refuse("`individual` is too short (needs one entry per observation).")
     codes, _ = _code_grouping(individual)
     maximum(codes) == fit.nindiv || _bsig_refuse(
-        "`individual` has $(maximum(codes)) groups but the fit has nindiv = $(fit.nindiv).")
+        "`individual` has $(maximum(codes)) groups but the fit has nindiv = $(fit.nindiv). " *
+        "(`individual` must have one entry per observation of the original data; its length " *
+        "cannot be checked because the fit does not store it.)")
     ind_idx = [findall(==(g), codes) for g in 1:maximum(codes)]
     ntot = length(individual)
     LB = _psd_sqrt_factor(fit.Σ_B); LW = _psd_sqrt_factor(fit.Σ_W)
@@ -248,8 +296,38 @@ do not compare them across `has_diag` settings.
 
 # Other behaviour worth knowing
 
+- `X` is the p x n_sites x q design array used at fit time (a 2-d matrix is refused) and
+  must agree with `n_sites` when both are given. For a fit from
+  `fit_gllvm(Y; family = Normal(), K)` (trait intercepts) no `X` is needed, but `n_sites`
+  (or `y`) still is. `y` must be p x n; only `size(y, 2)` is read, its values are ignored.
+  `n_sites` must be at least 2.
+- `link_residual` is validated and stored on the result but has no effect for these Gaussian
+  fits. `boot_median` is accepted by the R list but is always an empty `NamedTuple` here
+  (not computed). For a `TwoLevelFit`, `y`, `n_sites`, `X` and `Σ_phy` are ignored; for a
+  `GllvmFit`, `individual` and `center` are ignored.
+- A warning always fires when ANY replicate is lost (refit failed, or the summaries could
+  not be extracted), whatever `what` is requested; it names the count out of `n_boot`. `n_failed` itself counts
+  failed refits only: an extraction error on a converged refit blanks that replicate but is
+  not in `n_failed` (see below).
+- `progress = true` emits one `@info` per replicate (about 1000 at the default) and the
+  default `level` always logs a "level(s) ... dropped" `@info`; pass `progress = false` and an
+  explicit `level` for quiet output.
+- Correlation bounds (`R_*`) are clamped to [-1, 1] only when they overshoot by rounding
+  (at most 1e-8); a larger excursion is left as is so a genuine error stays visible.
+- A replicate summary of the wrong shape becomes a NaN draw and is counted in the "lost"
+  warning (not in `n_failed`), like an extraction error.
+- `n_sites` between 2 and p is accepted, but a fit with fewer sites than traits usually fails
+  every refit: the result is then all-NaN, announced only by the "lost" warning.
+- For `has_diag = true` the built-in refit (not a user `_refit`) uses `iterations = 2000,
+  f_tol = 1e-12` (R's nlminb stops on a relative objective change); a deviation from the pinned
+  R. It rescues the replicates that hit the stock 500-iteration cap and moves even
+  already-converged replicates slightly (bounds by about 1e-5 in the fixtures measured).
+- Entries whose point estimate is itself non-finite (for example a zero-variance trait) are
+  not counted in the attrition warning.
 - `TwoLevelFit` does not store `center`; the refit assumes `center = true` unless the
   keyword says otherwise. Simulated data are zero-mean.
+- `boot_median` is an empty `NamedTuple`, as in R: the pinned R fills `boot_median` only for
+  `multiple_r_*` entries (R/bootstrap-sigma.R:717-720), which Gaussian fits never have.
 - Draws are filtered with `isfinite`; R's `quantile(na.rm = TRUE)` drops only `NA`/`NaN`,
   so a `±Inf` draw is dropped here but would be kept by R (not expected to arise).
 - A refit that throws or returns a non-converged fit is a failed replicate. An error while
@@ -281,6 +359,7 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
     link_residual in (:auto, :none) || _bsig_refuse(
         "link_residual must be :auto or :none; got :$link_residual")
     (0 < conf < 1) || _bsig_refuse("conf must be in (0, 1); got $conf")
+    (seed === nothing || seed >= 0) || _bsig_refuse("seed must be >= 0; got $seed")
     n_boot >= 1 || _bsig_refuse("n_boot must be >= 1; got $n_boot")
     n_cores == 1 || _bsig_refuse("n_cores = $n_cores is unsupported in v1 (use 1).")
     nb = Int(n_boot)
@@ -312,8 +391,10 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
     # point estimate (original fit); refuse before any simulation if nothing can be reported
     pe_pairs = _bsig_entries(fit, kept, wh)
     isempty(pe_pairs) && _bsig_refuse(
-        "none of the requested summaries ($(join(wh, ", "))) is available for this fit and level; " *
-        "nothing to bootstrap.")
+        "none of the requested summaries ($(isempty(wh) ? "none left after dropping ICC" : join(wh, ", "))) " *
+        "is available for this fit and level; nothing to bootstrap (a GllvmFit supports what = :Sigma, " *
+        ":R or :communality; :ICC needs a TwoLevelFit with levels :B and :W; :cross_corr is never " *
+        "available, R needs a multinomial trait).")
     keys_pe = Symbol[k for (k, _) in pe_pairs]
 
     # rr-only GllvmFit: B = ΛΛ' only, so communality_B is identically 1 (zero-width interval)
@@ -332,6 +413,7 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
 
     draws = Vector{Dict{Symbol, Any}}(undef, nb)
     failed = fill(false, nb)
+    n_extract_err = 0
     for b in 1:nb
         progress && @info "bootstrap_Sigma_r: replicate $b / $nb"
         fb = try
@@ -351,10 +433,18 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
             e isa InterruptException && rethrow()
             nothing   # R: an extraction error skips the entry; not counted as a failed replicate
         end
-        draws[b] = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) ?
+        # a summary of the wrong shape is treated like an extraction error (NaN draw, counted as lost)
+        bad_shape = ent !== nothing && any(haskey(ent, k) && size(ent[k]) != size(v) for (k, v) in pe_pairs)
+        (ent === nothing || bad_shape) && (n_extract_err += 1)
+        draws[b] = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) && size(ent[k]) == size(v) ?
                                            ent[k] : _bsig_nan_like(v)) for (k, v) in pe_pairs)
     end
     n_failed = count(failed)
+    # replicates lost to failed refits or to extraction errors (the latter are not in n_failed)
+    n_lost = n_failed + n_extract_err
+    n_lost > 0 && @warn "bootstrap_Sigma_r: $n_lost of $nb replicates were lost " *
+        "($n_failed failed refits, $n_extract_err extraction errors); bounds rest on the survivors" *
+        (n_lost == nb ? " and are all NaN." : ".")
 
     # 7. aggregation: type-7 percentiles of the finite draws, no minimum survivor rule
     α = 1 - conf
@@ -369,6 +459,11 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
                 U[idx] = _derived_percentile(vals, 1 - α / 2)
             end
         end
+        if startswith(String(k), "R_")   # interpolation can overshoot +-1 by an ulp
+            # only a rounding overshoot is clamped; a genuine |R| > 1 + 1e-8 is left visible (it is a bug upstream)
+            L .= ifelse.(abs.(L) .<= 1 + 1e-8, clamp.(L, -1.0, 1.0), L)
+            U .= ifelse.(abs.(U) .<= 1 + 1e-8, clamp.(U, -1.0, 1.0), U)
+        end
         lo[k] = L; hi[k] = U
         v isa AbstractVector && (neff[k] = vec(N))
     end
@@ -376,9 +471,11 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
     # 8. attrition warning over vector entries only (R:465-486, R limitation kept)
     if !isempty(neff)
         worst_k = :none; worst = Inf
-        for k in keys_pe
+        for (k, v) in pe_pairs
             haskey(neff, k) || continue
-            f = minimum(neff[k]) / nb
+            ok = [i for i in eachindex(v) if isfinite(v[i])]   # structural NaN is not attrition
+            isempty(ok) && continue
+            f = minimum(neff[k][ok]) / nb
             f < worst && (worst = f; worst_k = k)
         end
         worst < 0.8 && @warn "bootstrap_Sigma_r: attrition. Summary $worst_k kept only " *

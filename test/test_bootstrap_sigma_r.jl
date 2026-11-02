@@ -75,10 +75,14 @@ _t2_comm(f, t) = t === :B ? [f.Λ_B[i]^2 / (f.Λ_B[i]^2 + f.σ²_B[i]) for i in 
 _t2_icc(f) = [(f.Λ_B[i]^2 + f.σ²_B[i]) / (f.Λ_B[i]^2 + f.σ²_B[i] + f.Λ_W[i]^2 + f.σ²_W[i]) for i in 1:3]
 _cor(S) = S ./ sqrt.(diag(S) * diag(S)')
 struct _NotAFit end
+# a matrix whose element access raises InterruptException (extraction-time interrupt probe)
+struct _BsigBoom <: AbstractMatrix{Float64}; p::Int; end
+Base.size(b::_BsigBoom) = (b.p, 1)
+Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
 
 @testset "bootstrap_Sigma_r (pinned-R contract)" begin
     @testset "0. RED baseline: the driver exists" begin
-        @test _bsig_defined
+        @test _bsig_defined && hasmethod(GLLVModels.bootstrap_Sigma_r, Tuple{GllvmFit})
     end
     rng = MersenneTwister(20261101)
     p, K, n = 4, 1, 150
@@ -567,5 +571,416 @@ struct _NotAFit end
         r = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 1, progress = false,
                                _refit = (yb; kw...) -> error("boom")))
         @test r.n_failed == 3
+    end
+
+    @testset "18. refit receives the fitted structure (K, K_B/K_W, center, X); mean path" begin
+        # GllvmFit with K = 2 (every other fixture has K = 1, so a hard-coded K = 1 went unseen)
+        r2 = MersenneTwister(18)
+        p6, n6 = 6, 300
+        L2 = [0.9 0.0; 0.6 0.5; 0.4 -0.6; -0.5 0.4; 0.3 0.7; 0.7 -0.3]
+        y6k2 = L2 * randn(r2, 2, n6) + 0.5 * randn(r2, p6, n6)
+        f2 = fit_gaussian_gllvm(y6k2; K = 2)
+        @test f2.model.K == 2 && f2.converged
+        kwlog = Any[]
+        _quiet(() -> _bsig(f2; y = y6k2, what = :Sigma, n_boot = 2, seed = 1, progress = false,
+                           _refit = (yb; kw...) -> (push!(kwlog, (; kw...)); f2)))
+        @test all(k.K == 2 && k.K_W == 0 && k.has_diag == false for k in kwlog)
+        empty!(kwlog)
+        _quiet(() -> _bsig(fitd; y = y, what = :Sigma, n_boot = 2, seed = 1, progress = false,
+                           _refit = (yb; kw...) -> (push!(kwlog, (; kw...)); fitd)))
+        @test all(k.K == 1 && k.has_diag == true for k in kwlog)
+
+        # TwoLevelFit with K_B != K_W (test 13 has K_B == K_W == 1, so a swap went unseen)
+        ΛB = [0.9 0.1; 0.6 -0.3; -0.4 0.5]; σB = [0.30, 0.20, 0.25]
+        ΛW = reshape([0.3, -0.2, 0.5], 3, 1); σW = [0.60, 0.50, 0.40]
+        tk = TwoLevelFit(ΛB, σB, ΛW, σW, Matrix(ΛB * ΛB' + Diagonal(σB)), Matrix(ΛW * ΛW' + Diagonal(σW)), 30, -1.0, true, 1)
+        tlog = Any[]; tstub = (yb, i; kw...) -> (push!(tlog, (; kw...)); tk)
+        _quiet(() -> _bsig(tk; individual = _IND, what = :Sigma, n_boot = 2, seed = 1, progress = false, _refit = tstub))
+        @test all(k.K_B == 2 && k.K_W == 1 && k.center == true for k in tlog)
+        empty!(tlog)
+        _quiet(() -> _bsig(tk; individual = _IND, what = :Sigma, n_boot = 2, seed = 1, progress = false, center = false, _refit = tstub))
+        @test all(k.center == false for k in tlog)
+
+        # fitted covariate: refit gets X, datasets carry the fitted mean X*beta, no X -> refusal
+        rX = MersenneTwister(77); pX, nX = 4, 200
+        Xc = randn(rX, pX, nX, 1)
+        yX = 2.0 .* Xc[:, :, 1] .+ [0.9, 0.6, 0.4, -0.5] * randn(rX, 1, nX) .+ 0.5 * randn(rX, pX, nX)
+        fx = fit_gaussian_gllvm(yX; K = 1, X = Xc)
+        @test fx.converged && length(fx.pars.β) == 1 && abs(fx.pars.β[1] - 2.0) < 0.3
+        @test_throws ArgumentError _bsig(fx; n_sites = nX, what = :Sigma, n_boot = 2, progress = false, _refit = (yb; kw...) -> fx)
+        ys = Matrix{Float64}[]; kwlog = Any[]
+        xstub = (yb; kw...) -> (push!(ys, copy(yb)); push!(kwlog, (; kw...)); fx)
+        _quiet(() -> _bsig(fx; X = Xc, what = :Sigma, n_boot = 2, seed = 1, progress = false, _refit = xstub))
+        @test all(haskey(k, :X) && k.X !== nothing && size(k.X) == (pX, nX, 1) for k in kwlog)
+        μX = fx.pars.β[1] .* Xc[:, :, 1]
+        @test cor(vec(ys[1]), vec(μX)) > 0.7                       # mean is carried (zero-mean sim gives ~0)
+        @test maximum(abs, mean(ys[1] .- μX, dims = 2)) < 0.3
+        # priority: X (hence its n) beats y for the number of simulated columns
+        empty!(ys)
+        _quiet(() -> _bsig(fx; y = yX[:, 1:11], X = Xc, what = :Sigma, n_boot = 2, seed = 1, progress = false, _refit = xstub))
+        @test all(size(Y, 2) == nX for Y in ys)
+
+        # the common user route: fit_gllvm(Y; family = Normal()) estimates trait intercepts (mean_design)
+        ri = MersenneTwister(5)
+        yi = [5.0, -3.0, 0.0, 10.0] .+ [0.9, 0.6, 0.4, -0.5] * randn(ri, 1, 150) .+ 0.5 * randn(ri, 4, 150)
+        fi = GLLVModels.fit_gllvm(yi; family = GLLVModels.Normal(), K = 1)
+        ys = Matrix{Float64}[]; kwlog = Any[]
+        istub = (yb; kw...) -> (push!(ys, copy(yb)); push!(kwlog, (; kw...)); fi)
+        _quiet(() -> _bsig(fi; n_sites = 20000, what = :Sigma, n_boot = 1, seed = 2, progress = false, _refit = istub))
+        @test maximum(abs, vec(mean(ys[1], dims = 2)) .- fi.pars.β) < 0.05   # simulated mean = fitted intercepts
+        @test maximum(abs, fi.pars.β) > 3                                    # control: intercepts are large
+        @test all(k.X !== nothing && size(k.X) == (4, 20000, 4) for k in kwlog)
+    end
+
+    @testset "19. extraction errors, attrition element choice, guards, progress=false, Inf draws" begin
+        # an extraction error on a CONVERGED refit blanks that replicate to NaN and is NOT counted failed
+        bad_extract(fb) = GllvmFit(fb.model, merge(fb.pars, (Λ = nothing,)), fb.logLik, fb.n_iter, true, fb.optim_result, fb.cputime)
+        j = Ref(0)
+        ex = (yb; kw...) -> ((j[] += 1) % 4 == 0 ? bad_extract(fit_gaussian_gllvm(yb; kw...)) : fit_gaussian_gllvm(yb; kw...))
+        re = _quiet(() -> _bsig(fit; y = y, what = [:Sigma, :communality], n_boot = NB, seed = 5, keep_draws = true, progress = false, _refit = ex))
+        @test re.n_failed == 0
+        @test count(d -> all(isnan, d.Sigma_B), re.draws) == 3
+        @test re.n_effective.communality_B == fill(NB - 3, p)
+        # attrition takes the MINIMUM over elements: NaN in element 3 (not 1) must still warn
+        j3 = Ref(0)
+        nan3 = function (yb; kw...)
+            j3[] += 1
+            fb = fit_gaussian_gllvm(yb; kw...)
+            j3[] % 4 == 0 || return fb
+            Λn = copy(fb.pars.Λ); Λn[3, 1] = NaN
+            GllvmFit(fb.model, merge(fb.pars, (Λ = Λn,)), fb.logLik, fb.n_iter, true, fb.optim_result, fb.cputime)
+        end
+        r3, lg3 = _logged(() -> _bsig(fit; y = y, what = [:Sigma, :communality], n_boot = NB, seed = 5, progress = false, _refit = nan3))
+        @test r3.n_effective.communality_B[3] == NB - 3 && r3.n_effective.communality_B[1] == NB
+        @test any(occursin("attrition", m) for m in _warns(lg3))
+        # R's .safe_icc_ratio / communality guard: NaN for a non-positive or non-finite denominator
+        # (a zero denominator alone cannot tell the guard from 0/0 = NaN)
+        Σb = Matrix(Diagonal([-1.0, Inf, 1.0])); Σw = Matrix(0.5I(3))
+        tg = TwoLevelFit(reshape([0.5, 0.5, 0.5], 3, 1), [0.1, 0.1, 0.1], reshape([0.3, 0.3, 0.3], 3, 1), [0.1, 0.1, 0.1], Σb, Σw, 30, 0.0, true, 0)
+        rg = _quiet(() -> _bsig(_mk2(); individual = _IND, what = [:communality, :ICC], n_boot = 2, seed = 1, keep_draws = true,
+                                progress = false, _refit = (yb, i; kw...) -> tg))
+        d1 = rg.draws[1]
+        @test isnan(d1.ICC_site[1]) && isnan(d1.ICC_site[2]) && isfinite(d1.ICC_site[3])
+        @test isnan(d1.communality_B[1]) && isnan(d1.communality_B[2]) && isfinite(d1.communality_B[3])
+        @test rg.n_effective.ICC_site == [0, 0, 2] && rg.n_effective.communality_B == [0, 0, 2]
+        # a refit returning the wrong class is a failed replicate, not an uncaught FieldError
+        rw = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 1, progress = false, _refit = (yb; kw...) -> _NotAFit()))
+        @test rw.n_failed == 3
+        # progress = false is silent
+        _, lgq = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 1, progress = false, _refit = (yb; kw...) -> fit))
+        @test !any(occursin("replicate", m) for m in _infos(lgq))
+        # DOCUMENTED divergence from R (docstring): a non-finite draw is dropped. Pinned so a change is deliberate.
+        infit(fb) = GllvmFit(fb.model, merge(fb.pars, (Λ = [Inf; fb.pars.Λ[2:end, :]],)), fb.logLik, 1, true, fb.optim_result, 0.0)
+        ri = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 1, progress = false, _refit = (yb; kw...) -> infit(fit)))
+        @test isnan(ri.ci_lower.Sigma_B[1, 1])
+    end
+
+    @testset "20. TwoLevelFit grouping is by label: shuffled columns, unbalanced groups, string ids" begin
+        t2 = _mk2()
+        nind = 4000; rg = MersenneTwister(31)
+        sizes = rand(rg, 2:3, nind)
+        labels = String[]; for g in 1:nind, _ in 1:sizes[g]; push!(labels, "id" * string(g)); end
+        perm = randperm(rg, length(labels)); lab = labels[perm]
+        t2big = TwoLevelFit(t2.Λ_B, t2.σ²_B, t2.Λ_W, t2.σ²_W, t2.Σ_B, t2.Σ_W, nind, 0.0, true, 0)
+        Ys = Matrix{Float64}[]; inds = Any[]
+        _quiet(() -> _bsig(t2big; individual = lab, what = :Sigma, n_boot = 1, seed = 6, progress = false,
+                           _refit = (yb, i; kw...) -> (push!(Ys, copy(yb)); push!(inds, i); t2big)))
+        Yb = Ys[1]; @test size(Yb, 2) == length(lab) && inds[1] == lab
+        cols = Dict{String, Vector{Int}}(); for (j, l) in enumerate(lab); push!(get!(cols, l, Int[]), j); end
+        same = sum(Yb[:, c[1]] * Yb[:, c[2]]' for c in values(cols)) ./ nind
+        @test maximum(abs, same .- t2.Σ_B) < 0.08                              # same label share the B effect
+        @test maximum(abs, same .- t2.Σ_B) < maximum(abs, t2.Σ_B)             # control: the tolerance is far below the signal
+    end
+
+    @testset "21. mutation-hardening: gaps found by the line-level mutation campaign" begin
+        # (a) the DEFAULT progress = true emits one @info per replicate (every other test passes progress explicitly)
+        _, lgd = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 1, _refit = (yb; kw...) -> fit))
+        @test count(occursin("replicate", m) for m in _infos(lgd)) == 3
+        @test any(occursin("replicate 2 / 3", m) for m in _infos(lgd))
+        # (b) `center` defaults to true and is passed through to the TwoLevelFit refit
+        f2 = _mk2(1.0, 1.7); seen = Any[]
+        spy = (yb, i; kw...) -> (push!(seen, get(kw, :center, :absent)); f2)
+        _quiet(() -> _bsig(f2; individual = _IND, n_boot = 2, seed = 1, progress = false, _refit = spy))
+        _quiet(() -> _bsig(f2; individual = _IND, n_boot = 2, seed = 1, progress = false, center = false, _refit = spy))
+        @test seen == Any[true, true, false, false]
+        # (c) the n_boot lower bound is inclusive: n_boot = 1 is accepted and its single draw is both bounds
+        r1 = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 1, seed = 1, progress = false,
+                                _refit = (yb; kw...) -> _scaled(fit, 1.0)))
+        @test r1.n_boot == 1 && r1.n_failed == 0
+        @test r1.ci_lower.Sigma_B ≈ r1.point_est.Sigma_B rtol = 1e-12
+        @test r1.ci_upper.Sigma_B ≈ r1.point_est.Sigma_B rtol = 1e-12
+        # (d) the number of simulated sites comes from size(X, 2) when only X is given (X is p x n x q, n != p)
+        X3 = randn(MersenneTwister(31), p, n, 1)
+        fx = fit_gaussian_gllvm(y; K = 1, X = X3)
+        fxr, lxr = _bs_refit()
+        _quiet(() -> _bsig(fx; X = X3, what = :Sigma, n_boot = 3, seed = 1, _refit = fxr, progress = false))
+        @test all(size(Y) == (p, n) for Y in lxr.ys)
+        # (e) communality is NaN (never Inf or negative) when the tier total diagonal is <= 0
+        ΛB = reshape([0.9, 0.6, -0.4], 3, 1)
+        zt = TwoLevelFit(ΛB, [0.3, 0.2, 0.25], reshape([0.3, -0.2, 0.5], 3, 1), [0.6, 0.5, 0.4],
+                         Matrix(Diagonal([0.0, -1.0, 1.0])), Matrix(Diagonal([0.7, 0.7, 0.7])), 30, 0.0, true, 0)
+        rzt = _quiet(() -> _bsig(zt; individual = _IND, what = :communality, level = :B, n_boot = 3, seed = 1,
+                                 progress = false, _refit = (yb, i; kw...) -> zt))
+        @test isnan(rzt.point_est.communality_B[1]) && isnan(rzt.point_est.communality_B[2])
+        @test rzt.point_est.communality_B[3] ≈ 0.16 rtol = 1e-12
+        @test rzt.n_effective.communality_B == [0, 0, 3]
+        @test !any(isinf, rzt.point_est.communality_B)
+        # (f) TwoLevelFit batch: every individual is simulated (none left uninitialised), in the documented draw order
+        ys2 = Matrix{Float64}[]
+        _quiet(() -> _bsig(f2; individual = _IND, what = :Sigma, n_boot = 2, seed = 5, progress = false,
+                           _refit = (yb, i; kw...) -> (push!(ys2, copy(yb)); f2)))
+        rr2 = MersenneTwister(5)
+        LBx = GLLVModels._psd_sqrt_factor(f2.Σ_B); LWx = GLLVModels._psd_sqrt_factor(f2.Σ_W)
+        want = [begin
+                    yb = zeros(3, length(_IND))
+                    for g in 1:30
+                        bi = LBx * randn(rr2, 3)
+                        for j in (3g - 2):(3g)
+                            yb[:, j] = bi .+ LWx * randn(rr2, 3)
+                        end
+                    end
+                    yb
+                end for _ in 1:2]
+        @test ys2 == want
+        # (g) InterruptException raised while EXTRACTING a converged replicate is never swallowed
+        boomfit = (yb; kw...) -> GllvmFit(fit.model, merge(fit.pars, (Λ = _BsigBoom(p),)),
+                                         fit.logLik, 1, true, fit.optim_result, 0.0)
+        @test_throws InterruptException _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 2, seed = 1,
+                                                           progress = false, _refit = boomfit))
+        # (h) refusal / warning / info message text (cosmetic mutants: pin the user-facing wording)
+        err(g) = try g(); nothing catch e; e end
+        e = err(() -> _bsig(fit; y = y, what = Symbol[], n_boot = NB, progress = false))
+        @test e isa ArgumentError && occursin("what is empty", e.msg)
+        e = err(() -> _bsig(fit; y = y, n_boot = 0, progress = false))
+        @test e isa ArgumentError && occursin("n_boot must be >= 1", e.msg)
+        e = err(() -> _bsig(fit; y = y, level = :W, n_boot = NB, progress = false))
+        @test e isa ArgumentError && occursin("Available: B", e.msg)
+        e = err(() -> _bsig(f2; individual = repeat(1:10, inner = 3), progress = false))
+        @test e isa ArgumentError && occursin("has 10 groups", e.msg) && occursin("nindiv = 30", e.msg)
+        _, lg100 = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 100, seed = 1, progress = false,
+                                       _refit = (yb; kw...) -> fit), min_level = Logging.Warn)
+        @test occursin("n_boot = 100 < 999", only(_warns(lg100)))
+        _, lgr = _logged(() -> _bsig(fit; y = y, what = :communality, n_boot = 3, seed = 1, progress = false,
+                                     _refit = (yb; kw...) -> fit))
+        @test any(occursin("(has_diag = false)", m) && occursin("refit with has_diag = true", m) for m in _infos(lgr))
+        ctrb = Ref(0)
+        _, lga = _logged(() -> _bsig(fit; y = y, what = :communality, n_boot = 12, seed = 1, progress = false,
+                                     _refit = (yb; kw...) -> _scaled(fit, 1.0; ok = (ctrb[] += 1) > 4)), min_level = Logging.Warn)
+        @test any(occursin("66.7%", m) for m in _warns(lga))
+    end
+    @testset "22. hardening regressions: validation, reporting, shape guards, bounds, show" begin
+        err(g) = try g(); nothing catch e; e end
+        stub = (yb; kw...) -> fit
+        # (a) input validation, each with a clear message and no refit attempted
+        for (lab, kw, pat) in (
+                ("n_sites = 1", (n_sites = 1,), "n_sites must be >= 2"),
+                ("n_sites = 0", (n_sites = 0,), "n_sites must be >= 2"),
+                ("n_sites = -3", (n_sites = -3,), "n_sites must be >= 2"),
+                ("vector y", (y = vec(y),), "must be a p x n matrix"),
+                ("transposed y", (y = permutedims(y),), "did you pass n x p"),
+                ("y with 3 rows", (y = y[1:3, :],), "has 3 rows"),
+                ("2-d X", (X = ones(1, n),), "p x n_sites x q"),
+                ("X vs n_sites", (X = ones(p, 50, 1), n_sites = 20), "must agree"))
+            e = err(() -> _bsig(fit; n_boot = NB, what = :Sigma, progress = false, _refit = stub, kw...))
+            @test e isa ArgumentError && occursin(pat, e.msg)
+        end
+        e = err(() -> _bsig(fit; y = y, n_boot = NB, seed = -1, what = :Sigma, progress = false, _refit = stub))
+        @test e isa ArgumentError && occursin("seed must be >= 0", e.msg)
+        e = err(() -> _bsig(_mk2(); individual = [1], progress = false))
+        @test e isa ArgumentError && occursin("too short", e.msg)
+        e = err(() -> _bsig(_mk2(); individual = repeat(1:10, inner = 3), progress = false))
+        @test e isa ArgumentError && occursin("one entry per observation", e.msg)
+        # controls: the valid forms of the same calls run
+        r = _quiet(() -> _bsig(fit; y = y, n_boot = 2, n_sites = 2, what = :Sigma, seed = 1, progress = false, _refit = stub))
+        @test r.n_boot == 2
+        # what = :ICC / :cross_corr on a GllvmFit: informative message, no empty parentheses
+        for w in (:ICC, :cross_corr)
+            e = err(() -> _bsig(fit; y = y, what = w, n_boot = NB, progress = false))
+            @test e isa ArgumentError && !occursin("()", e.msg) && occursin("TwoLevelFit", e.msg)
+        end
+
+        # (c) total failure is announced whatever `what` is (matrix-only requests have no n_effective)
+        for w in (:Sigma, [:Sigma, :R], :communality)
+            r, lg = _logged(() -> _bsig(fit; y = y, what = w, n_boot = 5, seed = 1, progress = false,
+                                        _refit = (yb; kw...) -> error("boom")), min_level = Logging.Warn)
+            @test r.n_failed == 5
+            @test any(occursin("5 of 5 replicates were lost", m) for m in _warns(lg))
+        end
+        # no warning when nothing is lost (control); ANY loss warns
+        _, lg0 = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 10, seed = 1, progress = false,
+                                     _refit = (yb; kw...) -> fit), min_level = Logging.Warn)
+        @test !any(occursin("were lost", m) for m in _warns(lg0))
+        _, lg2 = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 10, seed = 1, progress = false,
+                                     _refit = (yb; kw...) -> _scaled(fit, 1.0; ok = false)), min_level = Logging.Warn)
+        @test any(occursin("10 of 10 replicates were lost", m) for m in _warns(lg2))
+        j = Ref(0)
+        _, lg3 = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 10, seed = 1, progress = false,
+                                     _refit = (yb; kw...) -> _scaled(fit, 1.0; ok = (j[] += 1) > 2)), min_level = Logging.Warn)
+        @test any(occursin("2 of 10 replicates were lost", m) && occursin("2 failed refits", m) for m in _warns(lg3))
+        j5 = Ref(0)
+        _, lg5 = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 10, seed = 1, progress = false,
+                                     _refit = (yb; kw...) -> _scaled(fit, 1.0; ok = (j5[] += 1) > 1)), min_level = Logging.Warn)
+        @test any(occursin("1 of 10 replicates were lost", m) for m in _warns(lg5))   # a single lost replicate warns
+
+        # (b) extraction errors are not in n_failed (documented) but ARE reported as lost replicates
+        bad_ex(fb) = GllvmFit(fb.model, merge(fb.pars, (Λ = nothing,)), fb.logLik, fb.n_iter, true, fb.optim_result, fb.cputime)
+        re, lge = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 5, seed = 1, progress = false,
+                                      _refit = (yb; kw...) -> bad_ex(fit)), min_level = Logging.Warn)
+        @test re.n_failed == 0
+        @test any(occursin("5 of 5 replicates were lost", m) && occursin("5 extraction errors", m) for m in _warns(lge))
+
+        # (b) point-estimate NaN is structural, not attrition
+        tg = TwoLevelFit(reshape([0.9, 0.6, -0.4], 3, 1), [0.3, 0.2, 0.25], reshape([0.3, -0.2, 0.5], 3, 1), [0.6, 0.5, 0.4],
+                         Matrix(Diagonal([0.0, -1.0, 1.0])), Matrix(Diagonal([0.7, 0.7, 0.7])), 30, 0.0, true, 0)
+        rg, lgg = _logged(() -> _bsig(tg; individual = _IND, what = :communality, level = :B, n_boot = 4, seed = 1,
+                                      progress = false, _refit = (yb, i; kw...) -> tg), min_level = Logging.Warn)
+        @test rg.n_effective.communality_B == [0, 0, 4]
+        @test !any(occursin("attrition", m) for m in _warns(lgg))
+        # control: a genuine loss on a finite entry still warns
+        j4 = Ref(0)
+        _, lgh = _logged(() -> _bsig(fit; y = y, what = :communality, n_boot = 12, seed = 1, progress = false,
+                                     _refit = (yb; kw...) -> _scaled(fit, 1.0; ok = (j4[] += 1) > 4)), min_level = Logging.Warn)
+        @test any(occursin("attrition", m) for m in _warns(lgh))
+
+        # (b) a replicate summary of the wrong shape is a NaN draw, never indexed into the percentiles
+        w4 = TwoLevelFit([0.9, 0.6, 0.4, -0.5][:, :], fill(0.3, 4), [0.3, -0.2, 0.5, 0.1][:, :], fill(0.5, 4),
+                         Matrix(1.0I(4)), Matrix(1.0I(4)), 30, 0.0, true, 0)
+        rs = _quiet(() -> _bsig(_mk2(); individual = _IND, what = :Sigma, n_boot = 3, seed = 1, progress = false,
+                                _refit = (yb, i; kw...) -> w4))
+        @test rs.n_failed == 0
+        @test all(isnan, rs.ci_lower.Sigma_B) && all(isnan, rs.ci_upper.Sigma_W)
+        @test size(rs.ci_lower.Sigma_B) == (3, 3)
+
+        # (b) correlation bounds never leave [-1, 1]: K = 1 rr-only has |R| = 1 up to rounding
+        for c in (0.3, 0.7, 1.1, 1.3, 2.9)
+            rb = _quiet(() -> _bsig(fit; y = y, what = :R, n_boot = 9, seed = 1, progress = false,
+                                    _refit = (yb; kw...) -> _scaled(fit, c)))
+            @test all(abs.(rb.ci_lower.R_B) .<= 1.0) && all(abs.(rb.ci_upper.R_B) .<= 1.0)
+        end
+        cs = Iterators.Stateful(Iterators.cycle((0.37, 0.9, 1.13, 1.7, 2.1, 0.61)))
+        rv = _quiet(() -> _bsig(fit; y = y, what = :R, n_boot = 30, seed = 1, progress = false,
+                                _refit = (yb; kw...) -> _scaled(fit, popfirst!(cs))))
+        @test all(abs.(rv.ci_lower.R_B) .<= 1.0) && all(abs.(rv.ci_upper.R_B) .<= 1.0)
+
+        # (d) show: one-line form unchanged; text/plain lists estimates and intervals compactly
+        rsh = _quiet(() -> _bsig(fit; y = y, what = [:Sigma, :communality], n_boot = 4, seed = 1, progress = false,
+                                 _refit = (yb; kw...) -> _scaled(fit, 1.0; ok = (j[] += 1) % 2 == 0)))
+        @test occursin("BootstrapSigmaR(level=", sprint(show, rsh)) && !occursin('\n', sprint(show, rsh))
+        txt = sprint(show, MIME("text/plain"), rsh)
+        @test occursin("Sigma_B", txt) && occursin("communality_B", txt) && occursin("n_effective = ", txt)
+        @test occursin("replicates failed", txt) && occursin(r"\[1,1\] \S+ \[\S+, \S+\]", txt)
+        @test occursin(string(round(rsh.point_est.Sigma_B[1, 1]; sigdigits = 4)), txt)
+    end
+    @testset "23. survivors of the independent mutation review (PR #1059 review)" begin
+    stub = (yb; kw...) -> fit
+    err(g) = try g(); nothing catch e; e end
+    @testset "S02 warn threshold boundary" begin
+        _, lg = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 998, seed = 1, progress = false, _refit = stub), min_level = Logging.Warn)
+        @test occursin("n_boot = 998 < 999", only(_warns(lg)))
+    end
+    @testset "S03 X must have exactly n_sites columns (both directions)" begin
+        e = err(() -> _bsig(fit; X = ones(p, 10, 1), n_sites = 20, n_boot = 2, what = :Sigma, progress = false, _refit = stub))
+        @test e isa ArgumentError && occursin("must agree", e.msg)
+    end
+    @testset "S04 show prints both bounds for matrix entries" begin
+        r = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 4, seed = 1, progress = false, _refit = (yb; kw...) -> _scaled(fit, 1.0)))
+        @test occursin(r"\[1,1\] \S+ \[\S+, \S+\]", sprint(show, MIME("text/plain"), r))
+    end
+    @testset "S05 refusal order: fit structure before argument checks" begin
+        fw = fit_gaussian_gllvm(y; K = 1, K_W = 1)
+        e = err(() -> _bsig(fw; y = y, level = :nonsense, progress = false, _refit = stub))
+        @test e isa ArgumentError && occursin("K_W", e.msg)
+    end
+    @testset "S06 +-Inf draws are dropped" begin
+        infit = GllvmFit(fit.model, merge(fit.pars, (Λ = [Inf; fit.pars.Λ[2:end, :]],)), fit.logLik, 1, true, fit.optim_result, 0.0)
+        r = _quiet(() -> _bsig(fit; y = y, what = :communality, n_boot = 3, seed = 1, progress = false, keep_draws = true, _refit = (yb; kw...) -> infit))
+        @test r.n_effective.communality_B[1] == 0
+        ok = _scaled(fit, 1.0)
+        c = Ref(0)
+        r2 = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 5, seed = 1, progress = false,
+                                _refit = (yb; kw...) -> (c[] += 1) == 1 ? infit : _scaled(fit, 1.0 + c[] / 10)))
+        @test isfinite(r2.ci_upper.Sigma_B[1, 1]) && isfinite(r2.ci_lower.Sigma_B[1, 1])
+    end
+    @testset "S07/S08 built-in refit: optimizer settings only for has_diag" begin
+        # same data as the driver's batch, refit directly with / without the extra kwargs
+        ys = Matrix{Float64}[]
+        _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 9, progress = false, _refit = (yb; kw...) -> (push!(ys, copy(yb)); fit)))
+        r = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 3, seed = 9, progress = false, keep_draws = true))
+        for (b, yb) in enumerate(ys)
+            d = fit_gaussian_gllvm(yb; K = 1, K_W = 0, has_diag = false, K_phy = 0, has_phy_unique = false, Σ_phy = nothing, X = nothing)
+            @test r.draws[b].Sigma_B == GLLVModels._r_tier_total(d, :unit)   # bit-identical: no extra kwargs
+        end
+        ysd = Matrix{Float64}[]
+        _quiet(() -> _bsig(fitd; y = y[:, 1:8], what = :Sigma, n_boot = 6, seed = 9, progress = false, _refit = (yb; kw...) -> (push!(ysd, copy(yb)); fitd)))
+        rd = _quiet(() -> _bsig(fitd; y = y[:, 1:8], what = :Sigma, n_boot = 6, seed = 9, progress = false, keep_draws = true))
+        for (b, yb) in enumerate(ysd)
+            d = fit_gaussian_gllvm(yb; K = 1, K_W = 0, has_diag = true, K_phy = 0, has_phy_unique = false, Σ_phy = nothing, X = nothing, iterations = 2000, f_tol = 1e-12)
+            exp = d.converged ? sigma_y_site(d) : fill(NaN, p, p)
+            @test isequal(rd.draws[b].Sigma_B, exp)
+        end
+    end
+    @testset "S09 seed = 0 is valid" begin
+        r = _quiet(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 2, seed = 0, progress = false, _refit = stub))
+        @test r.n_boot == 2
+    end
+    @testset "S10 ICC: zero denominator with nonzero numerator is NaN, not Inf" begin
+        Σb = Matrix(Diagonal([1.0, 2.0, 3.0])); Σw = Matrix(Diagonal([-1.0, -2.0, 1.0]))
+        tg = TwoLevelFit(reshape([0.5, 0.5, 0.5], 3, 1), [0.1, 0.1, 0.1], reshape([0.3, 0.3, 0.3], 3, 1), [0.1, 0.1, 0.1], Σb, Σw, 30, 0.0, true, 0)
+        r = _quiet(() -> _bsig(tg; individual = _IND, what = :ICC, n_boot = 2, seed = 1, progress = false, _refit = (yb, i; kw...) -> tg))
+        @test isnan(r.point_est.ICC_site[1]) && isnan(r.point_est.ICC_site[2]) && r.point_est.ICC_site[3] ≈ 3 / 4
+    end
+    @testset "S11 attrition message names the FIRST of tied entries" begin
+        c = Ref(0)
+        _, lg = _logged(() -> _bsig(_mk2(); individual = _IND, n_boot = 12, seed = 1, progress = false,
+                                    _refit = (yb, i; kw...) -> _mk2(1.0, 1.0; ok = (c[] += 1) > 4)), min_level = Logging.Warn)
+        @test any(occursin("Summary communality_B kept only", m) for m in _warns(lg))
+    end
+    @testset "S12 duplicate `what` entries are collapsed" begin
+        r = _quiet(() -> _bsig(fit; y = y, what = [:Sigma, :Sigma], n_boot = 2, seed = 1, progress = false, _refit = stub))
+        @test r.what == [:Sigma] && collect(keys(r.point_est)) == [:Sigma_B]
+    end
+    end
+    @testset "24. review follow-ups: optimizer kwargs seen by the seam, clamp scope, wrong-shape count" begin
+        # a user _refit keeps its own controls: the driver injects no optimizer options into the seam
+        kwa = Any[]
+        for ft in (fitd, fit)
+            empty!(kwa)
+            _quiet(() -> _bsig(ft; y = y, what = :Sigma, n_boot = 2, seed = 1, progress = false,
+                               _refit = (yb; kw...) -> (push!(kwa, (; kw...)); ft)))
+            @test !any(haskey(k, :iterations) || haskey(k, :f_tol) for k in kwa) && length(kwa) == 2
+        end
+        # a genuine |R| > 1 is NOT hidden by the rounding clamp
+        sb = [1.0 2.0 0.1; 2.0 1.0 0.1; 0.1 0.1 1.0]
+        tbad = TwoLevelFit(reshape([0.5, 0.5, 0.5], 3, 1), [0.1, 0.1, 0.1], reshape([0.3, 0.3, 0.3], 3, 1), [0.1, 0.1, 0.1],
+                           sb, Matrix(0.5I(3)), 30, 0.0, true, 0)
+        rbad = _quiet(() -> _bsig(tbad; individual = _IND, what = :R, level = :B, n_boot = 3, seed = 1, progress = false,
+                                  _refit = (yb, i; kw...) -> tbad))
+        @test rbad.point_est.R_B[1, 2] ≈ 2.0 && rbad.ci_lower.R_B[1, 2] ≈ 2.0 && rbad.ci_upper.R_B[1, 2] ≈ 2.0
+        # a wrong-shaped summary is a NaN draw AND is counted as lost (not in n_failed)
+        w4 = TwoLevelFit([0.9, 0.6, 0.4, -0.5][:, :], fill(0.3, 4), [0.3, -0.2, 0.5, 0.1][:, :], fill(0.5, 4),
+                         Matrix(1.0I(4)), Matrix(1.0I(4)), 30, 0.0, true, 0)
+        rw, lgw = _logged(() -> _bsig(_mk2(); individual = _IND, what = :Sigma, n_boot = 3, seed = 1, progress = false,
+                                      _refit = (yb, i; kw...) -> w4), min_level = Logging.Warn)
+        @test rw.n_failed == 0 && any(occursin("3 of 3 replicates were lost", m) && occursin("3 extraction errors", m) for m in _warns(lgw))
+        # n_sites between 2 and p: accepted, and the all-NaN outcome is announced
+        rn, lgn = _logged(() -> _bsig(fit; n_sites = 3, what = :Sigma, n_boot = 3, seed = 1, progress = false), min_level = Logging.Warn)
+        @test size(rn.ci_lower.Sigma_B) == (p, p) && rn.n_boot == 3
+        @test (rn.n_failed > 0) == any(occursin("were lost", m) for m in _warns(lgn))   # loss, if any, is announced
+    end
+    @testset "25. has_diag K=2 built-in refit reaches the optimum, not the 500-iteration cap" begin
+        # Replicate 65 of bootstrap seed 101 on the has_diag K=2 fixture (n = 200 units, p = 6, trait intercepts).
+        # R gllvmTMB on the same data gives logLik -1422.97095347 (convergence 0); the stock Julia fit stops at
+        # the 500-iteration cap with logLik -1422.97217 (recorded 2026-11-01). (CSV parsed by hand: no extra test dependency.)
+        rows = [parse.(Float64, split(l, ',')) for l in readlines(joinpath(@__DIR__, "data", "bsig_c_s101_b65.csv")) if !isempty(strip(l))]
+        Yb = Matrix{Float64}(reduce(hcat, rows))                     # p x n
+        nb_ = size(Yb, 2); Xb = zeros(6, nb_, 6)
+        for t in 1:6; Xb[t, :, t] .= 1.0; end
+        f0 = _quiet(() -> fit_gaussian_gllvm(Yb; K = 2, has_diag = true, X = Xb))
+        @test !f0.converged && f0.n_iter == 500                      # pins the cause (stock cap)
+        _, refit = GLLVModels._bsig_setup(f0, 1, nothing, nb_, Xb, nothing)
+        fb = _quiet(() -> refit(Yb))                                  # the driver's built-in refit
+        @test fb.converged
+        @test fb.logLik >= f0.logLik
+        @test isapprox(fb.logLik, -1422.97095347239; atol = 1e-4)     # the external (R) optimum
     end
 end
