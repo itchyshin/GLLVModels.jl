@@ -197,7 +197,6 @@ include("grouped_fit.jl")               # internal joint grouped Gaussian fit an
 include("precision_multivariate_fit.jl") # internal multivariate phylogenetic fit and intervals
 include("grouped_nongaussian_fit.jl")   # internal five-family joint grouping extension
 include("destination_b_postfit.jl")     # explicit population-only Gaussian postfit routes
-include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl, and (PrecisionMultivariateFit tier :phy) precision_multivariate_fit.jl + destination_b_postfit.jl.
 include("phylo_latent_precision.jl")    # observation/tip labels on PrecisionMultivariateFit
 include("phylo_latent.jl")              # fit_phylo_latent_gllvm: twin of R's bare Gaussian phylo_latent()
 include("phylo_latent_postfit.jl")      # extract_phylo_signal for the phylo_latent twin
@@ -211,6 +210,7 @@ include("joint_phylo_grouped_gaussian.jl") # one joint Gaussian marginal, evalua
 include("joint_covariance_identification.jl") # actual covariance tangent aliases
 include("joint_phylo_grouped_fit.jl") # private joint optimizer and marginal intervals
 include("joint_phylo_grouped_postfit.jl") # explicit population mean and source-labelled extraction
+include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl, precision_multivariate_fit.jl + destination_b_postfit.jl (PrecisionMultivariateFit tier :phy) and joint_phylo_grouped_fit.jl + joint_phylo_grouped_postfit.jl + joint_covariance_identification.jl (JointPhyloGroupedGaussianFit tier :phy).
 include("diagnostics.jl")                # check_gllvmTMB / gllvmTMB_diagnose / predictive_check / sanity_multi / compare_* / confint_inspect (core070 diagnostics/compare cluster)
 include("summary_table.jl")              # coef_table: tidy Wald inference table
 include("postfit_tables.jl")             # final missing-surface cluster (core070 §1): deviance, cross-rho profiles,
