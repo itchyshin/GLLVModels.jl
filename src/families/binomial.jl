@@ -455,7 +455,8 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = Integer.(_sanitize_missing(Y, 0))
+    _check_response_support(:binomial, Y, msk; caller = "fit_binomial_gllvm", N = Nm)
+    Yc  = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical link-scale intercepts + SVD (PPCA-like) loadings
     Zemp = [linkfun(link, clamp((Yc[t, i] + 0.5) / (Nm[t, i] + 1), 1e-4, 1 - 1e-4))

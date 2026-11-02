@@ -291,6 +291,22 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    ratio_max::Real = 25.0, require_converged::Bool = false,
                    binary_ridge::Real = 2.0, pd_hessian::Bool = false,
                    _fitter = fit_gllvm, kwargs...)
+    if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
+        requested = kwargs[:optimizer]
+        _optimizer_method(requested, Optim.LBFGS(); route = "select_lv")
+        family isa Union{Normal,Poisson,NegativeBinomial} ||
+            _refuse_optimizer(requested, "select_lv", "this response family")
+        _fitter === fit_gllvm || _refuse_optimizer(requested, "select_lv", "a custom fitter")
+        (get(kwargs, :grouping, nothing) === nothing && get(kwargs, :phylo, nothing) === nothing &&
+         get(kwargs, :row_eff, :none) === :none && !get(kwargs, :pervar, false)) ||
+            _refuse_optimizer(requested, "select_lv", "grouped, phylogenetic, row-effect, or pervar fits")
+        _aghq_request(get(kwargs, :aghq, false)) === :off ||
+            _refuse_optimizer(requested, "select_lv", "AGHQ fits")
+        family isa Normal || !haskey(kwargs, :X) ||
+            _refuse_optimizer(requested, "select_lv", "non-Gaussian covariate fits")
+        family isa Poisson && get(kwargs, :disp_group, nothing) !== nothing &&
+            _refuse_optimizer(requested, "select_lv", "grouped Poisson dispersion")
+    end
     criterion in (:aic, :bic, :bic_sites) ||
         throw(ArgumentError("criterion must be :aic, :bic or :bic_sites; got :$criterion"))
     mask = get(kwargs, :mask, nothing)

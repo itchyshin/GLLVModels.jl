@@ -450,6 +450,27 @@ end
         @test_throws ArgumentError confint(ford, Yo; method = :wald, objective = :va)
     end
 
+    @testset "Ordinal confint guards X_lv fits (#776)" begin
+        Random.seed!(776)
+        pc, nc, Kc = 3, 80, 1
+        Xc = reshape(collect(range(-1.0, 1.0; length = nc)), nc, 1)
+        Lc = reshape([0.5, -0.4, 0.3], pc, Kc)
+        τc = [-1.0, 0.0, 1.0]
+        zc = vec(Xc * [0.5]) .+ randn(nc)
+        Yc = Matrix{Int}(undef, pc, nc)
+        for s in 1:nc, t in 1:pc
+            pr = [GLLVModels._ord_prob(c, (Lc * reshape(zc, 1, nc))[t, s], τc, LogitLink()) for c in 1:4]
+            Yc[t, s] = rand(Categorical(pr ./ sum(pr)))
+        end
+        f_lv = fit_ordinal_gllvm(Yc; K = Kc, X_lv = Xc, iterations = 60)
+        @test f_lv.alpha_lv !== nothing
+        @test_throws ArgumentError confint(f_lv, Yc; method = :wald)
+        # control: the same data without X_lv still returns intervals
+        f0 = fit_ordinal_gllvm(Yc; K = Kc, iterations = 60)
+        @test f0.alpha_lv === nothing
+        @test !isempty(confint(f0, Yc; method = :wald).estimate)
+    end
+
     @testset "Beta-binomial Wald + bootstrap (phi on natural scale, N as data)" begin
         Random.seed!(45)
         p, K, n, Ntr, φ_true = 4, 1, 60, 8, 6.0

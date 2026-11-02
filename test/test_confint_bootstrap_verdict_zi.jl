@@ -131,8 +131,23 @@ end
     end
 
     @testset "all-converged bootstrap: endpoints identical to the bare-vector contract" begin
-        route, fit, Y, ad, direct, pack = routes[1]   # ZIP, no covariates: the fastest route
-        m = length(ad.θ)
+        route, fit, Y, ad0, direct, pack = routes[1]   # ZIP, no covariates: the fastest route
+        m = length(ad0.θ)
+        # The ZIP Laplace log-determinant uses the observed count curvature (#739), so a
+        # replicate whose optimum sits on the Laplace breakdown guard is correctly reported
+        # `converged = false` (about 1 draw in 10 here, and which draws depends on the
+        # Julia version's random stream). This test is about the all-converged contract,
+        # not that rate, so the simulator keeps the first draw of each replicate's stream
+        # whose refit converged. Deterministic given the rng, and the draws still vary.
+        function _sim_converged(rng)
+            for _ in 1:50
+                Yd = ad0.simulate(rng)
+                r = ad0.refit(Yd)
+                r !== nothing && r.converged && return Yd
+            end
+            error("no converged ZIP replicate in 50 draws")
+        end
+        ad = GM._FamilyCI(ad0.θ, ad0.nll, ad0.names, ad0.kinds, _sim_converged, ad0.refit)
         ad_bare = GM._FamilyCI(ad.θ, ad.nll, ad.names, ad.kinds, ad.simulate,
                                Yb_ -> (r = ad.refit(Yb_); r === nothing ? nothing : r.θ))
         # `_family_bootstrap` reports NaN bounds below 10 usable replicates.

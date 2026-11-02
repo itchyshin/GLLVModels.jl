@@ -20,6 +20,7 @@ using Distributions: Distribution, Univariate, Discrete, Continuous,
 
 # Core
 include("fit_verdict.jl")            # _fit_verdict: never report a failure sentinel as a loglik
+include("optimizer_selection.jl")     # direct outer optimizer choices and immutable fit receipts
 include("packing.jl")
 include("lowrank_cholesky.jl")          # used by likelihood
 include("likelihood.jl")
@@ -71,6 +72,7 @@ include("relaxed_clock.jl")              # Relaxed-clock per-branch evolution ra
 # Response families (Phase 3): Distributions types as markers + link functions
 include("families/links.jl")
 include("families/laplace.jl")           # generic family-dispatched Laplace marginal core
+include("families/response_support.jl")  # response-domain checks shared by the Laplace fitters (#730)
 include("families/aghq_grid.jl")         # Stage-1a/1b live-pin AGHQ grid + Liu–Pierce site (not a public knob)
 include("families/aghq_outer.jl")        # Internal unpenalized outer adaptation; public fit wiring pending
 include("families/aghq_fit_info.jl")
@@ -208,6 +210,7 @@ include("joint_phylo_grouped_gaussian.jl") # one joint Gaussian marginal, evalua
 include("joint_covariance_identification.jl") # actual covariance tangent aliases
 include("joint_phylo_grouped_fit.jl") # private joint optimizer and marginal intervals
 include("joint_phylo_grouped_postfit.jl") # explicit population mean and source-labelled extraction
+include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl, precision_multivariate_fit.jl + destination_b_postfit.jl (PrecisionMultivariateFit tier :phy) and joint_phylo_grouped_fit.jl + joint_phylo_grouped_postfit.jl + joint_covariance_identification.jl (JointPhyloGroupedGaussianFit tier :phy).
 include("diagnostics.jl")                # check_gllvmTMB / gllvmTMB_diagnose / predictive_check / sanity_multi / compare_* / confint_inspect (core070 diagnostics/compare cluster)
 include("summary_table.jl")              # coef_table: tidy Wald inference table
 include("postfit_tables.jl")             # final missing-surface cluster (core070 §1): deviance, cross-rho profiles,
@@ -243,7 +246,8 @@ Alias of [`ConstrainedOrdinationFit`](@ref), the result type of
 const ConcurrentOrdinationFit = ConstrainedOrdinationFit
 
 # Public API
-export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevolution_blockna,
+export OptimizerStage, OptimizerRecord, optimizer_info,
+       make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevolution_blockna,
        fit_gaussian_mi_fiml, fit_gaussian_mi_phylo, fit_gllvm_mi, fit_gllvm_mi_multi,
        spatial_cov, relatedness_cov,
        spde_fem, spde_precision, spde_projector, matern_correlation,
@@ -278,7 +282,7 @@ export make_cross_kernel, extract_Gamma, fit_coevolution_gaussian, fit_coevoluti
        loading_profile_exploratory, loading_profile,
        profile_ci_total_variance, profile_ci_phylo_signal,
        slope_sd_ci, standard_errors,
-       latent_score_sd, getREsd, bootstrap_Sigma, tmbprofile_wrapper, profile_targets, profile_curve_targets,
+       latent_score_sd, getREsd, bootstrap_Sigma, bootstrap_Sigma_r, BootstrapSigmaR, tmbprofile_wrapper, profile_targets, profile_curve_targets,
        profile_phylo_signal,
        ppca_init, em_fa,
        sigma_y_site, communality, correlation, phylo_signal, link_residual,

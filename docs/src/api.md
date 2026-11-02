@@ -6,6 +6,26 @@ This page documents the public API of `GLLVModels.jl`, categorized by functional
 
 ## Model Fitting
 
+### Outer optimizer selection
+
+The ordinary Gaussian, Poisson Laplace, shared-dispersion NB2 Laplace, and
+per-trait NB2 Laplace fitters accept `optimizer = nothing` (the unchanged
+historical default), `optimizer = :lbfgs` / `:bfgs`, or a configured
+`Optim.LBFGS()` / `Optim.BFGS()` object. An explicit choice runs that method
+directly; it does not invoke the Poisson/NB2 legacy BFGS continuation. For the
+default per-trait NB2 formula route, explicit LBFGS also skips the historical
+BFGS Poisson-ridge polish, while explicit BFGS uses BFGS for each executed
+stage. Use `optimizer_info(fit)` to inspect the immutable per-fit receipt,
+including the requested and actual method, derivative path, controls, and each
+outer attempt. `select_lv` carries the request to each candidate fit.
+
+This option does not select inner latent-mode or AGHQ solvers. Explicit choices
+are refused on AGHQ/adaptive, variational, composite/grouped-covariance,
+phylogenetic, row-effect, pervar, and other family routes. Profile and bootstrap
+interval refits are also refused for fits made with an explicit optimizer,
+because those internal refits do not yet forward the selected method; use the
+historical default fit for those interval methods.
+
 ### Unified & General Fitters
 
 The explicit Gaussian `phylo=PrecisionPhy` route supports precision-only
@@ -37,6 +57,9 @@ fit_mixed_gllvm
 fit_gaussian_gllvm
 fit_gaussian_pervar_gllvm
 fit_gaussian_sources
+optimizer_info
+OptimizerRecord
+OptimizerStage
 GroupingTerm
 GroupedGaussianFit
 grouped_gaussian_intervals

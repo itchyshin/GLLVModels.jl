@@ -243,7 +243,7 @@
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/verify.txt": "9b0fd01a18849b610fc866dc91ab159840af37f6d67fb929f7a238c94da709cc",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-poisson/poisson-health.toml": "8a45a681cc1e2483528883b4e3414c0fd9df89c0edc942bdb668d71a0c242214",
     "docs/dev-log/core070/public-bridge-required-cases.json": "72597c8905af7f680984089f89fbb89a6972be02c8bef207986a035f27377e4b",
-    "tools/core070_family_bridge_p1.R": "4413eef2e719a5eafb37de836b06c069c3a431728d1c8728a14b642cf528e82c"
+    "tools/core070_family_bridge_p1.R": "9de80df088426f55dd4ca418220ef860713f69b3ba7dfdf2d2189ec666b35d2f"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/results.json"

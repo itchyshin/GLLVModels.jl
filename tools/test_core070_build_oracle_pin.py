@@ -16,8 +16,10 @@ Covers:
 """
 import hashlib
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
@@ -114,6 +116,116 @@ class PinsFileAgreesWithParityOracle(unittest.TestCase):
                 f"pin {name!r}: core070_oracle_pins.toml disagrees with "
                 "parity_oracle.R_REF_PINS on the commit SHA",
             )
+
+
+@unittest.skipUnless(shutil.which("R"), "R is required to query installed package metadata")
+class InstalledPackageVersionReceipt(unittest.TestCase):
+    def test_version_probe_reads_the_package_in_the_selected_library(self):
+        for pin, version in (("P0", "0.7.0"), ("P1", "0.7.1")):
+            with self.subTest(pin=pin), tempfile.TemporaryDirectory() as tmp:
+                library = Path(tmp)
+                package = library / "gllvmTMB"
+                package.mkdir()
+                (package / "DESCRIPTION").write_text(
+                    "Package: gllvmTMB\n"
+                    f"Version: {version}\n"
+                    "Title: Version probe fixture\n"
+                    "Description: Minimal installed-package metadata for the pin probe.\n"
+                    "License: GPL-3\n"
+                    "Author: Test\n"
+                    "Maintainer: Test <test@example.org>\n"
+                )
+                env = _clean_env(GLLVM_PARITY_PIN=pin)
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import core070_build_oracle as b, sys; "
+                        "print(b._installed_gllvmtmb_version(sys.argv[1], sys.argv[2]))",
+                        shutil.which("R"),
+                        str(library),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env=env,
+                    cwd=str(TOOLS),
+                    timeout=20,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), version)
+
+
+class BuildVersionValidation(unittest.TestCase):
+    def test_failed_install_is_reported_before_missing_version(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import core070_build_oracle as b; "
+                "print(b._build_validation_error({'exit_code': 1, "
+                "'original_source_unchanged': True}, '0.7.1'))",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=_clean_env(GLLVM_PARITY_PIN="P1"),
+            cwd=str(TOOLS),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("build command failed", result.stdout)
+        self.assertNotIn("version None", result.stdout)
+
+    def test_verify_requires_matching_receipt_and_marker_versions(self):
+        script = r"""
+import json, sys
+from pathlib import Path
+import core070_build_oracle as b
+
+mode, raw_destination = sys.argv[1:]
+destination = Path(raw_destination)
+installed = destination / "library" / "gllvmTMB"
+installed.mkdir(parents=True)
+version = str(b._PIN["version"])
+marker_version = "0.7.0" if mode == "wrong-marker" else version
+(installed / b.MARKER).write_text(f'gllvmTMB_version = "{marker_version}"\n')
+log = destination / "install.log"
+log.write_text("fixture install log\n")
+receipt_version = "0.7.0" if mode == "wrong-receipt" else version
+result = {
+    "exit_code": 0,
+    "original_source_unchanged": True,
+    "reference_commit": b.REFERENCE,
+    "source_tree_sha256": b.SOURCE_TREE,
+    "archive_sha256": b.ARCHIVE,
+    "gllvmTMB_version": receipt_version,
+    "installed_tree_sha256": b.tree_hash(b.files(installed, excluded=(b.MARKER,))),
+    "marker_sha256": b.sha(installed / b.MARKER),
+    "log_sha256": b.sha(log),
+}
+(destination / "build.json").write_text(json.dumps(result))
+b.verify(destination)
+"""
+        for mode, expected_error in (
+            ("valid", None),
+            ("wrong-receipt", "build receipt gllvmTMB_version"),
+            ("wrong-marker", "installed marker gllvmTMB_version"),
+        ):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as tmp:
+                result = subprocess.run(
+                    [sys.executable, "-c", script, mode, tmp],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env=_clean_env(GLLVM_PARITY_PIN="P1"),
+                    cwd=str(TOOLS),
+                )
+                if expected_error is None:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("CORE070_ORACLE_VERIFY_PASS", result.stdout)
+                else:
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertIn(expected_error, result.stderr)
 
 
 def _sha256_file(path):

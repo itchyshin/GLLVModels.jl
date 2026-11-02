@@ -38,7 +38,10 @@ function sim_beta(link; p = 6, n = 300, seed = 1, φ = 25.0,
     Y = zeros(p, n)
     for i in 1:n, t in 1:p
         μ = clamp(G.linkinv(link, β[t] + λ[t] * z[i]), 1e-3, 1 - 1e-3)
-        Y[t, i] = rand(rng, Beta(μ * φ, (1 - μ) * φ))
+        # A draw near μ = 1 can round to exactly 1.0, outside the open Beta support that
+        # `fit_beta_gllvm` now enforces (#730); keep it at the bound the Beta
+        # log-density already scored it at (`_clamp_y`).
+        Y[t, i] = clamp(rand(rng, Beta(μ * φ, (1 - μ) * φ)), 1e-12, 1 - 1e-12)
     end
     return Y, β, λ
 end

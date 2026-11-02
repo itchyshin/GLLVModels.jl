@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto';
 // True-parity acceptance oracle for GLLVModels.jl vs gllvmTMB, pinned per-pin (P0 frozen at
 // 0.7.0 b4d5fee64def88bc768dda1f1f77c29b295edd86; P1 = gllvmTMB main
 // 9539352f66f2db2cc26b1c393e67212a359b60c9, 0.7.1 candidate, D-294/D-295, 2026-09-27).
@@ -99,22 +100,25 @@ const P1_SHA = '9539352f66f2db2cc26b1c393e67212a359b60c9';
 const SHA256_RE = /^[0-9a-f]{64}$/;
 
 // Per-pin ledger paths. "Configurable per pin": add a pin here, or override with
-// PARITY_SCOREBOARD / PARITY_CASEMAP / PARITY_REVERSE_GAP for one-off runs.
+// PARITY_SCOREBOARD / PARITY_CASEMAP / PARITY_SCOPED_TWIN_CASEMAP / PARITY_REVERSE_GAP for one-off runs.
 const PIN_PATHS = {
   P0: {
     scoreboard: 'docs/dev-log/core070/true-parity-gate-tier-scoreboard-2026-09-25.md',
     casemap: 'docs/dev-log/core070/required-source-case-map.json',
+    scopedTwinCasemap: 'docs/dev-log/core070/required-source-case-map.json',
     reverseGap: null, // P0's reverse-gap list is tool-produced by tools/parity_ledger.py, not tracked as a file
   },
   P1: {
     scoreboard: 'docs/dev-log/core070/true-parity-latest/scoreboard.md',
     casemap: 'docs/dev-log/core070/true-parity-latest/case-map.json',
+    scopedTwinCasemap: 'docs/dev-log/core070/true-parity-latest/case-map-assembled.json',
     reverseGap: 'docs/dev-log/core070/true-parity-latest/reverse-gap.json',
   },
 };
 const PATHS = {
   scoreboard: process.env.PARITY_SCOREBOARD || (PIN_PATHS[PIN] || PIN_PATHS.P1).scoreboard,
   casemap: process.env.PARITY_CASEMAP || (PIN_PATHS[PIN] || PIN_PATHS.P1).casemap,
+  scopedTwinCasemap: process.env.PARITY_SCOPED_TWIN_CASEMAP || (PIN_PATHS[PIN] || PIN_PATHS.P1).scopedTwinCasemap,
   reverseGap: process.env.PARITY_REVERSE_GAP || (PIN_PATHS[PIN] || PIN_PATHS.P1).reverseGap,
 };
 const PARITY_PAGE = 'docs/src/gllvmtmb-parity.md';
@@ -136,12 +140,19 @@ const C6_DECISION_VOCAB = new Set([
   'DEPRECATE_AND_REMOVE',
   'RENAME_TO_AVOID_COLLISION',
   'EXCLUDED_INTERNAL_HELPER',
+  'SCOPED_R_TWIN',
+  'HOLD_PENDING_EVIDENCE',
 ]);
-// C6 decisions are signed by a ruling, and a ruling covers only the words it names. The table is the
-// ONLY signature the tool accepts on a reverse-gap decision: itchyshin/GLLVModels.jl#684 item 3, signed
-// 2026-10-02, covers exactly these two words. A new ruling is a new entry here, added in review.
+const HELD_C6_NAMES = new Set([
+  'NBFit', 'Ordinal', 'TweedieFit', 'ZIB', 'ZINegBin',
+  'fit_animal_latent_gllvm', 'fit_kernel_latent_gllvm', 'gllvm', 'link_residual',
+]);
+// C6 decisions are signed by a ruling, and a ruling covers only the words it names. #684 item 3
+// covers its two original words. The 2026-10-17 record supports scoped twins with executable receipts
+// and a hold disposition for exactly HELD_C6_NAMES; a hold is not evidence of equivalence.
 const C6_RULINGS = {
   'itchyshin/GLLVModels.jl#684 item 3': { signed_on: '2026-10-02', words: new Set(['KEPT_AS_JULIA_EXTRA', 'EXCLUDED_INTERNAL_HELPER']) },
+  'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md': { signed_on: '2026-10-17', words: new Set(['SCOPED_R_TWIN', 'HOLD_PENDING_EVIDENCE']) },
 };
 const BEHAVIOUR_EQUIVALENCE = 'docs/dev-log/core070/true-parity-latest/behaviour-equivalence.json';
 const BEHAVIOUR_KINDS = new Set(['route', 'refusal', 'error_class', 'printed_fields']);
@@ -277,12 +288,12 @@ function hasSignedTokens(text) {
   return !!by && !!on && signatureProblem(by[1], on[1]) === null;
 }
 
-function loadCasemap() {
-  const j = show(PATHS.casemap);
-  if (j === null) die(`${PATHS.casemap} not on ${REF}`);
+function loadCasemap(path = PATHS.casemap) {
+  const j = show(path);
+  if (j === null) die(`${path} not on ${REF}`);
   let d;
-  try { d = JSON.parse(j); } catch (e) { die(`${PATHS.casemap} is not valid JSON: ${e.message}`); }
-  return Array.isArray(d.rows) ? d.rows : die(`${PATHS.casemap} has no "rows" array`);
+  try { d = JSON.parse(j); } catch (e) { die(`${path} is not valid JSON: ${e.message}`); }
+  return Array.isArray(d.rows) ? d.rows : die(`${path} has no "rows" array`);
 }
 
 function rowReceiptPaths(row) {
@@ -1048,6 +1059,70 @@ function keptBasisProblem(basis) {
   return null;
 }
 
+// Exact contracts signed on 2026-10-17, from c6-approved-decisions-2026-10-17.toml.
+// The general rule is not a signature for a new name or a changed route.
+const C6_APPROVED_SCOPE_SHA256 = {
+  "BetaBinom": "9cd3b96b383762cbb5b55d7d4614beedb0e4fb8b735eab9aa59d26b9710264c5",
+  "NB1": "ba276a261732c8125bcd33765ff1db054139fcab46b4ac98d2e3b5e36d7cb7fc",
+  "StudentT": "b6321a8f647f1ee2a646c6951bb85011b1b01f04b391e55bf19b13136d544279",
+  "StudentTFamily": "e571e8fa54d7a51b2d9504cdd2cf8d96cbdb9ab65895285d82820908852b5e46",
+  "TruncatedNegBin2": "174a5994c47565f760dc413a5a76a660f6de077db824011cb7b918679bea31c3",
+  "bridge_fit": "5b5c1f8e067571073f71038d0263fbb63201e19d0fe854a2ff39a77903fb3222",
+  "fit_animal_dep_gllvm": "fb8bd42aeaa88c3d3ea79ee37c8f542fe52837967513cb4b6a6efa3e2186788e",
+  "fit_dep_gllvm": "c0baa3610de08e061b21bb117e93a2faccc6c51b03fccd2debcb57b7129e0125",
+  "fit_gllvm": "a666827b39c386b01a5ef76d48ea5d3d4f354fb22f71d0d5baaaed8716193488",
+  "fit_kernel_dep_gllvm": "33475a40838b1a5fc85d26dada32b69f80bc65c0468cd1f3a07ae227e349c756",
+  "fit_kernel_indep_gllvm": "13dcb057d0794cb3b806f1825025db2817708ec402d8b13a68c5b2338c5427b8"
+};
+function c6Canonical(value) {
+  if (Array.isArray(value)) return value.map(c6Canonical);
+  if (value !== null && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(k => [k, c6Canonical(value[k])]));
+  return value;
+}
+function approvedScopeProblem(item) {
+  if (!Object.hasOwn(C6_APPROVED_SCOPE_SHA256, item.name) || item.source_id !== `julia-export/${item.name}`) return 'SCOPED_R_TWIN name is not an exact approved Julia export';
+  const contract = Object.fromEntries(['counterpart', 'scope', 'receipt_ids', 'ruling'].map(k => [k, item[k]]));
+  const digest = createHash('sha256').update(JSON.stringify(c6Canonical(contract))).digest('hex');
+  return digest === C6_APPROVED_SCOPE_SHA256[item.name] ? null : 'SCOPED_R_TWIN contract differs from the exact approved scope';
+}
+
+function scopedTwinProblem(item) {
+  const counterpart = item.counterpart;
+  if (!counterpart || typeof counterpart !== 'object' || Array.isArray(counterpart)) return 'SCOPED_R_TWIN requires a counterpart object';
+  if (!isVisible(counterpart.r_function)) return 'SCOPED_R_TWIN requires counterpart.r_function';
+  if (counterpart.r_commit !== P1_SHA) return `SCOPED_R_TWIN counterpart.r_commit must equal pinned P1 ${P1_SHA}`;
+  const rloc = counterpart.r_source;
+  if (typeof rloc !== 'string' || !/^R\/[^:\s]+:\d+(?:-\d+)?$/.test(rloc)) return 'SCOPED_R_TWIN requires counterpart.r_source as R/path:line[-line]';
+  const jloc = counterpart.julia_source;
+  if (typeof jloc !== 'string' || !/^src\/[^:\s]+:\d+(?:-\d+)?$/.test(jloc)) return 'SCOPED_R_TWIN requires counterpart.julia_source as src/path:line[-line]';
+  if (!existsAsBlob(jloc.split(':')[0])) return `SCOPED_R_TWIN Julia source ${jloc} does not resolve at the ref`;
+  const scope = item.scope;
+  if (!scope || typeof scope !== 'object' || Array.isArray(scope)) return 'SCOPED_R_TWIN requires a scope object';
+  for (const key of ['public_route', 'family_link', 'data', 'estimand']) {
+    if (!isVisible(scope[key])) return `SCOPED_R_TWIN requires scope.${key}`;
+  }
+  for (const key of ['outputs', 'exclusions']) {
+    if (!Array.isArray(scope[key]) || scope[key].length === 0 || !scope[key].every(isVisible)) return `SCOPED_R_TWIN requires a non-empty string array scope.${key}`;
+  }
+  if (!Array.isArray(item.receipt_ids) || item.receipt_ids.length === 0 || !item.receipt_ids.every(isVisible)) return 'SCOPED_R_TWIN requires non-empty receipt_ids';
+  if (new Set(item.receipt_ids).size !== item.receipt_ids.length) return 'SCOPED_R_TWIN receipt_ids must be unique';
+  // Scoped C6 decisions bind to the generated union of per-family case maps. The
+  // ordinary C1-C8/X2 ledger keeps using case-map.json, whose dispositions are
+  // independently maintained and must not be replaced by the generated union.
+  const rows = loadCasemap(PATHS.scopedTwinCasemap);
+  for (const receiptId of item.receipt_ids) {
+    const bound = rows.some((row) => {
+      if (!Array.isArray(row.executable_case_ids) || !row.executable_case_ids.includes(receiptId)) return false;
+      if (row.measured_against !== P1_SHA || !['numeric', 'behavioural'].includes(row.evidence_tier)) return false;
+      const paths = rowReceiptPaths(row);
+      return paths.length > 0 && paths.every((path) => typeof path === 'string'
+        && !path.startsWith('/') && !path.split('/').includes('..') && existsAsBlob(path));
+    });
+    if (!bound) return `SCOPED_R_TWIN receipt id ${receiptId} has no executable P1 numeric or behavioural row with a resolving receipt`;
+  }
+  return approvedScopeProblem(item);
+}
+
 function checkC6() {
   if (!PATHS.reverseGap) die('no reverse-gap list path configured for this pin');
   const j = show(PATHS.reverseGap);
@@ -1056,11 +1131,10 @@ function checkC6() {
   try { items = JSON.parse(j); } catch (e) { die(`${PATHS.reverseGap} is not valid JSON: ${e.message}`); }
   if (!Array.isArray(items) || items.length === 0) { console.log('C6 items=0 EMPTY_SELECTION (vacuous; not a pass)'); return false; }
   const invalid = items.filter((it) => !C6_DECISION_VOCAB.has(it.decision)).map((it) => `${it.source_id || it.name || '?'}:${JSON.stringify(it.decision)}`);
-  // Ruling 3 (itchyshin/GLLVModels.jl#684 item 3): a decided item needs a written basis (a visible
-  // text) and a ruling {ref, signed_by, signed_on} whose signer and date pass the signature rule. A
-  // KEPT_AS_JULIA_EXTRA basis must also cite a docs/src/... file that resolves at the ref (a documented
-  // extra is documented). The tool cannot check that the named person signed (PR review does), but it
-  // refuses an item with no basis, no ruling reference, or a signer outside the allow-list.
+  // A decided item needs a written basis (visible text) and a ruling {ref, signed_by, signed_on}
+  // whose signer/date pass the signature rule. KEPT_AS_JULIA_EXTRA also cites a docs/src page.
+  // SCOPED_R_TWIN carries exact counterpart, route/scope, and receipt identifiers; those identifiers
+  // must bind to executable P1 evidence. The rule approval does not sign an individual name.
   const unsignedDecision = [];
   const counts = Object.fromEntries([...C6_DECISION_VOCAB].map((d) => [d, 0]));
   for (const it of items) {
@@ -1077,6 +1151,17 @@ function checkC6() {
     else why = signatureProblem(rl.signed_by, rl.signed_on);
     if (why === null && rl.signed_on.trim() !== C6_RULINGS[rl.ref].signed_on) why = `ruling signed_on ${JSON.stringify(rl.signed_on)} is not the date of ${rl.ref}`;
     if (why === null && it.decision === 'KEPT_AS_JULIA_EXTRA') why = keptBasisProblem(it.basis);
+    if (why === null && it.decision === 'SCOPED_R_TWIN' && !existsAsBlob(rl.ref)) why = `SCOPED_R_TWIN approval record ${rl.ref} does not resolve at the ref`;
+    if (why === null && it.decision === 'SCOPED_R_TWIN') why = scopedTwinProblem(it);
+    if (why === null && it.decision === 'HOLD_PENDING_EVIDENCE') {
+      if (!HELD_C6_NAMES.has(it.name)) why = 'HOLD_PENDING_EVIDENCE is restricted to the nine approved held names';
+      else if (it.source_id !== `julia-export/${it.name}`) why = 'HOLD_PENDING_EVIDENCE source_id must match its exact Julia export name';
+      else if (it.status !== 'held') why = 'HOLD_PENDING_EVIDENCE requires status held';
+      else if (rl.ref !== 'docs/dev-log/decisions/2026-10-17-p1-c6-and-c3-c4-contract-approval.md') why = 'HOLD_PENDING_EVIDENCE requires its explicit maintainer ruling';
+      else if (!existsAsBlob(rl.ref)) why = `HOLD_PENDING_EVIDENCE approval record ${rl.ref} does not resolve at the ref`;
+      else if (!it.basis.includes('no twin or parity claim') || !it.basis.includes('no scoreboard row')) why = 'HOLD_PENDING_EVIDENCE basis must state no twin/parity claim and no scoreboard row admission';
+      else if ('counterpart' in it || 'scope' in it || 'receipt_ids' in it) why = 'HOLD_PENDING_EVIDENCE cannot carry twin scope or receipt fields';
+    }
     if (why !== null) unsignedDecision.push(`${id}(${why})`);
   }
   console.log(`C6 items=${items.length} invalid_decision=${invalid.join(',') || 'none'} (vocabulary: ${[...C6_DECISION_VOCAB].join('|')}) unsigned_decision=${unsignedDecision.join(',') || 'none'} decision_counts=${Object.entries(counts).map(([d, n]) => `${d}:${n}`).join(',')}`);
