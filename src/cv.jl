@@ -26,19 +26,19 @@ using Printf
 Summary container holding out-of-sample cross-validation evaluation results.
 
 Fields:
-- `k_folds::Int` — number of folds ($K$)
-- `split::Symbol` — split strategy (`:random`, `:site`, or `:species`)
-- `loglik::Float64` — total out-of-sample log-likelihood summed across all test cells
-- `mse::Float64` — overall out-of-sample Mean Squared Error
-- `residual_mean::Float64` — sample mean of out-of-sample Dunn–Smyth randomized quantile residuals (target ≈ 0)
-- `residual_std::Float64` — sample standard deviation of out-of-sample randomized quantile residuals (target ≈ 1)
-- `fold_logliks::Vector{Float64}` — out-of-sample log-likelihood for each fold
-- `fold_mses::Vector{Float64}` — out-of-sample MSE for each fold
-- `fold_residual_means::Vector{Float64}` — mean of quantile residuals per fold
-- `fold_residual_stds::Vector{Float64}` — standard deviation of quantile residuals per fold
-- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$ (for `Binomial` with trial counts `N`, the expected count $N\hat{\mu}$, on the scale of `Y`)
-- `residuals::Matrix{Float64}` — $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
-- `fits::Vector{Any}` — fitted model objects from each training fold
+- `k_folds::Int`: number of folds ($K$)
+- `split::Symbol`: split strategy (`:random`, `:site`, or `:species`)
+- `loglik::Float64`: total out-of-sample log-likelihood summed across all test cells
+- `mse::Float64`: overall out-of-sample Mean Squared Error
+- `residual_mean::Float64`: sample mean of out-of-sample Dunn–Smyth randomized quantile residuals (target ≈ 0)
+- `residual_std::Float64`: sample standard deviation of out-of-sample randomized quantile residuals (target ≈ 1)
+- `fold_logliks::Vector{Float64}`: out-of-sample log-likelihood for each fold
+- `fold_mses::Vector{Float64}`: out-of-sample MSE for each fold
+- `fold_residual_means::Vector{Float64}`: mean of quantile residuals per fold
+- `fold_residual_stds::Vector{Float64}`: standard deviation of quantile residuals per fold
+- `predictions::Matrix{Float64}`: $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$ (for `Binomial` with trial counts `N`, the expected count $N\hat{\mu}$, on the scale of `Y`)
+- `residuals::Matrix{Float64}`: $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
+- `fits::Vector{Any}`: fitted model objects from each training fold
 """
 struct CVResult
     k_folds::Int
@@ -293,9 +293,9 @@ Run $K$-fold cross-validation on community response matrix `Y` ($p \times n$,
 species/traits $\times$ sites/observations).
 
 Supported `split` strategies:
-- `:random` (or `:cell`, `:entry`) — Random entry-wise split across all observed cells.
-- `:site` (or `:site_block`, `:site_level`, `:column`) — Site-level block cross-validation holding out entire site columns.
-- `:species` (or `:species_block`, `:species_level`, `:row`) — Species-level block cross-validation holding out entire species rows.
+- `:random` (or `:cell`, `:entry`): random entry-wise split across all observed cells.
+- `:site` (or `:site_block`, `:site_level`, `:column`): site-level block cross-validation holding out entire site columns.
+- `:species` (or `:species_block`, `:species_level`, `:row`): species-level block cross-validation holding out entire species rows.
 
 For the Gaussian family, a fixed-effect design `X` (a `p×n×q` array, as for
 [`fit_gaussian_gllvm`](@ref)) may be passed as `X = X`; it is subset with each
@@ -311,6 +311,7 @@ Dunn–Smyth randomized quantile residuals, predictions, and per-fold metrics.
 # Examples
 ```julia
 using GLLVModels, Random
+using Distributions: Poisson
 
 # 5-fold random cell-level CV on count data
 Y = rand(0:10, 6, 40)
