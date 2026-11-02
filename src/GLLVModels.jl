@@ -180,7 +180,6 @@ include("confint_derived_wald.jl")       # transformed-Wald CIs for bounded deri
 # adds methods to). Additive: the ::GllvmFit methods are unchanged.
 include("link_residual.jl")
 include("extractors.jl")                # extract_*/get* post-fit extractor family (core070 Cluster 1)
-include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl.
 include("families/nb_grouped_postfit.jl") # predict/fitted/residuals/getResidualCor for NBGroupedFit + NBGroupedCovFit (#555). AFTER extractors.jl (getResidualCor, _canonical_level) and link_residual.jl (_latent_correlation).
 include("re_sd.jl")                      # latent_score_sd (renamed from getREsd): TMB-sdreport-style conditional-on-θ̂ random-effect SDs (core070 E-cluster)
 include("families/mixed.jl")             # mixed-family GLLVM (cross-family VCV): fit_mixed_gllvm + MixedFamilyFit. AFTER link_residual + the family fitters so all dispatch targets exist.
@@ -198,6 +197,7 @@ include("grouped_fit.jl")               # internal joint grouped Gaussian fit an
 include("precision_multivariate_fit.jl") # internal multivariate phylogenetic fit and intervals
 include("grouped_nongaussian_fit.jl")   # internal five-family joint grouping extension
 include("destination_b_postfit.jl")     # explicit population-only Gaussian postfit routes
+include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl, and (PrecisionMultivariateFit tier :phy) precision_multivariate_fit.jl + destination_b_postfit.jl.
 include("phylo_latent_precision.jl")    # observation/tip labels on PrecisionMultivariateFit
 include("phylo_latent.jl")              # fit_phylo_latent_gllvm: twin of R's bare Gaussian phylo_latent()
 include("phylo_latent_postfit.jl")      # extract_phylo_signal for the phylo_latent twin

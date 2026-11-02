@@ -15,6 +15,12 @@
 # DOES include sigma_eps^2 and sigma^2_W) when `has_diag && K_W == 0`. That second meaning
 # rests on a Julia comment (extractors.jl:270-276), not on R output: UNVERIFIED against R.
 #
+# PrecisionMultivariateFit (tier :phy only) follows the same contract: the batch is drawn from the
+# fitted law with every phylogenetic effect REDRAWN (R `simulate(fit)` unconditional path, R/methods-
+# gllvmTMB.R at the pinned SHA), the loadings held fixed, one cold-start refit per replicate (R has no warm
+# start), failure = throw or `!converged`. Evidence level: STRUCTURAL (code read against the pinned R plus
+# tests and mutants); no numerical comparison with an R run exists. See the docstring.
+#
 # WIRING: included by src/GLLVModels.jl after extractors.jl, confint_derived.jl and twolevel.jl
 # (PR #1056). The legacy `bootstrap_Sigma` (confint_derived_wald.jl) is not touched and is a
 # different estimand.
@@ -115,6 +121,8 @@ end
 _bsig_available_tiers(fit::GllvmFit) =
     _r_tier_present(fit, :unit) ? Symbol[:B] : Symbol[]
 _bsig_available_tiers(::TwoLevelFit) = Symbol[:B, :W]
+# R keeps `phy` when phylo_rr || phylo_diag is fit; the class has no B/W tier. R has only B, W, phy.
+_bsig_available_tiers(::PrecisionMultivariateFit) = Symbol[:phy]
 
 function _bsig_pair(fit::GllvmFit, tier::Symbol)
     tier === :B || throw(ArgumentError("internal: GllvmFit has only tier :B in v1"))
@@ -127,6 +135,15 @@ function _bsig_pair(fit::TwoLevelFit, tier::Symbol)
     tier === :B && return fit.Σ_B, fit.Λ_B * fit.Λ_B'
     tier === :W && return fit.Σ_W, fit.Λ_W * fit.Λ_W'
     throw(ArgumentError("internal: TwoLevelFit has no tier :$tier"))
+end
+
+# PrecisionMultivariateFit tier :phy. Total = LL' + diag(unique) (R `extract_Sigma(level = "phy",
+# part = "total")` for a Gaussian fit: NO residual variance); shared = LL' (R phylo_rr part). With
+# `:barelowrank` (R `phylo_latent` alone) unique = 0, so total == shared and communality is exactly 1.
+function _bsig_pair(fit::PrecisionMultivariateFit, tier::Symbol)
+    tier === :phy || throw(ArgumentError("internal: PrecisionMultivariateFit has only tier :phy"))
+    shared, _, total = _destination_b_covariance_parts(fit, :phy)
+    return total, shared
 end
 
 # R `.safe_icc_ratio`: NaN where the denominator is not finite or <= 0.
@@ -202,7 +219,8 @@ function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
     # iterations, they converge with a relative objective test, as R's nlminb does. Measured: 0 of
     # 1998 refits fail, logLik within 1e-4 of R, and it is not slower than stock (mean 60 vs 77 ms).
     # f_tol = 1e-10 stops too early (logLik up to 1.3e-3 low); do not loosen it. Never applied to
-    # phylo fits (a relative f_tol stopped those early); they are refused in v1 anyway.
+    # phylo fits (a relative f_tol stopped those early); a phylogenetic GllvmFit is refused in v1, and the
+    # PrecisionMultivariateFit refit also keeps the default controls.
     # DEVIATION from the pinned-R behaviour (optimizer settings), see the PR description.
     refit_opts = (_refit === nothing && (m.has_diag || m.K_W > 0)) ?
         (iterations = 2000, f_tol = 1e-12) : NamedTuple()
@@ -245,6 +263,56 @@ function _bsig_setup(fit::TwoLevelFit, n_boot::Int, individual, center::Bool, _r
     return simulate, refit
 end
 
+# PrecisionMultivariateFit, tier :phy. Batch simulator: for each replicate every phylogenetic effect
+# is REDRAWN from its fitted law, loadings held fixed, as R's unconditional `simulate(fit)` does
+# (R/methods-gllvmTMB.R at the pinned SHA: phylo_rr = one A-covariance draw per latent axis; phylo_diag
+# = one A-covariance draw per TRAIT, independent across traits, scaled by the fitted unique SD).
+# A draw with covariance A = Q^-1 on the augmented node set is `U \ z`, z ~ N(0, I), Q = U'U. Each
+# observation reads the node `phy.species_aug_id[species_id[o]]`; the mean is `mean_design * beta`.
+# Draw order per replicate: g (n_aug x rank), then h (n_aug x d; only when the fit has a unique
+# component), then the residual. The RNG stream cannot equal R's (different language and generator):
+# the law is the same, the draws are not. Dense Cholesky of Q: O(n_aug^3), fixtures and modest trees only.
+function _bsig_pmv_simulate_batch(rng, fit::PrecisionMultivariateFit, n_boot::Integer)
+    phy = fit.phy
+    d, m = fit.response_shape
+    U = cholesky(Symmetric(Matrix(phy.Q))).U
+    nodes = phy.species_aug_id[fit.species_id]
+    μ = reshape(fit.mean_design * fit.beta, d, m)
+    r = size(fit.loading, 2)
+    sd_res = sqrt.(fit.residual_variance)
+    sd_uni = fit.phylo_unique_variance === nothing ? nothing : sqrt.(fit.phylo_unique_variance)
+    Ys = Vector{Matrix{Float64}}(undef, n_boot)
+    for b in 1:n_boot
+        g = U \ randn(rng, phy.n_aug, r)
+        yb = μ .+ fit.loading * transpose(g[nodes, :])
+        if sd_uni !== nothing
+            h = U \ randn(rng, phy.n_aug, d)
+            yb .+= sd_uni .* transpose(h[nodes, :])
+        end
+        yb .+= sd_res .* randn(rng, d, m)
+        Ys[b] = yb
+    end
+    return Ys
+end
+
+# Refit: the SAME tree object, rank, mode, residual mode, observation-to-tip map and complete mean design
+# (`fit.mean_design` is accepted back as `X`; for a default-means fit it reproduces them exactly), default
+# optimiser controls, and NO `start` (R refits cold; a warm start would shrink failure rates and tails).
+# No relative `f_tol` (see the GllvmFit comment above: it stopped phylogenetic fits early).
+function _bsig_setup(fit::PrecisionMultivariateFit, n_boot::Int, _refit)
+    refit_fn = _refit === nothing ? fit_precision_multivariate : _refit
+    simulate = rng -> _bsig_pmv_simulate_batch(rng, fit, n_boot)
+    refit = Y -> refit_fn(Y, fit.phy; rank = fit.rank, mode = fit.mode,
+                          residual_mode = fit.residual_mode, species_id = fit.species_id,
+                          X = fit.mean_design, coefficient_names = fit.coefficient_names)
+    return simulate, refit
+end
+
+# One dispatching call per class (the driver passes the same argument bundle to all of them).
+_bsig_build(fit::GllvmFit, nb, a, _refit) = _bsig_setup(fit, nb, a.y, a.n_sites, a.X, _refit)
+_bsig_build(fit::TwoLevelFit, nb, a, _refit) = _bsig_setup(fit, nb, a.individual, a.center, _refit)
+_bsig_build(fit::PrecisionMultivariateFit, nb, a, _refit) = _bsig_setup(fit, nb, _refit)
+
 # ---------------------------------------------------------------- refusals
 function _bsig_check_fit(fit::GllvmFit, Σ_phy)
     _has_gaussian_record(fit) && _bsig_refuse(
@@ -261,10 +329,27 @@ function _bsig_check_fit(fit::GllvmFit, Σ_phy)
     return nothing
 end
 _bsig_check_fit(::TwoLevelFit, Σ_phy) = nothing
+function _bsig_check_fit(::PrecisionMultivariateFit, Σ_phy)
+    Σ_phy === nothing || _bsig_refuse(
+        "Σ_phy is not accepted for a PrecisionMultivariateFit: the tree is stored in the fit.")
+    return nothing
+end
+
+# Per-class refusal of arguments that would otherwise be silently ignored. A PrecisionMultivariateFit
+# keeps its response shape, mean design and tree, so `y`, `n_sites`, `X` and `individual` mean nothing.
+_bsig_check_args(fit, a) = nothing
+function _bsig_check_args(::PrecisionMultivariateFit, a)
+    for k in (:y, :n_sites, :X, :individual)
+        getfield(a, k) === nothing || _bsig_refuse(
+            "`$k` is not accepted for a PrecisionMultivariateFit (the fit stores its response " *
+            "shape, mean design and tree); it would be silently ignored.")
+    end
+    return nothing
+end
 
 # ---------------------------------------------------------------- driver
 """
-    bootstrap_Sigma_r(fit::Union{GllvmFit,TwoLevelFit}; n_boot=999,
+    bootstrap_Sigma_r(fit::Union{GllvmFit,TwoLevelFit,PrecisionMultivariateFit}; n_boot=999,
         level=(:unit,:unit_obs,:phy,:B,:W), what=(:Sigma,:R,:communality,:ICC,:cross_corr),
         conf=0.95, seed=nothing, n_cores=1, progress=true, keep_draws=false,
         link_residual=:auto, y=nothing, n_sites=nothing, X=nothing, Σ_phy=nothing,
@@ -274,7 +359,8 @@ Parametric percentile bootstrap of covariance summaries, following the pinned R
 `bootstrap_Sigma` (gllvmTMB 9539352f6). `GllvmFit` (no W tier, no pins, no phylo block,
 no retained record): tier `:B` only; `Sigma`, `R`, `communality`; `ICC` is dropped and
 `cross_corr` is always skipped (R needs a multinomial trait). `TwoLevelFit` (pass
-`individual`): tiers `:B`, `:W` and `ICC_site`. Everything else throws `ArgumentError`.
+`individual`): tiers `:B`, `:W` and `ICC_site`. `PrecisionMultivariateFit`: tier `:phy` only
+(see below). Everything else, including `JointPhyloGroupedGaussianFit`, throws `ArgumentError`.
 `n_cores > 1` is refused. See the ledger Spec for the full contract; the legacy
 `bootstrap_Sigma` is a different estimand and is unchanged.
 
@@ -292,6 +378,37 @@ no retained record): tier `:B` only; `Sigma`, `R`, `communality`; `ICC` is dropp
 
 `Sigma_B`, `R_B` and `communality_B` are therefore different estimands in the two cases;
 do not compare them across `has_diag` settings.
+
+# `PrecisionMultivariateFit` (tier `:phy` only)
+
+Maps to R's phylogenetic tier: `mode = :barelowrank` is `phylo_latent` alone, `:explicitunique` is
+`phylo_latent + phylo_unique`. `Sigma_phy = ΛΛ' + diag(unique)` with NO residual variance (R's Gaussian
+`Sigma_phy`), `R_phy` its correlation, `communality_phy = diag(ΛΛ') ./ diag(Sigma_phy)` (R: link residual
+`"none"`). B, W and `ICC_site` do not exist for this class (dropped with an `@info` at the default
+`level`; `level = :B` alone throws); `cross_corr` is never produced; `y`, `n_sites`, `X`, `individual`
+and `Σ_phy` are refused (the fit stores its tree, response shape and mean design). `mode = :barelowrank`
+gives `communality_phy` exactly 1 with a zero-width interval (flagged by an `@info`).
+
+Each replicate redraws every phylogenetic effect from its fitted law with the loadings held fixed (R's
+unconditional `simulate`: one tree-correlated draw per latent axis, and, with a unique component, one per
+trait), adds the fixed effects `mean_design * beta` and residual noise, and is refit once from default
+starts (no warm start, no relative `f_tol`). This is a parametric bootstrap conditional on the tree,
+`species_id`, mean design and fitted parameters; it is not a bootstrap of tips. Caveats:
+
+- The RNG stream cannot match R's: parity is distributional only.
+- `Sigma_phy` is on the scale of the supplied tree (`sigma2_phy` is fixed at 1); compare across trees
+  through `R_phy` or `communality_phy` only.
+- DEVIATION in the failure rule: R fails a replicate on `opt\$convergence != 0`; here a replicate fails
+  when the refit throws or `!converged`, and `converged` also needs a fresh finite-difference gradient
+  norm below `g_tol`. Failure rates are therefore not comparable with R's. The Hessian is checked by
+  neither implementation.
+- The simulator uses a dense Cholesky of the tree precision (O(n_aug^3)): fixtures and modest trees only.
+- Small tip counts give biased, boundary-truncated percentile intervals for variance components (R
+  shares this). Coverage has not been assessed.
+- EVIDENCE LEVEL: structural. The contract was read from the pinned R source and is pinned by tests and
+  mutation checks; the simulator law is checked against the model covariance and the fitter's own
+  likelihood. NO numerical comparison with an R `bootstrap_Sigma` run exists, so "matches R output" is
+  not claimed. (R's own test-suite has no phy-tier bootstrap test.) `center` is ignored.
 
 # Other behaviour worth knowing
 
@@ -336,7 +453,7 @@ do not compare them across `has_diag` settings.
 - `n_boot = 999` and `progress = true` (one `@info` per replicate) mirror R and need
   maintainer agreement as Julia defaults.
 """
-function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
+function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivariateFit};
         n_boot::Integer = 999,
         level = _BSIG_LEVELS_ALL,
         what = _BSIG_WHAT_ALL,
@@ -352,6 +469,8 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
 
     # 1. class-specific refusals (R: class and structural asserts come first)
     _bsig_check_fit(fit, Σ_phy)
+    args = (y = y, n_sites = n_sites, X = X, individual = individual, center = center)
+    _bsig_check_args(fit, args)
     # 2-4. level, what, link_residual, conf, n_boot (R order)
     lev = _bsig_normalise_level(level)
     wh = _bsig_check_what(what)
@@ -403,10 +522,16 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit};
               "It carries no information; refit with has_diag = true for an informative communality."
     end
 
+    # PrecisionMultivariateFit :barelowrank (R `phylo_latent` alone): phy total = LL' = shared
+    if fit isa PrecisionMultivariateFit && fit.phylo_unique_variance === nothing && :communality in wh
+        @info "bootstrap_Sigma_r: communality_phy is exactly 1 with a zero-width interval for a fit " *
+              "without a phylogenetic unique component (mode = :barelowrank): the phy tier is LL' with " *
+              "no diagonal, so shared/total = 1. It carries no information; refit with " *
+              "mode = :explicitunique for an informative communality."
+    end
+
     # 6. one batch drawn first, then one refit per replicate
-    simulate, refit = fit isa GllvmFit ?
-        _bsig_setup(fit, nb, y, n_sites, X, _refit) :
-        _bsig_setup(fit, nb, individual, center, _refit)
+    simulate, refit = _bsig_build(fit, nb, args, _refit)
     rng = seed === nothing ? Random.default_rng() : Random.MersenneTwister(seed)
     Ys = simulate(rng)
 
@@ -494,6 +619,6 @@ end
 
 # Any other class: refuse explicitly (no verified simulate-and-refit route).
 bootstrap_Sigma_r(fit; kwargs...) = _bsig_refuse(
-    "unsupported fit class $(typeof(fit)). v1 supports GllvmFit and TwoLevelFit only " *
-    "(PrecisionMultivariateFit, JointPhyloGroupedGaussianFit and non-Gaussian fits have no " *
-    "verified simulate-and-refit route).")
+    "unsupported fit class $(typeof(fit)). Supported: GllvmFit, TwoLevelFit and " *
+    "PrecisionMultivariateFit (tier :phy only). JointPhyloGroupedGaussianFit and non-Gaussian " *
+    "fits have no verified simulate-and-refit route.")
