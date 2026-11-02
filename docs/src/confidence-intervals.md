@@ -184,7 +184,7 @@ is refused by name. The default is still `method = :wald`.
 | `parm` | quantity | `:wald` | `:profile` | `:bootstrap` |
 |--------|----------|---------|------------|--------------|
 | `"communality[t]"` | `communality(fit)[t]` | `communality_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
-| `"icc[t]"`, `"repeatability[t]"` | `extract_ICC_site(fit)[t]` | `icc_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
+| `"icc[t]"`, `"repeatability[t]"` | `extract_ICC_site(fit)[t]` | `icc_wald_ci` (logit) | withdrawn (refused) | `bootstrap_ci_derived` |
 | `"rho[i,j]"`, `"correlation[i,j]"` | `correlation(fit)[i,j]` | `correlation_wald_ci` (Fisher-z) | `profile_ci_derived` | `bootstrap_ci_derived` |
 | `"proportion:<component>[t]"` | `proportions(fit; component)[t]` | `icc_wald_ci` (logit) | `profile_ci_derived` | `bootstrap_ci_derived` |
 | `"phylo_signal[t]"` | `phylo_signal(fit)[t]` | `phylo_signal_wald_ci` (logit) | `profile_ci_phylo_signal` | `bootstrap_ci_derived` |

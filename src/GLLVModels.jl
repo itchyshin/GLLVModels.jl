@@ -197,6 +197,7 @@ include("grouped_fit.jl")               # internal joint grouped Gaussian fit an
 include("precision_multivariate_fit.jl") # internal multivariate phylogenetic fit and intervals
 include("grouped_nongaussian_fit.jl")   # internal five-family joint grouping extension
 include("destination_b_postfit.jl")     # explicit population-only Gaussian postfit routes
+include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl, and (PrecisionMultivariateFit tier :phy) precision_multivariate_fit.jl + destination_b_postfit.jl.
 include("phylo_latent_precision.jl")    # observation/tip labels on PrecisionMultivariateFit
 include("phylo_latent.jl")              # fit_phylo_latent_gllvm: twin of R's bare Gaussian phylo_latent()
 include("phylo_latent_postfit.jl")      # extract_phylo_signal for the phylo_latent twin
@@ -281,7 +282,7 @@ export OptimizerStage, OptimizerRecord, optimizer_info,
        loading_profile_exploratory, loading_profile,
        profile_ci_total_variance, profile_ci_phylo_signal,
        slope_sd_ci, standard_errors,
-       latent_score_sd, getREsd, bootstrap_Sigma, tmbprofile_wrapper, profile_targets, profile_curve_targets,
+       latent_score_sd, getREsd, bootstrap_Sigma, bootstrap_Sigma_r, BootstrapSigmaR, tmbprofile_wrapper, profile_targets, profile_curve_targets,
        profile_phylo_signal,
        ppca_init, em_fa,
        sigma_y_site, communality, correlation, phylo_signal, link_residual,

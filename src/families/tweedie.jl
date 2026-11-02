@@ -335,6 +335,7 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:nonneg_real, Y, _resolve_obs_mask(mask, Y); caller = "fit_tweedie_gllvm")
     p_sp, n = size(Y)
     rr = rr_theta_len(p_sp, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
@@ -343,11 +344,13 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized response matrix with a safe placeholder (0) in the masked cells.
     msk = _resolve_obs_mask(mask, Y)
-    Yc = float.(_sanitize_missing(Y, 0))
+    Yc = float.(_sanitize_unobserved(Y, msk, 0))
 
     Zemp = log.(Yc .+ _tweedie_log_offset(Yc, msk))
     _mask_warmstart!(Zemp, msk)
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, nothing; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_tweedie_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)

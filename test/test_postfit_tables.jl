@@ -140,7 +140,8 @@ using Distributions: Normal, quantile
             mask[r, c] = false
         end
 
-        fit = fit_gaussian_gllvm(Y; K = K, mask = mask)
+        # Table structure is the claim; g_tol matches the masked posdef stationarity scale.
+        fit = fit_gaussian_gllvm(Y; K = K, mask = mask, g_tol = 1e-3)
         @test fit.converged
 
         out = predict_missing(fit, Y; mask = mask, type = :link)

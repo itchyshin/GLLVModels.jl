@@ -14,9 +14,9 @@ null/saturated-model comparison, delegating through the same maximised
 marginal log-likelihood that a ridged fit reports (R's "unpenalised logLik at
 penalised MAP" caveat is inherited unchanged here).
 
-Deliberately does not touch [`nobs`](@ref) or [`bic`](@ref) — the R/Julia
-`nobs` convention mismatch (site count vs likelihood-contributing cells) is a
-separate maintainer decision (core070 spec §3.1).
+This calculation does not use [`nobs`](@ref). When comparing [`bic`](@ref)
+across R and Julia, check the observation-count convention: site counts and
+counts of likelihood-contributing cells can differ.
 """
 StatsAPI.deviance(fit::AnyGllvmFit) = -2 * StatsAPI.loglikelihood(fit)
 
@@ -131,10 +131,9 @@ indices into the stacked two-lineage entity set that `fit` was fitted on.
 
 Returns a `NamedTuple` of equal-length vectors with fields
 `row_level, col_level, row_trait, col_trait, kernel_value, gamma_shape,
-covariance` — the positional analogue of R's table (R's `rho` /
-`kernel_includes_rho` metadata columns are deferred to the `CrossKernel`
-metadata wrapper, core070 spec §2.6, since GLLVModels.jl's kernel is presently an
-unnamed matrix with no stored `rho`).
+covariance`, corresponding to the rows of R's table. R's `rho` and
+`kernel_includes_rho` metadata columns are not returned: `K` is an unnamed
+matrix with no stored `rho`.
 
 Throws `ArgumentError` if any level index falls outside `axes(K)` (mirroring
 R's abort at `extract-sigma.R:1885-1908`).
@@ -202,9 +201,8 @@ result (R's complete-data behaviour). `type` is forwarded to `predict`
 `predict`) must support the `mask` keyword for the masked call to succeed —
 currently the AGHQ Gaussian route and the dense-Laplace non-Gaussian
 families (e.g. Binomial). GLLVModels.jl's `GllvmFit`/`Y` do not store their own
-mask, so it is re-supplied by the caller here (the fit-stored mask, R's
-zero-argument `predict_missing(fit)` shape, needs a `GllvmFit` mask field —
-core070 spec §2.5, not built).
+mask, so the caller must supply it here. The single-argument form
+`predict_missing(fit)` is not supported.
 
 Returns `(row, col, est)`: `row`/`col` are the 1-based `(trait, site)`
 indices of each masked cell (findall order — column-major, i.e. `row` varies
@@ -265,8 +263,8 @@ measurement-error term, so `σ²_eps` is folded into `ψ_W`, matching R's own
 `Lambda_B`/`Lambda_W` default to `0.7 .* randn(rng, n_traits, K_B)` /
 `0.5 .* randn(rng, n_traits, K_W)` when not supplied.
 
-Output shape is GLLVModels.jl-native (core070 spec §3.4: NamedTuple/matrix, no
-DataFrame dependency), not R's long-format `(data, truth)` data frame:
+Output uses a matrix and `NamedTuple` rather than R's long-format
+`(data, truth)` data frame:
 returns `(Y, individual, truth)` — `Y` is `n_traits × (n_units*n_obs_per_unit)`,
 `individual` is the length-matching grouping vector `fit_twolevel_gaussian`
 expects, and `truth` is a `NamedTuple` with fields `alpha, Lambda_B, Lambda_W,

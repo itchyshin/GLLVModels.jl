@@ -78,6 +78,23 @@ function _eta_cap_verdict(conv::Bool, link::Link, β::AbstractVector, offset; ma
     return false
 end
 
+# #874: a user `β_init` entry with β_t + offset above the cap starts on the sentinel above,
+# where the optimiser cannot move. Replace each such entry by the default warm start (the
+# row mean of the link-scale data `Zemp`, bit-identical to `β_init = nothing`) and warn.
+# Not projected onto the cap: at 29 the count objectives already sit at failure-scale
+# values (n·e^29 > 1e12). A default that is itself past the cap (data on a 1e14 scale)
+# still ends at the sentinel, which is the right outcome there. `guarded` is the fitter's
+# objective guard (`_eta_cap_guarded(link)`); a wrong-length `β0` is left to the fitter.
+function _rescue_beta_init(β0::AbstractVector, Zemp::AbstractMatrix, offset; mask = nothing,
+                           guarded::Bool = true, caller::AbstractString = "fit")
+    (guarded && length(β0) == size(Zemp, 1)) || return β0
+    bad = [t for t in eachindex(β0) if β0[t] + _eta_offset_max(offset, t; mask = mask) > _ETA_CLAMP]
+    isempty(bad) && return β0
+    β0[bad] = (vec(sum(Zemp; dims = 2)) ./ size(Zemp, 2))[bad]
+    @warn "$caller: β_init puts the intercept of species $bad above the η clamp ($(_ETA_CLAMP)), where the objective is flat; using the default warm start for those entries."
+    return β0
+end
+
 # Robust linear solve: returns `nothing` if the factorization is singular or
 # fails, so the inner Newton can stop gracefully. A = Λ'WΛ + I is SPD by
 # construction but can be numerically singular when the Fisher weights blow up
@@ -578,10 +595,21 @@ function _sanitize_missing(Y::AbstractMatrix, placeholder)
     return map(y -> ismissing(y) ? placeholder : y, Y)
 end
 
-# Resolve an observation mask: an explicit `mask` wins; otherwise derive it from
-# `missing` entries in `Y` (or `nothing` when `Y` is fully observed).
-_resolve_obs_mask(mask, Y) =
-    mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
+# Resolve an observation mask: derive it from `missing` entries in `Y` (or `nothing` when `Y` is
+# fully observed) when no `mask` is given. An explicit `mask` is returned untouched, but it must not
+# mark a `missing` cell as observed (#763): that cell is a placeholder (0 / 1) by the time it reaches
+# the likelihood, so it would be fitted as data. Such a mask throws an `ArgumentError` naming the
+# first offending cell (row, column) and the count. A mask that marks extra cells unobserved is fine.
+function _resolve_obs_mask(mask, Y)
+    mask === nothing && return any(ismissing, Y) ? observed_mask(Y) : nothing
+    (size(mask) == size(Y) && any(ismissing, Y)) || return mask
+    bad = [I for I in CartesianIndices(Y) if ismissing(Y[I]) && mask[I]]
+    isempty(bad) && return mask
+    throw(ArgumentError("`mask` marks $(length(bad)) cell(s) as observed where `Y` is `missing`; " *
+                        "first at (row, column) = ($(bad[1][1]), $(bad[1][2])). A `missing` cell " *
+                        "cannot be observed: set `mask` to false there, or pass `mask = observed_mask(Y)` " *
+                        "(or omit `mask`) to derive it from `missing`."))
+end
 
 # Mask-respecting warm start: overwrite the masked cells of a link-scale empirical
 # matrix `Zemp` with their row's observed mean, so the intercept and SVD loadings

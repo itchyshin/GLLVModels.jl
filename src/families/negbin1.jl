@@ -197,6 +197,7 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_nb1_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_nb1_gllvm")
@@ -204,8 +205,8 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_nb1_gllvm: hessian must be :fisher or :observed; got :$hessian"))
 
-    msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    msk = _resolve_obs_mask(mask, Y)
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
@@ -218,7 +219,9 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_nb1_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
@@ -255,7 +258,10 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    ll, conv, iters = _fit_verdict(res)
+    # `Optim.converged` also fires on a zero-length step far from a stationary point; require
+    # the gradient test too (#505, as in the grouped fitters).
+    ll, conv, iters = _fit_verdict(Optim.minimum(res),
+        Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm")
     return NB1Fit(β̂, Λ̂, φ̂, link, ll, conv, iters, hessian, _stored_offset(offset))
 end

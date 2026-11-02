@@ -59,7 +59,8 @@ end
 # ---------------------------------------------------------------------------
 
 """
-    predict(fit::NBGroupedFit, Y; type=:response, N=nothing, mask=nothing, offset=nothing) -> p×n matrix
+    predict(fit::NBGroupedFit, Y; type=:response, N=nothing, mask=nothing, offset=nothing,
+            modes=:refit) -> p×n matrix
 
 In-sample fitted values of a grouped-dispersion NB2 fit at the Laplace mode `ẑ`
 (see [`getLV`](@ref)): `type=:link` returns `η = β + offset + Λẑ`; `type=:response`
@@ -75,15 +76,70 @@ p×n matrix, a scalar or a length-p vector). New units from an offset fit withou
 function predict(fit::NBGroupedFit, Y::AbstractMatrix{<:Integer};
                  type::Symbol = :response,
                  N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-                 mask = nothing, offset = nothing)
+                 mask = nothing, offset = nothing, modes::Symbol = :refit)
     _nb_grouped_check_type(type)
     O = _grouped_prediction_offset(fit, Y, offset, mask, "predict")
-    Z = getLV(fit, Y; N = N, rotate = false, mask = mask, offset = O)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
+    Z = getLV(fit, Y; N = N, rotate = false, mask = mask, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η = η .+ O)
     type === :link && return η
     return linkinv.(Ref(fit.link), _clamp_eta.(η))
 end
+
+# predict for the other grouped-dispersion fits the public `fit_gllvm(Y; family, disp_group)`
+# route returns (BetaGroupedFit, GammaGroupedFit, NB1GroupedFit; #832): the same rule as
+# `predict(::NBGroupedFit)` and the per-family `BetaFit`/`GammaFit`/`NB1Fit` methods. The
+# stored training offset (or an explicit `offset`) enters η, and `modes = :training` keeps the
+# training units' modes searched at the stored offset (`_prediction_mode_offset`).
+function _grouped_glm_predict(fit, Y::AbstractMatrix, type::Symbol, mask, offset,
+                              modes::Symbol, getlv_kwargs)
+    type in (:link, :response) ||
+        throw(ArgumentError("type must be :link or :response; got :$type"))
+    O = _grouped_prediction_offset(fit, Y, offset, mask, "predict")
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
+    Z = getLV(fit, Y; getlv_kwargs..., rotate = false, mask = mask, offset = Omode)
+    η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η = η .+ O)
+    type === :link && return η
+    return linkinv.(Ref(fit.link), η)
+end
+
+"""
+    predict(fit::BetaGroupedFit, Y; type=:response, mask=nothing, offset=nothing,
+            modes=:refit) -> p×n matrix
+
+In-sample fitted values of a grouped-dispersion Beta fit at the Laplace mode: `type=:link`
+returns `η = β + offset + Λẑ`, `type=:response` the inverse-link mean. On a fit made with an
+`offset`, `η` and the latent mode include it: the stored training offset (`fit.offset`) when
+`Y` has the training size, otherwise the `offset` you pass; new units from an offset fit
+without an `offset` are refused. `modes = :training` keeps the training units' modes and swaps
+in the new `offset` (see `predict(::BetaFit)`); `Y` must then be the training response.
+"""
+predict(fit::BetaGroupedFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+        mask = nothing, offset = nothing, modes::Symbol = :refit) =
+    _grouped_glm_predict(fit, Y, type, mask, offset, modes, (;))
+
+"""
+    predict(fit::GammaGroupedFit, Y; type=:response, mask=nothing, offset=nothing,
+            modes=:refit) -> p×n matrix
+
+As [`predict(::BetaGroupedFit, Y)`](@ref) for a grouped-dispersion Gamma fit.
+"""
+predict(fit::GammaGroupedFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+        mask = nothing, offset = nothing, modes::Symbol = :refit) =
+    _grouped_glm_predict(fit, Y, type, mask, offset, modes, (;))
+
+"""
+    predict(fit::NB1GroupedFit, Y; type=:response, N=nothing, mask=nothing, offset=nothing,
+            modes=:refit) -> p×n matrix
+
+As [`predict(::BetaGroupedFit, Y)`](@ref) for a grouped-dispersion NB1 fit.
+"""
+predict(fit::NB1GroupedFit, Y::AbstractMatrix{<:Integer}; type::Symbol = :response,
+        N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
+        mask = nothing, offset = nothing, modes::Symbol = :refit) =
+    _grouped_glm_predict(fit, Y, type, mask, offset, modes, (; N = N))
 
 """
     residuals(fit::NBGroupedFit, Y; type=:dunnsmyth, rng=Random.default_rng(),
