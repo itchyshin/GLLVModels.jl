@@ -21,7 +21,20 @@ _bsig(args...; kw...) = _bsig_defined ? GLLVModels.bootstrap_Sigma_r(args...; kw
     error("bootstrap_Sigma_r is not defined (RED): src/bootstrap_sigma_r.jl missing")
 
 _quiet(f) = with_logger(f, NullLogger())
-_logged(f; min_level = Logging.Info) = (lg = Test.TestLogger(min_level = min_level);
+# Test.TestLogger has no lock on Julia 1.10.0, so concurrent log pushes from worker threads can lose messages.
+# This wrapper serialises handle_message; `.logs` is the wrapped TestLogger's vector.
+struct _LockedTestLogger <: Logging.AbstractLogger
+    inner::Test.TestLogger
+    lock::ReentrantLock
+end
+_LockedTestLogger(; min_level = Logging.Info) = _LockedTestLogger(Test.TestLogger(min_level = min_level), ReentrantLock())
+Base.getproperty(l::_LockedTestLogger, s::Symbol) = s === :logs ? getfield(l, :inner).logs : getfield(l, s)
+Logging.min_enabled_level(l::_LockedTestLogger) = Logging.min_enabled_level(l.inner)
+Logging.shouldlog(l::_LockedTestLogger, args...) = Logging.shouldlog(l.inner, args...)
+Logging.catch_exceptions(l::_LockedTestLogger) = Logging.catch_exceptions(l.inner)
+Logging.handle_message(l::_LockedTestLogger, args...; kw...) =
+    lock(() -> Logging.handle_message(l.inner, args...; kw...), l.lock)
+_logged(f; min_level = Logging.Info) = (lg = _LockedTestLogger(min_level = min_level);
                                         r = with_logger(f, lg); (r, lg.logs))
 _warns(logs) = [string(l.message) for l in logs if l.level == Logging.Warn]
 _infos(logs) = [string(l.message) for l in logs if l.level == Logging.Info]
@@ -2289,13 +2302,14 @@ end
             rng = MersenneTwister(10); yy = randn(rng, 4, 30); ff = fit_gaussian_gllvm(yy; K = 1)
             done = Threads.Atomic{Int}(0)
             main = current_task()
-            Threads.@spawn (sleep(0.4); schedule(main, InterruptException(); error = true))
+            # deliver the interrupt only once a worker has finished a replicate (a fixed timer races with first-call JIT)
+            Threads.@spawn (while done[] < 1; sleep(0.005); end; sleep(0.1); schedule(main, InterruptException(); error = true))
             @test_throws InterruptException _quiet(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 400, seed = 1,
                 progress = false, n_cores = kk, _refit = (yb; kw...) -> (sleep(0.05); Threads.atomic_add!(done, 1); ff)))
             at_return = done[]
             sleep(1.0)
             @test done[] == at_return            # nothing kept running after the call returned
-            @test 0 < at_return < 100            # and it stopped early (400 replicates would take about 5 s at kk = 4)
+            @test 1 <= at_return < 400           # a worker had started, and it stopped early (all 400 would take about 5 s at kk = 4)
         end
     end
 
@@ -2307,9 +2321,10 @@ end
             for trial in 1:300
                 GLLVModels._reset_unidentified_warnings!()
                 go = Threads.Atomic{Bool}(false)
-                lg = Test.TestLogger(min_level = Logging.Warn)
+                lg = _LockedTestLogger(min_level = Logging.Warn)
                 with_logger(lg) do
-                    ts = [Threads.@spawn((while !go[]; end; GLLVModels._warn_unidentified_once(:has_diag, "hammer"))) for _ in 1:kk]
+                    # the spin needs a safepoint: a bare spin loop on a loaded node blocks the main task's GC and deadlocks
+                    ts = [Threads.@spawn((while !go[]; GC.safepoint(); end; GLLVModels._warn_unidentified_once(:has_diag, "hammer"))) for _ in 1:kk]
                     go[] = true
                     foreach(wait, ts)
                 end
