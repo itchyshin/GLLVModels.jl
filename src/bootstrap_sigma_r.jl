@@ -465,7 +465,58 @@ function _bsig_check_fit(fit::JointPhyloGroupedGaussianFit, Σ_phy)
         "the original JointPhyloGroupedGaussianFit is not component-identified (reason :$reason): its " *
         "phylogenetic and ordinary covariance components are not separately interpretable, so a phy-tier " *
         "bootstrap is refused.")
+    _bsig_jpg_check_group_terms(fit)
     return nothing
+end
+
+# Driver-level guard for ordinary group terms the upstream identification gate does not judge (it returns
+# `:identified` with a group variance near 1e-13 for these; fuzz finding S2-F1). These rules and the numbers
+# in them are THIS DRIVER'S choices, not R's and not the fitter's.
+#   1. Fewer than `_BSIG_MIN_GROUPS` (3) groups in a term: refused. With 1 group the term is the intercept;
+#      with 2 the variance rests on one degree of freedom. Three is the smallest count with a contrast to
+#      spare after the intercept; it is a floor, not a guarantee of a well-estimated variance.
+#   2. Aliasing with FIXED group dummies: for each trait, the group-indicator columns of the term are
+#      projected on the mean-design columns of that trait; if they add no rank (rank([X_t Z_k]) == rank(X_t))
+#      the group effect is exactly a fixed effect and its variance is not identified: refused. This is exact
+#      (a rank statement on a 0/1 matrix), so it detects only TOTAL aliasing for a trait; near-aliasing
+#      (fixed dummies for some groups plus a covariate nearly proportional to a group contrast) is NOT
+#      detected. Cost: one rank of an m x (q_t + G) matrix per trait and term.
+const _BSIG_MIN_GROUPS = 3
+function _bsig_jpg_check_group_terms(fit::JointPhyloGroupedGaussianFit)
+    d, m = fit.response_shape
+    for (term, inc) in zip(fit.terms, fit.incidences)
+        ng = count(j -> inc.colptr[j + 1] > inc.colptr[j], 1:size(inc, 2))
+        ng >= _BSIG_MIN_GROUPS || _bsig_refuse(
+            "the ordinary group term :$(term.name) of this JointPhyloGroupedGaussianFit has $ng group(s); " *
+            "at least $_BSIG_MIN_GROUPS are required (the upstream identification gate does not catch this: the " *
+            "group variance would sit at the boundary and the :phy intervals are not trustworthy). The " *
+            "threshold is this driver's choice, not R's.")
+        Z = Matrix(inc)
+        for t in 1:d
+            Xt = fit.mean_design[t:d:(d * m), :]
+            rank(hcat(Xt, Z)) > rank(Xt) || _bsig_refuse(
+                "the ordinary group term :$(term.name) is aliased with fixed effects in the mean design for " *
+                "trait $t of this JointPhyloGroupedGaussianFit (its group indicators add no rank to the fixed " *
+                "design, e.g. fixed group dummies); its variance is not identified, so a :phy bootstrap is refused.")
+        end
+    end
+    return nothing
+end
+
+# Terms (name, trait) whose estimated variance is below `_BSIG_TINY_REL` of the trait's total variance
+# (phylogenetic + every ordinary term + residual): the group interval then sits on the boundary. Driver's
+# choice: 1e-8 is about the fitter's own boundary behaviour (observed 1e-13 to 1e-15 against O(1) totals) with
+# a margin of several orders of magnitude, and far below any variance share a user would call small.
+const _BSIG_TINY_REL = 1e-8
+function _bsig_jpg_boundary_terms(fit::JointPhyloGroupedGaussianFit)
+    d = fit.response_shape[1]
+    tot = [fit.phylo_covariance[t, t] + fit.residual_variance[t] +
+           sum(diag(C)[t] for C in fit.ordinary_covariances) for t in 1:d]
+    out = Tuple{Symbol, Int}[]
+    for (term, C) in zip(fit.terms, fit.ordinary_covariances), t in 1:d
+        C[t, t] < _BSIG_TINY_REL * tot[t] && push!(out, (term.name, t))
+    end
+    return out
 end
 
 # Per-class refusal of arguments that would otherwise be silently ignored. These classes keep their response
@@ -508,7 +559,7 @@ no retained record): tier `:B` only; `Sigma`, `R`, `communality`; `ICC` is dropp
 `cross_corr` is always skipped (R needs a multinomial trait). `TwoLevelFit` (pass
 `individual`): tiers `:B`, `:W` and `ICC_site`. `PrecisionMultivariateFit` and
 `JointPhyloGroupedGaussianFit`: tier `:phy` only (see below). Everything else throws `ArgumentError`.
-`n_cores > 1` is refused. See the ledger Spec for the full contract; the legacy
+`n_cores > 1` runs replicates on that many Julia threads (see below). See the ledger Spec for the full contract; the legacy
 `bootstrap_Sigma` is a different estimand and is unchanged.
 
 # What tier `:B` means for a `GllvmFit` (it changes with `has_diag`)
@@ -639,6 +690,14 @@ comparison with an R run exists and NO R parity is claimed; `link_residual` and 
   extracting summaries from a converged refit blanks every entry of that replicate to `NaN`
   and is NOT counted in `n_failed` (R skips per level; here one or two tiers make the
   difference small). `InterruptException` is never swallowed.
+- **`n_cores` (Julia threads).** `n_cores = 1` (default) runs serially. `n_cores = k > 1` refits replicates on
+  `k` tasks. Julia must be started with at least `k` threads (`julia -t k` or `JULIA_NUM_THREADS`); `n_cores < 1`
+  or `n_cores > Threads.nthreads()` throws `ArgumentError`. The batch of datasets is simulated first from `seed`
+  and each refit is independent, so the draws, bounds and `n_failed` are bit-identical and the driver's warnings the same as for `n_cores = 1`
+  for the same seed, whatever the thread count or scheduling. A user `_refit` must itself be thread-safe. With
+  `progress = true` the replicate `@info` lines come out in completion order. Each thread's refit is single-threaded
+  only if BLAS is: set `OPENBLAS_NUM_THREADS=1` (or `BLAS.set_num_threads(1)`) to avoid oversubscription.
+  `InterruptException` still propagates (on the calling task or in a worker); the workers are told to stop, the in-flight refits finish, and no worker outlives the call. Any other unexpected error in a worker stops the others and is rethrown. The once-per-session identification warning of the fitter is emitted once (its warn-once set is lock-guarded).
 - `n_boot = 999` and `progress = true` (one `@info` per replicate) mirror R and need
   maintainer agreement as Julia defaults.
 """
@@ -668,8 +727,12 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
     (0 < conf < 1) || _bsig_refuse("conf must be in (0, 1); got $conf")
     (seed === nothing || seed >= 0) || _bsig_refuse("seed must be >= 0; got $seed")
     n_boot >= 1 || _bsig_refuse("n_boot must be >= 1; got $n_boot")
-    n_cores == 1 || _bsig_refuse("n_cores = $n_cores is unsupported in v1 (use 1).")
+    n_cores >= 1 || _bsig_refuse("n_cores must be >= 1; got $n_cores")
+    n_cores <= Threads.nthreads() || _bsig_refuse(
+        "n_cores = $n_cores exceeds Threads.nthreads() = $(Threads.nthreads()); start Julia with at least " *
+        "that many threads (for example `julia -t $n_cores`).")
     nb = Int(n_boot)
+    n_cores = Int(n_cores)
 
     # 5a. coverage ceiling warnings (R:252-277). Never both; neither throws.
     min_boot = ceil(Int, 2 / (1 - conf)) - 1
@@ -735,16 +798,26 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
               "truncated at the boundary."
     end
 
+    # JointPhyloGroupedGaussianFit: a group variance at (numerically) zero relative to its trait's total.
+    if fit isa JointPhyloGroupedGaussianFit
+        for nm in unique(first.(_bsig_jpg_boundary_terms(fit)))
+            trs = [t for (n, t) in _bsig_jpg_boundary_terms(fit) if n == nm]
+            @warn "bootstrap_Sigma_r: the estimated variance of the ordinary group term :$nm is below " *
+                  "$(_BSIG_TINY_REL) of the total variance for trait $(join(trs, ", ")) (boundary estimate): " *
+                  "its group interval sits on a boundary, and the :phy intervals that depend on it can be " *
+                  "unreliable. The threshold is this driver's choice, not R's."
+        end
+    end
+
     # 6. one batch drawn first, then one refit per replicate
     simulate, refit = _bsig_build(fit, nb, args, _refit)
     rng = seed === nothing ? Random.default_rng() : Random.MersenneTwister(seed)
     Ys = simulate(rng)
 
-    draws = Vector{Dict{Symbol, Any}}(undef, nb)
-    failed = fill(false, nb)
-    n_extract_err = 0
-    n_thrown = 0; n_not_conv = 0; n_non_ident = 0; n_conv = 0; n_nonpd = 0
-    for b in 1:nb
+    # One replicate: refit on Ys[b] and summarise. Pure in `b` (reads only Ys, the fit and the closures; no
+    # shared mutable state), so the result is the same whichever thread runs it and in whatever order.
+    # InterruptException is rethrown; any other refit or extraction error becomes a failed / lost replicate.
+    function one_replicate(b)
         progress && @info "bootstrap_Sigma_r: replicate $b / $nb"
         fb = try
             refit(Ys[b])
@@ -754,18 +827,15 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
         end
         status = fb === nothing ? :thrown :
                  (!(fb isa typeof(fit)) || !fb.converged) ? :not_converged : :converged
+        conv = false; nonpd = false
         if status === :converged
-            n_conv += 1
-            fb isa JointPhyloGroupedGaussianFit && !fb.hessian_positive_definite && (n_nonpd += 1)
+            conv = true
+            fb isa JointPhyloGroupedGaussianFit && !fb.hessian_positive_definite && (nonpd = true)
             status = _bsig_replicate_status(fit, fb)         # :ok or :non_identified
         end
-        status === :thrown && (n_thrown += 1)
-        status === :not_converged && (n_not_conv += 1)
-        status === :non_identified && (n_non_ident += 1)
         if status !== :ok
-            failed[b] = true
-            draws[b] = Dict{Symbol, Any}(k => _bsig_nan_like(v) for (k, v) in pe_pairs)
-            continue
+            return (draw = Dict{Symbol, Any}(k => _bsig_nan_like(v) for (k, v) in pe_pairs),
+                    status = status, conv = conv, nonpd = nonpd, extract_err = false)
         end
         ent = try
             Dict{Symbol, Any}(_bsig_entries(fb, kept, wh))
@@ -775,10 +845,60 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
         end
         # a summary of the wrong shape is treated like an extraction error (NaN draw, counted as lost)
         bad_shape = ent !== nothing && any(haskey(ent, k) && size(ent[k]) != size(v) for (k, v) in pe_pairs)
-        (ent === nothing || bad_shape) && (n_extract_err += 1)
-        draws[b] = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) && size(ent[k]) == size(v) ?
-                                           ent[k] : _bsig_nan_like(v)) for (k, v) in pe_pairs)
+        draw = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) && size(ent[k]) == size(v) ?
+                                       ent[k] : _bsig_nan_like(v)) for (k, v) in pe_pairs)
+        return (draw = draw, status = :ok, conv = conv, nonpd = nonpd,
+                extract_err = ent === nothing || bad_shape)
     end
+
+    # Per-replicate results go to preallocated slots; counters are reduced afterwards in replicate order.
+    results = Vector{Any}(undef, nb)
+    if n_cores == 1
+        for b in 1:nb
+            results[b] = one_replicate(b)
+        end
+    else
+        # `n_cores` tasks pull replicate indices from an atomic counter (dynamic balance: refit times vary).
+        # Each replicate writes only its own slot. A worker that hits an error stops the others from
+        # taking new work; an InterruptException is rethrown as such, never wrapped.
+        next = Threads.Atomic{Int}(0)
+        stop = Threads.Atomic{Bool}(false)
+        errs = Vector{Any}(nothing, n_cores)
+        tasks = map(1:n_cores) do w
+            Threads.@spawn begin
+                try
+                    while !stop[]
+                        b = Threads.atomic_add!(next, 1) + 1
+                        b > nb && break
+                        results[b] = one_replicate(b)
+                    end
+                catch e
+                    stop[] = true
+                    errs[w] = e
+                end
+            end
+        end
+        try
+            foreach(wait, tasks)
+        catch e
+            # Ctrl-C (or any error) on the calling task: tell the workers to stop taking new replicates and wait
+            # for the in-flight refits, so no worker outlives the call.
+            stop[] = true
+            foreach(t -> (try; wait(t); catch; end), tasks)
+            throw(e)
+        end
+        any(e -> e isa InterruptException, errs) && throw(InterruptException())
+        i = findfirst(!isnothing, errs)
+        i === nothing || throw(errs[i])
+    end
+    draws = Dict{Symbol, Any}[r.draw for r in results]
+    failed = Bool[r.status !== :ok for r in results]
+    n_extract_err = count(r -> r.extract_err, results)
+    n_thrown = count(r -> r.status === :thrown, results)
+    n_not_conv = count(r -> r.status === :not_converged, results)
+    n_non_ident = count(r -> r.status === :non_identified, results)
+    n_conv = count(r -> r.conv, results)
+    n_nonpd = count(r -> r.nonpd, results)
     n_failed = count(failed)
     # replicates lost to failed refits or to extraction errors (the latter are not in n_failed)
     n_lost = n_failed + n_extract_err
