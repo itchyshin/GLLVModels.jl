@@ -1,6 +1,6 @@
 # N1b pre-registration, DRAFT: paired R-versus-Julia bootstrap comparison, phy tier
 
-Status: UNSIGNED DRAFT. This document has not been approved. The full run (Section 7) must not start until Shinichi has read it, changed what he wants, and signed Section 10. Nothing here changes a row status, a scoreboard, a receipt or a tolerance. No run was made for this draft. The thresholds below are proposals taken from the null analysis cited in Section 1; they were not simulated beyond that analysis.
+Status: APPROVED BY DELEGATION on 2026-11-03 (Section 10). The full run (Section 7) may start. Nothing here changes a row status, a scoreboard, a receipt or a tolerance. No run was made for this draft. The thresholds below are proposals taken from the null analysis cited in Section 1; they were not simulated beyond that analysis.
 
 Date drafted: 2026-11-03. Drafted by a Claude session; not yet reviewed by anyone.
 
@@ -110,11 +110,14 @@ No N1b pilot was run for this draft. The evidence behind it is the diagnosis not
 - Interior datasets 1201 and 1202 are unscreened and might not be interior; the replacement rule in Section 3 covers that.
 - Thresholds are proposals for Shinichi to change.
 
-## 10. Approval (unsigned)
+## 10. Approval (by delegation)
 
-This registration is a DRAFT and is UNSIGNED. The full run needs Shinichi's approval after he has read Sections 3 to 7. No signature, date or approval is recorded here.
+Shinichi delegated this approval in chat on 2026-11-03 ("you can do 1 and 2 if you like", in reply to a request to sign this pre-registration). It is recorded here as approval by delegation, not as Shinichi's own signature; Shinichi can still change any threshold below before the results are read, and the thresholds are fixed from the moment the N1b run is launched.
 
-- Approved by: ______ (not filled)
-- Date: ______ (not filled)
-- Changes required before launch: ______ (not filled)
-- Julia commit and Manifest hash at launch: ______ (not filled)
+- Approved by: Claude (Sonnet 5.5) under Shinichi's chat delegation of 2026-11-03
+- Date: 2026-11-03
+- Thresholds adopted exactly as proposed: Agree limit paired max z 0.50 with SE ratio in [0.80, 1.25]; Disagree limit paired max z 1.00 or SE ratio outside [0.67, 1.50]; simulator-moment rule within 4 Monte Carlo SE; interior dataset means smallest unique variance above 1e-3.
+- Section 5 (R simulation step): not confirmed. If the R simulation function cannot be called as stated, the simulator-moment check is reported as NOT RUN and an Agree verdict then makes no claim about simulation. This does not block the paired primary design.
+- Compute: 0.8 to 1.9 core-hours (Section 7), under the 3 h line; a run that overruns stops and re-reports.
+- Changes required before launch: none
+- Julia commit and Manifest hash at launch: to be recorded by the launch script
