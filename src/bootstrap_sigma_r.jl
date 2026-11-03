@@ -40,7 +40,9 @@ Result of [`bootstrap_Sigma_r`](@ref); mirrors the fields of the R `bootstrap_Si
 `point_est`, `ci_lower`, `ci_upper` are `NamedTuple`s in R's entry order (per tier in
 `level` order: `Sigma_*`, `R_*`, `communality_*`; then `ICC_site`). `n_effective` has
 entries for vector summaries only (R limitation, kept). `level` holds the internal tier
-names (`:B`, `:W`, `:phy`), never `:unit`/`:unit_obs`. `diagnostics` is an empty `NamedTuple` except for a
+names (`:B`, `:W`, `:phy`), never `:unit`/`:unit_obs`. `what` echoes the request as in R (after `:ICC` is
+dropped when B and W are not both present), so it can list `:cross_corr`, which is never produced for a
+Gaussian fit: the keys of `point_est` are the authoritative list of summaries. `diagnostics` is an empty `NamedTuple` except for a
 `JointPhyloGroupedGaussianFit`, where it carries the failure breakdown and the Hessian-curvature count
 (see [`bootstrap_Sigma_r`](@ref)).
 """
@@ -112,6 +114,7 @@ _bsig_refuse(msg::AbstractString) = throw(ArgumentError("bootstrap_Sigma_r: " * 
 
 # ---------------------------------------------------------------- argument handling
 _bsig_symvec(x::Symbol) = Symbol[x]
+_bsig_symvec(x::AbstractString) = Symbol[Symbol(x)]   # a String is not iterated as characters
 _bsig_symvec(x) = Symbol[Symbol(s) for s in x]
 
 # R: `.normalise_level` (unit -> B, unit_obs -> W) after match.arg; then unique, first-seen.
@@ -339,9 +342,14 @@ end
 function _bsig_setup(fit::PrecisionMultivariateFit, n_boot::Int, _refit)
     refit_fn = _refit === nothing ? fit_precision_multivariate : _refit
     simulate = rng -> _bsig_pmv_simulate_batch(rng, fit, n_boot)
-    refit = Y -> refit_fn(Y, fit.phy; rank = fit.rank, mode = fit.mode,
-                          residual_mode = fit.residual_mode, species_id = fit.species_id,
-                          X = fit.mean_design, coefficient_names = fit.coefficient_names)
+    # The fitter's structural-redundancy @warn fires on every likelihood evaluation (about 1e3 per refit for
+    # d = 2 rank 1 :explicitunique), so it is silenced here; the driver counts and announces failed refits
+    # itself, and an exception is NOT silenced (it propagates to the driver's catch).
+    refit = Y -> Base.CoreLogging.with_logger(Base.CoreLogging.NullLogger()) do
+        refit_fn(Y, fit.phy; rank = fit.rank, mode = fit.mode,
+                 residual_mode = fit.residual_mode, species_id = fit.species_id,
+                 X = fit.mean_design, coefficient_names = fit.coefficient_names)
+    end
     return simulate, refit
 end
 
@@ -746,9 +754,9 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
     pe_pairs = _bsig_entries(fit, kept, wh)
     isempty(pe_pairs) && _bsig_refuse(
         "none of the requested summaries ($(isempty(wh) ? "none left after dropping ICC" : join(wh, ", "))) " *
-        "is available for this fit and level; nothing to bootstrap (a GllvmFit supports what = :Sigma, " *
-        ":R or :communality; :ICC needs a TwoLevelFit with levels :B and :W; :cross_corr is never " *
-        "available, R needs a multinomial trait).")
+        "is available for this fit and level; nothing to bootstrap (a GllvmFit, PrecisionMultivariateFit or " *
+        "JointPhyloGroupedGaussianFit supports what = :Sigma, :R or :communality; :ICC needs a TwoLevelFit " *
+        "with levels :B and :W; :cross_corr is never available, R needs a multinomial trait).")
     keys_pe = Symbol[k for (k, _) in pe_pairs]
 
     # rr-only GllvmFit: B = ΛΛ' only, so communality_B is identically 1 (zero-width interval)
