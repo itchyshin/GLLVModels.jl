@@ -465,7 +465,58 @@ function _bsig_check_fit(fit::JointPhyloGroupedGaussianFit, Σ_phy)
         "the original JointPhyloGroupedGaussianFit is not component-identified (reason :$reason): its " *
         "phylogenetic and ordinary covariance components are not separately interpretable, so a phy-tier " *
         "bootstrap is refused.")
+    _bsig_jpg_check_group_terms(fit)
     return nothing
+end
+
+# Driver-level guard for ordinary group terms the upstream identification gate does not judge (it returns
+# `:identified` with a group variance near 1e-13 for these; fuzz finding S2-F1). These rules and the numbers
+# in them are THIS DRIVER'S choices, not R's and not the fitter's.
+#   1. Fewer than `_BSIG_MIN_GROUPS` (3) groups in a term: refused. With 1 group the term is the intercept;
+#      with 2 the variance rests on one degree of freedom. Three is the smallest count with a contrast to
+#      spare after the intercept; it is a floor, not a guarantee of a well-estimated variance.
+#   2. Aliasing with FIXED group dummies: for each trait, the group-indicator columns of the term are
+#      projected on the mean-design columns of that trait; if they add no rank (rank([X_t Z_k]) == rank(X_t))
+#      the group effect is exactly a fixed effect and its variance is not identified: refused. This is exact
+#      (a rank statement on a 0/1 matrix), so it detects only TOTAL aliasing for a trait; near-aliasing
+#      (fixed dummies for some groups plus a covariate nearly proportional to a group contrast) is NOT
+#      detected. Cost: one rank of an m x (q_t + G) matrix per trait and term.
+const _BSIG_MIN_GROUPS = 3
+function _bsig_jpg_check_group_terms(fit::JointPhyloGroupedGaussianFit)
+    d, m = fit.response_shape
+    for (term, inc) in zip(fit.terms, fit.incidences)
+        ng = count(j -> inc.colptr[j + 1] > inc.colptr[j], 1:size(inc, 2))
+        ng >= _BSIG_MIN_GROUPS || _bsig_refuse(
+            "the ordinary group term :$(term.name) of this JointPhyloGroupedGaussianFit has $ng group(s); " *
+            "at least $_BSIG_MIN_GROUPS are required (the upstream identification gate does not catch this: the " *
+            "group variance would sit at the boundary and the :phy intervals are not trustworthy). The " *
+            "threshold is this driver's choice, not R's.")
+        Z = Matrix(inc)
+        for t in 1:d
+            Xt = fit.mean_design[t:d:(d * m), :]
+            rank(hcat(Xt, Z)) > rank(Xt) || _bsig_refuse(
+                "the ordinary group term :$(term.name) is aliased with fixed effects in the mean design for " *
+                "trait $t of this JointPhyloGroupedGaussianFit (its group indicators add no rank to the fixed " *
+                "design, e.g. fixed group dummies); its variance is not identified, so a :phy bootstrap is refused.")
+        end
+    end
+    return nothing
+end
+
+# Terms (name, trait) whose estimated variance is below `_BSIG_TINY_REL` of the trait's total variance
+# (phylogenetic + every ordinary term + residual): the group interval then sits on the boundary. Driver's
+# choice: 1e-8 is about the fitter's own boundary behaviour (observed 1e-13 to 1e-15 against O(1) totals) with
+# a margin of several orders of magnitude, and far below any variance share a user would call small.
+const _BSIG_TINY_REL = 1e-8
+function _bsig_jpg_boundary_terms(fit::JointPhyloGroupedGaussianFit)
+    d = fit.response_shape[1]
+    tot = [fit.phylo_covariance[t, t] + fit.residual_variance[t] +
+           sum(diag(C)[t] for C in fit.ordinary_covariances) for t in 1:d]
+    out = Tuple{Symbol, Int}[]
+    for (term, C) in zip(fit.terms, fit.ordinary_covariances), t in 1:d
+        C[t, t] < _BSIG_TINY_REL * tot[t] && push!(out, (term.name, t))
+    end
+    return out
 end
 
 # Per-class refusal of arguments that would otherwise be silently ignored. These classes keep their response
@@ -733,6 +784,17 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
               "eigenvalue $(fit.hessian_min_eigenvalue)); a variance component is probably on its boundary. " *
               "The bootstrap runs, but interval ends of quantities that depend on that component can be " *
               "truncated at the boundary."
+    end
+
+    # JointPhyloGroupedGaussianFit: a group variance at (numerically) zero relative to its trait's total.
+    if fit isa JointPhyloGroupedGaussianFit
+        for nm in unique(first.(_bsig_jpg_boundary_terms(fit)))
+            trs = [t for (n, t) in _bsig_jpg_boundary_terms(fit) if n == nm]
+            @warn "bootstrap_Sigma_r: the estimated variance of the ordinary group term :$nm is below " *
+                  "$(_BSIG_TINY_REL) of the total variance for trait $(join(trs, ", ")) (boundary estimate): " *
+                  "its group interval sits on a boundary, and the :phy intervals that depend on it can be " *
+                  "unreliable. The threshold is this driver's choice, not R's."
+        end
     end
 
     # 6. one batch drawn first, then one refit per replicate
