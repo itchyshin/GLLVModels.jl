@@ -16,3 +16,9 @@ Branch claude/bsig-ncores-20261102, cut from claude/bsig-driver-fixes-20261102 (
 ## Not verified
 - Scaling on an unloaded machine; behaviour with user-supplied `_refit` that is not thread-safe (documented as the caller's duty).
 - The threaded legs of the test file only run when Julia has at least 2 (or 4) threads; the default `Pkg.test()` is single-threaded, where they are skipped (refusal tests still run).
+
+## Update after race review (head after this commit)
+- Fixed: an interrupt on the calling task now sets `stop[]` and waits for in-flight refits (no orphaned workers); the fitter's warn-once set in `src/fit.jl` (`_UNIDENTIFIED_WARNED`) is lock-guarded (the one src/fit.jl change). Tests N11 (interrupt scheduled on the main task, workers must stop) and N12 (warn-once exactly once, 300 released-together trials plus driver runs).
+- Merged origin/main (no conflicts). Whole file on Totoro `-t 4`: 913 pass / 913 (348 + 184 + 289 + 39 + 47), 9m40s, log ~/bsig-ncores-final2.log.
+- Mutants: 16 of 16 killed, unmutated control 47/47. New: no stop on interrupt (M13), no lock (M14), no wait for in-flight (M15), stop flag not checked (M16).
+- N12 hammers at n_cores = 4 (the cap of 4 cores); the reviewer's n_cores = 8 case was not run.
