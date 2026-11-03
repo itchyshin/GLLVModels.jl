@@ -94,6 +94,7 @@ println(_SHARD === nothing ?
     _shard_include("test_joint_phylo_grouped_alias_public.jl")
     _shard_include("test_joint_phylo_grouped_interior.jl")
     _shard_include("test_joint_phylo_grouped_postfit.jl")
+    _shard_include("test_extract_phylo_signal_joint.jl")
     _shard_include("test_destination_b_precision_public.jl")
     _shard_include("test_marginal_target_intervals.jl")
     _shard_include("test_ppca_init.jl")
@@ -322,6 +323,8 @@ println(_SHARD === nothing ?
     _shard_include("test_select_lv_print.jl")
     _shard_include("test_binomial_ridge.jl")
     _shard_include("test_model_comparison.jl")
+    # #108: tutorial gllvm_anova section (status vocabulary, claim boundary) and the behaviour it states.
+    _shard_include("test_issue_108_anova_docs.jl")
     # P1 behavioural twins (itchyshin/GLLVModels.jl#684 item 2): print.anova table fields and the
     # extract_latent_scores refusal vs gllvmTMB R/aghq-report.R and R/extract-latent-scores.R.
     _shard_include("test_c1_behaviour_p1.jl")
@@ -591,6 +594,7 @@ println(_SHARD === nothing ?
     _shard_include("test_animal_scalar_p1.jl")
     # P1 numeric twins of the gllvmTMB namespace rows extract_Gamma and extract_coevolution_modules (cross-lineage kernel tier, Gaussian).
     _shard_include("test_cross_lineage_p1.jl")
+    _shard_include("test_cross_lineage_extract_internals.jl")
     # P1 bridge readback: gllvmTMB_julia coef/fitted/logLik/predict/residuals/summary and gllvm_julia_fit, recorded live through JuliaCall.
     _shard_include("test_bridge_readback_p1.jl")
     # P1 numeric twins of the gllvmTMB namespace rows gllvmTMB_wide, ordiplot.gllvmTMB_multi and flag_unreliable_loadings (one shared Gaussian fixture).
@@ -670,5 +674,7 @@ println(_SHARD === nothing ?
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")
+    # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
+    _shard_include("test_bootstrap_sigma_r.jl")
 end
 include("test_readme_quickstart.jl")
