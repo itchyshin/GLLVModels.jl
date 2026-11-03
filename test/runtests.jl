@@ -94,6 +94,7 @@ println(_SHARD === nothing ?
     _shard_include("test_joint_phylo_grouped_alias_public.jl")
     _shard_include("test_joint_phylo_grouped_interior.jl")
     _shard_include("test_joint_phylo_grouped_postfit.jl")
+    _shard_include("test_extract_phylo_signal_joint.jl")
     _shard_include("test_destination_b_precision_public.jl")
     _shard_include("test_marginal_target_intervals.jl")
     _shard_include("test_ppca_init.jl")
