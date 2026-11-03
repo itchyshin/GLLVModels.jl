@@ -221,7 +221,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             f_tol = 0.0,
                             g_tol = 1e-6,
                             iterations = 500,
-                            optimizer = nothing)
+                            optimizer = nothing,
+                            _sufficient_stat::Bool = false)
     p, n = size(y)
     default_optimizer = Optim.LBFGS()
     outer_optimizer = _optimizer_method(optimizer, default_optimizer; route = "fit_gaussian_gllvm")
@@ -577,10 +578,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         vcat(log_τ_B₀, log_τ_W₀, θ_B₀, θ_W₀, ρ_phy₀, θ_phy₀)
     end
 
+    suff_ss = (_sufficient_stat && !has_phy_block && !do_profile_beta) ? _gaussian_suff(y, X_fit, q) : nothing
     nll = params -> gaussian_profile_nll(params, y;
                                           spec = spec, X = X_fit,
                                           Σ_phy = Σ_phy,
-                                          profile_beta = do_profile_beta)
+                                          profile_beta = do_profile_beta,
+                                          suff = suff_ss)
 
     opts = Optim.Options(
         x_abstol = x_tol,

@@ -218,7 +218,7 @@ _bsig_nan_like(v::AbstractVector) = fill(NaN, length(v))
 
 # ---------------------------------------------------------------- class-specific setup
 # Each returns (simulate_batch(rng) -> Vector{Matrix}, refit(Y) -> fit).
-function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
+function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit; sufficient_stat::Bool = false)
     m = fit.model
     p = m.p
     n = n_sites !== nothing ? Int(n_sites) :
@@ -264,9 +264,14 @@ function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
     # DEVIATION from the pinned-R behaviour (optimizer settings), see the PR description.
     refit_opts = (_refit === nothing && (m.has_diag || m.K_W > 0)) ?
         (iterations = 2000, f_tol = 1e-12) : NamedTuple()
+    # Sufficient-statistic objective for the built-in refit only (a user `_refit` is never touched): the
+    # same profile likelihood, evaluated through p x p cross products instead of p x n Dual temporaries
+    # (`gaussian_profile_nll(...; suff)`); the reported logLik is still the stock form. Same function to
+    # rounding, but L-BFGS then follows a rounding-level different path, so draws move by about 1e-6.
+    suff_opts = (_refit === nothing && sufficient_stat) ? (_sufficient_stat = true,) : NamedTuple()
     refit = Y -> refit_fn(Y; K = m.K, K_W = m.K_W, has_diag = m.has_diag,
                           K_phy = m.K_phy, has_phy_unique = m.has_phy_unique,
-                          Σ_phy = nothing, X = Xm, refit_opts...)
+                          Σ_phy = nothing, X = Xm, refit_opts..., suff_opts...)
     return simulate, refit
 end
 
@@ -425,7 +430,8 @@ function _bsig_setup(fit::JointPhyloGroupedGaussianFit, n_boot::Int, _refit)
 end
 
 # One dispatching call per class (the driver passes the same argument bundle to all of them).
-_bsig_build(fit::GllvmFit, nb, a, _refit) = _bsig_setup(fit, nb, a.y, a.n_sites, a.X, _refit)
+_bsig_build(fit::GllvmFit, nb, a, _refit) =
+    _bsig_setup(fit, nb, a.y, a.n_sites, a.X, _refit; sufficient_stat = a.sufficient_stat)
 _bsig_build(fit::TwoLevelFit, nb, a, _refit) = _bsig_setup(fit, nb, a.individual, a.center, _refit)
 _bsig_build(fit::PrecisionMultivariateFit, nb, a, _refit) = _bsig_setup(fit, nb, _refit)
 _bsig_build(fit::JointPhyloGroupedGaussianFit, nb, a, _refit) = _bsig_setup(fit, nb, _refit)
@@ -678,6 +684,12 @@ comparison with an R run exists and NO R parity is claimed; `link_residual` and 
   f_tol = 1e-12` (R's nlminb stops on a relative objective change); a deviation from the pinned
   R. It rescues the replicates that hit the stock 500-iteration cap and moves even
   already-converged replicates slightly (bounds by about 1e-5 in the fixtures measured).
+- Internal keyword `_sufficient_stat::Bool = false` (not public API; `GllvmFit` only, built-in refit only,
+  never a user `_refit`): refit with the sufficient-statistic form of the same profile likelihood
+  (10 to 13x faster measured on the fixtures). It is the same function to rounding, but L-BFGS then takes a
+  rounding-level different path, so draws move: typically about 2e-6, up to 3e-5 for Heywood-boundary
+  replicates and up to about 4e-4 for flat-ridge ones (bounds at n_boot = 999 within 8.1e-6). It is therefore
+  opt-in: the default reproduces the stock path. Not run for `K_W > 0` refit grids; phylo paths untouched.
 - Entries whose point estimate is itself non-finite (for example a zero-variance trait) are
   not counted in the attrition warning.
 - `TwoLevelFit` does not store `center`; the refit assumes `center = true` unless the
@@ -713,11 +725,13 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
         link_residual::Symbol = :auto,
         y = nothing, n_sites = nothing, X = nothing, Σ_phy = nothing,
         individual = nothing, center::Bool = true,
-        _refit::Union{Nothing, Function} = nothing)
+        _refit::Union{Nothing, Function} = nothing,
+        _sufficient_stat::Bool = false)
 
     # 1. class-specific refusals (R: class and structural asserts come first)
     _bsig_check_fit(fit, Σ_phy)
-    args = (y = y, n_sites = n_sites, X = X, individual = individual, center = center)
+    args = (y = y, n_sites = n_sites, X = X, individual = individual, center = center,
+            sufficient_stat = _sufficient_stat)
     _bsig_check_args(fit, args)
     # 2-4. level, what, link_residual, conf, n_boot (R order)
     lev = _bsig_normalise_level(level)
