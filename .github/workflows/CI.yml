@@ -98,7 +98,7 @@ jobs:
           # unset, same convention as GLLVM_TEST_SHARD above). No step is added.
           # Positional, so test/runtests.jl fails the job (GLLVM_TEST_REQUIRE_THREADS)
           # if that include lands in a single-threaded shard; then move this value.
-          JULIA_NUM_THREADS: ${{ matrix.shard == 4 && '4' || '' }}
+          JULIA_NUM_THREADS: ${{ matrix.shard == 4 && '4' || '1' }}
           GLLVM_TEST_REQUIRE_THREADS: ${{ matrix.shard && '4' || '' }}
         with:
           # Coverage is off on routine (push/PR) runs — instrumentation cost
