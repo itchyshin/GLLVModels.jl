@@ -271,7 +271,7 @@ are algebra from the declared components, not fitted results.
   `Psi` by the same amount, and changes the log-likelihood; five refusals (CI,
   missing selector, unknown term, wrong type, site term); one aliased fit refused.
 
-Red, then green, then a mutation check (original run on the local Mac; re-run on Totoro, Julia 1.10.12, one thread, see the PR for tallies):
+Red, then green, then a mutation check (original run on the local Mac; re-run on Totoro, Julia 1.10.12, one thread, 2026-11-03 on current main `85e47a2a9`: draft test 28 of 28, joint postfit 29 of 29, phylo_latent twin 89 of 89, extractors 114 of 114, shard selection 43 of 43):
 
 - Red, before the method existed: 11 tests, 3 pass, 6 fail, 2 error. The 6
   failures are the five refusal checks and the aliased-fit refusal; the 2 errors
