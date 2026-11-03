@@ -642,11 +642,11 @@ comparison with an R run exists and NO R parity is claimed; `link_residual` and 
 - **`n_cores` (Julia threads).** `n_cores = 1` (default) runs serially. `n_cores = k > 1` refits replicates on
   `k` tasks. Julia must be started with at least `k` threads (`julia -t k` or `JULIA_NUM_THREADS`); `n_cores < 1`
   or `n_cores > Threads.nthreads()` throws `ArgumentError`. The batch of datasets is simulated first from `seed`
-  and each refit is independent, so the draws, bounds, `n_failed` and warnings are bit-identical to `n_cores = 1`
+  and each refit is independent, so the draws, bounds and `n_failed` are bit-identical and the driver's warnings the same as for `n_cores = 1`
   for the same seed, whatever the thread count or scheduling. A user `_refit` must itself be thread-safe. With
   `progress = true` the replicate `@info` lines come out in completion order. Each thread's refit is single-threaded
   only if BLAS is: set `OPENBLAS_NUM_THREADS=1` (or `BLAS.set_num_threads(1)`) to avoid oversubscription.
-  `InterruptException` still propagates; any other unexpected error in a worker stops the others and is rethrown.
+  `InterruptException` still propagates (on the calling task or in a worker); the workers are told to stop, the in-flight refits finish, and no worker outlives the call. Any other unexpected error in a worker stops the others and is rethrown. The once-per-session identification warning of the fitter is emitted once (its warn-once set is lock-guarded).
 - `n_boot = 999` and `progress = true` (one `@info` per replicate) mirror R and need
   maintainer agreement as Julia defaults.
 """
@@ -816,7 +816,15 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
                 end
             end
         end
-        foreach(wait, tasks)
+        try
+            foreach(wait, tasks)
+        catch e
+            # Ctrl-C (or any error) on the calling task: tell the workers to stop taking new replicates and wait
+            # for the in-flight refits, so no worker outlives the call.
+            stop[] = true
+            foreach(t -> (try; wait(t); catch; end), tasks)
+            throw(e)
+        end
         any(e -> e isa InterruptException, errs) && throw(InterruptException())
         i = findfirst(!isnothing, errs)
         i === nothing || throw(errs[i])

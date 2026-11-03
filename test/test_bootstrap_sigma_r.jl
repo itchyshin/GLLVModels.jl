@@ -2172,4 +2172,49 @@ end
             @test calls[] == 3000 && r.n_failed == 0 && all(==(3000), r.n_effective.communality_B)
         end
     end
+
+    @testset "N11 an interrupt on the MAIN task stops the workers (no orphans)" begin
+        kk = maximum(cores)
+        if kk > 1
+            rng = MersenneTwister(10); yy = randn(rng, 4, 30); ff = fit_gaussian_gllvm(yy; K = 1)
+            done = Threads.Atomic{Int}(0)
+            main = current_task()
+            Threads.@spawn (sleep(0.4); schedule(main, InterruptException(); error = true))
+            @test_throws InterruptException _quiet(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 400, seed = 1,
+                progress = false, n_cores = kk, _refit = (yb; kw...) -> (sleep(0.05); Threads.atomic_add!(done, 1); ff)))
+            at_return = done[]
+            sleep(1.0)
+            @test done[] == at_return            # nothing kept running after the call returned
+            @test 0 < at_return < 100            # and it stopped early (400 replicates would take about 5 s at kk = 4)
+        end
+    end
+
+    @testset "N12 the fitter's warn-once identification warning is emitted exactly once under threads" begin
+        kk = maximum(cores)
+        if kk > 1
+            # direct hammer: kk tasks released together call the helper with the key un-set, many trials
+            nwarn = Int[]
+            for trial in 1:300
+                GLLVModels._reset_unidentified_warnings!()
+                go = Threads.Atomic{Bool}(false)
+                lg = Test.TestLogger(min_level = Logging.Warn)
+                with_logger(lg) do
+                    ts = [Threads.@spawn((while !go[]; end; GLLVModels._warn_unidentified_once(:has_diag, "hammer"))) for _ in 1:kk]
+                    go[] = true
+                    foreach(wait, ts)
+                end
+                push!(nwarn, length(lg.logs))
+            end
+            @test all(==(1), nwarn)
+            # through the driver: re-armed set, real has_diag refits
+            rng = MersenneTwister(11); yy = [0.9, 0.6, 0.4, -0.5] * randn(rng, 1, 120) + 0.5 * randn(rng, 4, 120)
+            fd = _quiet(() -> fit_gaussian_gllvm(yy; K = 1, has_diag = true))
+            for trial in 1:5
+                GLLVModels._reset_unidentified_warnings!()
+                _, lg = _logged(() -> _bsig(fd; y = yy, what = :Sigma, n_boot = 16, seed = trial, progress = false, n_cores = kk),
+                                min_level = Logging.Warn)
+                @test count(occursin("has_diag = true with one observation", m) for m in _warns(lg)) == 1
+            end
+        end
+    end
 end
