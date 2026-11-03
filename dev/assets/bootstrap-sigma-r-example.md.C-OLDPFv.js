@@ -120,7 +120,7 @@ import{_ as i,o as a,c as n,ao as e}from"./chunks/framework.CQpcpohJ.js";const g
 <span class="line"><span style="--shiki-light:#24292e;--shiki-dark:#e1e4e8;">    ArgumentError: bootstrap_Sigma_r: unsupported fit class PoissonFit. Supported: GllvmFit, TwoLevelFit, PrecisionMultivariateFit and JointPhyloGroupedGaussianFit (tier :phy only for the last two). Non-Gaussian fits have no verified simulate-and-refit route.</span></span>
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#24292e;--shiki-dark:#e1e4e8;">n_cores = 2:</span></span>
-<span class="line"><span style="--shiki-light:#24292e;--shiki-dark:#e1e4e8;">    ArgumentError: bootstrap_Sigma_r: n_cores = 2 is unsupported in v1 (use 1).</span></span>
+<span class="line"><span style="--shiki-light:#24292e;--shiki-dark:#e1e4e8;">    ArgumentError: bootstrap_Sigma_r: n_cores = 2 exceeds Threads.nthreads() = 1; start Julia with at least that many threads (for example \`julia -t 2\`).</span></span>
 <span class="line"></span>
 <span class="line"><span style="--shiki-light:#24292e;--shiki-dark:#e1e4e8;">what = :cross_corr:</span></span>
 <span class="line"><span style="--shiki-light:#24292e;--shiki-dark:#e1e4e8;">    ArgumentError: bootstrap_Sigma_r: none of the requested summaries (cross_corr) is available for this fit and level; nothing to bootstrap (a GllvmFit, PrecisionMultivariateFit or JointPhyloGroupedGaussianFit supports what = :Sigma, :R or :communality; :ICC needs a TwoLevelFit with levels :B and :W; :cross_corr is never available, R needs a multinomial trait).</span></span>
