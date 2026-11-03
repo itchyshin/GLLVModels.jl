@@ -508,7 +508,7 @@ no retained record): tier `:B` only; `Sigma`, `R`, `communality`; `ICC` is dropp
 `cross_corr` is always skipped (R needs a multinomial trait). `TwoLevelFit` (pass
 `individual`): tiers `:B`, `:W` and `ICC_site`. `PrecisionMultivariateFit` and
 `JointPhyloGroupedGaussianFit`: tier `:phy` only (see below). Everything else throws `ArgumentError`.
-`n_cores > 1` is refused. See the ledger Spec for the full contract; the legacy
+`n_cores > 1` runs replicates on that many Julia threads (see below). See the ledger Spec for the full contract; the legacy
 `bootstrap_Sigma` is a different estimand and is unchanged.
 
 # What tier `:B` means for a `GllvmFit` (it changes with `has_diag`)
@@ -639,6 +639,14 @@ comparison with an R run exists and NO R parity is claimed; `link_residual` and 
   extracting summaries from a converged refit blanks every entry of that replicate to `NaN`
   and is NOT counted in `n_failed` (R skips per level; here one or two tiers make the
   difference small). `InterruptException` is never swallowed.
+- **`n_cores` (Julia threads).** `n_cores = 1` (default) runs serially. `n_cores = k > 1` refits replicates on
+  `k` tasks. Julia must be started with at least `k` threads (`julia -t k` or `JULIA_NUM_THREADS`); `n_cores < 1`
+  or `n_cores > Threads.nthreads()` throws `ArgumentError`. The batch of datasets is simulated first from `seed`
+  and each refit is independent, so the draws, bounds, `n_failed` and warnings are bit-identical to `n_cores = 1`
+  for the same seed, whatever the thread count or scheduling. A user `_refit` must itself be thread-safe. With
+  `progress = true` the replicate `@info` lines come out in completion order. Each thread's refit is single-threaded
+  only if BLAS is: set `OPENBLAS_NUM_THREADS=1` (or `BLAS.set_num_threads(1)`) to avoid oversubscription.
+  `InterruptException` still propagates; any other unexpected error in a worker stops the others and is rethrown.
 - `n_boot = 999` and `progress = true` (one `@info` per replicate) mirror R and need
   maintainer agreement as Julia defaults.
 """
@@ -668,8 +676,12 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
     (0 < conf < 1) || _bsig_refuse("conf must be in (0, 1); got $conf")
     (seed === nothing || seed >= 0) || _bsig_refuse("seed must be >= 0; got $seed")
     n_boot >= 1 || _bsig_refuse("n_boot must be >= 1; got $n_boot")
-    n_cores == 1 || _bsig_refuse("n_cores = $n_cores is unsupported in v1 (use 1).")
+    n_cores >= 1 || _bsig_refuse("n_cores must be >= 1; got $n_cores")
+    n_cores <= Threads.nthreads() || _bsig_refuse(
+        "n_cores = $n_cores exceeds Threads.nthreads() = $(Threads.nthreads()); start Julia with at least " *
+        "that many threads (for example `julia -t $n_cores`).")
     nb = Int(n_boot)
+    n_cores = Int(n_cores)
 
     # 5a. coverage ceiling warnings (R:252-277). Never both; neither throws.
     min_boot = ceil(Int, 2 / (1 - conf)) - 1
@@ -740,11 +752,10 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
     rng = seed === nothing ? Random.default_rng() : Random.MersenneTwister(seed)
     Ys = simulate(rng)
 
-    draws = Vector{Dict{Symbol, Any}}(undef, nb)
-    failed = fill(false, nb)
-    n_extract_err = 0
-    n_thrown = 0; n_not_conv = 0; n_non_ident = 0; n_conv = 0; n_nonpd = 0
-    for b in 1:nb
+    # One replicate: refit on Ys[b] and summarise. Pure in `b` (reads only Ys, the fit and the closures; no
+    # shared mutable state), so the result is the same whichever thread runs it and in whatever order.
+    # InterruptException is rethrown; any other refit or extraction error becomes a failed / lost replicate.
+    function one_replicate(b)
         progress && @info "bootstrap_Sigma_r: replicate $b / $nb"
         fb = try
             refit(Ys[b])
@@ -754,18 +765,15 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
         end
         status = fb === nothing ? :thrown :
                  (!(fb isa typeof(fit)) || !fb.converged) ? :not_converged : :converged
+        conv = false; nonpd = false
         if status === :converged
-            n_conv += 1
-            fb isa JointPhyloGroupedGaussianFit && !fb.hessian_positive_definite && (n_nonpd += 1)
+            conv = true
+            fb isa JointPhyloGroupedGaussianFit && !fb.hessian_positive_definite && (nonpd = true)
             status = _bsig_replicate_status(fit, fb)         # :ok or :non_identified
         end
-        status === :thrown && (n_thrown += 1)
-        status === :not_converged && (n_not_conv += 1)
-        status === :non_identified && (n_non_ident += 1)
         if status !== :ok
-            failed[b] = true
-            draws[b] = Dict{Symbol, Any}(k => _bsig_nan_like(v) for (k, v) in pe_pairs)
-            continue
+            return (draw = Dict{Symbol, Any}(k => _bsig_nan_like(v) for (k, v) in pe_pairs),
+                    status = status, conv = conv, nonpd = nonpd, extract_err = false)
         end
         ent = try
             Dict{Symbol, Any}(_bsig_entries(fb, kept, wh))
@@ -775,10 +783,52 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
         end
         # a summary of the wrong shape is treated like an extraction error (NaN draw, counted as lost)
         bad_shape = ent !== nothing && any(haskey(ent, k) && size(ent[k]) != size(v) for (k, v) in pe_pairs)
-        (ent === nothing || bad_shape) && (n_extract_err += 1)
-        draws[b] = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) && size(ent[k]) == size(v) ?
-                                           ent[k] : _bsig_nan_like(v)) for (k, v) in pe_pairs)
+        draw = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) && size(ent[k]) == size(v) ?
+                                       ent[k] : _bsig_nan_like(v)) for (k, v) in pe_pairs)
+        return (draw = draw, status = :ok, conv = conv, nonpd = nonpd,
+                extract_err = ent === nothing || bad_shape)
     end
+
+    # Per-replicate results go to preallocated slots; counters are reduced afterwards in replicate order.
+    results = Vector{Any}(undef, nb)
+    if n_cores == 1
+        for b in 1:nb
+            results[b] = one_replicate(b)
+        end
+    else
+        # `n_cores` tasks pull replicate indices from an atomic counter (dynamic balance: refit times vary).
+        # Each replicate writes only its own slot. A worker that hits an error stops the others from
+        # taking new work; an InterruptException is rethrown as such, never wrapped.
+        next = Threads.Atomic{Int}(0)
+        stop = Threads.Atomic{Bool}(false)
+        errs = Vector{Any}(nothing, n_cores)
+        tasks = map(1:n_cores) do w
+            Threads.@spawn begin
+                try
+                    while !stop[]
+                        b = Threads.atomic_add!(next, 1) + 1
+                        b > nb && break
+                        results[b] = one_replicate(b)
+                    end
+                catch e
+                    stop[] = true
+                    errs[w] = e
+                end
+            end
+        end
+        foreach(wait, tasks)
+        any(e -> e isa InterruptException, errs) && throw(InterruptException())
+        i = findfirst(!isnothing, errs)
+        i === nothing || throw(errs[i])
+    end
+    draws = Dict{Symbol, Any}[r.draw for r in results]
+    failed = Bool[r.status !== :ok for r in results]
+    n_extract_err = count(r -> r.extract_err, results)
+    n_thrown = count(r -> r.status === :thrown, results)
+    n_not_conv = count(r -> r.status === :not_converged, results)
+    n_non_ident = count(r -> r.status === :non_identified, results)
+    n_conv = count(r -> r.conv, results)
+    n_nonpd = count(r -> r.nonpd, results)
     n_failed = count(failed)
     # replicates lost to failed refits or to extraction errors (the latter are not in n_failed)
     n_lost = n_failed + n_extract_err
