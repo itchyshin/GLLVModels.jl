@@ -7,6 +7,9 @@
 #
 #   Rscript --vanilla tools/core070_coef_empty_pair_draft.R <pinned-R-source-root> <out.json>
 #
+# Under --vanilla the installed library is not on the search path: set R_LIBS to the library that holds the
+# gllvmTMB build (on Totoro, R_LIBS=/home/snakagaw/R/lib), or the script stops with 'no package gllvmTMB'.
+#
 # It needs an installed gllvmTMB built from that same source tree. It refuses to run when
 # R/vcov-coef.R in <pinned-R-source-root> is not the blob at the pin.
 args <- commandArgs(trailingOnly = TRUE)

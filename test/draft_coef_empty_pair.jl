@@ -9,9 +9,12 @@
 #   R  value ~ 0 + latent(..)           Julia  y ~ 0      coef length 0
 #   R  value ~ 0 + trait + latent(..)   Julia  y ~ 1      coef length p
 #   R  value ~ 0 + trait + x + latent() Julia  y ~ 1 + x  coef length p + 1
-# A constant-empty accessor fails the second and third pair. A spurious extra coefficient fails the first.
+# A constant-empty accessor fails the second and third pair. A spurious extra coefficient fails all three.
 #
-# Run:  julia --project=. test/draft_coef_empty_pair.jl
+# Run (neither --project=. nor --project=test works on a clean checkout: JSON3 is a test-environment
+# dependency and test/Project.toml does not list GLLVModels). Use a throwaway environment, from the repo root:
+#   julia -e 'using Pkg; Pkg.activate(temp=true); Pkg.develop(path="."); Pkg.add("JSON3"); include("test/draft_coef_empty_pair.jl")'
+# This edits no tracked file. With a mutant: COEF_PAIR_ACCESSOR=spurious julia -e '...' (same one-liner).
 # Select the accessor under test (default real):  COEF_PAIR_ACCESSOR=always_empty | spurious | real
 # With a mutant selected the file is expected to FAIL; that is the red run of the controls.
 using GLLVModels, Test, Random

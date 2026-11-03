@@ -1,5 +1,26 @@
 # POST-COEF-EMPTY ruling packet (2026-11-02)
 
+## Status block (2026-11-03): option B adopted, status-neutral part only
+
+Shinichi answered "yes" on 2026-11-03 to option B (a discriminating pair, tolerance 0 on lengths `[0, 5, 6]`, two
+controls, names left as the accepted gap, row stays unbound until the receipt from a real run exists, no closure
+by disposition). The row `postfit-policy/POST-COEF-EMPTY` stays UNBOUND. This PR changes no row status,
+scoreboard line, receipt, case map, GATES text or tolerance, and does not edit the frozen contract JSON.
+
+Done in this PR: the packet rebased onto origin/main `85e47a2a9`, the draft R half, Julia half and R diagnostic
+JSON, and the run-instruction fixes from the two verifiers (test-file header and run recipe, `R_LIBS` for the R
+script, the "fails all three" wording, `bridge.jl:1085`, and the unsourced "13" count).
+
+Not done, because each needs a signed contract edit or a receipt: moving the pair into the batch runner against
+the frozen Mac oracle, editing `postfit-policy-batch-contract-p1.json`, and writing the receipt.
+
+The new run recipe was checked on 2026-11-03 on Totoro (Julia 1.10.0, one thread, two cores, throwaway
+environment, about 1 to 2 minutes per run after instantiate; estimate given before launch: at most 15 minutes): real
+accessor 7 pass of 7, always-empty control 5 pass 2 fail, spurious control 4 pass 3 fail. Same tallies as section 7.
+Diagnostic only, not a pass for any row.
+
+PR #1063: see section 8 and the PR description for what it still needs.
+
 Row: `postfit-policy/POST-COEF-EMPTY`, case `CORE070-POSTFIT-COEF-EMPTY-NATIVE`.
 Pin: gllvmTMB `9539352f66f2db2cc26b1c393e67212a359b60c9`. Main at writing: `16a7f08df`.
 
@@ -73,7 +94,7 @@ I found no value or engine defect. The lengths agree on every public pairing I c
 
 ## 6. Options
 
-**A. Leave it.** The row stays unbound for good; #1063 lands as a label fix. No work. Cost: the row can never be evidenced, and the unresolved count stays at 13.
+**A. Leave it.** The row stays unbound for good; #1063 lands as a label fix. No work. Cost: the row can never be evidenced, and it stays outside the bound rows (GATES.md N1 says "about 13 rows" are non-binding context; I found no exact count).
 
 **B. Approve a discriminating pair (recommended).** New case scope: public no-fixed-effect, trait-intercept and trait-intercept-plus-covariate fits on both sides, integer equality at tolerance 0 on the lengths `[0, 5, 6]`, a spurious-coefficient control and an always-empty control, names recorded separately as the accepted gap. Then a follow-up PR runs the real measurement (R on the frozen Mac oracle, Julia on the pinned commit) and writes a receipt. Work: edit the frozen contract JSON, extend the batch pair, one Totoro or Mac run of a few minutes. The row binds only if the checker accepts the new comparison. Risk: the contract JSON is frozen, so this needs your signature; the names gap stays open.
 
@@ -93,7 +114,7 @@ Files, all new, none wired into `runtests.jl` and none under a receipts director
 
 - `tools/core070_coef_empty_pair_draft.R`: the R half. Refuses to run unless `R/vcov-coef.R` is the pin's blob (`a707d537...`). Writes the diagnostic JSON.
 - `docs/dev-log/plans/2026-11-02-c2-post-coef-empty-r-diagnostic.json`: its output, `"binding": false`.
-- `test/draft_coef_empty_pair.jl`: the Julia half. It fits through the public `gllvm(@formula)` route, compares each coef length with the R JSON (exact, tolerance 0), and can swap the accessor with `COEF_PAIR_ACCESSOR`. Run with `julia --project=test test/draft_coef_empty_pair.jl` (JSON3 is a test-environment dependency).
+- `test/draft_coef_empty_pair.jl`: the Julia half. It fits through the public `gllvm(@formula)` route, compares each coef length with the R JSON (exact, tolerance 0), and can swap the accessor with `COEF_PAIR_ACCESSOR`. Run recipe: see the header of the test file (a throwaway environment with `Pkg.develop(path=".")` and `JSON3`; `--project=.` and `--project=test` both fail on a clean checkout). The R half needs `R_LIBS` set to the library that holds the gllvmTMB build.
 
 No file under `src/` changed. There is no engine defect to fix, so the "red" is a mutation red, not a failing real behaviour:
 
@@ -141,7 +162,7 @@ Decision for #1063: it can be updated and is safe to merge as bookkeeping once n
 - The diagnostic R fits used the Totoro library built from the clone above. The committed receipt used the Mac oracle at `/Users/z3437171/local-scratch/a3cov-oracle/build/library`. I did not show the two binaries are the same. The source tree matches the pin (131 files); the install log ends `DONE`. `R/vcov-coef.R` in the Mac oracle source (`/Users/z3437171/local-scratch/a3cov-oracle/build/source`) has the pin's blob `a707d537...`, so the function is the same in both trees; I did not hash the rest of the Mac tree or the Mac installed library.
 - The R diagnostic is one run, one seed, p = 5, K = 1, Gaussian, and measures only length and names. It says nothing about `vcov`, `confint` or non-Gaussian families.
 - I did not search the pin's tests exhaustively. A grep of `X_fix_names` and `length(coef(` in `tests/testthat` found no test of the empty branch.
-- Julia lengths for non-Gaussian families and for `GllvmFit` objects built by the REML bridge path (`src/bridge.jl:1084`, `β = nothing`) were not run through the pair.
+- Julia lengths for non-Gaussian families and for `GllvmFit` objects built by the REML bridge path (`src/bridge.jl:1085`, `β = nothing`) were not run through the pair.
 - Whether the checker accepts a `[0, 5, 6]` comparison as one integer entry or needs three entries is untested; I only called `degenerate()`.
 - Shard 2/4 and the full Julia suite were not re-run after the merge. Only the Python and node true-parity checks were.
-- Estimates, stated after the fact: each Totoro R run took under a minute of wall time at one thread, each Julia run about 25 to 30 s after a one-off precompile of about 10 s plus a test-environment instantiate. All were far under the 3 h line.
+- Estimates were stated after the fact. Each Totoro R run took under a minute of wall time at one thread (a verifier measured 1.8 s). Julia runs took about 25 to 30 s on a quiet machine and 1 to 1.7 minutes at a Totoro load near 360, after a one-off instantiate. All were far under the 3 h line.
