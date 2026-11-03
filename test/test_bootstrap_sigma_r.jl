@@ -1926,6 +1926,116 @@ end
         @test !occursin("Hessian", sprint(show, MIME"text/plain"(), t))
     end
 end
+
+# Driver-level guard for group terms the upstream identification gate cannot judge (finding S2-F1): a term with
+# fewer than 3 groups, or one aliased with fixed group dummies in the mean design, is refused; a term whose
+# estimated variance is below 1e-8 of the trait's total variance gets a boundary warning. The thresholds are
+# this driver's choices, not R's.
+@testset "bootstrap_Sigma_r phy tier: JointPhyloGroupedGaussianFit group-term guard (S2-F1)" begin
+    phy4 = PrecisionPhy(GLLVModels.random_balanced_tree(4; branch_length = 0.35))
+    sid4 = [1, 2, 3, 4, 1, 3, 2, 4, 1, 2, 3, 4]
+    u12 = [3, 1, 1, 2, 3, 3, 1, 2, 2, 3, 1, 3]
+    c12 = ["a", "b", "a", "c", "b", "a", "c", "c", "b", "a", "a", "b"]
+    L2 = reshape([0.9, -0.6], 2, 1)
+    mk(labels; ordvars = [[0.5, 0.3] for _ in 1:length(labels)], D = nothing, beta = [0.4, -0.3]) =
+        _jpg_hand(phy4, sid4, labels; beta = beta, loading = L2, unique = nothing, ordvars = ordvars,
+                  residual = [0.4, 0.6], D = D)
+    stub(f) = (Y, phy; kw...) -> f
+    err(g) = try g(); nothing catch e; e end
+    run(f) = _logged(() -> _bsig(f; level = :phy, n_boot = 3, seed = 1, progress = false, _refit = stub(f)))
+    ident(f) = _PG._joint_phylo_grouped_component_identification(f).reason
+
+    @testset "G1 fewer than 3 groups is refused, naming the term and its group count" begin
+        ctl = mk((unit = u12,))
+        @test ident(ctl) === :identified
+        r, lg = run(ctl)
+        @test r isa GLLVModels.BootstrapSigmaR && !any(occursin("boundary", w) for w in _warns(lg))   # 3 groups: accepted, no guard warning
+        for (nm, lab, n) in (("one group", ones(Int, 12), 1), ("two groups", repeat([1, 2], 6), 2))
+            f = mk((unit = lab,))
+            @test ident(f) === :identified                                    # the upstream gate lets it through
+            e = err(() -> run(f))
+            @test e isa ArgumentError && occursin("unit", e.msg) && occursin("$n group", e.msg) &&
+                  occursin("at least 3", e.msg) && occursin("JointPhyloGroupedGaussianFit", e.msg)
+        end
+        # the offending term is named when it is the second one, and the first term is fine
+        f = mk((unit = u12, cluster = repeat(["a", "b"], 6)))
+        e = err(() -> run(f))
+        @test e isa ArgumentError && occursin("cluster", e.msg) && occursin("2 group", e.msg) && !occursin("term :unit", e.msg)
+        # the refusal precedes any refit (exactly 3 groups is the accepted boundary: the control above)
+        n_calls = Ref(0)
+        cnt = (Y, phy; kw...) -> (n_calls[] += 1; ctl)
+        err(() -> _quiet(() -> _bsig(mk((unit = ones(Int, 12),)); level = :phy, n_boot = 3, progress = false, _refit = cnt)))
+        @test n_calls[] == 0
+    end
+
+    @testset "G2 aliasing with fixed group dummies in the mean design is refused" begin
+        inc = _jpg_inc(u12)
+        T = _jpg_trait_design(2, 12)
+        # all group dummies per trait, no intercept: the group effect is exactly the fixed effects
+        fa = mk((unit = u12,); D = Matrix(kron(inc, Matrix(1.0I, 2, 2))), beta = zeros(6))
+        @test ident(fa) === :identified
+        e = err(() -> run(fa))
+        @test e isa ArgumentError && occursin("unit", e.msg) && occursin("alias", e.msg) && occursin("trait 1", e.msg)
+        # intercept plus dummies for all but one group spans the same space
+        fb = mk((unit = u12,); D = hcat(T, Matrix(kron(inc[:, 1:2], Matrix(1.0I, 2, 2)))), beta = zeros(6))
+        @test err(() -> run(fb)) isa ArgumentError
+        # only trait 2 aliased: trait-1 intercept, trait-2 group dummies
+        e1 = [1.0 0.0]'; e2 = [0.0 1.0]'
+        fc = mk((unit = u12,); D = hcat(kron(ones(12), e1), Matrix(kron(inc, e2))), beta = zeros(4))
+        e = err(() -> run(fc))
+        @test e isa ArgumentError && occursin("trait 2", e.msg) && occursin("alias", e.msg)
+        # controls: intercept plus ONE group dummy leaves G - 2 >= 1 free contrasts; covariates unrelated to groups
+        fd = mk((unit = u12,); D = hcat(T, Matrix(kron(inc[:, 1], Matrix(1.0I, 2, 2)))), beta = zeros(4))
+        r, lg = run(fd)
+        @test r isa GLLVModels.BootstrapSigmaR && !any(occursin("boundary", w) for w in _warns(lg))
+        x = repeat(collect(range(-1.0, 1.0; length = 12)), inner = 1)
+        fe = mk((unit = u12,); D = hcat(T, Matrix(kron(x, Matrix(1.0I, 2, 2)))), beta = zeros(4))
+        @test run(fe)[1] isa GLLVModels.BootstrapSigmaR
+    end
+
+    @testset "G3 a variance far below the trait's total variance warns (boundary), once per term" begin
+        for v in (1e-12, 1e-10)
+            f = mk((unit = u12,); ordvars = [[v, 0.3]])
+            r, lg = run(f)
+            @test r isa GLLVModels.BootstrapSigmaR                              # a warning, not a refusal
+            ws = [w for w in _warns(lg) if occursin("boundary", w)]
+            @test length(ws) == 1 && occursin("unit", ws[1]) && occursin("trait 1", ws[1]) && !occursin("trait 2", ws[1])
+        end
+        # above the threshold: silent (1e-6 of the total is NOT flagged)
+        f = mk((unit = u12,); ordvars = [[1e-6, 0.3]])
+        @test !any(occursin("boundary", w) for w in _warns(run(f)[2]))
+        # relative, not absolute: a tiny variance on a tiny-scale trait is not flagged
+        fs = _jpg_hand(phy4, sid4, (unit = u12,); beta = [0.4, -0.3], loading = 1e-6 .* L2, unique = nothing,
+                       ordvars = [[1e-10, 1e-10]], residual = [1e-6, 1e-6])
+        @test !any(occursin("boundary", w) for w in _warns(run(fs)[2]))
+        # two terms: only the small one is named
+        f2 = mk((unit = u12, cluster = c12); ordvars = [[0.5, 0.3], [0.4, 1e-12]])
+        ws = [w for w in _warns(run(f2)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin("cluster", ws[1]) && occursin("trait 2", ws[1])
+        # both traits of one term tiny: still one warning for the term, listing both traits
+        fb = mk((unit = u12,); ordvars = [[1e-12, 1e-12]])
+        ws = [w for w in _warns(run(fb)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin("trait 1, 2", ws[1])
+        # different traits in different terms: each warning names only its own trait
+        fx = mk((unit = u12, cluster = c12); ordvars = [[1e-12, 0.3], [0.4, 1e-12]])
+        ws = [w for w in _warns(run(fx)[2]) if occursin("boundary", w)]
+        @test length(ws) == 2
+        wu = only(w for w in ws if occursin(":unit", w)); wc = only(w for w in ws if occursin(":cluster", w))
+        @test occursin("trait 1", wu) && !occursin("trait 2", wu) && occursin("trait 2", wc) && !occursin("trait 1", wc)
+        # the reference total includes the residual and every other ordinary term
+        fres = _jpg_hand(phy4, sid4, (unit = u12,); beta = [0.4, -0.3], loading = L2, unique = nothing,
+                         ordvars = [[1e-7, 0.3]], residual = [1000.0, 0.6])
+        ws = [w for w in _warns(run(fres)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin("trait 1", ws[1])
+        foth = mk((unit = u12, cluster = c12); ordvars = [[1e-7, 0.3], [1000.0, 0.4]])
+        ws = [w for w in _warns(run(foth)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin(":unit", ws[1])
+        # the warning comes after validation: a refused call does not emit it
+        fr = mk((unit = ones(Int, 12),); ordvars = [[1e-12, 0.3]])
+        _, lgr = _logged(() -> err(() -> _bsig(fr; level = :phy, n_boot = 3, progress = false, _refit = stub(fr))))
+        @test !any(occursin("boundary", w) for w in _warns(lgr))
+    end
+end
 # END JPG-TIER
 
 # DRIVER-FIXES: refit warning flood (F1), String level/what (F4), `what` echo and refusal text (F5)
