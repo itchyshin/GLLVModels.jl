@@ -2328,3 +2328,139 @@ end
         end
     end
 end
+
+# SUFFICIENT-STATISTIC BUILT-IN REFIT (internal keyword `_sufficient_stat`, 2026-11-03).
+# Evidence: docs/dev-log/check-log.d/2026-11-02-bootstrap-sigma-sufficient-stat-gllvmfit.md and
+# 2026-11-02-bootstrap-sigma-profile.md. The fast objective is the same function as the stock profile
+# NLL (p x p cross products instead of p x n temporaries); only the optimiser path moves, at rounding level.
+@testset "bootstrap_Sigma_r sufficient-statistic refit (GllvmFit built-in refit only)" begin
+    using ForwardDiff
+    _flat(r) = reduce(vcat, [collect(Float64, vec(getfield(d, k))) for d in r.draws for k in keys(d)])
+    _interceptX(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1.0; end; X)
+    # fixtures a (K=1, rr-only), b (K=1, has_diag), c (K=2, has_diag), all p = 6, six-intercept X, Gaussian
+    function _fx(kind; n = 120, seed = 7)
+        rng = MersenneTwister(seed); p = 6
+        K, hd = kind == :a ? (1, false) : kind == :b ? (1, true) : (2, true)
+        Λ = 0.8 .* randn(rng, p, K)
+        y = Λ * randn(rng, K, n) .+ (hd ? 0.35 .* randn(rng, p, n) : 0.0) .+ 0.4 .* randn(rng, p, n) .+ collect(1.0:p)
+        X = _interceptX(p, n)
+        f = _quiet(() -> fit_gaussian_gllvm(y; K = K, has_diag = hd, X = X))
+        return (y = y, X = X, fit = f, K = K, hd = hd, n = n)
+    end
+    fxs = Dict(k => _fx(k) for k in (:a, :b, :c))
+
+    @testset "SS1 objective and ForwardDiff gradient equal the stock ones (K, has_diag, K_W, with and without X)" begin
+        rng = MersenneTwister(11); p = 5; n = 40
+        worst = 0.0; ncase = 0
+        for K in (1, 2), K_W in (0, 1), hd in (false, true), withX in (false, true)
+            q = 2
+            qq = withX ? q : 0
+            y = randn(rng, p, n) .+ 1.0
+            X = withX ? randn(rng, p, n, qq) : nothing
+            spec = (q = qq, p = p, K_B = K, K_W = K_W, has_diag = hd, K_phy = 0, has_phy_unique = false)
+            np = GLLVModels.profile_nparams(spec; profile_beta = false)
+            suff = GLLVModels._gaussian_suff(y, X, qq)
+            f0 = x -> GLLVModels.gaussian_profile_nll(x, y; spec = spec, X = X, profile_beta = false)
+            f1 = x -> GLLVModels.gaussian_profile_nll(x, y; spec = spec, X = X, profile_beta = false, suff = suff)
+            for _ in 1:2
+                x = 0.3 .* randn(rng, np)
+                v0, v1 = f0(x), f1(x)
+                g0, g1 = ForwardDiff.gradient(f0, x), ForwardDiff.gradient(f1, x)
+                worst = max(worst, abs(v0 - v1) / max(1, abs(v0)),
+                            maximum(abs.(g0 .- g1)) / max(1, maximum(abs.(g0))))
+                ncase += 1
+            end
+        end
+        @test ncase >= 30
+        @test worst <= 1e-12
+    end
+
+    @testset "SS2 the stock path is unchanged when the keyword is absent (same fit bit for bit)" begin
+        fx = fxs[:b]
+        f1 = _quiet(() -> fit_gaussian_gllvm(fx.y; K = 1, has_diag = true, X = fx.X))
+        f2 = _quiet(() -> fit_gaussian_gllvm(fx.y; K = 1, has_diag = true, X = fx.X, _sufficient_stat = false))
+        @test f1.logLik == f2.logLik && f1.n_iter == f2.n_iter && f1.pars.θ_packed == f2.pars.θ_packed
+    end
+
+    @testset "SS3 refits agree with the stock path on fixtures a, b, c; equal failure counts" begin
+        # Replicate by replicate through the setup seam (stock vs fast refit of the same simulated data).
+        # Ordinary and Heywood-boundary replicates (both fits stop within 500 iterations): the implied site
+        # covariance, i.e. what the draws are made of, agrees to 5e-5 (evidence: typically 2e-6, up to 3.2e-5 on
+        # Heywood-boundary replicates; 1.2e-5 to 1.6e-5 seen on ordinary ones on Julia 1.12, so 1e-5 is not a
+        # per-replicate guarantee on every platform; aggregated bounds at n_boot = 999 were within 8.1e-6). Flat-ridge replicates (Heywood draws that need >500 iterations; the
+        # fit slides along sigma2_B / sigma2_W / sigma_eps^2 and the relative f_tol test fires at a slightly
+        # different point) agree in logLik to 1e-4 and in covariance only to 2e-3 (evidence notes: up to 4.4e-4
+        # on 999-replicate fixtures; this fixture is more ridge-prone). That is why the keyword is opt-in.
+        for k in (:a, :b, :c)
+            fx = fxs[k]
+            sim, rf0 = GLLVModels._bsig_setup(fx.fit, 8, nothing, fx.n, fx.X, nothing; sufficient_stat = false)
+            _, rf1 = GLLVModels._bsig_setup(fx.fit, 8, nothing, fx.n, fx.X, nothing; sufficient_stat = true)
+            nridge = 0
+            for Y in sim(MersenneTwister(3))
+                f0 = _quiet(() -> rf0(Y)); f1 = _quiet(() -> rf1(Y))
+                @test f0.converged == f1.converged
+                @test abs(f0.logLik - f1.logLik) <= 1e-4
+                dΣ = maximum(abs.(GLLVModels._derived_site_cov(f0) .- GLLVModels._derived_site_cov(f1)))
+                if max(f0.n_iter, f1.n_iter) <= 500
+                    @test dΣ <= 5e-5
+                else
+                    nridge += 1
+                    @test dΣ <= 2e-3
+                end
+            end
+            k == :a && @test nridge == 0
+        end
+        # through the driver: the same failure counts, and (fixtures a, b) draws within 1e-5
+        for k in (:a, :b, :c)
+            fx = fxs[k]
+            run(ss) = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 6, seed = 3, progress = false,
+                                         keep_draws = true, _sufficient_stat = ss))
+            r0, r1 = run(false), run(true)
+            d0, d1 = _flat(r0), _flat(r1)
+            @test length(d0) == length(d1) && !isempty(d0)
+            @test isequal(isnan.(d0), isnan.(d1))
+            ok = .!isnan.(d0)
+            @test maximum(abs.(d0[ok] .- d1[ok])) <= (k == :c ? 2e-3 : 1e-5)
+            @test r0.n_failed == r1.n_failed
+            k != :a && @test !isequal(d0, d1)      # the flag reaches the refit (a never iterates: bit-identical there)
+        end
+    end
+
+    @testset "SS4 same seed gives bit-identical results with the fast refit; a user _refit is never switched" begin
+        fx = fxs[:c]
+        run() = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 4, seed = 9, progress = false,
+                                   keep_draws = true, _sufficient_stat = true))
+        @test isequal(_flat(run()), _flat(run()))
+        # default is the stock path: omitting the keyword equals `_sufficient_stat = false` bit for bit
+        rd = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 4, seed = 9, progress = false, keep_draws = true))
+        rf = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 4, seed = 9, progress = false, keep_draws = true,
+                                _sufficient_stat = false))
+        @test isequal(_flat(rd), _flat(rf))
+        seen = Ref(false)
+        cap = function (yb; kwargs...)
+            seen[] |= haskey(kwargs, :_sufficient_stat)
+            fit_gaussian_gllvm(yb; kwargs...)
+        end
+        _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 2, seed = 9, progress = false,
+                           _sufficient_stat = true, _refit = cap))
+        @test !seen[]
+        # the built-in refit really switches objective: far fewer allocations (measured about 22x less)
+        _, rf0 = GLLVModels._bsig_setup(fx.fit, 1, nothing, fx.n, fx.X, nothing; sufficient_stat = false)
+        _, rf1 = GLLVModels._bsig_setup(fx.fit, 1, nothing, fx.n, fx.X, nothing; sufficient_stat = true)
+        _quiet(() -> (rf0(fx.y); rf1(fx.y)))                      # compile
+        a0 = _quiet(() -> @allocated rf0(fx.y)); a1 = _quiet(() -> @allocated rf1(fx.y))
+        @test a1 < a0 / 5
+    end
+
+    @testset "SS5 threads: n_cores = 4 equals n_cores = 1 bit for bit" begin
+        if Threads.nthreads() >= 4
+            fx = fxs[:b]
+            run(k) = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 8, seed = 5, progress = false,
+                                        keep_draws = true, n_cores = k, _sufficient_stat = true))
+            @test isequal(_flat(run(1)), _flat(run(4)))
+        else
+            @info "SS5 skipped: needs julia -t 4 (Threads.nthreads() = $(Threads.nthreads()))"
+            @test_skip false
+        end
+    end
+end
