@@ -12,9 +12,23 @@ _shard_spec = get(ENV, "GLLVM_TEST_SHARD", "")
 _SHARD = isempty(_shard_spec) ? nothing : _parse_shard_spec(_shard_spec)
 
 _shard_pos = Ref(0)
+
+# Files whose coverage depends on Julia threads (their testset skips legs when
+# Threads.nthreads() is too small). CI sets GLLVM_TEST_REQUIRE_THREADS=4 on every
+# sharded job and JULIA_NUM_THREADS=4 on every sharded job; if
+# an include moves to a single-threaded shard this fails loudly rather than letting
+# the legs skip silently. Unset (default, local runs) = no check.
+_THREADED_FILES = ("test_bootstrap_sigma_r.jl",)
+_REQUIRE_THREADS = something(tryparse(Int, get(ENV, "GLLVM_TEST_REQUIRE_THREADS", "")), 0)
+
 function _shard_include(path::AbstractString)
     _shard_pos[] += 1
     if _SHARD === nothing || (_shard_pos[] - 1) % _SHARD[2] == _SHARD[1] - 1
+        if _REQUIRE_THREADS > 0 && path in _THREADED_FILES
+            @testset "threaded file $path needs Julia threads" begin
+                @test Threads.nthreads() >= _REQUIRE_THREADS
+            end
+        end
         include(path)
     end
 end
