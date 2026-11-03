@@ -1,0 +1,46 @@
+{
+  "schema": "core070-coef-empty-pair-draft-r-diagnostic/v1",
+  "binding": false,
+  "note": "DIAGNOSTIC, NON-BINDING. Not a receipt. Public gllvmTMB() fits at the pin, coef() length and names only.",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "vcov_coef_blob": "a707d537e209fe2963dd09a688fe51a611ca3de2",
+  "gllvmTMB_version": "0.7.1",
+  "p": 5,
+  "n": 80,
+  "K": 1,
+  "pairs": [
+    {
+      "label": "no fixed effects",
+      "r_formula": "0",
+      "julia_formula": "y ~ 0",
+      "class": "gllvmTMB_multi",
+      "x_fix_names_is_null": true,
+      "coef_length": 0,
+      "coef_has_names_attribute": true,
+      "coef_names": [],
+      "coef_identical_to_named_empty": true
+    },
+    {
+      "label": "trait intercepts",
+      "r_formula": "0 + trait",
+      "julia_formula": "y ~ 1",
+      "class": "gllvmTMB_multi",
+      "x_fix_names_is_null": false,
+      "coef_length": 5,
+      "coef_has_names_attribute": true,
+      "coef_names": ["traitt1", "traitt2", "traitt3", "traitt4", "traitt5"],
+      "coef_identical_to_named_empty": false
+    },
+    {
+      "label": "trait intercepts plus one shared covariate",
+      "r_formula": "0 + trait + x",
+      "julia_formula": "y ~ 1 + x",
+      "class": "gllvmTMB_multi",
+      "x_fix_names_is_null": false,
+      "coef_length": 6,
+      "coef_has_names_attribute": true,
+      "coef_names": ["traitt1", "traitt2", "traitt3", "traitt4", "traitt5", "x"],
+      "coef_identical_to_named_empty": false
+    }
+  ]
+}
