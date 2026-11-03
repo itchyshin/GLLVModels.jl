@@ -53,7 +53,7 @@ a PASS is not a twin." Its `julia_check.symbol` is `phylo_signal`, first method
 `src/confint_derived.jl:311`, measured at Julia commit `c29c1c0b6d8d985e1edd96426edef2621402a03f`.
 On current main that method is at `src/confint_derived.jl:342`.
 
-Gate text (`GATES.md:1088-1093`): "C2: every P1 capability inside the D-295
+Gate text (`docs/dev-log/core070/true-parity-latest/GATES.md:1088-1093`): "C2: every P1 capability inside the D-295
 boundary ... has a scoreboard row with a resolving P1 receipt (a row at
 `EVIDENCED-BEHAVIOURAL` counts as done only inside the frozen behavioural list)".
 
@@ -115,10 +115,11 @@ square the reported SD (`sd_B^2`, `sd_q^2`), and `1870-1873` returns it as `s`.
 R's own tests describe the cases that matter here
 (`tests/testthat/test-phylo-signal-species-level.R`): lines 44-62 fit
 `phylo_unique(species) + unique(0 + trait | species)` in a crossed site by
-species design and require `H2 < 1` and `Psi > 0`; lines 81-120 require
+species design with a binomial probit family and require `H2 < 1` and `Psi > 0`; lines 81-120 require
 `H2 + C2_non + Psi = 1` and `Psi * V_eta` to equal the unit-tier unique part.
-`tests/testthat/test-phylo-signal-categorical.R:103-123` requires `H2 = 1` for a
-phylogeny-only Gaussian fit.
+`tests/testthat/test-phylo-signal-categorical.R:112`, inside the test at line 96 (probit and
+multinomial mock fits), asserts `H2 = 1`; the Gaussian test at lines 117-135 only asserts
+that no `liability` message appears.
 
 The Gaussian residual in R is one shared SD. `R/fit-multi.R:4288-4293` and
 `5802-5804` build a length-one `log_sigma_eps`, and `src/gllvmTMB.cpp:3266-3271`
@@ -140,7 +141,7 @@ extractor reports, because the residual is outside `V_eta`.
 - `src/phylo_latent_postfit.jl:24-34`: `extract_phylo_signal(fit::PrecisionMultivariateFit; ci)`
   returns R's table with `H2 = 1`, `C2_non = 0`, `Psi = 0`, `V_eta = diag(Sigma_phy)`,
   and refuses `ci = true`. It matches R for a bare `phylo_latent()` fit
-  (`test/test_phylo_latent_twin.jl:166-172`, citing `test-phylo-signal-categorical.R:117`).
+  (`test/test_phylo_latent_twin.jl:166-172`, citing `test-phylo-signal-categorical.R:112`).
   It cannot represent a species-level non-phylogenetic variance.
 - `src/joint_phylo_grouped_postfit.jl` (main): `JointPhyloGroupedGaussianFit` has
   `extract_Sigma` and component covariances (lines 98-140) but no
@@ -270,7 +271,7 @@ are algebra from the declared components, not fitted results.
   `Psi` by the same amount, and changes the log-likelihood; five refusals (CI,
   missing selector, unknown term, wrong type, site term); one aliased fit refused.
 
-Red, then green, then a mutation check (Julia 1.10.0, one thread, local Mac):
+Red, then green, then a mutation check (original run on the local Mac; re-run on Totoro, Julia 1.10.12, one thread, see the PR for tallies):
 
 - Red, before the method existed: 11 tests, 3 pass, 6 fail, 2 error. The 6
   failures are the five refusal checks and the aliased-fit refusal; the 2 errors
