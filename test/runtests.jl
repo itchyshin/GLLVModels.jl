@@ -15,7 +15,7 @@ _shard_pos = Ref(0)
 
 # Files whose coverage depends on Julia threads (their testset skips legs when
 # Threads.nthreads() is too small). CI sets GLLVM_TEST_REQUIRE_THREADS=4 on every
-# sharded job and JULIA_NUM_THREADS=4 only on the shard that holds these files; if
+# sharded job and JULIA_NUM_THREADS=4 on every sharded job; if
 # an include moves to a single-threaded shard this fails loudly rather than letting
 # the legs skip silently. Unset (default, local runs) = no check.
 _THREADED_FILES = ("test_bootstrap_sigma_r.jl",)
