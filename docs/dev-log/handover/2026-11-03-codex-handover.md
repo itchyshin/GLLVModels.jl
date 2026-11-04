@@ -4,6 +4,18 @@ You are Codex, picking up the GLLVModels.jl `bootstrap_Sigma_r` true-parity lane
 
 Date stamps are 2026-11-03. `origin/main` at write time: `6b35956f7` (merge of #1086) plus later merges; re-read it, do not trust this number.
 
+## 0. The grand goal: true R-Julia parity (P1)
+
+The lane you are in serves one durable aim: **GLLVModels.jl must reproduce R `gllvmTMB` (pinned, read-only, commit `9539352f66f2db2cc26b1c393e67212a359b60c9`) in behaviour, not only in API shape or ledger counts.** "Core070 ledger accounting is not true parity" (see `docs/src/gllvmtmb-parity.md`). Parity is claimed only from measured evidence, row by row, under signed maintainer rulings.
+
+- **Finish line (P1 is NOT met):** C0 to C8 and X2 all MET on `origin/main`; F-capability coverage verified; required negative controls passing on main; an independent completion review; reconciliation; a validated after-task report; and a final handover on main. Do not call P1 done before every one of those holds.
+- **Last recorded exact-main measurement (2026-10-28, from `docs/dev-log/handover/2026-11-01-claude-handover.md` on branch `codex/true-parity-p1-restored-20261101`):** C0, C1, C5, C6, C7, C8 MET; C2 290/297; C3 6/8; C4 4/8; X2 304/317; F-capability 1,146/1,146 across five selected suites only (not full-suite, not closure). Re-measure on current main before quoting any of these.
+- **Open rows at that measurement:** C2 `FAMILY-00-IDENTITY`, `simulate`/`gllvmTMB_multi`, `animal_latent`, `bootstrap_Sigma`, `extract_phylo_signal`, `POST-COEF-EMPTY`, `POST-SIMULATE-DEFAULT`; C3 `ORDINAL-LOGIT-RSZ`, `ISDM-HEADLINE-RSZ`; C4 `RD-URBANISATION-BINOMIAL`, `RD-SPIDER-NB2`, `RD-BEETLE-NB2`, `RD-FUNGI-BINOMIAL`.
+- **What this session moved toward it:** `bootstrap_Sigma_r` now implements the pinned-R `bootstrap_Sigma` behaviour (the maintainer approved the full-behaviour target). That is an implementation checkpoint only. The `bootstrap_Sigma` row stays open until measured evidence supports binding it, and no scoreboard, receipt, case-map or GATES file was changed. N1b (R vs Julia, phy tier) is Inconclusive, so it does not yet count as evidence for a bind.
+- **Fitted-comparison rule that makes a row pass:** positive-definite Hessian and max|grad| below 1e-5 on both engines. Signed P1 FAIL rows stay FAIL; the 2026-10-21 limits in `docs/dev-log/decisions/2026-10-21-p1-optimizer-stopping-rule.md` stand. Usability is never traded away for an accuracy gain (D-139).
+- **Where truth lives:** the pending board `docs/dev-log/2026-09-14-true-parity-pending-board.md`, the decision map `docs/dev-log/core070/true-parity-decision-map.md`, the scoreboard and receipts under `docs/dev-log/core070/true-parity-latest/`, and the P1 candidate branch `codex/true-parity-p1-current-main-20261024` (Codex-owned, protected; do not push to it without its owner). The `AGENTS.md` P1 snapshot is stale; many lanes are live, so verify PRs, branches and worktrees before acting.
+- **Order of leverage toward the goal:** (1) unblock the receipt chain (#1046, #1055, #1063) via the `negative-controls` Julia fix; (2) the open C2 rulings (simulate, `extract_phylo_signal`, POST-COEF-EMPTY, POST-SIMULATE-DEFAULT) with the maintainer; (3) N1c on 1101 so `bootstrap_Sigma` can eventually be bound; (4) C3 and C4 rows only through new maintainer rulings, never by refits of spider or beetle; (5) fresh exact-main measurement, completion panel, reconciliation and final handover.
+
 ## 1. Critical context
 
 - **Goal:** implement the pinned-R `bootstrap_Sigma` behaviour as `bootstrap_Sigma_r` and move other open true-parity rows only through maintainer rulings. Pinned R `gllvmTMB` is `9539352f66f2db2cc26b1c393e67212a359b60c9`, read-only: never modify it.
