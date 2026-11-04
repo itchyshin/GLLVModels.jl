@@ -21,7 +21,20 @@ _bsig(args...; kw...) = _bsig_defined ? GLLVModels.bootstrap_Sigma_r(args...; kw
     error("bootstrap_Sigma_r is not defined (RED): src/bootstrap_sigma_r.jl missing")
 
 _quiet(f) = with_logger(f, NullLogger())
-_logged(f; min_level = Logging.Info) = (lg = Test.TestLogger(min_level = min_level);
+# Test.TestLogger has no lock on Julia 1.10.0, so concurrent log pushes from worker threads can lose messages.
+# This wrapper serialises handle_message; `.logs` is the wrapped TestLogger's vector.
+struct _LockedTestLogger <: Logging.AbstractLogger
+    inner::Test.TestLogger
+    lock::ReentrantLock
+end
+_LockedTestLogger(; min_level = Logging.Info) = _LockedTestLogger(Test.TestLogger(min_level = min_level), ReentrantLock())
+Base.getproperty(l::_LockedTestLogger, s::Symbol) = s === :logs ? getfield(l, :inner).logs : getfield(l, s)
+Logging.min_enabled_level(l::_LockedTestLogger) = Logging.min_enabled_level(l.inner)
+Logging.shouldlog(l::_LockedTestLogger, args...) = Logging.shouldlog(l.inner, args...)
+Logging.catch_exceptions(l::_LockedTestLogger) = Logging.catch_exceptions(l.inner)
+Logging.handle_message(l::_LockedTestLogger, args...; kw...) =
+    lock(() -> Logging.handle_message(l.inner, args...; kw...), l.lock)
+_logged(f; min_level = Logging.Info) = (lg = _LockedTestLogger(min_level = min_level);
                                         r = with_logger(f, lg); (r, lg.logs))
 _warns(logs) = [string(l.message) for l in logs if l.level == Logging.Warn]
 _infos(logs) = [string(l.message) for l in logs if l.level == Logging.Info]
@@ -332,7 +345,8 @@ Base.getindex(::_BsigBoom, ::Int, ::Int) = throw(InterruptException())
         # progress = true emits one @info per replicate
         _, lgp = _logged(() -> _bsig(fit; y = y, what = :Sigma, n_boot = 4, seed = 1, progress = true, _refit = (yb; kw...) -> fit))
         @test count(occursin("replicate", m) for m in _infos(lgp)) == 4
-        @test_throws ArgumentError _bsig(fit; y = y, n_boot = 4, n_cores = 2)
+        # n_cores refusals (the threaded behaviour itself is in the n_cores testset at the end of the file)
+        @test_throws ArgumentError _bsig(fit; y = y, n_boot = 4, n_cores = Threads.nthreads() + 1)
     end
 
     @testset "9. link_residual :auto and :none are bit-identical for Gaussian" begin
@@ -1380,7 +1394,7 @@ end
             @test e isa ArgumentError
         end
         # n_cores > 1
-        @test_throws ArgumentError _bsig(fpu; level = :phy, n_cores = 2, n_boot = 3, progress = false, _refit = cap)
+        @test_throws ArgumentError _bsig(fpu; level = :phy, n_cores = Threads.nthreads() + 1, n_boot = 3, progress = false, _refit = cap)
         @test length(log.calls) == n_ok + 3                           # only the supported control (default level) refit
         # JointPhyloGroupedGaussianFit is handled by Stage 2 (tier :phy only): see the JPG-TIER region below.
         # It is no longer 'unsupported'; its own refusals (unidentified or non-converged original) are tested there.
@@ -1836,11 +1850,11 @@ end
         for wh in ([:ICC], [:cross_corr], [:ICC, :cross_corr])
             @test err(() -> _bsig(f3u; level = :phy, what = wh, n_boot = 3, progress = false, _refit = cap)) isa ArgumentError
         end
-        @test_throws ArgumentError _bsig(f3u; level = :phy, n_cores = 2, n_boot = 3, progress = false, _refit = cap)
+        @test_throws ArgumentError _bsig(f3u; level = :phy, n_cores = Threads.nthreads() + 1, n_boot = 3, progress = false, _refit = cap)
         # only the three supported controls (J6 control, default-level control, level = :phy control) refit
         @test length(log.calls) == n_ok + 3 + 3
         # the original-fit refusal precedes argument validation (nothing is simulated or refit)
-        e = err(() -> _bsig(fni; level = :phy, n_boot = 3, progress = false, n_cores = 2, _refit = cap))
+        e = err(() -> _bsig(fni; level = :phy, n_boot = 3, progress = false, n_cores = Threads.nthreads() + 1, _refit = cap))
         @test e isa ArgumentError && occursin("identif", e.msg)
     end
 
@@ -1925,6 +1939,116 @@ end
         @test !occursin("Hessian", sprint(show, MIME"text/plain"(), t))
     end
 end
+
+# Driver-level guard for group terms the upstream identification gate cannot judge (finding S2-F1): a term with
+# fewer than 3 groups, or one aliased with fixed group dummies in the mean design, is refused; a term whose
+# estimated variance is below 1e-8 of the trait's total variance gets a boundary warning. The thresholds are
+# this driver's choices, not R's.
+@testset "bootstrap_Sigma_r phy tier: JointPhyloGroupedGaussianFit group-term guard (S2-F1)" begin
+    phy4 = PrecisionPhy(GLLVModels.random_balanced_tree(4; branch_length = 0.35))
+    sid4 = [1, 2, 3, 4, 1, 3, 2, 4, 1, 2, 3, 4]
+    u12 = [3, 1, 1, 2, 3, 3, 1, 2, 2, 3, 1, 3]
+    c12 = ["a", "b", "a", "c", "b", "a", "c", "c", "b", "a", "a", "b"]
+    L2 = reshape([0.9, -0.6], 2, 1)
+    mk(labels; ordvars = [[0.5, 0.3] for _ in 1:length(labels)], D = nothing, beta = [0.4, -0.3]) =
+        _jpg_hand(phy4, sid4, labels; beta = beta, loading = L2, unique = nothing, ordvars = ordvars,
+                  residual = [0.4, 0.6], D = D)
+    stub(f) = (Y, phy; kw...) -> f
+    err(g) = try g(); nothing catch e; e end
+    run(f) = _logged(() -> _bsig(f; level = :phy, n_boot = 3, seed = 1, progress = false, _refit = stub(f)))
+    ident(f) = _PG._joint_phylo_grouped_component_identification(f).reason
+
+    @testset "G1 fewer than 3 groups is refused, naming the term and its group count" begin
+        ctl = mk((unit = u12,))
+        @test ident(ctl) === :identified
+        r, lg = run(ctl)
+        @test r isa GLLVModels.BootstrapSigmaR && !any(occursin("boundary", w) for w in _warns(lg))   # 3 groups: accepted, no guard warning
+        for (nm, lab, n) in (("one group", ones(Int, 12), 1), ("two groups", repeat([1, 2], 6), 2))
+            f = mk((unit = lab,))
+            @test ident(f) === :identified                                    # the upstream gate lets it through
+            e = err(() -> run(f))
+            @test e isa ArgumentError && occursin("unit", e.msg) && occursin("$n group", e.msg) &&
+                  occursin("at least 3", e.msg) && occursin("JointPhyloGroupedGaussianFit", e.msg)
+        end
+        # the offending term is named when it is the second one, and the first term is fine
+        f = mk((unit = u12, cluster = repeat(["a", "b"], 6)))
+        e = err(() -> run(f))
+        @test e isa ArgumentError && occursin("cluster", e.msg) && occursin("2 group", e.msg) && !occursin("term :unit", e.msg)
+        # the refusal precedes any refit (exactly 3 groups is the accepted boundary: the control above)
+        n_calls = Ref(0)
+        cnt = (Y, phy; kw...) -> (n_calls[] += 1; ctl)
+        err(() -> _quiet(() -> _bsig(mk((unit = ones(Int, 12),)); level = :phy, n_boot = 3, progress = false, _refit = cnt)))
+        @test n_calls[] == 0
+    end
+
+    @testset "G2 aliasing with fixed group dummies in the mean design is refused" begin
+        inc = _jpg_inc(u12)
+        T = _jpg_trait_design(2, 12)
+        # all group dummies per trait, no intercept: the group effect is exactly the fixed effects
+        fa = mk((unit = u12,); D = Matrix(kron(inc, Matrix(1.0I, 2, 2))), beta = zeros(6))
+        @test ident(fa) === :identified
+        e = err(() -> run(fa))
+        @test e isa ArgumentError && occursin("unit", e.msg) && occursin("alias", e.msg) && occursin("trait 1", e.msg)
+        # intercept plus dummies for all but one group spans the same space
+        fb = mk((unit = u12,); D = hcat(T, Matrix(kron(inc[:, 1:2], Matrix(1.0I, 2, 2)))), beta = zeros(6))
+        @test err(() -> run(fb)) isa ArgumentError
+        # only trait 2 aliased: trait-1 intercept, trait-2 group dummies
+        e1 = [1.0 0.0]'; e2 = [0.0 1.0]'
+        fc = mk((unit = u12,); D = hcat(kron(ones(12), e1), Matrix(kron(inc, e2))), beta = zeros(4))
+        e = err(() -> run(fc))
+        @test e isa ArgumentError && occursin("trait 2", e.msg) && occursin("alias", e.msg)
+        # controls: intercept plus ONE group dummy leaves G - 2 >= 1 free contrasts; covariates unrelated to groups
+        fd = mk((unit = u12,); D = hcat(T, Matrix(kron(inc[:, 1], Matrix(1.0I, 2, 2)))), beta = zeros(4))
+        r, lg = run(fd)
+        @test r isa GLLVModels.BootstrapSigmaR && !any(occursin("boundary", w) for w in _warns(lg))
+        x = repeat(collect(range(-1.0, 1.0; length = 12)), inner = 1)
+        fe = mk((unit = u12,); D = hcat(T, Matrix(kron(x, Matrix(1.0I, 2, 2)))), beta = zeros(4))
+        @test run(fe)[1] isa GLLVModels.BootstrapSigmaR
+    end
+
+    @testset "G3 a variance far below the trait's total variance warns (boundary), once per term" begin
+        for v in (1e-12, 1e-10)
+            f = mk((unit = u12,); ordvars = [[v, 0.3]])
+            r, lg = run(f)
+            @test r isa GLLVModels.BootstrapSigmaR                              # a warning, not a refusal
+            ws = [w for w in _warns(lg) if occursin("boundary", w)]
+            @test length(ws) == 1 && occursin("unit", ws[1]) && occursin("trait 1", ws[1]) && !occursin("trait 2", ws[1])
+        end
+        # above the threshold: silent (1e-6 of the total is NOT flagged)
+        f = mk((unit = u12,); ordvars = [[1e-6, 0.3]])
+        @test !any(occursin("boundary", w) for w in _warns(run(f)[2]))
+        # relative, not absolute: a tiny variance on a tiny-scale trait is not flagged
+        fs = _jpg_hand(phy4, sid4, (unit = u12,); beta = [0.4, -0.3], loading = 1e-6 .* L2, unique = nothing,
+                       ordvars = [[1e-10, 1e-10]], residual = [1e-6, 1e-6])
+        @test !any(occursin("boundary", w) for w in _warns(run(fs)[2]))
+        # two terms: only the small one is named
+        f2 = mk((unit = u12, cluster = c12); ordvars = [[0.5, 0.3], [0.4, 1e-12]])
+        ws = [w for w in _warns(run(f2)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin("cluster", ws[1]) && occursin("trait 2", ws[1])
+        # both traits of one term tiny: still one warning for the term, listing both traits
+        fb = mk((unit = u12,); ordvars = [[1e-12, 1e-12]])
+        ws = [w for w in _warns(run(fb)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin("trait 1, 2", ws[1])
+        # different traits in different terms: each warning names only its own trait
+        fx = mk((unit = u12, cluster = c12); ordvars = [[1e-12, 0.3], [0.4, 1e-12]])
+        ws = [w for w in _warns(run(fx)[2]) if occursin("boundary", w)]
+        @test length(ws) == 2
+        wu = only(w for w in ws if occursin(":unit", w)); wc = only(w for w in ws if occursin(":cluster", w))
+        @test occursin("trait 1", wu) && !occursin("trait 2", wu) && occursin("trait 2", wc) && !occursin("trait 1", wc)
+        # the reference total includes the residual and every other ordinary term
+        fres = _jpg_hand(phy4, sid4, (unit = u12,); beta = [0.4, -0.3], loading = L2, unique = nothing,
+                         ordvars = [[1e-7, 0.3]], residual = [1000.0, 0.6])
+        ws = [w for w in _warns(run(fres)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin("trait 1", ws[1])
+        foth = mk((unit = u12, cluster = c12); ordvars = [[1e-7, 0.3], [1000.0, 0.4]])
+        ws = [w for w in _warns(run(foth)[2]) if occursin("boundary", w)]
+        @test length(ws) == 1 && occursin(":unit", ws[1])
+        # the warning comes after validation: a refused call does not emit it
+        fr = mk((unit = ones(Int, 12),); ordvars = [[1e-12, 0.3]])
+        _, lgr = _logged(() -> err(() -> _bsig(fr; level = :phy, n_boot = 3, progress = false, _refit = stub(fr))))
+        @test !any(occursin("boundary", w) for w in _warns(lgr))
+    end
+end
 # END JPG-TIER
 
 # DRIVER-FIXES: refit warning flood (F1), String level/what (F4), `what` echo and refusal text (F5)
@@ -1972,6 +2096,386 @@ end
             @test e isa ArgumentError && !occursin("()", e.msg)
             @test occursin("PrecisionMultivariateFit", e.msg) && occursin("TwoLevelFit", e.msg)
             @test occursin("JointPhyloGroupedGaussianFit", e.msg)
+        end
+    end
+end
+
+# N-CORES: replicates on Julia threads. Draws must be bit-identical to n_cores = 1 for the same seed.
+@testset "bootstrap_Sigma_r n_cores (threaded replicates)" begin
+    nth = Threads.nthreads()
+    cores = [k for k in (1, 2, 4) if k <= nth]       # the threaded legs need `julia -t 4`
+    nth < 4 && @info "n_cores testset: only n_cores $(cores) can run with Threads.nthreads() = $nth (start Julia with -t 4)"
+    same(a, b) = all(isequal(getfield(a, f), getfield(b, f)) for f in
+        (:point_est, :ci_lower, :ci_upper, :n_effective, :n_boot, :n_failed, :level, :what, :draws, :diagnostics))
+    # run with n_cores = 1 as reference, then every available k; the logs (warnings) must match too
+    function agree(mk; min_level = Logging.Warn)
+        ref, lg1 = _logged(() -> mk(1), min_level = min_level)
+        ok = true
+        for k in cores
+            k == 1 && continue
+            r, lgk = _logged(() -> mk(k), min_level = min_level)
+            ok &= same(ref, r) && sort(_warns(lg1)) == sort(_warns(lgk))
+        end
+        return ok, ref, _warns(lg1)
+    end
+
+    @testset "N1 refusals: n_cores < 1, above Threads.nthreads(), non-integer" begin
+        rng = MersenneTwister(1); yy = randn(rng, 4, 40)
+        ff = fit_gaussian_gllvm(yy; K = 1)
+        for k in (0, -1)
+            e = try _bsig(ff; y = yy, n_boot = 2, n_cores = k, progress = false); nothing catch ex; ex end
+            @test e isa ArgumentError && occursin("n_cores must be >= 1", e.msg)
+        end
+        e = try _bsig(ff; y = yy, n_boot = 2, n_cores = nth + 1, progress = false); nothing catch ex; ex end
+        @test e isa ArgumentError && occursin("exceeds Threads.nthreads() = $nth", e.msg) && occursin("-t", e.msg)
+        @test_throws TypeError _bsig(ff; y = yy, n_boot = 2, n_cores = 1.5, progress = false)
+        # the refusal happens before any refit
+        n = Threads.Atomic{Int}(0)
+        try _bsig(ff; y = yy, n_boot = 2, n_cores = nth + 1, progress = false, _refit = (yb; kw...) -> (Threads.atomic_add!(n, 1); ff)) catch; end
+        @test n[] == 0
+    end
+
+    @testset "N2 GllvmFit stub: identical draws and failure count for n_cores in $(cores)" begin
+        rng = MersenneTwister(20261102); yy = [0.9, 0.6, 0.4, -0.5] * randn(rng, 1, 120) + 0.5 * randn(rng, 4, 120)
+        ff = fit_gaussian_gllvm(yy; K = 1)
+        # depends on the replicate data only (never on call order): ok iff hash(Y) % 4 != 0, scale varies with Y
+        stub = (yb; kw...) -> _scaled(ff, 1.0 + 0.2 * abs(mean(yb)) * 5; ok = hash(yb) % 4 != 0)
+        ok, ref, ws = agree(k -> _bsig(ff; y = yy, what = [:Sigma, :communality], n_boot = 41, seed = 7, keep_draws = true,
+                                       progress = false, n_cores = k, _refit = stub))
+        @test ok
+        @test 0 < ref.n_failed < 41                      # the control is live: some replicates fail, some do not
+        @test any(occursin("replicates were lost", w) && occursin("$(ref.n_failed) failed refits", w) for w in ws)
+        @test count(d -> all(isnan, d.Sigma_B), ref.draws) == ref.n_failed
+    end
+
+    @testset "N3 TwoLevelFit stub" begin
+        f = _mk2()
+        stub = (yb, i; kw...) -> _mk2(0.8 + abs(mean(yb)), 1.0 + abs(mean(yb[:, 1:2:end])); ok = hash(yb) % 5 != 0)
+        ok, ref, _ = agree(k -> _bsig(f; individual = _IND, n_boot = 25, seed = 3, keep_draws = true, progress = false,
+                                      n_cores = k, _refit = stub))
+        @test ok && 0 < ref.n_failed < 25
+    end
+
+    @testset "N4 PMV and JPG stubs (thrown, non-converged and converged mixed)" begin
+        phy8 = PrecisionPhy(GLLVModels.random_balanced_tree(8; branch_length = 0.35)); sid8 = repeat(1:8, inner = 2)
+        Y8 = _pmv_truth_data(MersenneTwister(20261103), phy8, sid8; beta = [0.4, -0.3],
+                             loading = reshape([0.8, -0.5], 2, 1), unique = [0.3, 0.2], residual = [0.1, 0.12])
+        fp = _quiet(() -> _PG.fit_precision_multivariate(Y8, phy8; rank = 1, mode = :explicitunique, species_id = sid8))
+        fpn = _quiet(() -> _PG.fit_precision_multivariate(Y8, phy8; rank = 1, mode = :explicitunique, species_id = sid8, iterations = 1))
+        @test fp.converged && !fpn.converged
+        pstub = (Y, phy; kw...) -> (h = hash(Y) % 3; h == 0 ? error("boom") : h == 1 ? fpn : fp)
+        ok, ref, _ = agree(k -> _bsig(fp; level = :phy, n_boot = 30, seed = 5, keep_draws = true, progress = false,
+                                      n_cores = k, _refit = pstub))
+        @test ok && ref.n_failed > 0 && ref.n_failed < 30
+
+        phy6 = PrecisionPhy(GLLVModels.random_balanced_tree(6; branch_length = 0.35)); sid6 = repeat(1:6, inner = 4)
+        uni = repeat(1:8, inner = 3)
+        Yr = _jpg_truth_data(MersenneTwister(20261103), phy6, sid6, (unit = uni,); beta = [0.4, -0.3, 0.7],
+                             loading = reshape([0.8, -0.5, 0.6], 3, 1), uniq = nothing, ordvars = [[0.25, 0.20, 0.30]],
+                             residual = [0.30, 0.40, 0.35])
+        fj = _quiet(() -> _PG.fit_joint_phylo_grouped_gaussian(Yr, phy6; rank = 1, phylo_mode = :barelowrank,
+                terms = _jpg_terms([:unit]), unit = uni, species_id = sid6))
+        jstub = (Y, phy; kw...) -> hash(Y) % 4 == 0 ? error("boom") : fj
+        ok, ref, _ = agree(k -> _bsig(fj; level = :phy, n_boot = 30, seed = 5, keep_draws = true, progress = false,
+                                      n_cores = k, _refit = jstub))
+        @test ok && 0 < ref.n_failed < 30
+        @test ref.diagnostics.n_thrown == ref.n_failed          # JPG status counters also reduce identically
+    end
+
+    @testset "N5 real refits: GllvmFit (rr and has_diag), TwoLevelFit, PMV, JPG" begin
+        rng = MersenneTwister(20261101)
+        yy = [0.9, 0.6, 0.4, -0.5] * randn(rng, 1, 150) + 0.5 * randn(rng, 4, 150)
+        f1 = fit_gaussian_gllvm(yy; K = 1); f2 = fit_gaussian_gllvm(yy; K = 1, has_diag = true)
+        for ff in (f1, f2)
+            ok, ref, _ = agree(k -> _bsig(ff; y = yy, what = [:Sigma, :communality], n_boot = 12, seed = 11,
+                                          keep_draws = true, progress = false, n_cores = k))
+            @test ok && ref.n_failed == 0
+        end
+        pp, nind, nobs = 3, 20, 3; ind = repeat(1:nind, inner = nobs)
+        ΛB = reshape([0.9, 0.6, -0.4], pp, 1); ΛW = reshape([0.4, -0.3, 0.5], pp, 1)
+        Y = Matrix{Float64}(undef, pp, nind * nobs)
+        for i in 1:nind
+            b = ΛB * randn(rng, 1) + sqrt.([0.3, 0.2, 0.25]) .* randn(rng, pp)
+            for j in ((i - 1) * nobs + 1):(i * nobs)
+                Y[:, j] = b + ΛW * randn(rng, 1) + sqrt.([0.5, 0.4, 0.45]) .* randn(rng, pp)
+            end
+        end
+        tf = fit_twolevel_gaussian(Y, ind; K_B = 1, K_W = 1)
+        ok, ref, _ = agree(k -> _bsig(tf; individual = ind, n_boot = 8, seed = 2, keep_draws = true, progress = false, n_cores = k))
+        @test ok && ref.n_failed == 0
+
+        phy8 = PrecisionPhy(GLLVModels.random_balanced_tree(8; branch_length = 0.35)); sid8 = repeat(1:8, inner = 2)
+        Y8 = _pmv_truth_data(MersenneTwister(20261103), phy8, sid8; beta = [0.4, -0.3],
+                             loading = reshape([0.8, -0.5], 2, 1), unique = [0.3, 0.2], residual = [0.1, 0.12])
+        fp = _quiet(() -> _PG.fit_precision_multivariate(Y8, phy8; rank = 1, mode = :explicitunique, species_id = sid8))
+        ok, ref, _ = agree(k -> _bsig(fp; level = :phy, n_boot = 8, seed = 4, keep_draws = true, progress = false, n_cores = k))
+        @test ok
+
+        phy6 = PrecisionPhy(GLLVModels.random_balanced_tree(6; branch_length = 0.35)); sid6 = repeat(1:6, inner = 4)
+        uni = repeat(1:8, inner = 3)
+        Yr = _jpg_truth_data(MersenneTwister(20261103), phy6, sid6, (unit = uni,); beta = [0.4, -0.3, 0.7],
+                             loading = reshape([0.8, -0.5, 0.6], 3, 1), uniq = nothing, ordvars = [[0.25, 0.20, 0.30]],
+                             residual = [0.30, 0.40, 0.35])
+        fj = _quiet(() -> _PG.fit_joint_phylo_grouped_gaussian(Yr, phy6; rank = 1, phylo_mode = :barelowrank,
+                terms = _jpg_terms([:unit]), unit = uni, species_id = sid6))
+        ok, ref, _ = agree(k -> _bsig(fj; level = :phy, n_boot = 8, seed = 4, keep_draws = true, progress = false, n_cores = k))
+        @test ok
+    end
+
+    @testset "N6 a throwing refit in one thread is one failed replicate; InterruptException propagates" begin
+        rng = MersenneTwister(5); yy = randn(rng, 4, 60); ff = fit_gaussian_gllvm(yy; K = 1)
+        bad = Ref(UInt64(0))
+        # first replicate-data hash is the thrower: found with a serial dry run so the test is order-free
+        seen = UInt64[]
+        _quiet(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 9, seed = 2, progress = false,
+                           _refit = (yb; kw...) -> (push!(seen, hash(yb)); ff)))
+        bad[] = seen[5]
+        thrower = (yb; kw...) -> hash(yb) == bad[] ? error("injected") : ff
+        ok, ref, _ = agree(k -> _bsig(ff; y = yy, what = :Sigma, n_boot = 9, seed = 2, keep_draws = true, progress = false,
+                                      n_cores = k, _refit = thrower))
+        @test ok && ref.n_failed == 1 && all(isnan, ref.draws[5].Sigma_B) && all(isfinite, ref.draws[4].Sigma_B)
+        for k in cores
+            k == 1 && continue
+            @test_throws InterruptException _quiet(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 9, seed = 2, progress = false,
+                n_cores = k, _refit = (yb; kw...) -> hash(yb) == bad[] ? throw(InterruptException()) : ff))
+                        boom = GllvmFit(ff.model, merge(ff.pars, (Λ = _BsigBoom(4),)), ff.logLik, 1, true, ff.optim_result, 0.0)
+            @test_throws InterruptException _quiet(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 9, seed = 2, progress = false,
+                n_cores = k, _refit = (yb; kw...) -> hash(yb) == bad[] ? boom : ff))
+        end
+    end
+
+    @testset "N7 progress and logger handling under threads" begin
+        rng = MersenneTwister(6); yy = randn(rng, 4, 60); ff = fit_gaussian_gllvm(yy; K = 1)
+        for k in cores
+            _, lg = _logged(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 12, seed = 1, progress = true, n_cores = k,
+                                        _refit = (yb; kw...) -> ff))
+            msgs = [m for m in _infos(lg) if occursin("replicate", m) && !occursin("replicates", m)]
+            @test sort(msgs) == sort(["bootstrap_Sigma_r: replicate $b / 12" for b in 1:12])   # each exactly once
+            # a NullLogger around the call silences every thread (task-inherited logger)
+            @test _quiet(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 6, seed = 1, progress = true, n_cores = k,
+                                     _refit = (yb; kw...) -> ff)) isa GLLVModels.BootstrapSigmaR
+        end
+    end
+
+    @testset "N8 real PMV refit emits no structural-redundancy warning flood on threads" begin
+        phy8 = PrecisionPhy(GLLVModels.random_balanced_tree(8; branch_length = 0.35)); sid8 = repeat(1:8, inner = 2)
+        Y8 = _pmv_truth_data(MersenneTwister(20261103), phy8, sid8; beta = [0.4, -0.3],
+                             loading = reshape([0.8, -0.5], 2, 1), unique = [0.3, 0.2], residual = [0.1, 0.12])
+        fp = _quiet(() -> _PG.fit_precision_multivariate(Y8, phy8; rank = 1, mode = :explicitunique, species_id = sid8))
+        for k in cores
+            _, lg = _logged(() -> _bsig(fp; level = :phy, n_boot = 6, seed = 1, progress = false, n_cores = k), min_level = Logging.Warn)
+            @test length(_warns(lg)) <= 5 && !any(occursin("structurally non-identifiable", m) for m in _warns(lg))
+        end
+    end
+
+    @testset "N9 exactly n_cores workers run concurrently (the threaded path is really used)" begin
+        rng = MersenneTwister(8); yy = randn(rng, 4, 60); ff = fit_gaussian_gllvm(yy; K = 1)
+        for k in cores
+            lk = ReentrantLock(); tasks = Set{UInt}(); inflight = Threads.Atomic{Int}(0); peak = Threads.Atomic{Int}(0)
+            stub = function (yb; kw...)
+                n = Threads.atomic_add!(inflight, 1) + 1
+                Threads.atomic_max!(peak, n)
+                lock(() -> push!(tasks, objectid(current_task())), lk)
+                sleep(0.05)
+                Threads.atomic_sub!(inflight, 1)
+                return ff
+            end
+            _quiet(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 16, seed = 1, progress = false, n_cores = k, _refit = stub))
+            @test length(tasks) == k && peak[] == k
+        end
+    end
+
+    @testset "N10 every replicate is refit exactly once under contention (fast stub, many replicates)" begin
+        rng = MersenneTwister(9); yy = randn(rng, 4, 30); ff = fit_gaussian_gllvm(yy; K = 1)
+        for k in cores
+            k == 1 && continue
+            calls = Threads.Atomic{Int}(0)
+            r = _quiet(() -> _bsig(ff; y = yy, what = :communality, n_boot = 3000, seed = 1, progress = false, n_cores = k,
+                                   _refit = (yb; kw...) -> (Threads.atomic_add!(calls, 1); ff)))
+            @test calls[] == 3000 && r.n_failed == 0 && all(==(3000), r.n_effective.communality_B)
+        end
+    end
+
+    @testset "N11 an interrupt on the MAIN task stops the workers (no orphans)" begin
+        kk = maximum(cores)
+        if kk > 1
+            rng = MersenneTwister(10); yy = randn(rng, 4, 30); ff = fit_gaussian_gllvm(yy; K = 1)
+            done = Threads.Atomic{Int}(0)
+            main = current_task()
+            # deliver the interrupt only once a worker has finished a replicate (a fixed timer races with first-call JIT)
+            Threads.@spawn (while done[] < 1; sleep(0.005); end; sleep(0.1); schedule(main, InterruptException(); error = true))
+            @test_throws InterruptException _quiet(() -> _bsig(ff; y = yy, what = :Sigma, n_boot = 400, seed = 1,
+                progress = false, n_cores = kk, _refit = (yb; kw...) -> (sleep(0.05); Threads.atomic_add!(done, 1); ff)))
+            at_return = done[]
+            sleep(1.0)
+            @test done[] == at_return            # nothing kept running after the call returned
+            @test 1 <= at_return < 400           # a worker had started, and it stopped early (all 400 would take about 5 s at kk = 4)
+        end
+    end
+
+    @testset "N12 the fitter's warn-once identification warning is emitted exactly once under threads" begin
+        kk = maximum(cores)
+        if kk > 1
+            # direct hammer: kk tasks released together call the helper with the key un-set, many trials
+            nwarn = Int[]
+            for trial in 1:300
+                GLLVModels._reset_unidentified_warnings!()
+                go = Threads.Atomic{Bool}(false)
+                lg = _LockedTestLogger(min_level = Logging.Warn)
+                with_logger(lg) do
+                    # the spin needs a safepoint: a bare spin loop on a loaded node blocks the main task's GC and deadlocks
+                    ts = [Threads.@spawn((while !go[]; GC.safepoint(); end; GLLVModels._warn_unidentified_once(:has_diag, "hammer"))) for _ in 1:kk]
+                    go[] = true
+                    foreach(wait, ts)
+                end
+                push!(nwarn, length(lg.logs))
+            end
+            @test all(==(1), nwarn)
+            # through the driver: re-armed set, real has_diag refits
+            rng = MersenneTwister(11); yy = [0.9, 0.6, 0.4, -0.5] * randn(rng, 1, 120) + 0.5 * randn(rng, 4, 120)
+            fd = _quiet(() -> fit_gaussian_gllvm(yy; K = 1, has_diag = true))
+            for trial in 1:5
+                GLLVModels._reset_unidentified_warnings!()
+                _, lg = _logged(() -> _bsig(fd; y = yy, what = :Sigma, n_boot = 16, seed = trial, progress = false, n_cores = kk),
+                                min_level = Logging.Warn)
+                @test count(occursin("has_diag = true with one observation", m) for m in _warns(lg)) == 1
+            end
+        end
+    end
+end
+
+# SUFFICIENT-STATISTIC BUILT-IN REFIT (internal keyword `_sufficient_stat`, 2026-11-03).
+# Evidence: docs/dev-log/check-log.d/2026-11-02-bootstrap-sigma-sufficient-stat-gllvmfit.md and
+# 2026-11-02-bootstrap-sigma-profile.md. The fast objective is the same function as the stock profile
+# NLL (p x p cross products instead of p x n temporaries); only the optimiser path moves, at rounding level.
+@testset "bootstrap_Sigma_r sufficient-statistic refit (GllvmFit built-in refit only)" begin
+    using ForwardDiff
+    _flat(r) = reduce(vcat, [collect(Float64, vec(getfield(d, k))) for d in r.draws for k in keys(d)])
+    _interceptX(p, n) = (X = zeros(p, n, p); for t in 1:p; X[t, :, t] .= 1.0; end; X)
+    # fixtures a (K=1, rr-only), b (K=1, has_diag), c (K=2, has_diag), all p = 6, six-intercept X, Gaussian
+    function _fx(kind; n = 120, seed = 7)
+        rng = MersenneTwister(seed); p = 6
+        K, hd = kind == :a ? (1, false) : kind == :b ? (1, true) : (2, true)
+        Λ = 0.8 .* randn(rng, p, K)
+        y = Λ * randn(rng, K, n) .+ (hd ? 0.35 .* randn(rng, p, n) : 0.0) .+ 0.4 .* randn(rng, p, n) .+ collect(1.0:p)
+        X = _interceptX(p, n)
+        f = _quiet(() -> fit_gaussian_gllvm(y; K = K, has_diag = hd, X = X))
+        return (y = y, X = X, fit = f, K = K, hd = hd, n = n)
+    end
+    fxs = Dict(k => _fx(k) for k in (:a, :b, :c))
+
+    @testset "SS1 objective and ForwardDiff gradient equal the stock ones (K, has_diag, K_W, with and without X)" begin
+        rng = MersenneTwister(11); p = 5; n = 40
+        worst = 0.0; ncase = 0
+        for K in (1, 2), K_W in (0, 1), hd in (false, true), withX in (false, true)
+            q = 2
+            qq = withX ? q : 0
+            y = randn(rng, p, n) .+ 1.0
+            X = withX ? randn(rng, p, n, qq) : nothing
+            spec = (q = qq, p = p, K_B = K, K_W = K_W, has_diag = hd, K_phy = 0, has_phy_unique = false)
+            np = GLLVModels.profile_nparams(spec; profile_beta = false)
+            suff = GLLVModels._gaussian_suff(y, X, qq)
+            f0 = x -> GLLVModels.gaussian_profile_nll(x, y; spec = spec, X = X, profile_beta = false)
+            f1 = x -> GLLVModels.gaussian_profile_nll(x, y; spec = spec, X = X, profile_beta = false, suff = suff)
+            for _ in 1:2
+                x = 0.3 .* randn(rng, np)
+                v0, v1 = f0(x), f1(x)
+                g0, g1 = ForwardDiff.gradient(f0, x), ForwardDiff.gradient(f1, x)
+                worst = max(worst, abs(v0 - v1) / max(1, abs(v0)),
+                            maximum(abs.(g0 .- g1)) / max(1, maximum(abs.(g0))))
+                ncase += 1
+            end
+        end
+        @test ncase >= 30
+        @test worst <= 1e-12
+    end
+
+    @testset "SS2 the stock path is unchanged when the keyword is absent (same fit bit for bit)" begin
+        fx = fxs[:b]
+        f1 = _quiet(() -> fit_gaussian_gllvm(fx.y; K = 1, has_diag = true, X = fx.X))
+        f2 = _quiet(() -> fit_gaussian_gllvm(fx.y; K = 1, has_diag = true, X = fx.X, _sufficient_stat = false))
+        @test f1.logLik == f2.logLik && f1.n_iter == f2.n_iter && f1.pars.θ_packed == f2.pars.θ_packed
+    end
+
+    @testset "SS3 refits agree with the stock path on fixtures a, b, c; equal failure counts" begin
+        # Replicate by replicate through the setup seam (stock vs fast refit of the same simulated data).
+        # Ordinary and Heywood-boundary replicates (both fits stop within 500 iterations): the implied site
+        # covariance, i.e. what the draws are made of, agrees to 5e-5 (evidence: typically 2e-6, up to 3.2e-5 on
+        # Heywood-boundary replicates; 1.2e-5 to 1.6e-5 seen on ordinary ones on Julia 1.12, so 1e-5 is not a
+        # per-replicate guarantee on every platform; aggregated bounds at n_boot = 999 were within 8.1e-6). Flat-ridge replicates (Heywood draws that need >500 iterations; the
+        # fit slides along sigma2_B / sigma2_W / sigma_eps^2 and the relative f_tol test fires at a slightly
+        # different point) agree in logLik to 1e-4 and in covariance only to 2e-3 (evidence notes: up to 4.4e-4
+        # on 999-replicate fixtures; this fixture is more ridge-prone). That is why the keyword is opt-in.
+        for k in (:a, :b, :c)
+            fx = fxs[k]
+            sim, rf0 = GLLVModels._bsig_setup(fx.fit, 8, nothing, fx.n, fx.X, nothing; sufficient_stat = false)
+            _, rf1 = GLLVModels._bsig_setup(fx.fit, 8, nothing, fx.n, fx.X, nothing; sufficient_stat = true)
+            nridge = 0
+            for Y in sim(MersenneTwister(3))
+                f0 = _quiet(() -> rf0(Y)); f1 = _quiet(() -> rf1(Y))
+                @test f0.converged == f1.converged
+                @test abs(f0.logLik - f1.logLik) <= 1e-4
+                dΣ = maximum(abs.(GLLVModels._derived_site_cov(f0) .- GLLVModels._derived_site_cov(f1)))
+                if max(f0.n_iter, f1.n_iter) <= 500
+                    @test dΣ <= 5e-5
+                else
+                    nridge += 1
+                    @test dΣ <= 2e-3
+                end
+            end
+            k == :a && @test nridge == 0
+        end
+        # through the driver: the same failure counts, and (fixtures a, b) draws within 1e-5
+        for k in (:a, :b, :c)
+            fx = fxs[k]
+            run(ss) = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 6, seed = 3, progress = false,
+                                         keep_draws = true, _sufficient_stat = ss))
+            r0, r1 = run(false), run(true)
+            d0, d1 = _flat(r0), _flat(r1)
+            @test length(d0) == length(d1) && !isempty(d0)
+            @test isequal(isnan.(d0), isnan.(d1))
+            ok = .!isnan.(d0)
+            @test maximum(abs.(d0[ok] .- d1[ok])) <= (k == :c ? 2e-3 : 1e-5)
+            @test r0.n_failed == r1.n_failed
+            k != :a && @test !isequal(d0, d1)      # the flag reaches the refit (a never iterates: bit-identical there)
+        end
+    end
+
+    @testset "SS4 same seed gives bit-identical results with the fast refit; a user _refit is never switched" begin
+        fx = fxs[:c]
+        run() = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 4, seed = 9, progress = false,
+                                   keep_draws = true, _sufficient_stat = true))
+        @test isequal(_flat(run()), _flat(run()))
+        # default is the stock path: omitting the keyword equals `_sufficient_stat = false` bit for bit
+        rd = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 4, seed = 9, progress = false, keep_draws = true))
+        rf = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 4, seed = 9, progress = false, keep_draws = true,
+                                _sufficient_stat = false))
+        @test isequal(_flat(rd), _flat(rf))
+        seen = Ref(false)
+        cap = function (yb; kwargs...)
+            seen[] |= haskey(kwargs, :_sufficient_stat)
+            fit_gaussian_gllvm(yb; kwargs...)
+        end
+        _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 2, seed = 9, progress = false,
+                           _sufficient_stat = true, _refit = cap))
+        @test !seen[]
+        # the built-in refit really switches objective: far fewer allocations (measured about 22x less)
+        _, rf0 = GLLVModels._bsig_setup(fx.fit, 1, nothing, fx.n, fx.X, nothing; sufficient_stat = false)
+        _, rf1 = GLLVModels._bsig_setup(fx.fit, 1, nothing, fx.n, fx.X, nothing; sufficient_stat = true)
+        _quiet(() -> (rf0(fx.y); rf1(fx.y)))                      # compile
+        a0 = _quiet(() -> @allocated rf0(fx.y)); a1 = _quiet(() -> @allocated rf1(fx.y))
+        @test a1 < a0 / 5
+    end
+
+    @testset "SS5 threads: n_cores = 4 equals n_cores = 1 bit for bit" begin
+        if Threads.nthreads() >= 4
+            fx = fxs[:b]
+            run(k) = _quiet(() -> _bsig(fx.fit; y = fx.y, X = fx.X, n_boot = 8, seed = 5, progress = false,
+                                        keep_draws = true, n_cores = k, _sufficient_stat = true))
+            @test isequal(_flat(run(1)), _flat(run(4)))
+        else
+            @info "SS5 skipped: needs julia -t 4 (Threads.nthreads() = $(Threads.nthreads()))"
+            @test_skip false
         end
     end
 end
