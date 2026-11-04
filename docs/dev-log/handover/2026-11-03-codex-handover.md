@@ -133,3 +133,5 @@ Mission-control summary:
 | GLLVModels.jl | `6b35956f7` and later | green on merged PRs | `bootstrap_Sigma_r` for 4 fit classes, threaded CI, robust tests, N1b run | 1 Julia setup in negative-controls, 2 N1c on 1101, 3 maintainer sign-offs |
 
 Claude plans, writes prose and gates merges; Codex runs the live Julia/R/Totoro toolchain.
+
+<!-- slop-ok: structured handover record, bold labels are the house format -->
