@@ -112,7 +112,7 @@ function _va_require_canonical_link(fname::AbstractString, link::Link, canonical
 end
 
 """
-    fit_poisson_gllvm_va(Y; K, β_init=nothing, Λ_init=nothing, …) -> PoissonFit
+    fit_poisson_gllvm_va(Y; K, β_init=nothing, λ_init=nothing, …) -> PoissonFit
 
 Fit a Poisson GLLVM by maximising the **variational** lower bound
 ([`poisson_marginal_loglik_va`](@ref)) over `[β; vec(Λ)]` with L-BFGS — the VA
@@ -123,7 +123,7 @@ lower bound on the true log-marginal), so it is directly comparable across VA fi
 but sits slightly below the Laplace `loglik` for the same data.
 """
 function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, n = size(Y)
@@ -133,7 +133,7 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
 
     Zemp = [linkfun(link, max(Y[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc); kk = min(K, length(F.S))
         L = zeros(p, K)
@@ -142,7 +142,7 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     θ0 = vcat(β0, pack_lambda(Λ0))

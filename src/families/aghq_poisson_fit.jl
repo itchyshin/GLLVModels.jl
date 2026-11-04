@@ -12,7 +12,7 @@ Ineligible requests retain Laplace with a warning and recorded reason.
 
 `n_init` (default `1`, a single start) fits from `n_init` starts and returns the one with the
 highest log-likelihood, preferring converged fits. Start 1 is the usual warm start (or your
-`Λ_init`); starts `2:n_init` use lower-triangular `0.3 * randn` loadings from fixed seeds, so the
+`λ_init`); starts `2:n_init` use lower-triangular `0.3 * randn` loadings from fixed seeds, so the
 result is reproducible and the global random stream is untouched. The Laplace likelihood can have
 several local optima, and a fit that reports `converged = true` is a local optimum only
 (#915: on `ade4::mafragh flo table`, `K = 2`, the default start stops 8.4 log-likelihood units below
@@ -100,7 +100,7 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,n_init::Integer=1,aghq=f
         selected.converged,selected.passes,nothing,copy(t),:observed,info)
 end
 # Best of `n_init` Laplace fits (#915). Start 1 is the unchanged default call; the extra
-# starts replace `Λ_init` with a seeded lower-triangular draw. Converged fits rank before
+# starts replace `λ_init` with a seeded lower-triangular draw. Converged fits rank before
 # unconverged ones, then higher `loglik`; ties keep the earlier start, so `n_init = 1` and any
 # case where start 1 wins are exactly the single-start fit.
 function _poisson_best_of_starts(Y,K,n_init,kwargs)
@@ -112,7 +112,7 @@ function _poisson_best_of_starts(Y,K,n_init,kwargs)
         L=0.3 .* randn(Random.Xoshiro(915+s),p,K)
         for k in 1:K,i in 1:min(k-1,p);L[i,k]=0.0;end
         cand=try
-            _fit_poisson_gllvm_laplace(Y;K=K,merge((;kwargs...),(Λ_init=L,))...)
+            _fit_poisson_gllvm_laplace(Y;K=K,merge((;kwargs...),(λ_init=L,))...)
         catch e
             e isa InterruptException && rethrow()
             nothing

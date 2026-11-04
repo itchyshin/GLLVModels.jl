@@ -289,7 +289,7 @@ behaviour.
 function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = _default_hessian(GeneralizedPoisson1(0.0), link),
-        β_init = nothing, Λ_init = nothing, α_init = nothing,
+        β_init = nothing, λ_init = nothing, α_init = nothing,
         α_bound::Real = 2.0,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
@@ -311,7 +311,7 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
          _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
                            guarded = _eta_cap_guarded(link), caller = "fit_gp1_gllvm")   # #874
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -321,7 +321,7 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     N1 = ones(Int, size(Yc))                           # unit trials, hoisted out of the closure

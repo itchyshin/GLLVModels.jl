@@ -53,16 +53,16 @@ function em_fa(y::AbstractMatrix, K::Integer;
         # the returned Λ is rotation-arbitrary (only ΛΛ' is identified).
         # `rng` defaults to a fixed-seed MersenneTwister so calls are
         # reproducible; pass your own `rng` to vary the start.
-        Λ_init = 0.1 .* randn(rng, p, K)
+        λ_init = 0.1 .* randn(rng, p, K)
         for k in 1:K
-            Λ_init[k, k] = abs(Λ_init[k, k]) + 0.5
+            λ_init[k, k] = abs(λ_init[k, k]) + 0.5
         end
         for i in 1:K, k in 1:K
             if i < k
-                Λ_init[i, k] = 0.0
+                λ_init[i, k] = 0.0
             end
         end
-        Λ_init
+        λ_init
     else
         copy(λ_init)
     end

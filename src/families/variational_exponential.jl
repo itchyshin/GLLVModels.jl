@@ -109,7 +109,7 @@ ELBO is derived for the log link only: any other `link` throws `ArgumentError`.
 """
 function fit_exponential_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(),
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
     _va_require_canonical_link("fit_exponential_gllvm_va", link, LogLink())
@@ -119,7 +119,7 @@ function fit_exponential_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
 
     Zemp = log.(max.(Y, 1e-6))
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -129,7 +129,7 @@ function fit_exponential_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     θ0 = vcat(β0, pack_lambda(Λ0))

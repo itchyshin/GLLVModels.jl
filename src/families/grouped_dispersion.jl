@@ -628,12 +628,12 @@ function getLV(fit::NBGroupedFit, Y::AbstractMatrix{<:Integer};
                           N = N, rotate = rotate, mask = mask, offset = offset)
 end
 
-# Warm start shared by the grouped NB2 / Beta / NB1 fitters: `β_init` and `Λ_init` when
+# Warm start shared by the grouped NB2 / Beta / NB1 fitters: `β_init` and `λ_init` when
 # given (the `fit_nb_gllvm` convention, src/families/negbin.jl), otherwise empirical
 # link-scale means and SVD loadings of the centred link-scale data. As in `fit_nb_gllvm`,
 # a supplied `β_init` also centres the data the default loadings are taken from. With
 # `guarded`, a `β_init` entry above the η clamp falls back to the default (#874).
-function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init;
+function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, λ_init;
                              offset = nothing, mask = nothing, guarded::Bool = false,
                              caller::AbstractString = "fit")
     p, n = size(Zemp)
@@ -641,14 +641,14 @@ function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init;
         length(β_init) == p || throw(ArgumentError(
             "β_init has length $(length(β_init)); expected p = $p"))
     end
-    if Λ_init !== nothing
-        size(Λ_init) == (p, K) || throw(ArgumentError(
-            "Λ_init has size $(size(Λ_init)); expected (p, K) = ($p, $K)"))
+    if λ_init !== nothing
+        size(λ_init) == (p, K) || throw(ArgumentError(
+            "λ_init has size $(size(λ_init)); expected (p, K) = ($p, $K)"))
     end
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
          _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = mask,
                            guarded = guarded, caller = caller)
-    Λ_init === nothing || return β0, collect(float.(Λ_init))
+    λ_init === nothing || return β0, collect(float.(λ_init))
     Zc = Zemp .- β0
     F = svd(Zc); kk = min(K, length(F.S))
     Λ0 = zeros(p, K)
@@ -660,7 +660,7 @@ end
 
 """
     fit_nb_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
-                         hessian=:observed, β_init=nothing, Λ_init=nothing,
+                         hessian=:observed, β_init=nothing, λ_init=nothing,
                          optimizer=nothing, …) -> NBGroupedFit
 
 Fit a negative-binomial GLLVM with grouped / species-specific dispersion (gllvm's
@@ -681,7 +681,7 @@ site that still fails makes the objective return its failure sentinel. With one 
 matches [`fit_nb_gllvm`](@ref) when `hessian=:fisher`. `hessian=:observed` (the
 default) uses the exact conditional NB2/log curvature used by TMB's Laplace
 objective; set `hessian=:fisher` to retain the expected-information approximation.
-`β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
+`β_init` (length p) and `λ_init` (p×K) replace the default warm start when given,
 as in [`fit_nb_gllvm`](@ref); `r_group` still starts at `r₀ = 10`.
 `optimizer` accepts `:lbfgs`, `:bfgs`, or a configured Optim method object.
 `nothing` preserves the historical initial LBFGS, boundary restarts, and
@@ -691,7 +691,7 @@ executed stage. [`optimizer_info`](@ref) retains the per-attempt results.
 """
 function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
         link::Link = LogLink(), mask = nothing, offset = nothing,
-        hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
+        hessian::Symbol = :observed, β_init = nothing, λ_init = nothing,
         optimizer = nothing, g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
@@ -709,7 +709,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, mask = msk,
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, λ_init; offset = offset, mask = msk,
                                  guarded = true, caller = "fit_nb_gllvm_grouped")   # #874
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
 
@@ -1412,7 +1412,7 @@ end
 
 """
     fit_beta_gllvm_grouped(Y; K, group, link=LogitLink(), mask=nothing, offset=nothing,
-                           hessian=:observed, β_init=nothing, Λ_init=nothing, …) -> BetaGroupedFit
+                           hessian=:observed, β_init=nothing, λ_init=nothing, …) -> BetaGroupedFit
 
 Fit a Beta GLLVM with grouped / species-specific precision (gllvm's `disp.group`):
 species `t` shares precision `φ[group[t]]`. `group` is a length-p vector of group
@@ -1428,13 +1428,13 @@ only. This improves the local search but does not guarantee the global maximum. 
 group this matches [`fit_beta_gllvm`](@ref). `hessian=:observed` (the default)
 uses the exact conditional Beta/logit curvature used by TMB's Laplace objective;
 set `hessian=:fisher` to retain the expected-information approximation.
-`β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
+`β_init` (length p) and `λ_init` (p×K) replace the default warm start when given,
 as in [`fit_nb_gllvm`](@ref); the per-group `φ` still starts at `φ₀ = 10`.
 """
 function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogitLink(), mask = nothing, offset = nothing,
-        hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
+        hessian::Symbol = :observed, β_init = nothing, λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
@@ -1453,7 +1453,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init)
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, λ_init)
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
 
     function negll(θ)
@@ -2429,7 +2429,7 @@ _nb1_grouped_g_met(res, g_tol) = (gres = Optim.g_residual(res);
 
 """
     fit_nb1_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
-                          hessian=:observed, β_init=nothing, Λ_init=nothing, …) -> NB1GroupedFit
+                          hessian=:observed, β_init=nothing, λ_init=nothing, …) -> NB1GroupedFit
 
 Fit a negative-binomial type-1 (NB1) GLLVM with grouped / species-specific
 dispersion (gllvm's `disp.group`): species `t` shares dispersion `φ[group[t]]`
@@ -2452,13 +2452,13 @@ approximation.
     already defaulting to `:observed` — matched `gllvmTMB` to 1.3e-8. Aligning this
     default with the NB2 ([`fit_nb_gllvm_grouped`](@ref)) and Beta siblings closes
     the gap. Caught by `test/parity/test_nox_dispersion_parity.jl`.
-`β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
+`β_init` (length p) and `λ_init` (p×K) replace the default warm start when given,
 as in [`fit_nb_gllvm`](@ref); the per-group `φ` still starts at `φ₀ = 1`.
 """
 function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogLink(), mask = nothing, offset = nothing,
-        hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
+        hessian::Symbol = :observed, β_init = nothing, λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
@@ -2476,7 +2476,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
-    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, mask = msk,
+    β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, λ_init; offset = offset, mask = msk,
                                  guarded = _eta_cap_guarded(link),
                                  caller = "fit_nb1_gllvm_grouped")   # #874
     θ0 = vcat(β0, pack_lambda(Λ0), fill(log(1.0), G))

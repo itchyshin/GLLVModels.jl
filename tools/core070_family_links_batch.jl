@@ -214,7 +214,7 @@ function _best_of_multistart_binomial(Y::AbstractMatrix, K::Integer, link;
                 rng = Random.MersenneTwister(seed + s)
                 β0 = randn(rng, p) .* 0.5
                 Λ0 = randn(rng, p, K) .* 0.4
-                fit_binomial_gllvm(Y; K = K, link = link, β_init = β0, Λ_init = Λ0)
+                fit_binomial_gllvm(Y; K = K, link = link, β_init = β0, λ_init = Λ0)
             end
         catch
             nothing

@@ -151,7 +151,7 @@ depends only on the observed cells (gllvm-style NA handling).
 function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed,
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     _check_response_support(:positive, Y, _resolve_obs_mask(mask, Y); caller = "fit_exponential_gllvm")
@@ -174,7 +174,7 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
          _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
                            guarded = _eta_cap_guarded(link), caller = "fit_exponential_gllvm")   # #874
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -184,7 +184,7 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     θ0 = vcat(β0, pack_lambda(Λ0))

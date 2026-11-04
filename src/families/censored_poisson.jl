@@ -197,7 +197,7 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         censored = nothing,
         lower = nothing, upper = nothing,
         mask = nothing, offset = nothing,
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     link isa LogLink || throw(ArgumentError(
@@ -265,7 +265,7 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
          _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
                            guarded = _eta_cap_guarded(link), caller = "fit_censored_poisson_gllvm")   # #874
     Zc = Zemp .- β0
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         F = svd(Zc)
         kk = min(K, length(F.S))
         Lmat = zeros(p, K)
@@ -274,7 +274,7 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         end
         Lmat
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     θ0 = vcat(β0, pack_lambda(Λ0))

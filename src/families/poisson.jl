@@ -195,7 +195,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing, weights = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Poisson(), link),
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, λ_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
@@ -272,7 +272,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
          _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
                            guarded = _eta_cap_guarded(link), caller = "fit_poisson_gllvm")   # #874
     Zc = Zemp .- β0
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         F = svd(Zc)
         kk = min(K, length(F.S))
         L = zeros(p, K)
@@ -281,7 +281,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     # alpha_lv warm start: least-squares regression of the initial PPCA scores on X_lv.
