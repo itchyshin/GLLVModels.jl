@@ -3089,6 +3089,14 @@ continuous positive part, so the `:dunnsmyth` randomized quantile residual draws
 `u` uniform on `[0, F(0)]` at `y=0` and is the deterministic PIT `Φ⁻¹(F(y))` for
 `y>0` — ≈ N(0,1) under a correct model (pass a fixed `rng` to reproduce). `:pearson`
 returns `(Y − μ) / √(φ μ^p)`.
+
+!!! note "Dunn–Smyth values are capped at ±7.034"
+    Unlike the other families (#767), the Tweedie `:dunnsmyth` residual is clamped:
+    `u` is limited to `[1e-12, 1 − 1e-12]` before `Φ⁻¹`, so `|z| ≤ Φ⁻¹(1 − 1e-12) ≈ 7.034`.
+    The Tweedie CDF is a 200-point Simpson quadrature with no upper-tail CDF, so a tail
+    probability below about `1e-12` is under its resolution; two gross outliers can
+    therefore both show exactly `±7.034`. Use `|z| ≳ 7` as an outlier flag, not as a measure
+    of how extreme the observation is.
 """
 function residuals(fit::TweedieFit, Y::AbstractMatrix{<:Real};
                    type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng())
