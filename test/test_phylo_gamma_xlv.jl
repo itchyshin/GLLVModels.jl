@@ -68,6 +68,38 @@ function _dense_leaf_phylo_gamma_xlv_loglik(Y, beta, Lambda, alpha_lv,
         maximum(abs, delta) < tol && break
     end
 
+    # Newton above uses expected (Fisher) weights, as the sparse evaluator's mode
+    # search does. The Laplace log-det must use the OBSERVED information at the
+    # mode, matching the evaluator's `_default_hessian` (= :observed for this
+    # non-canonical log link).
+    H = zeros(n_z + p, n_z + p)
+    @inbounds for s in 1:n, k in 1:K
+        H[(s - 1) * K + k, (s - 1) * K + k] += 1.0
+    end
+    @views H[(n_z + 1):end, (n_z + 1):end] .+= Pa
+    @inbounds for s in 1:n, t in 1:p
+        eta_ts = beta[t] + mean_eta[t, s] + a[t]
+        for k in 1:K
+            eta_ts += Lambda[t, k] * eps[s, k]
+        end
+        eta_c = GLLVModels._clamp_eta(eta_ts)
+        mu_ts = exp(eta_c)
+        me_ts = GLLVModels.mu_eta(LogLink(), eta_c)
+        weight_ts = GLLVModels._glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s],
+                                               LogLink(), eta_c)
+        aidx = n_z + t
+        H[aidx, aidx] += weight_ts
+        for k in 1:K
+            zidx_k = (s - 1) * K + k
+            ltk = Lambda[t, k]
+            H[zidx_k, aidx] += weight_ts * ltk
+            H[aidx, zidx_k] += weight_ts * ltk
+            for j in 1:K
+                H[zidx_k, (s - 1) * K + j] += weight_ts * ltk * Lambda[t, j]
+            end
+        end
+    end
+
     q = -0.5 * sum(abs2, eps) - 0.5 * dot(a, Pa * a)
     @inbounds for s in 1:n, t in 1:p
         eta_ts = beta[t] + mean_eta[t, s] + a[t]
