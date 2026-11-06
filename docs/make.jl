@@ -41,6 +41,7 @@ makedocs(;
             "Covariance & Correlation" => "covariance-correlation.md",
             "Confidence intervals" => "confidence-intervals.md",
             "Worked example: bootstrap_Sigma_r" => "bootstrap-sigma-r-example.md",
+            "Worked example: bootstrap_Sigma_r, phylogenetic tier" => "bootstrap-sigma-r-phy-example.md",
             "Diagnostics and model comparison" => "diagnostics.md",
         ],
         "Tested models and limits" => [

@@ -12,9 +12,23 @@ _shard_spec = get(ENV, "GLLVM_TEST_SHARD", "")
 _SHARD = isempty(_shard_spec) ? nothing : _parse_shard_spec(_shard_spec)
 
 _shard_pos = Ref(0)
+
+# Files whose coverage depends on Julia threads (their testset skips legs when
+# Threads.nthreads() is too small). CI sets GLLVM_TEST_REQUIRE_THREADS=4 on every
+# sharded job and JULIA_NUM_THREADS=4 on every sharded job; if
+# an include moves to a single-threaded shard this fails loudly rather than letting
+# the legs skip silently. Unset (default, local runs) = no check.
+_THREADED_FILES = ("test_bootstrap_sigma_r.jl",)
+_REQUIRE_THREADS = something(tryparse(Int, get(ENV, "GLLVM_TEST_REQUIRE_THREADS", "")), 0)
+
 function _shard_include(path::AbstractString)
     _shard_pos[] += 1
     if _SHARD === nothing || (_shard_pos[] - 1) % _SHARD[2] == _SHARD[1] - 1
+        if _REQUIRE_THREADS > 0 && path in _THREADED_FILES
+            @testset "threaded file $path needs Julia threads" begin
+                @test Threads.nthreads() >= _REQUIRE_THREADS
+            end
+        end
         include(path)
     end
 end
@@ -94,6 +108,7 @@ println(_SHARD === nothing ?
     _shard_include("test_joint_phylo_grouped_alias_public.jl")
     _shard_include("test_joint_phylo_grouped_interior.jl")
     _shard_include("test_joint_phylo_grouped_postfit.jl")
+    _shard_include("test_extract_phylo_signal_joint.jl")
     _shard_include("test_destination_b_precision_public.jl")
     _shard_include("test_marginal_target_intervals.jl")
     _shard_include("test_ppca_init.jl")
@@ -174,28 +189,18 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_xlv.jl")
     _shard_include("test_phylo_beta_xlv.jl")
 
-    # UN-WIRED 2026-08-25, having briefly been wired in. test_phylo_binomial_xlv,
-    # test_phylo_nb_xlv, test_phylo_ordinal_xlv and test_sparse_phy_grad pass
-    # locally but fail on CI, on DIFFERENT platform subsets each time:
-    #
-    #   macOS 1.12      ordinal (6), nb (2), sparse_phy_grad (1), binomial (1)
-    #   Windows 1.12    nb (2), sparse_phy_grad (1), binomial (1)
-    #   ubuntu 1.10     nb (2)
-    #
-    # Different platforms failing different subsets is instability, not a
-    # deterministic bug. The failing assertions are the tell: `prof.pd_hessian`,
-    # profile-CI endpoint status, and NaN/inverted CI bounds — all
-    # optimiser-path and BLAS sensitive.
-    #
-    # This is very likely WHY they were orphaned. Wiring them in on the strength
-    # of one local run, on one platform and one Julia version, was premature —
-    # "passes locally" is not evidence that a numerically sensitive test is
-    # stable. They need stabilising (fixed seeds per platform, or tolerance
-    # analysis, or a `@test_broken`), which is its own slice and should be done
-    # by someone looking at the numerics, not folded into a curvature PR.
-    #
-    #   include("test_phylo_binomial_xlv.jl")
-    #   include("test_phylo_nb_xlv.jl")
+    # #948: wire NB and binomial xlv. Profile-CI canaries stay behind
+    # GLLVM_XLV_CANARY=1 (pd_hessian / endpoint_status / NaN bounds are
+    # optimiser-path and BLAS sensitive; they failed on this 1.10.12
+    # snapshot too). Likelihood identities, likelihood ArgumentError
+    # guards, and the cheap profile ArgumentError guards run in CI.
+    # The NB sparse-vs-dense-leaf identity is `@test_broken` (1.3e-2
+    # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv
+    # and test_sparse_phy_grad stay unwired (same flake class; not in #948).
+    _shard_include("test_phylo_binomial_xlv.jl")
+    _shard_include("test_phylo_nb_xlv.jl")
+    _shard_include("test_xlv_nb_binomial_wired.jl")
+
     #   include("test_phylo_ordinal_xlv.jl")
     #   include("test_sparse_phy_grad.jl")
 
@@ -520,6 +525,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_grouped_dispersion.jl")
     _shard_include("test_bridge_capabilities.jl")
     _shard_include("test_mixed_mode_search.jl")
+    _shard_include("test_mixed_contract.jl")
     _shard_include("test_bridge_mixed.jl")
     _shard_include("test_bridge_x.jl")
     _shard_include("test_bridge_zib.jl")
@@ -637,6 +643,8 @@ println(_SHARD === nothing ?
     # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
     _shard_include("test_zip_zinb_stall.jl")
     _shard_include("test_zip_observed_laplace.jl")
+    # #926: ZIP betaz-hat matches the exact-likelihood betaz (Wald centre), not the Fisher-Laplace one.
+    _shard_include("test_zip_betaz_wald_926.jl")
     _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
     _shard_include("test_input_validation.jl")
