@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-2026-10-31: PR #1019 narrowed to #1007 (README `Y`). The #1008
-`λ_init` alias on Laplace routes was removed: #1008 was a keyword
-error (`Λ_init` works; 6/6 starts clean on aed938e). The
-`λ_init`/`Λ_init` naming question stays on #149. README examples
-run on shard 1 only.
-
-2026-10-30: README optimizer example defines `Y` (#1007).
-See after-task/2026-10-30-readme-lambda-init-1007-1008.md.
-=======
 2026-10-31: #1005 body restores Closes #948 plus intended-closes so
 the wrong-close guard accepts commit 1cde1b673. The `@test_broken`
 comment cites #1018; the owed draft points at the filed issue.
@@ -27,7 +17,14 @@ after-task/2026-10-31-wire-xlv-nb-binomial-948-review.md.
 into runtests.jl (#948). Profile canaries stay behind GLLVM_XLV_CANARY.
 Focused run: 29 passed, 0 failed, 1 skip. See
 after-task/2026-10-25-wire-xlv-nb-binomial-948.md.
->>>>>>> origin/main
+2026-10-31: PR #1019 narrowed to #1007 (README `Y`). The #1008
+`λ_init` alias on Laplace routes was removed: #1008 was a keyword
+error (`Λ_init` works; 6/6 starts clean on aed938e). The
+`λ_init`/`Λ_init` naming question stays on #149. README examples
+run on shard 1 only.
+
+2026-10-30: README optimizer example defines `Y` (#1007).
+See after-task/2026-10-30-readme-lambda-init-1007-1008.md.
 
 2026-10-25: Family CI bootstrap and profile-refit rethrow
 InterruptException. A "not supported" simulate stub is now
