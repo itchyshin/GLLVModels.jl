@@ -663,11 +663,13 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
         cursor += rr
         τ̂ = _unpack_cutpoints(@view(θ̂[(cursor + 1):(cursor + C - 1)]))
+        _warn_runaway_loadings(Λ̂, "Ordinal")
         return OrdinalFit(Λ̂, τ̂, C, link, _fit_verdict(res)...,
                           alpha_hat, collect(Float64, θ̂))
     else
         Λ̂ = unpack_lambda(θ̂[1:rr], p, K)
         τ̂ = _unpack_cutpoints(θ̂[(rr + 1):(rr + C - 1)])
+        _warn_runaway_loadings(Λ̂, "Ordinal")
         return OrdinalFit(Λ̂, τ̂, C, link, _fit_verdict(res)...)
     end
 end
@@ -735,6 +737,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     β̂ = collect(@view θ̂[1:p])
     Λ̂ = unpack_lambda(@view(θ̂[(p + 1):(p + rr)]), p, K)
     τ̂ = _unpack_cutpoints_pertrait(@view(θ̂[(p + rr + 1):(p + rr + ncut)]), C)
+    _warn_runaway_loadings(Λ̂, "Ordinal")
     return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, _fit_verdict(res)...)
 end
 
@@ -851,6 +854,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(@view(θ̂[(p + q + 1):(p + q + rr)]), p, K)
     τ̂ = _unpack_cutpoints_pertrait(@view(θ̂[(p + q + rr + 1):(p + q + rr + ncut)]), C)
+    _warn_runaway_loadings(Λ̂, "Ordinal")
     return OrdinalPerTraitCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, τ̂, C, link,
                                  _fit_verdict(res)...)
 end
