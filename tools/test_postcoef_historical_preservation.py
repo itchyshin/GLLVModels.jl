@@ -18,6 +18,12 @@ LEGACY = f'{receipt.REC_REL}/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json'
 NEW = f'{receipt.REC_REL}/cases/CORE070-POSTFIT-COEF-THREE-FIT-NATIVE.json'
 
 class HistoricalPreservationTests(unittest.TestCase):
+    def test_historical_scalar_text_rederives_without_receipt_changes(self):
+        historical = receipt.load(receipt.ROOT / LEGACY)
+        raw = receipt.load(receipt.REC / 'postfit-policy-p1' / 'julia-results.json')
+        expected = receipt.integer_text(receipt.COEF_EMPTY_CID, raw['cases'][receipt.COEF_EMPTY_CID])
+        self.assertEqual({key: historical[key] for key in expected}, expected)
+
     def test_allowlist_has_only_new_case(self):
         paths = receipt.postcoef_evidence_paths()
         self.assertIn(NEW, paths)
