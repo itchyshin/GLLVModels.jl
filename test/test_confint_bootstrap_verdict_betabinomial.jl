@@ -65,7 +65,7 @@ end
 # sentinel and reports converged = false, loglik = -Inf, at iteration 0. It is
 # data-driven, not RNG-driven, so it is the same on every Julia version.
 # The ungrouped fitter refuses y > N up front (#730), so that route uses a stubbed failed refit.
-_bb542_real_bad(route::Symbol) = route !== :ungrouped
+_bb542_real_bad(route::Symbol) = false   # #730: grouped fitters now refuse Y > N up front, so no in-support draw fails (stub)
 
 function _bb542_bad(Y, N)
     B = copy(Y)
