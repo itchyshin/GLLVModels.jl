@@ -1,0 +1,63 @@
+## 2026-11-02: bootstrap_Sigma_r tier :phy, fuzz probes and one R point-estimate check (evidence only)
+
+Docs-only note. It records diagnostic probing of the `:phy` tier of `bootstrap_Sigma_r` on two fit classes, plus one point-estimate comparison of `fit_precision_multivariate` against R gllvmTMB. No source, test, row status, tolerance, receipt or scoreboard change. No pass is claimed and no status moves. PR #990 and `src/confint_derived_wald.jl` were not touched.
+
+Code under test: Stage 1 (PrecisionMultivariateFit) at `bfa00e7a2` on `claude/bsig-phy-tier-20261102` (PR #1069 head). Stage 2 (JointPhyloGroupedGaussianFit) at `feb9628cb` on `claude/bsig-stage2-jpg-20261102`; that branch tip later moved to `0ba0f647a` (a merge of main plus changes to the test file), and `src/` is unchanged between the two, so the findings apply to the tip. The planned worktrees no longer existed on disk, so branch archives were used. Raw scripts and outputs are in the session scratchpad and were copied to `~/hsq_work/claude-phy-20261102/fz/` on Totoro; they are not committed here.
+
+### Headline
+
+Neither stage found a crash, a wrong shape, a wrong label mapping, a non-reproducible seeded result inside one machine and Julia version, or an input fit that was mutated. Stage 1 found no defect in `bootstrap_Sigma_r` itself; its one medium finding is a warning flood from the fitter layer below it. Stage 2 found one missing refusal and two undocumented scale dependences. Everything below is a lead for a later slice, and nothing was repaired.
+
+### Findings
+
+Severity: Medium means a documented guarantee does not hold or a user is likely to hit it; Low means cosmetic or narrow; Info means documented behaviour worth recording. Classification: bug, limitation, or gap (missing capability, refusal or polish).
+
+| ID | Severity | Class | Which class | Summary | Repro pointer |
+|---|---|---|---|---|---|
+| S1-F1 | Medium | bug | PrecisionMultivariateFit (`_pmv_layout`, src/precision_multivariate_fit.jl) | `_warn_covariance_redundancy` fires on every likelihood call, so a legitimate once-per-fit warning is emitted thousands of times. Affected (d, rank) with `:explicitunique`: d=2 rank 1 (1812 warnings per fit), d=2 rank 2 (838), d=5 rank 3 (6484); d=5 rank 2 gave 0. `bootstrap_Sigma_r(n_boot=3)` on d=2 rank 1 gave 3181 warnings. Two named min_boot configs gave 277,854 to 373,074 in one 199-replicate run. A figure for n_boot=999 was extrapolated and is unverified. `progress = false` does not silence it. | `fz1/repro_warnflood.jl` |
+| S1-F2 | Low | limitation | PrecisionMultivariateFit | `what` keeps `:cross_corr` although no such entry is produced; `keys(point_est)` is `(:Sigma_phy, :R_phy, :communality_phy)`. ICC is removed from `what`, cross_corr is not. | `fz1/probes_sum.txt` line 3 |
+| S1-F3 | Low | gap (polish) | PrecisionMultivariateFit | Total failure emits two overlapping warnings (lost replicates, then attrition at 0.0%). | `fz1/probes_sum.txt` lines 165-166 |
+| S1-F4 | Low | limitation | PrecisionMultivariateFit | A converged refit with NaN summaries is not counted in `n_failed`; only the attrition warning appears, and Sigma_phy and R_phy bounds are silently all NaN. Documented in the docstring. Reached only through an injected `_refit`, not through the real refit. | `fz1/probes_sum.txt` lines 229-234 |
+| S1-F5 | Low | gap (polish) | PrecisionMultivariateFit | Refusal text for `what = :ICC` or `:cross_corr` alone names the GllvmFit class; some refusals are thrown after the n_boot < min_boot warning has already been emitted; `n_boot = 1` is accepted with only the min_boot warning. | `fz1/probes_sum.txt` lines 67-68, 91-92, 97 |
+| S1-F6 | Info | limitation | PrecisionMultivariateFit | At min_boot (199, conf 0.99) on 32 small configs, 11 had failed refits, almost all `:explicitunique`; worst 11 of 199 (5.5%) at 4 tips, d=2. Each failed refit also prints a raw Optim "Terminated early due to NaN in gradient." warning. The "lost" count matched the all-NaN draw count in every case. Counts are specific to the Totoro run. | `fz1/out_*.txt` |
+| S1-F7 | Low | gap | PrecisionMultivariateFit | If the original fit did not converge, the bootstrap proceeds with no warning about the point-estimate fit. Whether this should be a refusal is a judgement call, as Stage 2 refuses the same case. | `fz1/probes.jl` |
+| S2-F1 | Medium | gap | JointPhyloGroupedGaussianFit | Identification gate reports `:identified` for group terms whose variance cannot be identified: a term with 1 or 2 groups, or a group effect aliased with fixed group indicators in the mean design. The ordinary variance sits at 1e-13 to 1e-15 and the bootstrap runs. The control (one observation per group) is refused correctly. Whether the `:phy` intervals are wrong in these cases was not assessed; only the refusal guarantee failing was shown. The cause is upstream of Stage 2. | `fz/repro.jl` F1a, F1b; `fz/probe3.out` Q1 |
+| S2-F2 | Medium | limitation | JointPhyloGroupedGaussianFit | Convergence uses an absolute gradient norm (g_tol 1e-5) from fixed start values, so rescaling the same data changes the outcome. At scale 10 the original converges but 12 of 40 replicates fail on the Mac (Totoro gave 15 of 40); at scales 0.01 and 100 the original is refused. Not documented. Failed replicates were not concentrated near the boundary in an 80-replicate check, so no evidence of bias in the lower bound was found. | `fz/repro.jl` F2; `fz/probe4.out` R2 |
+| S2-F3 | Medium | limitation | JointPhyloGroupedGaussianFit | Tree branch-length scale acts the same way. At branch length 35 (tree height about 105, ordinary for a tree in million years) 11 of 12 replicates fail on the Mac (Totoro gave 10 of 12); at 350 and 3500 the original is refused. A single survivor gives a zero-width interval with three warnings (no minimum-survivor rule, as in R). At branch length 1e-9 the likelihood is flat, the fit stays at its start value, counts as converged and identified, and the interval has essentially zero width. | `fz/repro.jl` F3; `fz/repro_bl35.jl`; `fz/probe4.out` R1 |
+| S2-F4 | Low | bug | shared helper `_bsig_symvec` (all fit classes) | A String `level` is split into characters, giving a misleading refusal ("unknown level :p"). Nothing wrong is computed. | `fz/repro.jl` F4 |
+| S2-F5 | Low | limitation | JointPhyloGroupedGaussianFit | `result.what` lists `:cross_corr` although none is produced (same as S1-F2). | `fz/repro.jl` F5 |
+| S2-F6 | Low | limitation | JointPhyloGroupedGaussianFit | Same-seed results are not portable. `MersenneTwister(9)` gives different streams in Julia 1.10.0 and 1.12.6. On the same Julia 1.10.0, Mac and Totoro agree to about 1e-6 relative but not bitwise, and the original-Hessian PD flag flips (`original_hessian_pd` false on Mac, true on Totoro), so one warning appears on one machine only. | `fz/cross.mac.out`, `fz/cross.totoro110.out`, `fz/rng.jl` |
+| S2-F7 | Info | limitation | JointPhyloGroupedGaussianFit | Share of converged refits with a non-PD Hessian is often large (12 of 12 for a one-group term; 9 to 11 of 12 in several cases). The docstring's 0 to 71% should not be read as a general bound. Counts are machine specific. | `fz/grid.out`, `fz/probe2.out` |
+| S2-F8 | Low | gap | JointPhyloGroupedGaussianFit | Hand-built fits only, not reachable through the fitter: negative residual variance gives a raw `DomainError`; NaN in an ordinary covariance gives `n_failed = n_boot` with no refusal. | `fz/inject.out` |
+| PR-F1 | Low | gap | oracle tooling | `core070_build_oracle.py verify` fails on the existing P1 oracle build because the build receipt has no `gllvmTMB_version` key. With the two version checks removed, verify passes (commit, source tree, archive, marker, installed tree and log hashes match). Provenance looks intact; the tool cannot say so for older receipts. | Totoro `fz/r-point/tools/verify_noversion.py` |
+| PR-F2 | Low | gap | PrecisionMultivariateFit | No `extract_communality` method (MethodError). Communality was computed from `extract_Sigma(level=:phy)` instead. R has the method. | `fz/comm_probe.jl` |
+| PR-F3 | Low | limitation | PrecisionMultivariateFit | `species_id` indexes tips in Newick leaf order, not by name. A permuted map is a valid index vector, so no refusal is possible; the fit silently describes the wrong model (loading about 6.8 against truth 0.9, `converged = true`). Suggest one documentation sentence. | `fz/sim.jl` before the `tipidx` change; datasets `fz/A5`, `fz/B5` |
+| PR-F4 | Low | limitation | PrecisionMultivariateFit | A boundary fit (Heywood-type, one unique variance near 5e-10) reports `converged = true` with a non-PD Hessian (min eigenvalue -1.0e-7). Convergence is gradient based by design; `hessian_positive_definite` carries the information. | dataset A6 |
+| PR-F5 | Low | limitation | R side | R `nlminb` returned code 1 ("singular convergence (7)") on an interior optimum with gradient 1.2e-4, a positive definite Hessian, and estimates matching Julia and R BFGS to about 1e-6. A check that requires `convergence == 0` would reject this R fit. | dataset B6, nlminb |
+
+### R point-estimate agreement (evidence only)
+
+Julia `fit_precision_multivariate` was compared with R gllvmTMB 0.7.1 at reference commit 9539352f66f2db2cc26b1c393e67212a359b60c9 (`phylo_latent(d = 1)` plus `phylo_unique`, Gaussian, ML). Julia side: rank 1, `:explicitunique`, `residual_mode = :shared`. Both engines used the same phylogenetic covariance (R's inverse tip block against Julia's `PrecisionPhy` tip covariance, max abs difference 1.6e-13 and 4.5e-14).
+
+Design: one random ultrametric tree of 30 tips, 5 traits, 2 replicates per species, simulated in Julia. Two datasets: B6 with an interior solution and a positive definite Hessian, and A6 with a boundary solution (one unique variance near zero). R was run with `nlminb` and with BFGS.
+
+Result, R minus Julia, over both datasets and both R optimisers: logLik difference at most 1.1e-9; Sigma_phy elementwise at most 1.8e-6; unique variances at most 1.3e-6; communality_phy at most 2.5e-6; beta at most 1.3e-6.
+
+Caveats that bound how far this can be read:
+- Two datasets, one tree, one rank, d = 5. It compares point estimates only. It is a different object from a bootstrap comparison, and it is no recovery or coverage study.
+- No pass is recorded and no row status changes. The 1e-6 point-estimate bar used elsewhere was not applied as a gate here; the largest difference (1.8e-6) is above 1e-6 for Sigma_phy under R `nlminb` on B6.
+- R `nlminb` on B6 returned code 1 with gradient 1.2e-4 (PR-F5), though its estimates matched. The Julia fit on A6 is `converged = true` with a non-PD Hessian (PR-F4), and R's Hessian there is essentially singular too.
+- B6 `nlminb` log file is missing from the record; only its printed status and the compare output remain.
+- The R fits took about 1.4 s under low load, and about 20 s under the load at the time of writing; timings are not a benchmark.
+- Julia dependencies were resolved fresh (no Manifest in the archive), so Optim and other versions may differ from the maintainer's.
+- The Julia communality is computed from `extract_Sigma` as `diag(shared)/diag(total)`, the same definition as R's `extract_communality(level = "phy")` with no link residual, because Julia has no method (PR-F2).
+- A d = 3 version was tried and dropped because rank 1 plus three uniques saturates the 3 by 3 covariance. R warned once per fit that `phylo_unique()` is soft-deprecated; the `unique = TRUE` route was not run.
+
+### What was not covered
+
+- Stage 1: no comparison with R, no coverage or recovery assessment, no n_boot near 999 (largest real run 199), 2 cores only, and `bootstrap_Sigma_r` itself was not run on tree sizes above 32 tips.
+- Stage 2: trees above about 12 tips in a refit, no R comparison, no coverage assessment, no multi-thread behaviour, no n_boot above 80, and no public `fit_gllvm` route for this class on the branch, so only the private `fit_joint_phylo_grouped_gaussian` produced fits. Real replicates that are converged but non-identified were never produced (`n_non_identified` was 0); that path was exercised only with injected refits.
+- R point check: other tree shapes or sizes, rank above 1, non-shared residuals, missing cells, REML, intervals, truth recovery, starting-value sensitivity, and the `unique = TRUE` keyword route.
+- Cross-machine and cross-version numbers (S2-F6, S2-F2, S2-F3, S1-F6) were measured on one or two machines only.
+- Stage 1 and Stage 2 ran on different branch tips, so a change between them in the shared helpers was not tested.
+- Nothing here was run on the merged main; no test was added.

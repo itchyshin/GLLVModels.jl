@@ -38,6 +38,49 @@
 # computed via Woodbury through the same A_K factor used for the data
 # quadratic form.
 
+
+# ---------------------------------------------------------------- SCRATCH (ss/gllvmfit): sufficient statistics
+# For the non-phy site-stacked path with beta supplied (pass-through branch), the data enter the
+# quadratic form only through p x p cross-products:
+#   Q = sum_s r_s' At^-1 r_s = tr(At^-1 R),  r_s = y_s - X_s beta,
+#   R = Syy - sum_j beta_j (C_j + C_j') + sum_{jk} beta_j beta_k Sxx_jk
+#   Syy = sum_s y_s y_s',  C_j = sum_s x_sj y_s',  Sxx_jk = sum_s x_sj x_sk'
+# so Q = tr(Ainv Syy) - 2 beta'v + beta'M beta  with  v_j = tr(Ainv C_j), M_jk = tr(Ainv Sxx_jk), and
+# Ainv = At^-1 = D^-1 - D^-1 L A_K^-1 L' D^-1 (p x p, Dual) is formed ONCE per call.
+# S is Float64 and computed once per fit (outside AD).
+function _gaussian_suff(y::AbstractMatrix, X, q::Integer)
+    p, n = size(y)
+    Syy = Matrix{Float64}(y * y')
+    if X === nothing || q == 0
+        return (Syy = Syy, C = nothing, Sxx = nothing, q = 0)
+    end
+    # Cmat[:, j] = vec(C_j'), tr(Ainv C_j) = sum(Ainv .* C_j') = dot(vec(Ainv), vec(C_j'))
+    Cmat = Matrix{Float64}(undef, p * p, q)
+    Sxmat = Matrix{Float64}(undef, p * p, q * q)
+    for j in 1:q
+        Xj = Matrix{Float64}(@view X[:, :, j])
+        Cmat[:, j] = vec((Xj * y')')           # C_j = Xj y'  ->  C_j'
+        for k in 1:q
+            Xk = Matrix{Float64}(@view X[:, :, k])
+            Sxmat[:, (k - 1) * q + j] = vec((Xj * Xk')')   # Sxx_jk' , column index for M[j,k] (col-major reshape)
+        end
+    end
+    return (Syy = Syy, C = Cmat, Sxx = Sxmat, q = Int(q))
+end
+
+function _ss_quad(Ainv::AbstractMatrix, β, suff)
+    a = vec(Ainv)
+    quad = sum(Ainv .* suff.Syy)
+    if suff.q > 0
+        q = suff.q
+        v = suff.C' * a                                 # q
+        Mv = suff.Sxx' * a                              # q^2, entry (k-1)*q + j  = tr(Ainv Sxx_jk)
+        Mm = reshape(Mv, q, q)                          # Mm[j,k]
+        quad = quad - 2 * dot(β, v) + dot(β, Mm * β)
+    end
+    return quad
+end
+
 """
     gaussian_profile_nll(params, y; spec, X=nothing, Σ_phy=nothing,
                          profile_beta=true) -> Real
@@ -60,7 +103,8 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
                               spec::NamedTuple,
                               X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                               Σ_phy::Union{Nothing, AbstractMatrix} = nothing,
-                              profile_beta::Bool = true)
+                              profile_beta::Bool = true,
+                              suff = nothing)
     p = spec.p
     q = spec.q
     K_B = spec.K_B
@@ -242,6 +286,11 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
             quad = quad_y - dot(β_hat, vvec)
         else
             # Pass-through residual computation (β provided or no X)
+            if suff !== nothing
+                # SCRATCH sufficient-statistic form (no p x n Dual temporaries)
+                Ainv = Matrix{Td}(Diagonal(d_inv)) .- DinvL * (cA \ Matrix(DinvL'))
+                quad = _ss_quad(Ainv, β, suff)
+            else
             if X === nothing || q == 0
                 resid = y
             else
@@ -260,6 +309,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
             z = cA \ LtDr
             Ainv_r = Dinv_r .- DinvL * z
             quad = sum(resid .* Ainv_r)
+            end # suff
         end
 
         # Profile σ²_eps from Q̃; build profile NLL.
