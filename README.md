@@ -82,6 +82,15 @@ yet, so this block fits the simpler shared-residual model to the same data and
 passes the data matrix `y` to each call:
 
 ```julia
+using GLLVModels, Random
+
+Random.seed!(0)
+p, K, n = 20, 2, 200
+Λ_true = randn(p, K); for i in 1:K, k in 1:K; if i < k; Λ_true[i, k] = 0; end; end
+for k in 1:K; Λ_true[k, k] = abs(Λ_true[k, k]) + 0.5; end
+ψ_true = 0.15 .+ 0.10 .* rand(p)
+y = Λ_true * randn(K, n) .+ sqrt.(ψ_true) .* randn(p, n)
+
 fit_shared = fit_gaussian_gllvm(y; K = K)
 GLLVModels.confint(fit_shared; y = y)                                 # Wald (default)
 GLLVModels.profile_ci(fit_shared, "sigma_eps"; y = y)                 # profile likelihood
@@ -107,6 +116,9 @@ select either supported solver explicitly and inspect the recorded method:
 ```julia
 using GLLVModels
 
+Y = [1 0 3 2 0 1 4 0 2 1 0 3;
+     0 2 1 0 3 1 0 4 1 0 2 1;
+     2 1 0 3 1 0 2 1 4 0 1 2]
 fit_bfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :bfgs)
 fit_lbfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :lbfgs)
 optimizer_info(fit_bfgs)
@@ -117,6 +129,8 @@ See the [tutorial](docs/src/tutorial.md) for a matched-start comparison and
 convergence and likelihood checks.
 
 ```julia
+using GLLVModels, Distributions
+
 Y_count = [1 0 3 2 0 1 4 0 2 1 0 3;
            0 2 1 0 3 1 0 4 1 0 2 1;
            2 1 0 3 1 0 2 1 4 0 1 2]
