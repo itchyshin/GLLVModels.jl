@@ -74,6 +74,7 @@ println(_SHARD === nothing ?
     _shard_include("test_animal_dep.jl")
     _shard_include("test_docstring_animal_dep_twin.jl")
     _shard_include("test_animal_latent.jl")
+    _shard_include("test_animal_latent_slope_estimand_algebra.jl")
     _shard_include("test_docstring_animal_latent_twin.jl")
     _shard_include("test_spatial_dep.jl")
     _shard_include("test_kernel_indep.jl")
