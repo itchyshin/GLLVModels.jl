@@ -37,7 +37,11 @@ rejects inadmissible `K` before fitting.
 `fit_gaussian_gllvm` warm-starts from PPCA and usually converges in a step or
 two; the non-Gaussian fitters use L-BFGS over a Laplace marginal. Always check
 the `converged` flag — if it is `false`, try a different start or more
-iterations. Standardising responses to a common scale helps the Gaussian path.
+iterations. `converged = true` alone is not the go-ahead to read the results:
+it means the optimizer stopped at a stationary point, not that it found the
+global maximum. For non-Gaussian fits with `K ≥ 2`, refit from several starts
+(`n_init` currently covers Poisson only) and keep the highest log-likelihood
+before reading loadings or comparing AIC. Standardising responses to a common scale helps the Gaussian path.
 
 ## Fewer sites than species (`n < p`)
 

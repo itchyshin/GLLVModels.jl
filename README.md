@@ -55,7 +55,7 @@ fit = fit_gaussian_pervar_gllvm(y; K = K)
 fit.Λ                                 # estimated loadings (p × K)
 fit.ψ²                                # residual variance of each response
 fit.loglik                            # log-likelihood
-fit.converged                         # check this before reading results
+fit.converged                         # necessary, not sufficient: for non-Gaussian K ≥ 2, also refit from several starts
 ```
 
 This is the matrix-first companion to the ordinary R
