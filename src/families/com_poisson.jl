@@ -431,13 +431,14 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_compoisson_gllvm")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized count matrix with a safe placeholder (0) in the masked cells.
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical log-rate intercepts (log of per-species (mean+0.5)) +
     # SVD (PPCA-like) loadings. Masked cells are overwritten with their row's

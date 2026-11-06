@@ -122,6 +122,7 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
     eps = zeros(Float64, n, K)
     u = zeros(Float64, size(Q, 1))
     local H
+    mode_found = false
 
     for _ in 1:maxiter
         grad, H = _phylo_gamma_xlv_grad_hessian(
@@ -160,8 +161,15 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
             step *= 0.5
         end
         accepted || return nothing, nothing, nothing
-        step * max_delta < tol && break
+        if step * max_delta < tol
+            mode_found = true
+            break
+        end
     end
+
+    # `maxiter` exhausted: (eps, u) is not the mode, so a Laplace value built from it
+    # would depend on `maxiter`. Report it as a failed search, like a non-SPD Hessian.
+    mode_found || return nothing, nothing, nothing
 
     # The Newton loop above ran on Fisher; this final assembly, at the CONVERGED
     # mode, is the one whose logdet enters the marginal.

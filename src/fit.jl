@@ -66,6 +66,26 @@ GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration)=
     GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration,nothing)
 
+# Warn once per Julia session per key: refits inside bootstrap and profile
+# loops call the fitter many times and must not repeat the message.
+const _UNIDENTIFIED_WARNED = Set{Symbol}()
+
+# The check-and-push is under a lock: threaded bootstrap refits (bootstrap_Sigma_r with n_cores > 1) call this
+# concurrently, and an unguarded Set both races (double warning) and is not safe to mutate from several tasks.
+const _UNIDENTIFIED_LOCK = ReentrantLock()
+
+function _warn_unidentified_once(key::Symbol, msg::AbstractString)
+    first = lock(_UNIDENTIFIED_LOCK) do
+        key in _UNIDENTIFIED_WARNED && return false
+        push!(_UNIDENTIFIED_WARNED, key)
+        return true
+    end
+    first && @warn msg
+    return nothing
+end
+
+_reset_unidentified_warnings!() = (lock(() -> empty!(_UNIDENTIFIED_WARNED), _UNIDENTIFIED_LOCK); nothing)
+
 """
     fit_gaussian_gllvm(y; K, K_W=0, has_diag=false, K_phy=0,
                        has_phy_unique=false, Σ_phy=nothing, X=nothing,
@@ -109,7 +129,9 @@ Optional extensions:
   how `Λ` and `Λ_W` share that covariance depends on the starting values, so
   tier-scoped summaries (`communality`, `proportions`, `extract_Sigma` at
   `level = :unit` / `:unit_obs`, `getLV`) and Wald SEs of single `Λ` / `Λ_W`
-  entries should not be interpreted. To separate between-unit from
+  entries should not be interpreted. `fit_gaussian_gllvm` warns once per Julia
+  session when `has_diag = true` or `K_W > 0` (a second unidentified fit in
+  the same session is silent). To separate between-unit from
   within-unit variation, use `fit_twolevel_gaussian` on repeated
   observations per unit.
 - J3 phylogenetic: `K_phy::Integer = 0` (Λ_phy rank),
@@ -199,7 +221,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             f_tol = 0.0,
                             g_tol = 1e-6,
                             iterations = 500,
-                            optimizer = nothing)
+                            optimizer = nothing,
+                            _sufficient_stat::Bool = false)
     p, n = size(y)
     default_optimizer = Optim.LBFGS()
     outer_optimizer = _optimizer_method(optimizer, default_optimizer; route = "fit_gaussian_gllvm")
@@ -225,6 +248,26 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             throw(ArgumentError(
                 "Σ_phy must be p × p; got $(size(Σ_phy)) for p = $p"))
     end
+
+    # Each column of `y` is one unit observed once, so the unit and within-unit
+    # tiers are not separately identified (#702, #792). Warn at the point of use.
+    has_diag && _warn_unidentified_once(:has_diag,
+        "has_diag = true with one observation per unit (each column of Y is one " *
+        "unit observed once): the unit-level variances σ²_B and the within-unit " *
+        "variances σ²_W enter the likelihood only through σ²_B + σ²_W + σ²_eps, so " *
+        "they are not identified. The fit can look converged while its Hessian is " *
+        "not positive definite; do not interpret the σ²_B / σ²_W split or their " *
+        "standard errors. The total Σ_y and the log-likelihood are unaffected. For " *
+        "a between-unit / within-unit decomposition use fit_twolevel_gaussian on " *
+        "repeated observations per unit (refs #792). Issued once per Julia session.")
+    K_W > 0 && _warn_unidentified_once(:K_W,
+        "K_W > 0: the W-tier loadings carry the full cross-trait covariance, so the " *
+        "unit (B) and within-unit (W) tiers are not separately identified and the " *
+        "split depends on the starting values. Do not interpret tier-scoped " *
+        "communality or proportions, extract_Sigma at :unit / :unit_obs, getLV, the " *
+        "kernel-separability verdict, or Wald SEs of single Λ / Λ_W entries. The " *
+        "total Σ_y and the log-likelihood are unaffected. See the W-tier note in " *
+        "?fit_gaussian_gllvm (refs #702). Issued once per Julia session.")
 
     # Validate X dims if present, then drop fixed-zero columns for the optimiser.
     q_full = 0
@@ -535,10 +578,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         vcat(log_τ_B₀, log_τ_W₀, θ_B₀, θ_W₀, ρ_phy₀, θ_phy₀)
     end
 
+    suff_ss = (_sufficient_stat && !has_phy_block && !do_profile_beta) ? _gaussian_suff(y, X_fit, q) : nothing
     nll = params -> gaussian_profile_nll(params, y;
                                           spec = spec, X = X_fit,
                                           Σ_phy = Σ_phy,
-                                          profile_beta = do_profile_beta)
+                                          profile_beta = do_profile_beta,
+                                          suff = suff_ss)
 
     opts = Optim.Options(
         x_abstol = x_tol,

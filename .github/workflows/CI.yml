@@ -68,7 +68,10 @@ jobs:
         # GLLVM_TEST_SHARD (see test/runtests.jl) so 2 versions x 1 os x 4
         # shards = 8 Julia jobs, each covering ~1/4 of the ~13k tests instead
         # of one multi-hour job.
-        version: ['1.10', '1']     # LTS + current stable
+        # Pull requests run the current stable Julia only; LTS (1.10) still runs
+        # on every push to main and on manual dispatch. This halves the runner
+        # queue that held PRs for hours (Shinichi, 24 Oct 2026).
+        version: ${{ fromJSON(github.event_name == 'pull_request' && '["1"]' || '["1.10", "1"]') }}
         os: [ubuntu-latest]
         shard: [1, 2, 3, 4]
         include: ${{ (github.event_name == 'workflow_dispatch' && inputs.full_matrix) && fromJSON('[{"version":"1","os":"macOS-latest"},{"version":"1","os":"windows-latest"}]') || fromJSON('[]') }}
@@ -85,6 +88,18 @@ jobs:
           # runs the whole suite there unchanged; test/runtests.jl treats an
           # unset/empty GLLVM_TEST_SHARD as "no sharding".
           GLLVM_TEST_SHARD: ${{ matrix.shard && format('{0}/4', matrix.shard) || '' }}
+          # Julia threads on every sharded job. test/test_bootstrap_sigma_r.jl is the
+          # last include in test/runtests.jl, so its shard moves whenever a test file
+          # is added (position 544 of 544 was shard 4, 545 of 545 is shard 1); its
+          # n_cores testset runs the n_cores = 2 and 4 legs only when
+          # Threads.nthreads() >= 2 and >= 4, and otherwise logs an @info and skips
+          # them. Giving every shard 4 threads (ubuntu runners have 4 cores) keeps
+          # that coverage independent of the file count. The shard-less full_matrix
+          # combos keep the Julia default (empty value = unset, same convention as
+          # GLLVM_TEST_SHARD above). test/runtests.jl fails the job
+          # (GLLVM_TEST_REQUIRE_THREADS) if the threaded file ever runs with fewer.
+          JULIA_NUM_THREADS: ${{ matrix.shard && '4' || '' }}
+          GLLVM_TEST_REQUIRE_THREADS: ${{ matrix.shard && '4' || '' }}
         with:
           # Coverage is off on routine (push/PR) runs — instrumentation cost
           # across 8 sharded jobs adds up for no benefit most pushes need; turn

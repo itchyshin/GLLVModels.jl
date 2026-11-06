@@ -532,6 +532,7 @@ function fit_beta_binomial_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:binomial, Y, _resolve_obs_mask(mask, Y); caller = "fit_beta_binomial_gllvm", N = N)
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
@@ -540,7 +541,7 @@ function fit_beta_binomial_gllvm(Y::AbstractMatrix; K::Integer,
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized success matrix with a safe placeholder (0) in masked cells.
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical link-scale intercepts + SVD (PPCA-like) loadings.
     Zemp = [linkfun(link, clamp((float(Yc[t, i]) + 0.5) / (float(Nm[t, i]) + 1),
@@ -713,6 +714,7 @@ function fit_beta_binomial_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_response_support(:binomial, Y, msk; caller = "fit_beta_binomial_gllvm_grouped", N = Nm)
     Yc = Integer.(_sanitize_missing(Y, 0))
 
     Zemp = [linkfun(link, clamp((float(Yc[t, i]) + 0.5) / (float(Nm[t, i]) + 1),
@@ -890,6 +892,7 @@ function fit_beta_binomial_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_response_support(:binomial, Y, msk; caller = "fit_beta_binomial_gllvm_grouped_cov", N = Nm)
     Yc = Integer.(_sanitize_missing(Y, 0))
     Zemp = [linkfun(link, clamp((float(Yc[t, i]) + 0.5) / (float(Nm[t, i]) + 1),
                                 1e-4, 1 - 1e-4)) for t in 1:p, i in 1:n]

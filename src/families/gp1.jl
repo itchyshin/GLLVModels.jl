@@ -293,6 +293,7 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         α_bound::Real = 2.0,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_gp1_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_gp1_gllvm")
@@ -302,7 +303,7 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
 
     # NA handling: observation mask + sanitized counts (see fit_poisson_gllvm).
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)           # offset (η = β + offset + Λz)

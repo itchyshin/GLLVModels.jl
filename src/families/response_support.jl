@@ -10,13 +10,19 @@ function _in_support(kind::Symbol, y, Nti)
     y isa Real && isfinite(y) || return false
     kind === :beta     && return 0 < y < 1
     kind === :positive && return y > 0
+    kind === :finite   && return true
+    kind === :nonneg_real && return y >= 0
+    kind === :unit_closed && return 0 <= y <= 1
     (y >= 0 && y == round(y)) || return false      # :count and :binomial
     return kind === :binomial ? y <= Nti : true
 end
 
 function _support_text(kind::Symbol)
     kind === :beta     && return "Beta support, the open interval (0, 1)"
-    kind === :positive && return "Gamma support, y > 0"
+    kind === :positive && return "positive support, y > 0"
+    kind === :finite   && return "real support, a finite number"
+    kind === :nonneg_real && return "non-negative real support, y >= 0"
+    kind === :unit_closed && return "closed unit interval [0, 1]"
     kind === :binomial && return "Binomial support, an integer 0 <= y <= N"
     return "Poisson support, a non-negative integer"
 end
@@ -25,7 +31,8 @@ end
 #
 # Throw an `ArgumentError` naming `caller`, the first offending cell, the number of
 # offending cells and the allowed support when an observed cell of `Y` is outside the
-# support for `kind` (`:count`, `:binomial` with trials `N`, `:beta` or `:positive`).
+# support for `kind` (`:count`, `:binomial` with trials `N`, `:beta`, `:positive`,
+# `:nonneg_real`, `:unit_closed` or `:finite`).
 # Non-finite cells count as offending; mask them or use `missing` for unobserved cells.
 # `mask = nothing` means every non-`missing` cell is observed.
 function _check_response_support(kind::Symbol, Y::AbstractMatrix, mask;

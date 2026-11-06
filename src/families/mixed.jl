@@ -87,7 +87,8 @@ function _penalized_negloglik_fg!(F, G, value_grad, θ)
         G !== nothing && (G .= .-grad)
         F !== nothing && return -value
         return nothing
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return _penalty_negloglik_fg!(F, G, θ)
     end
 end
@@ -688,7 +689,7 @@ end
 # ===========================================================================
 
 """
-    getLV(fit::MixedFamilyFit, Y; N=nothing, rotate=true) -> n×K matrix
+    getLV(fit::MixedFamilyFit, Y; N=nothing, rotate=true, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores (per-site Laplace mode `ẑₛ`) for a mixed fit.
 `rotate=true` applies the canonical SVD rotation of `Λ`.
@@ -725,7 +726,7 @@ function getLV(fit::MixedFamilyFit, Y::AbstractMatrix;
 end
 
 """
-    predict(fit::MixedFamilyFit, Y; type=:response, N=nothing) -> p×n matrix
+    predict(fit::MixedFamilyFit, Y; type=:response, N=nothing, offset=nothing) -> p×n matrix
 
 In-sample fitted values at the Laplace mode. `type=:link` returns
 `η[t,s] = β_t + (Λ ẑ_s)_t`; `type=:response` the per-trait inverse-link
