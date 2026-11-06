@@ -454,6 +454,7 @@ println(_SHARD === nothing ?
     _shard_include("test_confint_mask_refused.jl")
     _shard_include("test_predict_offset.jl")
     _shard_include("test_predict_offset_grouped.jl")
+    _shard_include("test_predict_offset_remaining_788.jl")
     _shard_include("test_predict_offset_shared.jl")
     _shard_include("test_predict_modes_training.jl")
     _shard_include("test_family_profile_open_lower.jl")
@@ -525,6 +526,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_grouped_dispersion.jl")
     _shard_include("test_bridge_capabilities.jl")
     _shard_include("test_mixed_mode_search.jl")
+    _shard_include("test_mixed_contract.jl")
     _shard_include("test_bridge_mixed.jl")
     _shard_include("test_bridge_x.jl")
     _shard_include("test_bridge_zib.jl")
@@ -642,6 +644,8 @@ println(_SHARD === nothing ?
     # #573: ZIP/ZINB fits never end below the nested Poisson / shared-r NB2 fit.
     _shard_include("test_zip_zinb_stall.jl")
     _shard_include("test_zip_observed_laplace.jl")
+    # #926: ZIP betaz-hat matches the exact-likelihood betaz (Wald centre), not the Fisher-Laplace one.
+    _shard_include("test_zip_betaz_wald_926.jl")
     _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
     _shard_include("test_input_validation.jl")
