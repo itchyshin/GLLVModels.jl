@@ -40,6 +40,7 @@
 # this repair.
 
 args <- commandArgs(TRUE)
+batch_started <- Sys.time()
 stopifnot(length(args) == 2L)
 frozen_library <- normalizePath(args[[1]], mustWork = TRUE)
 output_dir <- args[[2]]
@@ -78,6 +79,62 @@ contract_path <- file.path(root, if (identical(parity_pin, "P1"))
   "docs/dev-log/core070/postfit-policy-batch-contract.json")
 contract <- jsonlite::read_json(contract_path, simplifyVector = FALSE)
 contract_sha256 <- sha256_file(contract_path)
+
+if (identical(parity_pin, "P1")) {
+  git_output <- function(...) {
+    out <- system2("git", c("-C", shQuote(root), ...), stdout = TRUE, stderr = TRUE)
+    if (!is.null(attr(out, "status"))) stop("git provenance command failed")
+    trimws(paste(out, collapse = "\n"))
+  }
+  if (nzchar(git_output("status", "--porcelain", "--", "src"))) {
+    stop("P1 capture requires a clean Julia src tree")
+  }
+  julia_source_commit <- git_output("rev-parse", "HEAD")
+  julia_source_tree <- git_output("rev-parse", paste0(julia_source_commit, ":src"))
+  r_runner_path <- normalizePath(file.path(root, "tools/core070_postfit_policy_batch.R"))
+  j_runner_path <- normalizePath(file.path(root, "tools/core070_postfit_policy_batch.jl"))
+  file_arg <- grep("^--file=", commandArgs(FALSE), value = TRUE)
+  if (length(file_arg) != 1L ||
+      !identical(normalizePath(sub("^--file=", "", file_arg)), r_runner_path)) {
+    stop("P1 capture must execute the R runner from this checkout")
+  }
+  runner_snapshot_dir <- file.path(output_dir, "runner-snapshots")
+  dir.create(runner_snapshot_dir)
+  stopifnot(file.copy(r_runner_path, file.path(runner_snapshot_dir, basename(r_runner_path))),
+            file.copy(j_runner_path, file.path(runner_snapshot_dir, basename(j_runner_path))))
+  r_runner_sha256 <- sha256_file(r_runner_path)
+  j_runner_sha256 <- sha256_file(j_runner_path)
+  if (!identical(sha256_file(file.path(runner_snapshot_dir, basename(r_runner_path))), r_runner_sha256) ||
+      !identical(sha256_file(file.path(runner_snapshot_dir, basename(j_runner_path))), j_runner_sha256)) {
+    stop("P1 runner snapshot does not match the executed runner")
+  }
+  r_library_path <- normalizePath(getLoadedDLLs()[["gllvmTMB"]][["path"]])
+  r_library_sha256 <- sha256_file(r_library_path)
+  if (!identical(basename(frozen_library), "library")) stop("P1 library must come from a current-format oracle build")
+  oracle_build_root <- dirname(frozen_library)
+  oracle_build_receipt <- file.path(oracle_build_root, "build.json")
+  oracle_build_sha256 <- sha256_file(oracle_build_receipt)
+  oracle_build_metadata <- jsonlite::read_json(oracle_build_receipt, simplifyVector = FALSE)
+  r_full_version <- paste0(R.version.string, ' -- "', R.version$nickname, '"')
+  if (!identical(oracle_build_metadata$r_version, r_full_version)) {
+    stop("P1 oracle build and capture use different R versions")
+  }
+  r_executable_path <- normalizePath(file.path(R.home("bin"), "exec", "R"), mustWork = TRUE)
+  r_executable_sha256 <- sha256_file(r_executable_path)
+  oracle_builder <- normalizePath(file.path(root, "tools/core070_build_oracle.py"), mustWork = TRUE)
+  oracle_builder_sha256 <- sha256_file(oracle_builder)
+  verify_oracle <- function(log_path) {
+    python <- Sys.which("python3")
+    if (!nzchar(python)) stop("python3 is required to verify the P1 oracle build")
+    out <- system2(python, c(shQuote(oracle_builder), "verify", "--destination", shQuote(oracle_build_root)),
+                   env = "GLLVM_PARITY_PIN=P1", stdout = TRUE, stderr = TRUE)
+    writeLines(out, log_path)
+    if (!is.null(attr(out, "status")) || !any(out == "CORE070_ORACLE_VERIFY_PASS")) {
+      stop("P1 oracle build verification failed")
+    }
+  }
+  verify_oracle(file.path(output_dir, "oracle-verify-before.log"))
+}
 
 stopifnot(identical(contract$reference_commit, expected_reference),
           identical(contract$status, "FROZEN_POSTFIT_POLICY_BATCH_CONTRACT"),
@@ -172,23 +229,42 @@ ci <- tryCatch({
 }, error = function(e) list(ok = FALSE, lower = numeric(0), upper = numeric(0),
                              error = conditionMessage(e)))
 
-# --- POST-COEF-EMPTY: parse-one-function-and-eval on a synthetic mock ------
-.pp_coef_defs <- Filter(
-  function(x) is.call(x) && identical(x[[1L]], as.name("<-")) &&
-    identical(x[[2L]], as.name("coef.gllvmTMB_multi")),
-  parse(file.path(source_root, "R/vcov-coef.R"))
-)
-stopifnot(length(.pp_coef_defs) == 1L)
-.pp_coef_env <- new.env(parent = asNamespace("gllvmTMB"))
-eval(.pp_coef_defs[[1L]], .pp_coef_env)
-empty_coef <- .pp_coef_env$coef.gllvmTMB_multi(list(X_fix_names = character(0)))
+# P0 retains its frozen mock. P1 uses three real public fits on the same Y;
+# the R and Julia runners remain held until receipt provenance is wired.
+if (identical(parity_pin, "P0")) {
+  .pp_coef_defs <- Filter(
+    function(x) is.call(x) && identical(x[[1L]], as.name("<-")) &&
+      identical(x[[2L]], as.name("coef.gllvmTMB_multi")),
+    parse(file.path(source_root, "R/vcov-coef.R"))
+  )
+  stopifnot(length(.pp_coef_defs) == 1L)
+  .pp_coef_env <- new.env(parent = asNamespace("gllvmTMB"))
+  eval(.pp_coef_defs[[1L]], .pp_coef_env)
+  empty_coef <- .pp_coef_env$coef.gllvmTMB_multi(list(X_fix_names = character(0)))
+} else {
+  site_x <- rnorm(n)
+  df_long$x <- rep(site_x, each = p)
+  fit_coef <- function(fixed) {
+    f <- stats::as.formula(paste0("value ~ ", fixed,
+      " + latent(0 + trait | site, d = 1, unique = FALSE)"))
+    fit <- gllvmTMB(f, data = df_long, unit = "site", trait = "trait",
+                    family = gaussian(), control = gllvmTMBcontrol(n_init = 1L, se = TRUE))
+    stopifnot("gllvmTMB_multi" %in% class(fit))
+    value <- coef(fit)
+    list(length = length(value), names = names(value), values = as.numeric(value),
+         fixed_columns = length(fit$X_fix_names), type = typeof(value))
+  }
+  coef_fits <- lapply(c("0", "0 + trait", "0 + trait + x"), fit_coef)
+  stopifnot(identical(vapply(coef_fits, `[[`, integer(1), "length"), c(0L, 5L, 6L)))
+  stopifnot(identical(vapply(coef_fits, `[[`, integer(1), "fixed_columns"), c(0L, 5L, 6L)))
+  empty_coef <- coef_fits[[1L]]$values
+}
 
 # ---------------------------------------------------------------------------
 # 3. Write the oracle JSON (Y + all R-side values) for the Julia child.
 # ---------------------------------------------------------------------------
 oracle_path <- file.path(output_dir, "r-oracle.json")
-jsonlite::write_json(
-  list(
+oracle_payload <- list(
     schema = "core070-postfit-policy-r-oracle/v1",
     p = p, n = n, K = K,
     y = as.numeric(Y),               # column-major flatten; Julia reshapes (p, n)
@@ -206,22 +282,53 @@ jsonlite::write_json(
     simulate_condition_on_re_default = oracle$simulate_condition_on_re_default,
     ci_ok = ci$ok, ci_lower = ci$lower, ci_upper = ci$upper, ci_error = ci$error,
     empty_coef = as.numeric(empty_coef)
-  ),
-  oracle_path, auto_unbox = TRUE, pretty = TRUE, null = "null", na = "null", digits = 17
-)
+  )
+if (identical(parity_pin, "P1")) {
+  oracle_payload$postcoef_three_fit <- list(x = unname(site_x), fits = coef_fits)
+}
+jsonlite::write_json(oracle_payload, oracle_path, auto_unbox = TRUE,
+                     pretty = TRUE, null = "null", na = "null", digits = 17)
+if (identical(parity_pin, "P1")) r_oracle_sha256 <- sha256_file(oracle_path)
 
 # --- invoke the Julia child ---------------------------------------------
 julia_out <- file.path(output_dir, "julia-results.json")
 julia_env <- c(CORE070_POSTFIT_POLICY_R_ORACLE = oracle_path)
+if (identical(parity_pin, "P1")) {
+  requested_preload <- Sys.getenv("GLLVM_POSTFIT_CHILD_LD_PRELOAD", "")
+  if (nzchar(requested_preload)) requested_preload <- normalizePath(requested_preload, mustWork = TRUE)
+  julia_env <- c(julia_env, GLLVM_POSTCOEF_ACCESSOR_CONTROL = "real",
+                 JULIA_LOAD_PATH = "@:@stdlib", LD_PRELOAD = requested_preload)
+}
 julia_bin <- Sys.which("julia")
 stopifnot(nzchar(julia_bin))
+if (identical(parity_pin, "P1")) {
+  julia_launcher_path <- normalizePath(julia_bin)
+  julia_launcher_sha256 <- sha256_file(julia_launcher_path)
+  manifest_path <- file.path(root, "Manifest.toml")
+  project_path <- file.path(root, "Project.toml")
+  preferences_path <- file.path(root, "LocalPreferences.toml")
+  if (!file.exists(manifest_path)) stop("P1 capture requires a Julia Manifest.toml")
+  manifest_sha256 <- sha256_file(manifest_path)
+  project_sha256 <- sha256_file(project_path)
+  preferences_sha256 <- if (file.exists(preferences_path)) sha256_file(preferences_path) else "absent"
+  stopifnot(file.copy(julia_launcher_path, file.path(runner_snapshot_dir, "julia-launcher")),
+            file.copy(manifest_path, file.path(output_dir, "julia-Manifest.toml")))
+  if (file.exists(preferences_path)) {
+    stopifnot(file.copy(preferences_path, file.path(output_dir, "julia-LocalPreferences.toml")))
+  }
+}
 old_env <- Sys.getenv(names(julia_env), unset = NA, names = TRUE)
 do.call(Sys.setenv, as.list(julia_env))
 t0 <- Sys.time()
 julia_status <- tryCatch(
-  system2(julia_bin, c("--project=.", "tools/core070_postfit_policy_batch.jl", julia_out),
+  system2(julia_bin, c(if (identical(parity_pin, "P1")) "--startup-file=no", "--project=.", "tools/core070_postfit_policy_batch.jl", julia_out),
           stdout = file.path(output_dir, "julia-stdout.log"),
-          stderr = file.path(output_dir, "julia-stderr.log")),
+          stderr = file.path(output_dir, "julia-stderr.log"),
+          timeout = if (identical(parity_pin, "P1")) {
+            remaining <- 5400 - as.numeric(Sys.time() - batch_started, units = "secs")
+            if (remaining < 1) stop("P1 batch reached its 90-minute deadline")
+            floor(remaining)
+          } else 0),
   finally = {
     unset <- names(old_env)[is.na(old_env)]
     if (length(unset)) Sys.unsetenv(unset)
@@ -237,6 +344,18 @@ julia_report <- if (file.exists(julia_out)) {
 } else {
   NULL
 }
+if (identical(parity_pin, "P1")) {
+  if (nzchar(git_output("status", "--porcelain", "--", "src")) ||
+      !identical(git_output("rev-parse", "HEAD"), julia_source_commit) ||
+      !identical(git_output("rev-parse", paste0(julia_source_commit, ":src")), julia_source_tree) ||
+      !identical(sha256_file(r_runner_path), r_runner_sha256) ||
+      !identical(sha256_file(j_runner_path), j_runner_sha256) ||
+      !identical(sha256_file(r_library_path), r_library_sha256) ||
+      !identical(sha256_file(r_executable_path), r_executable_sha256) ||
+      !identical(sha256_file(oracle_path), r_oracle_sha256)) {
+    stop("P1 source, runner, oracle or R library changed during capture")
+  }
+}
 
 contract_case_ids <- vapply(contract$cases, `[[`, "", "case_id")
 contract_neg_ids <- vapply(contract$negative_controls, `[[`, "", "control_id")
@@ -251,6 +370,121 @@ results_ok <- !is.null(julia_report) &&
   identical(sort(names(julia_report$negative_controls)), sort(contract_neg_ids)) &&
   all(vapply(julia_report$cases, function(x) isTRUE(x$pass), logical(1))) &&
   all(vapply(julia_report$negative_controls, function(x) isTRUE(x$behaved), logical(1)))
+if (identical(parity_pin, "P1")) {
+  expected_identity <- list(source_commit = julia_source_commit, source_tree = julia_source_tree,
+                            r_oracle_sha256 = r_oracle_sha256, julia_runner_sha256 = j_runner_sha256)
+  observed_identity <- julia_report$postcoef_capture_identity
+  results_ok <- results_ok && is.list(observed_identity) &&
+    setequal(names(observed_identity), names(expected_identity)) &&
+    all(vapply(names(expected_identity), function(key)
+      identical(observed_identity[[key]], expected_identity[[key]]), logical(1)))
+  real_runtime <- julia_report$postcoef_runtime
+  results_ok <- results_ok && is.list(real_runtime) &&
+    identical(real_runtime$load_path, "@:@stdlib") &&
+    identical(real_runtime$depot_path, Sys.getenv("JULIA_DEPOT_PATH", "")) &&
+    identical(real_runtime$project_sha256, project_sha256) &&
+    identical(real_runtime$manifest_sha256, manifest_sha256) &&
+    identical(real_runtime$preferences_sha256, preferences_sha256) &&
+    identical(real_runtime$executable_path, julia_launcher_path) &&
+    identical(real_runtime$executable_sha256, julia_launcher_sha256) &&
+    identical(real_runtime$depot_checker_sha256, sha256_file(file.path(root, "tools/core070_postcoef_depot_check.py"))) &&
+    identical(real_runtime$python_executable_sha256, sha256_file(real_runtime$python_executable_path)) &&
+    identical(length(real_runtime$preloads), if (nzchar(requested_preload)) 1L else 0L) &&
+    (!nzchar(requested_preload) || identical(real_runtime$preloads[[1L]]$path, requested_preload)) &&
+    identical(real_runtime$executable_sha256, sha256_file(real_runtime$executable_path)) &&
+    all(vapply(real_runtime$preloads, function(x)
+      identical(x$sha256, sha256_file(x$path)), logical(1)))
+}
+
+if (identical(parity_pin, "P1") && isTRUE(results_ok)) {
+  run_coef_control <- function(mode, expected_lengths) {
+    control_out <- file.path(output_dir, paste0("julia-control-", mode, ".json"))
+    stdout_path <- file.path(output_dir, paste0("julia-control-", mode, ".stdout.log"))
+    stderr_path <- file.path(output_dir, paste0("julia-control-", mode, ".stderr.log"))
+    env <- c(CORE070_POSTFIT_POLICY_R_ORACLE = oracle_path,
+             GLLVM_POSTCOEF_ACCESSOR_CONTROL = mode, JULIA_LOAD_PATH = "@:@stdlib",
+             LD_PRELOAD = requested_preload)
+    old <- Sys.getenv(names(env), unset = NA, names = TRUE)
+    on.exit({
+      unset <- names(old)[is.na(old)]
+      if (length(unset)) Sys.unsetenv(unset)
+      set <- old[!is.na(old)]
+      if (length(set)) do.call(Sys.setenv, as.list(set))
+    })
+    do.call(Sys.setenv, as.list(env))
+    remaining <- 5400 - as.numeric(Sys.time() - batch_started, units = "secs")
+    if (remaining < 1) stop("P1 batch reached its 90-minute deadline")
+    status <- system2(julia_bin, c("--startup-file=no", "--project=.", "tools/core070_postfit_policy_batch.jl", control_out),
+                      stdout = stdout_path, stderr = stderr_path, timeout = floor(remaining))
+    exit_path <- file.path(output_dir, paste0("julia-control-", mode, ".exit"))
+    writeLines(as.character(status), exit_path)
+    report <- if (file.exists(control_out)) jsonlite::read_json(control_out, simplifyVector = FALSE) else NULL
+    target <- if (!is.null(report)) report$cases[["CORE070-POSTFIT-COEF-EMPTY-NATIVE"]] else NULL
+    pair <- if (!is.null(target)) target$three_fit else NULL
+    identity <- if (!is.null(report)) report$postcoef_capture_identity else NULL
+    other_ids <- setdiff(contract_case_ids, "CORE070-POSTFIT-COEF-EMPTY-NATIVE")
+    ok <- identical(status, 1L) && !is.null(report) && identical(report$status, "FAIL") &&
+      identical(report$all_checks, FALSE) && identical(target$pass, FALSE) &&
+      identical(report$all_positive_pass, FALSE) &&
+      identical(report$negative_controls_behaved_as_expected, TRUE) &&
+      identical(report$area, "postfit-policy") &&
+      identical(report$scope, "CORE070_POSTFIT_POLICY_BATCH") &&
+      identical(report$case_count, length(contract_case_ids)) &&
+      identical(report$negative_control_count, length(contract_neg_ids)) &&
+      identical(pair$selected_accessor, mode) &&
+      identical(as.integer(unlist(pair$julia_lengths, use.names = FALSE)), expected_lengths) &&
+      setequal(names(report$cases), contract_case_ids) &&
+      all(vapply(other_ids, function(id) isTRUE(report$cases[[id]]$pass), logical(1))) &&
+      setequal(names(report$negative_controls), contract_neg_ids) &&
+      all(vapply(report$negative_controls, function(x) isTRUE(x$behaved), logical(1))) &&
+      is.list(identity) && setequal(names(identity), names(expected_identity)) &&
+      all(vapply(names(expected_identity), function(key)
+        identical(identity[[key]], expected_identity[[key]]), logical(1))) &&
+      is.list(report$postcoef_runtime) && setequal(names(report$postcoef_runtime), names(real_runtime)) &&
+      all(vapply(setdiff(names(real_runtime), c("preloads", "depot_inventory")), function(key)
+        identical(report$postcoef_runtime[[key]], real_runtime[[key]]), logical(1))) &&
+      identical(lapply(report$postcoef_runtime$preloads, function(x) unname(c(x$path, x$sha256))),
+                lapply(real_runtime$preloads, function(x) unname(c(x$path, x$sha256)))) &&
+      identical(lapply(report$postcoef_runtime$depot_inventory, function(x)
+        unname(vapply(c("name", "uuid", "tree_hash", "source"), function(k)
+          if (is.null(x[[k]])) "<none>" else x[[k]], character(1)))),
+        lapply(real_runtime$depot_inventory, function(x)
+          unname(vapply(c("name", "uuid", "tree_hash", "source"), function(k)
+            if (is.null(x[[k]])) "<none>" else x[[k]], character(1)))) )
+    list(mode = mode, exit_code = status, passed = isTRUE(ok),
+         report_sha256 = if (file.exists(control_out)) sha256_file(control_out) else NA_character_,
+         stdout_sha256 = sha256_file(stdout_path), stderr_sha256 = sha256_file(stderr_path),
+         exit_sha256 = sha256_file(exit_path))
+  }
+  coef_controls <- list(
+    always_empty = run_coef_control("always_empty", c(0L, 0L, 0L)),
+    spurious_coefficient = run_coef_control("spurious_coefficient", c(1L, 6L, 7L))
+  )
+  results_ok <- results_ok && all(vapply(coef_controls, function(x) isTRUE(x$passed), logical(1)))
+  if (nzchar(git_output("status", "--porcelain", "--", "src")) ||
+      !identical(git_output("rev-parse", "HEAD"), julia_source_commit) ||
+      !identical(sha256_file(r_runner_path), r_runner_sha256) ||
+      !identical(sha256_file(j_runner_path), j_runner_sha256) ||
+      !identical(sha256_file(r_library_path), r_library_sha256) ||
+      !identical(sha256_file(julia_launcher_path), julia_launcher_sha256) ||
+      !identical(sha256_file(r_executable_path), r_executable_sha256) ||
+      !identical(sha256_file(manifest_path), manifest_sha256) ||
+      !identical(sha256_file(project_path), project_sha256) ||
+      !identical(if (file.exists(preferences_path)) sha256_file(preferences_path) else "absent", preferences_sha256) ||
+      !identical(sha256_file(oracle_build_receipt), oracle_build_sha256) ||
+      !identical(sha256_file(oracle_builder), oracle_builder_sha256) ||
+      !identical(sha256_file(oracle_path), r_oracle_sha256)) {
+    stop("P1 source, runner, oracle or R library changed during controls")
+  }
+  for (rel in names(contract$source_pins)) {
+    if (!identical(sha256_file(file.path(source_root, rel)), contract$source_pins[[rel]])) {
+      stop("P1 pinned R source changed during capture: ", rel)
+    }
+  }
+  verify_oracle(file.path(output_dir, "oracle-verify-after.log"))
+} else if (identical(parity_pin, "P1")) {
+  coef_controls <- list()
+}
 
 raw_lines <- if (!is.null(julia_report)) {
   vapply(contract_case_ids, function(id) {
@@ -294,6 +528,27 @@ receipt <- list(
   frozen_library = frozen_library,
   source_pin = source_pin
 )
+if (identical(parity_pin, "P1")) {
+  receipt$postcoef_capture_identity <- expected_identity
+  receipt$postcoef_runtime <- real_runtime
+  receipt$julia_launcher_path <- julia_launcher_path
+  receipt$julia_launcher_sha256 <- julia_launcher_sha256
+  receipt$r_runner_sha256 <- r_runner_sha256
+  receipt$r_library_sha256 <- r_library_sha256
+  receipt$r_library_path <- r_library_path
+  receipt$r_executable_path <- r_executable_path
+  receipt$r_executable_sha256 <- r_executable_sha256
+  receipt$r_platform <- R.version$platform
+  receipt$r_full_version <- r_full_version
+  receipt$oracle_build_sha256 <- oracle_build_sha256
+  receipt$oracle_builder_sha256 <- oracle_builder_sha256
+  receipt$oracle_verify_before_sha256 <- sha256_file(file.path(output_dir, "oracle-verify-before.log"))
+  receipt$oracle_verify_after_sha256 <- if (file.exists(file.path(output_dir, "oracle-verify-after.log")))
+    sha256_file(file.path(output_dir, "oracle-verify-after.log")) else NA_character_
+  receipt$julia_stdout_sha256 <- sha256_file(file.path(output_dir, "julia-stdout.log"))
+  receipt$julia_stderr_sha256 <- sha256_file(file.path(output_dir, "julia-stderr.log"))
+  receipt$postcoef_controls <- coef_controls
+}
 receipt_path <- file.path(output_dir, "receipt.json")
 jsonlite::write_json(receipt, receipt_path, auto_unbox = TRUE, pretty = TRUE, null = "null")
 

@@ -30,7 +30,15 @@
 # Invocation:
 #   julia --project=. tools/core070_postfit_policy_batch.jl <out.json>
 
+parity_pin = uppercase(strip(get(ENV, "GLLVM_PARITY_PIN", "P1")))
+parity_pin in ("P0", "P1") || error("GLLVM_PARITY_PIN must be P0 or P1")
+
 using GLLVModels
+if parity_pin == "P1"
+    @eval using SHA
+    @eval using Libdl
+    @eval using Pkg
+end
 
 # ---------------------------------------------------------------------------
 # Minimal JSON reader/writer (no external dependency; mirrors the existing
@@ -165,6 +173,84 @@ isempty(oracle_path) &&
 isfile(oracle_path) ||
     error("CORE070_POSTFIT_POLICY_R_ORACLE points to a nonexistent file: $oracle_path")
 
+p1_capture = if parity_pin == "P1"
+    root = realpath(pwd())
+    realpath(Base.pkgdir(GLLVModels)) == root || error("Julia package is not loaded from the capture checkout")
+    realpath(@__FILE__) == realpath(joinpath(root, "tools/core070_postfit_policy_batch.jl")) ||
+        error("Julia runner is not the capture checkout runner")
+    isempty(readchomp(`git status --porcelain -- src`)) || error("Julia src tree is dirty")
+    commit = readchomp(`git rev-parse HEAD`)
+    Dict("source_commit" => commit,
+         "source_tree" => readchomp(`git rev-parse $(commit):src`),
+         "r_oracle_sha256" => bytes2hex(sha256(read(oracle_path))),
+         "julia_runner_sha256" => bytes2hex(sha256(read(@__FILE__))))
+else
+    nothing
+end
+
+function postcoef_package_inventory()
+    records = Dict{String, Any}[]
+    for (id, package) in Pkg.dependencies()
+        string(id) == "2dc8e01c-4f48-4476-aaae-e919b4a30df7" && continue
+        package.source === nothing && error("manifest package source is missing")
+        push!(records, Dict("name" => package.name, "uuid" => string(id),
+                            "tree_hash" => package.tree_hash === nothing ? nothing : string(package.tree_hash),
+                            "source" => realpath(package.source)))
+    end
+    sort!(records; by = record -> record["uuid"])
+end
+
+function verify_postcoef_package_sources(records, manifest, checker, python, stdlib_root)
+    return mktemp() do path, io
+        write(io, to_json(records))
+        flush(io)
+        cmd = addenv(`$python $checker --manifest $manifest --inventory $path --stdlib-root $stdlib_root`, "LD_PRELOAD" => "")
+        result = read(cmd, String)
+        occursin("PACKAGE_SOURCE_TREES_MATCH", result) || error("Julia package source validation failed")
+        strip(result)
+    end
+end
+
+p1_runtime = if parity_pin == "P1"
+    root = realpath(pwd())
+    realpath(Base.active_project()) == realpath(joinpath(root, "Project.toml")) ||
+        error("Julia active project is not the capture checkout")
+    get(ENV, "JULIA_LOAD_PATH", "") == "@:@stdlib" || error("P1 requires an isolated Julia load path")
+    manifest = joinpath(root, "Manifest.toml")
+    !isfile(joinpath(root, "Manifest-v$(VERSION.major).$(VERSION.minor).toml")) ||
+        error("P1 capture does not permit a version-specific Julia manifest")
+    isfile(manifest) || error("P1 capture requires a retained Julia Manifest.toml")
+    executable = realpath(joinpath(Sys.BINDIR, Base.julia_exename()))
+    preferences = joinpath(root, "LocalPreferences.toml")
+    depot_checker = realpath(joinpath(root, "tools/core070_postcoef_depot_check.py"))
+    python = Sys.which("python3")
+    python === nothing && error("python3 is required to validate Julia package sources")
+    python = realpath(python)
+    inventory = postcoef_package_inventory()
+    stdlib_root = realpath(Sys.STDLIB)
+    depot_check = verify_postcoef_package_sources(inventory, manifest, depot_checker, python, stdlib_root)
+    preload_paths = filter(x -> !isempty(x), split(get(ENV, "LD_PRELOAD", ""), r"[:\s]+"))
+    loaded_paths = Set(realpath(path) for path in Libdl.dllist() if isfile(path))
+    all(path -> realpath(path) in loaded_paths, preload_paths) || error("recorded Julia preload is not loaded")
+    preloads = [Dict("path" => realpath(path), "sha256" => bytes2hex(sha256(read(path))))
+                for path in preload_paths]
+    Dict("executable_path" => executable, "executable_sha256" => bytes2hex(sha256(read(executable))),
+         "project_sha256" => bytes2hex(sha256(read(joinpath(root, "Project.toml")))),
+         "manifest_sha256" => bytes2hex(sha256(read(manifest))),
+         "preferences_sha256" => isfile(preferences) ? bytes2hex(sha256(read(preferences))) : "absent",
+         "load_path" => get(ENV, "JULIA_LOAD_PATH", ""),
+         "depot_path" => get(ENV, "JULIA_DEPOT_PATH", ""),
+         "depot_inventory" => inventory,
+         "depot_check" => depot_check,
+         "stdlib_root" => stdlib_root,
+         "depot_checker_sha256" => bytes2hex(sha256(read(depot_checker))),
+         "python_executable_path" => python,
+         "python_executable_sha256" => bytes2hex(sha256(read(python))),
+         "preloads" => preloads, "julia_version" => string(VERSION))
+else
+    nothing
+end
+
 oracle = json_read(oracle_path)
 
 # ---------------------------------------------------------------------------
@@ -245,6 +331,39 @@ end
 fit_no_x = fit_gaussian_gllvm(Y; K = 1)
 j_empty_coef = GLLVModels.StatsAPI.coef(fit_no_x)
 
+# P1 uses the same response and covariate exported by the R stage. Keep this
+# draft held at startup until the receipt verifier binds all retained inputs.
+postcoef_three_fit = if parity_pin == "P1"
+    r_pair = oracle["postcoef_three_fit"]
+    site_data = (x = Float64.(r_pair["x"]),)
+    length(site_data.x) == n || error("POST-COEF shared x has the wrong length")
+    fits = [gllvm(@formula(y ~ 0), Y, site_data; K = 1),
+            gllvm(@formula(y ~ 1), Y, site_data; K = 1),
+            gllvm(@formula(y ~ 1 + x), Y, site_data; K = 1)]
+    access = GLLVModels.StatsAPI.coef
+    always_empty(f) = Float64[]
+    spurious(f) = vcat(access(f), 0.0)
+    control = get(ENV, "GLLVM_POSTCOEF_ACCESSOR_CONTROL", "real")
+    control in ("real", "always_empty", "spurious_coefficient") ||
+        error("unknown POST-COEF accessor control")
+    selected = control == "real" ? access : control == "always_empty" ? always_empty : spurious
+    actual = [selected(f) for f in fits]
+    all(v -> v isa Vector{Float64}, actual) || error("POST-COEF unexpected Julia coefficient representation")
+    Dict("r_lengths" => [Int(x["length"]) for x in r_pair["fits"]],
+         "r_design_columns" => [Int(x["fixed_columns"]) for x in r_pair["fits"]],
+         "r_values" => [x["values"] for x in r_pair["fits"]],
+         "julia_lengths" => length.(actual),
+         "r_names" => [x["names"] for x in r_pair["fits"]],
+         "julia_names" => [hasproperty(v, :names) ? collect(getproperty(v, :names)) : nothing
+                           for v in actual],
+         "selected_accessor" => control,
+         "control_lengths" => Dict(
+             "always_empty" => [length(always_empty(f)) for f in fits],
+             "spurious_coefficient" => [length(spurious(f)) for f in fits]))
+else
+    nothing
+end
+
 # ---------------------------------------------------------------------------
 # Assemble the 15 case results.
 # ---------------------------------------------------------------------------
@@ -257,10 +376,19 @@ tol = Dict(
 
 cases = Dict{String, Any}()
 
-cases["CORE070-POSTFIT-COEF-EMPTY-NATIVE"] = Dict(
-    "pass" => length(j_empty_coef) == 0 && length(r_empty_coef) == 0,
+cases["CORE070-POSTFIT-COEF-EMPTY-NATIVE"] = Dict{String, Any}(
+    "pass" => parity_pin == "P0" ?
+        (length(j_empty_coef) == 0 && length(r_empty_coef) == 0) :
+        (postcoef_three_fit["r_lengths"] == [0, 5, 6] &&
+         postcoef_three_fit["r_design_columns"] == [0, 5, 6] &&
+         postcoef_three_fit["julia_lengths"] == [0, 5, 6] &&
+         postcoef_three_fit["control_lengths"]["always_empty"] == [0, 0, 0] &&
+         postcoef_three_fit["control_lengths"]["spurious_coefficient"] == [1, 6, 7]),
     "julia_length" => length(j_empty_coef), "r_length" => length(r_empty_coef),
 )
+if parity_pin == "P1"
+    cases["CORE070-POSTFIT-COEF-EMPTY-NATIVE"]["three_fit"] = postcoef_three_fit
+end
 
 coefficient_delta = maximum(abs.(j_coef .- r_coef))
 cases["CORE070-POSTFIT-COEF-NAMED-NATIVE"] = Dict(
@@ -357,6 +485,27 @@ report = Dict(
     "negative_controls" => negative_controls,
     "julia_version" => string(VERSION),
 )
+if parity_pin == "P1"
+    isempty(readchomp(`git status --porcelain -- src`)) || error("Julia src tree changed during capture")
+    p1_capture["source_commit"] == readchomp(`git rev-parse HEAD`) || error("Julia source commit changed during capture")
+    p1_capture["r_oracle_sha256"] == bytes2hex(sha256(read(oracle_path))) || error("R oracle changed during capture")
+    p1_capture["julia_runner_sha256"] == bytes2hex(sha256(read(@__FILE__))) || error("Julia runner changed during capture")
+    p1_runtime["executable_sha256"] == bytes2hex(sha256(read(p1_runtime["executable_path"]))) || error("Julia executable changed during capture")
+    p1_runtime["project_sha256"] == bytes2hex(sha256(read("Project.toml"))) || error("Julia project changed during capture")
+    p1_runtime["manifest_sha256"] == bytes2hex(sha256(read("Manifest.toml"))) || error("Julia manifest changed during capture")
+    !isfile("Manifest-v$(VERSION.major).$(VERSION.minor).toml") || error("alternate Julia manifest appeared during capture")
+    current_preferences = isfile("LocalPreferences.toml") ? bytes2hex(sha256(read("LocalPreferences.toml"))) : "absent"
+    p1_runtime["preferences_sha256"] == current_preferences || error("Julia preferences changed during capture")
+    p1_runtime["depot_inventory"] == postcoef_package_inventory() || error("Julia package inventory changed during capture")
+    checker = joinpath(pwd(), "tools/core070_postcoef_depot_check.py")
+    p1_runtime["depot_checker_sha256"] == bytes2hex(sha256(read(checker))) || error("Julia depot checker changed during capture")
+    p1_runtime["python_executable_sha256"] == bytes2hex(sha256(read(p1_runtime["python_executable_path"]))) || error("Python executable changed during capture")
+    p1_runtime["depot_check"] == verify_postcoef_package_sources(p1_runtime["depot_inventory"], "Manifest.toml", checker,
+        p1_runtime["python_executable_path"], p1_runtime["stdlib_root"]) || error("Julia package sources or coverage exclusions changed during capture")
+    all(item -> item["sha256"] == bytes2hex(sha256(read(item["path"]))), p1_runtime["preloads"]) || error("Julia preload changed during capture")
+    report["postcoef_capture_identity"] = p1_capture
+    report["postcoef_runtime"] = p1_runtime
+end
 open(out_path, "w") do io
     print(io, to_json(report))
 end

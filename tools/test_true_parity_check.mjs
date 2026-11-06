@@ -1947,6 +1947,73 @@ test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode to
   });
 }
 
+test('POST-COEF: C1 and C8 refuse an unqualified capture', () => {
+  const m = brTree({ sid: 'postfit-policy/POST-COEF-EMPTY', caseId: 'CORE070-POSTFIT-COEF-EMPTY-NATIVE', kind: 'numeric_r_vs_julia' });
+  for (const mode of ['C1', 'C8']) {
+    const result = runTree(m, mode);
+    assert.match(result.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'));
+    assert.match(result.stdout, /postfit-policy\/POST-COEF-EMPTY/);
+  }
+});
+test('POST-COEF: a signed exception cannot waive a missing capture', () => {
+  const targetRel = 'receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json';
+  const mutate = ({readJ, writeJ}) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({source_id:'postfit-policy/POST-COEF-EMPTY', classification:'required_core',
+      executable_case_ids:['CORE070-POSTFIT-COEF-EMPTY-NATIVE'], evidence:{receipt:`${L}/${targetRel}`},
+      measured_against:P1_FULL, disposition:null, evidence_tier:'numeric',
+      receipt_status_exception:{reason:'synthetic exception',signed_by:'Shinichi Nakagawa',signed_on:'2026-09-27'}});
+    writeJ('case-map.json', cm);
+    writeJ(targetRel, {case_id:'CORE070-POSTFIT-COEF-EMPTY-NATIVE', verdict:'UNQUALIFIED',
+      evidence_kind:'numeric_r_vs_julia', batch_verifier:{status:'UNVERIFIED',log:null},
+      glvmodels_worktree_dirty:null, comparison:{pin:'P1',cases:[]}});
+  };
+  for (const mode of ['C1','C8']) {
+    const result=runTree(mutate, mode);
+    assert.match(result.stdout,new RegExp(`${mode}_NOT_MET$`,'m'));
+    assert.match(result.stdout,/postfit-policy\/POST-COEF-EMPTY/);
+    if (mode === 'C1') assert.match(result.stdout,/POST-COEF case receipt missing/);
+    else assert.match(result.stdout,/NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
+  }
+});
+test('POST-COEF: a signed exception cannot waive an unqualified separate case', () => {
+  const targetRel = 'receipts/postfit/cases/CORE070-POSTFIT-COEF-THREE-FIT-NATIVE.json';
+  const mutate = ({readJ, writeJ}) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({source_id:'postfit-policy/POST-COEF-EMPTY', classification:'required_core',
+      executable_case_ids:['CORE070-POSTFIT-COEF-EMPTY-NATIVE'], evidence:{receipt:`${L}/${targetRel}`},
+      measured_against:P1_FULL, disposition:null, evidence_tier:'numeric',
+      receipt_status_exception:{reason:'synthetic exception',signed_by:'Shinichi Nakagawa',signed_on:'2026-09-27'}});
+    writeJ('case-map.json', cm);
+    writeJ(targetRel, {case_id:'CORE070-POSTFIT-COEF-THREE-FIT-NATIVE',
+      harness_case_id:'CORE070-POSTFIT-COEF-EMPTY-NATIVE',verdict:'UNQUALIFIED',
+      evidence_kind:'numeric_r_vs_julia',batch_verifier:{status:'UNVERIFIED',log:null},
+      glvmodels_worktree_dirty:null,comparison:{pin:'P1',cases:[]}});
+  };
+  for (const mode of ['C1','C8']) {
+    const result=runTree(mutate, mode);
+    assert.match(result.stdout,new RegExp(`${mode}_NOT_MET$`,'m'));
+    assert.match(result.stdout,/postfit-policy\/POST-COEF-EMPTY/);
+    if (mode === 'C1') assert.match(result.stdout,/POST-COEF artifact check: case identity or historical binding/);
+    else assert.match(result.stdout,/NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
+  }
+});
+test('POST-COEF: C1 and C8 refuse an unqualified capture at a Git ref', () => {
+  const dir = makeGitRepo('base');
+  try {
+    const readJ = (rel) => JSON.parse(readFileSync(join(dir, L, rel), 'utf8'));
+    const writeJ = (rel, v) => { mkdirSync(dirname(join(dir, L, rel)), { recursive: true }); writeFileSync(join(dir, L, rel), JSON.stringify(v, null, 1)); };
+    brTree({ sid: 'postfit-policy/POST-COEF-EMPTY', caseId: 'CORE070-POSTFIT-COEF-EMPTY-NATIVE', kind: 'numeric_r_vs_julia' })({ readJ, writeJ });
+    execFileSync('git', ['add', `${L}/case-map.json`, `${L}/receipts/br.json`], { cwd: dir });
+    execFileSync('git', ['-c', 'user.email=test@test.invalid', '-c', 'user.name=test', 'commit', '-qm', 'postcoef fixture'], { cwd: dir });
+    for (const mode of ['C1', 'C8']) {
+      const result = runGit(dir, mode);
+      assert.match(result.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'));
+      assert.match(result.stdout, /postfit-policy\/POST-COEF-EMPTY/);
+    }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
 if (failures > 0) {
   console.log(`\n${failures} control(s) FAILED`);
   process.exit(1);

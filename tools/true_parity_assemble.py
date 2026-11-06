@@ -121,6 +121,8 @@ from collections import Counter, OrderedDict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from core070_json_semantics import json_value_equal
+
 ROOT = Path(__file__).resolve().parent.parent
 LEDGER = Path("docs/dev-log/core070/true-parity-latest")
 P1_SHA = "9539352f66f2db2cc26b1c393e67212a359b60c9"
@@ -734,6 +736,169 @@ def convergence_parity_problem(cp, p):
     return None
 
 
+POSTCOEF_LAUNCHER_SHA256 = '3ab4461da658cfa2a2c0922f7199c9bffbbf4e36fee0bfb5a83fe00de82caa55'
+
+
+def postcoef_launcher_problem(path):
+    try:
+        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != POSTCOEF_LAUNCHER_SHA256:
+            return 'POST-COEF launcher differs from trusted caller binding'
+    except OSError:
+        return 'POST-COEF launcher unavailable'
+    return None
+
+
+def run_postcoef_gate(tool, mode, arguments, env):
+    fd = os.open(tool.parent.parent, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
+    try:
+        if tool.is_symlink() or not tool.is_file():
+            raise ValueError('POST-COEF launcher unavailable')
+        source = tool.read_bytes()
+        if hashlib.sha256(source).hexdigest() != POSTCOEF_LAUNCHER_SHA256:
+            raise ValueError('POST-COEF launcher differs from trusted caller binding')
+        bootstrap = ("__file__ = " + repr(str(tool)) + "; __gate_root_fd__ = " + str(fd) +
+                     "; exec(compile(bytes.fromhex(" + repr(source.hex()) + "), __file__, 'exec'))")
+        proc = subprocess.run([sys.executable, "-B", "-I", "-c", bootstrap, mode, *arguments],
+                              pass_fds=(fd,), capture_output=True, text=True, timeout=420, env=env)
+    finally:
+        os.close(fd)
+    if proc.returncode != 0:
+        raise ValueError('protected gate rejected verification')
+    return json.loads(proc.stdout)
+
+
+def postcoef_live_identity_matches(result, expected):
+    """Require the verifier output to describe the independently read tuple."""
+    fields = {"selected_commit", "selected_tree", "source_commit", "case_commit", "case_sha256",
+              "capture_sha256", "oracle_build_sha256", "runtime_record", "runtime_root", "python_executable"}
+    return (isinstance(result, dict) and result.get("status") == "POSTCOEF_LIVE_REF_VERIFIED"
+            and isinstance(expected, dict) and set(expected) == fields
+            and all(key in result and json_value_equal(result[key], value)
+                    for key, value in expected.items())
+            and result.get("capture_commit") == expected.get("source_commit"))
+
+
+POSTCOEF_CAPTURE_PREFIX = "docs/dev-log/core070/true-parity-latest/receipts/postfit/postcoef-empty-p1"
+
+
+def postcoef_capture_pointers_problem(case):
+    if not isinstance(case, dict):
+        return "POST-COEF invalid case"
+    binding = case.get("postcoef_capture")
+    if (not isinstance(binding, dict) or binding.get("receipt") != f"{POSTCOEF_CAPTURE_PREFIX}/receipt.json"
+            or not isinstance(binding.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", binding["sha256"])):
+        return "POST-COEF missing capture binding"
+    verifier = case.get("batch_verifier")
+    if (case.get("raw") != [f"{POSTCOEF_CAPTURE_PREFIX}/julia-results.json", f"{POSTCOEF_CAPTURE_PREFIX}/r-oracle.json"]
+            or not isinstance(verifier, dict) or verifier.get("log") != f"{POSTCOEF_CAPTURE_PREFIX}/verify.txt"
+            or not isinstance(verifier.get("log_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", verifier["log_sha256"])):
+        return "POST-COEF capture pointers differ"
+    return None
+
+
+def postcoef_capture_problem(case, root, row):
+    """Validate retained control evidence before accepting the POST-COEF case."""
+    rel = f"{POSTCOEF_CAPTURE_PREFIX}/receipt.json"
+    pointer_problem = postcoef_capture_pointers_problem(case)
+    if pointer_problem:
+        return pointer_problem
+    binding = case.get("postcoef_capture")
+    if (not isinstance(binding, dict) or binding.get("receipt") != rel
+            or not isinstance(binding.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", binding["sha256"])):
+        return "POST-COEF missing capture binding"
+    root = Path(root).resolve()
+    current = root
+    for part in Path(rel).parts:
+        current = current / part
+        if current.is_symlink():
+            return "POST-COEF capture path contains a symlink"
+    state = (root / rel).parent
+    try:
+        def walk_error(error):
+            raise error
+        for base, dirs, files in os.walk(state, followlinks=False, onerror=walk_error):
+            for name in dirs + files:
+                entry = Path(base) / name
+                if entry.is_symlink():
+                    return "POST-COEF capture contains a symlink"
+                if not (entry.is_file() or entry.is_dir()):
+                    return "POST-COEF capture contains a non-regular entry"
+    except OSError:
+        return "POST-COEF capture enumeration failed"
+    state = state.resolve()
+    if root not in state.parents:
+        return "POST-COEF capture path escapes root"
+    try:
+        transcript = (state / 'verify.txt').read_bytes()
+        markers = (b'CORE070_POSTFIT_POLICY_BATCH_NEGATIVES_PASS 10',
+                   b'CORE070_POSTFIT_POLICY_CONTRACT_NEGATIVES_PASS 4',
+                   b'CORE070_POSTFIT_POLICY_SOURCE_PIN_NEGATIVES_PASS 5',
+                   b'CORE070_POSTFIT_POLICY_BATCH_VERIFIED 15 negative_controls 2')
+        if (hashlib.sha256(transcript).hexdigest() != case['batch_verifier']['log_sha256']
+                or not all(marker in transcript.splitlines() for marker in markers)):
+            return "POST-COEF verifier transcript differs"
+    except (OSError, KeyError, TypeError):
+        return "POST-COEF verifier transcript missing"
+    tool = ROOT / "tools/core070_postcoef_offline_check.py"
+    proc = subprocess.run([sys.executable, str(tool), "--repo", str(root), "--state", str(state),
+                           "--receipt-sha256", binding["sha256"]], capture_output=True, text=True)
+    if proc.returncode != 0 or "ARTIFACT_INTEGRITY_PASS_RUNTIME_NOT_VERIFIED" not in proc.stdout.splitlines():
+        return "POST-COEF capture validation failed: " + proc.stderr.strip()[:500]
+    try:
+        report = json.loads((state / "julia-results.json").read_text())
+        oracle = json.loads((state / "r-oracle.json").read_text())
+        cid = "CORE070-POSTFIT-COEF-EMPTY-NATIVE"
+        result = report["cases"][cid]
+        comparisons = case["comparison"]["cases"]
+        if len(comparisons) != 1 or comparisons[0]["case_id"] != cid:
+            return "POST-COEF comparison identity mismatch"
+        expected_r = [fit["length"] for fit in oracle["postcoef_three_fit"]["fits"]]
+        expected_j = result["three_fit"]["julia_lengths"]
+        if (not json_value_equal(case.get("harness_fields"), result) or not json_value_equal(comparisons[0].get("r_value"), expected_r)
+                or not json_value_equal(comparisons[0].get("julia_value"), expected_j)):
+            return "POST-COEF case differs from capture"
+    except (OSError, ValueError, KeyError, TypeError):
+        return "POST-COEF capture data malformed"
+    runtime = os.environ.get("GLLVM_POSTCOEF_RUNTIME_ROOT")
+    if not runtime or not Path(runtime).is_absolute():
+        return "POST-COEF runtime and oracle build not independently verified"
+    try:
+        git_env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        git_env["GIT_NO_REPLACE_OBJECTS"] = "1"
+        def selected(*args):
+            return subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True,
+                                  text=True, timeout=30, env=git_env).stdout
+        head = selected("rev-parse", "--verify", "HEAD^{commit}").strip()
+        if not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", head):
+            return "POST-COEF selected commit is invalid"
+        case_rel = "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-THREE-FIT-NATIVE.json"
+        map_rel = "docs/dev-log/core070/true-parity-latest/case-map-postfit.json"
+        committed_case = json.loads(selected("show", f"{head}:{case_rel}"))
+        committed_map = json.loads(selected("show", f"{head}:{map_rel}"))
+        selected_rows = [item for item in committed_map["rows"]
+                         if item.get("source_id") == "postfit-policy/POST-COEF-EMPTY"]
+        if not json_value_equal(committed_case, case) or len(selected_rows) != 1 or not json_value_equal(selected_rows[0], row):
+            return "POST-COEF case or row differs from selected commit"
+        env = dict(git_env)
+        for name in ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP"):
+            env.pop(name, None)
+        tool = ROOT / "tools/core070_postcoef_gate_launcher.py"
+        problem = postcoef_launcher_problem(tool)
+        if problem:
+            return problem
+        arguments = ["--repo", str(root.resolve()), "--head", head, "--runtime-root", runtime]
+        result = run_postcoef_gate(tool, 'live', arguments, env)
+        expected = run_postcoef_gate(tool, 'identity', arguments, env)
+        if not postcoef_live_identity_matches(result, expected):
+            return "POST-COEF live verifier returned inconsistent identity"
+    except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return "POST-COEF selected-ref or live verification failed"
+    return None
+
+
 def numeric_receipt_problem(row, root, waive_status=False):
     """None when the row binds numerically, else why not. waive_status=True skips only the
     receipt status fields (what a valid receipt_status_exception waives in the checker)."""
@@ -741,6 +906,8 @@ def numeric_receipt_problem(row, root, waive_status=False):
     if not paths:
         return "no receipt"
     covered, blocks, not_passed = set(), 0, None
+    postcoef = row.get("source_id") == "postfit-policy/POST-COEF-EMPTY"
+    postcoef_checked = False
     for p in paths:
         try:
             j = json.loads((root / p).read_text())
@@ -748,6 +915,13 @@ def numeric_receipt_problem(row, root, waive_status=False):
             continue
         if not isinstance(j, dict):
             continue
+        if (postcoef and p == "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-THREE-FIT-NATIVE.json" and
+                j.get("case_id") == "CORE070-POSTFIT-COEF-THREE-FIT-NATIVE" and
+                j.get("harness_case_id") == "CORE070-POSTFIT-COEF-EMPTY-NATIVE"):
+            problem = postcoef_capture_problem(j, root, row)
+            if problem:
+                return problem
+            postcoef_checked = True
         if j.get("evidence_kind") == "live_bridge_readback":
             bp = bridge_readback_problem(row, p)
             if bp:
@@ -772,6 +946,8 @@ def numeric_receipt_problem(row, root, waive_status=False):
         if bad:
             return bad
         blocks += 1
+    if postcoef and not postcoef_checked:
+        return "POST-COEF case receipt missing"
     if blocks == 0:
         return "no comparison block in any receipt"
     ctx, ctx_problem = boundary_context(row, root)

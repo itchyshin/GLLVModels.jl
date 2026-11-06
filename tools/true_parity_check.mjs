@@ -88,8 +88,12 @@ import { createHash } from 'node:crypto';
 //     STATUS_NOT_BOUND, not done. The assembler no longer turns a case-map disposition into a done word
 //     (disposition_status); this guard keeps the two tools in agreement.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, lstatSync, realpathSync, openSync, closeSync, fstatSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
+import { inspectPostcoefArtifacts, liveIdentityMatches } from './core070_postcoef_ref_check.mjs';
+import { readRefBytes, resolveGitRef, safeGitEnv } from './core070_ref_bytes.mjs';
 
 const REF = process.env.PARITY_REF || 'origin/main';
 const PIN = process.env.PARITY_PIN || 'P1';
@@ -220,7 +224,7 @@ const behaviouralEligibleBoardId = (id) => BEHAVIOURAL_ELIGIBLE_BOARD_IDS.has(id
 const VISIBLE_RE = /[\p{L}\p{N}\p{P}\p{S}]/u;
 const isVisible = (x) => typeof x === 'string' && VISIBLE_RE.test(x);
 
-const git = (...a) => execFileSync('git', a, { encoding: 'utf8', maxBuffer: 64 << 20, stdio: ['ignore', 'pipe', 'pipe'] });
+const git = (...a) => execFileSync('git', a, { encoding: 'utf8', maxBuffer: 64 << 20, stdio: ['ignore', 'pipe', 'pipe'], env: safeGitEnv() });
 const die = (m) => { console.log(`MEASUREMENT_FAILED ${m}`); process.exit(2); };
 
 function show(p) {
@@ -522,13 +526,94 @@ function convergenceParityProblem(cp, p) {
 }
 
 function numericReceiptStatus(row) {
+  let immutableTargetRef = null;
+  // The retained offline verifier does not independently qualify the runtime
+  // or oracle build. Keep this specific case unbound until the selected ref
+  // carries a reviewed, complete qualification path. This is not a receipt
+  // status failure, so a status exception cannot waive it.
+  if (row.source_id === 'postfit-policy/POST-COEF-EMPTY') {
+    const root = REF === 'FS' ? FS_ROOT : process.cwd();
+    const pinned = REF === 'FS' ? 'FS' : resolveGitRef(root, REF);
+    if (!pinned) return { ok: false, reason: 'POST-COEF selected ref unavailable' };
+    try {
+      const map = JSON.parse(readRefBytes({root, ref:pinned, path:PATHS.casemap}));
+      const rows = map.rows.filter((entry) => entry.source_id === row.source_id);
+      if (rows.length !== 1 || !isDeepStrictEqual(rows[0], row))
+        return { ok: false, reason: 'POST-COEF case map changed during inspection' };
+    } catch { return { ok: false, reason: 'POST-COEF selected case map unavailable' }; }
+    const targetPath = 'docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-THREE-FIT-NATIVE.json';
+    let target = null;
+    if (rowReceiptPaths(row).includes(targetPath)) {
+      try {
+        const parsed = JSON.parse(readRefBytes({root, ref:pinned, path:targetPath}));
+        if (parsed?.case_id === 'CORE070-POSTFIT-COEF-THREE-FIT-NATIVE' &&
+            parsed?.harness_case_id === 'CORE070-POSTFIT-COEF-EMPTY-NATIVE') target = parsed;
+      } catch { /* Missing or malformed case cannot satisfy the guard. */ }
+    }
+    if (!target) return { ok: false, reason: 'POST-COEF case receipt missing' };
+    const artifacts = inspectPostcoefArtifacts({root, ref:pinned, caseReceipt: target});
+    if (!artifacts.ok) return { ok: false, reason: `POST-COEF artifact check: ${artifacts.reason}` };
+    const tool = fileURLToPath(new URL('./core070_postcoef_gate_launcher.py', import.meta.url));
+    let gateFd;
+    try {
+      gateFd = openSync(fileURLToPath(new URL('../', import.meta.url)), 'r');
+      if (!fstatSync(gateFd).isDirectory()) throw new Error('untrusted source root');
+      let launcherBytes;
+      if (lstatSync(tool).isSymbolicLink()) throw new Error('untrusted launcher');
+      launcherBytes = readFileSync(tool);
+      if (createHash('sha256').update(launcherBytes).digest('hex') !==
+          '3ab4461da658cfa2a2c0922f7199c9bffbbf4e36fee0bfb5a83fe00de82caa55')
+        throw new Error('untrusted launcher');
+    const bootstrap = `__file__ = ${JSON.stringify(tool)}; __gate_root_fd__ = 3; exec(compile(bytes.fromhex('${launcherBytes.toString('hex')}'), __file__, 'exec'))`;
+    if (pinned !== 'FS') {
+      try {
+        const verdict = execFileSync('python3', ['-B', '-I', '-c', bootstrap, 'ancestry', root, artifacts.sourceCommit, pinned],
+          {encoding:'utf8', stdio:['ignore','pipe','pipe',gateFd], timeout:420000, env:safeGitEnv()});
+        if (verdict.trim() !== 'POSTCOEF_REF_COMPATIBLE') throw new Error('unexpected verdict');
+      } catch { return { ok:false, reason:'POST-COEF selected ref is not an approved evidence-only descendant' }; }
+    }
+    const runtimeSetting = process.env.GLLVM_POSTCOEF_RUNTIME_ROOT;
+    if (!runtimeSetting || pinned === 'FS')
+      return { ok: false, reason: 'POST-COEF runtime and oracle build not independently verified' };
+    let runtimeRoot;
+    try { runtimeRoot = realpathSync(runtimeSetting); }
+    catch { return { ok: false, reason: 'POST-COEF runtime unavailable' }; }
+    try {
+      const env = safeGitEnv();
+      delete env.PYTHONPATH; delete env.PYTHONHOME; delete env.PYTHONSTARTUP;
+      const output = execFileSync('python3', ['-B', '-I', '-c', bootstrap, 'live', '--repo', root, '--head', pinned, '--runtime-root', runtimeRoot],
+        {encoding:'utf8', stdio:['ignore','pipe','pipe',gateFd], timeout:420000, env});
+      const verified = JSON.parse(output);
+      const selectedTree = execFileSync('git', ['-C', root, 'rev-parse', '--verify', `${pinned}^{tree}`],
+        {encoding:'utf8', stdio:['ignore','pipe','pipe'], timeout:30000, env:safeGitEnv()}).trim();
+      const caseBytes = readRefBytes({root, ref:pinned, path:targetPath});
+      const captureBytes = readRefBytes({root, ref:pinned, path:target.postcoef_capture.receipt});
+      const capture = JSON.parse(captureBytes);
+      const buildBytes = readRefBytes({root, ref:pinned, path:target.oracle_build_receipt});
+      if (!caseBytes || !buildBytes || !capture.postcoef_runtime ||
+          capture.postcoef_capture_identity?.source_commit !== artifacts.sourceCommit)
+        throw new Error('selected identity unavailable');
+      const expected = {selected_commit:pinned, selected_tree:selectedTree,
+        source_commit:artifacts.sourceCommit, case_commit:target.glvmodels_commit,
+        case_sha256:createHash('sha256').update(caseBytes).digest('hex'),
+        capture_sha256:createHash('sha256').update(captureBytes).digest('hex'),
+        oracle_build_sha256:createHash('sha256').update(buildBytes).digest('hex'),
+        runtime_record:capture.postcoef_runtime, runtime_root:realpathSync(runtimeRoot),
+        python_executable:realpathSync(capture.postcoef_runtime.python_executable_path)};
+      if (!liveIdentityMatches(verified, expected)) throw new Error('unexpected verifier identity');
+      immutableTargetRef = pinned;
+    } catch { return { ok:false, reason:'POST-COEF live selected-ref verification failed' }; }
+    } catch { return { ok:false, reason:'POST-COEF launcher differs from trusted caller binding' }; }
+    finally { if (gateFd !== undefined) closeSync(gateFd); }
+  }
   const paths = rowReceiptPaths(row);
   if (paths.length === 0) return { ok: false, reason: 'no receipt' };
   const covered = new Set();
   let blocks = 0;
   let notPassed = null;
   for (const p of paths) {
-    const txt = show(p);
+    const txt = immutableTargetRef === null ? show(p) :
+      (readRefBytes({root:process.cwd(), ref:immutableTargetRef, path:p})?.toString('utf8') ?? null);
     if (txt === null) return { ok: false, reason: `unreadable ${p}` };
     let j;
     try { j = JSON.parse(txt); } catch { continue; } // a non-JSON receipt carries no comparison
