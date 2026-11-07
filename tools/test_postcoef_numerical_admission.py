@@ -463,6 +463,50 @@ class SecondReviewC3ExactnessTests(unittest.TestCase):
         self.assertEqual(health.certify_gradient(1e-5, 1e-20), INC)
         self.assertEqual(health.certify_gradient(2e-5, 1e-6), FAIL)
 
+    def test_c3_survivor_controls_from_the_second_mutation_run(self):
+        # zero radius with an all-zero block: refused, not a (zero-margin) FAIL
+        self.assertEqual(hess([[0.0]], [1], 0.0)['verdict'], INC)
+        self.assertEqual(hess([[0.0]], [1], -0.0)['verdict'], INC)
+        # duplicated free index: refused
+        three = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+        self.assertEqual(hess(three, [1, 1, 2], pinned_indices=[3])['verdict'], INC)
+        # only the Julia engine has a recorded Hessian to certify
+        row = certified_good()['Julia'][0]
+        self.assertEqual(health.certify_fit(row, 'Julia')['verdict'], PASS)
+        out = health.certify_fit(row, 'R')
+        self.assertEqual(out['verdict'], INC)
+        self.assertIn('engine', out['reason'])
+        # Hessian size must equal the recorded gradient length
+        row = certified_good()['Julia'][0]
+        row['gradient'] = [1e-7, 0.0, 0.0]
+        out = health.certify_fit(row)
+        self.assertEqual(out['verdict'], INC)
+        self.assertIn('Hessian size', out['hessian']['reason'])
+
+    def test_c3_floors_are_compared_exactly(self):
+        # k = 3: the exact floor 3*2**-52*peak is not a binary64 number; a radius equal to its
+        # round-down float is below the exact floor and must be refused.
+        peak = 1.000000000078736
+        exact_floor = 3 * health.CERT_EPS * Fraction(peak)
+        r_down = float(exact_floor)
+        self.assertLess(Fraction(r_down), exact_floor)
+        m = [[peak, 0.0, 0.0], [0.0, peak, 0.0], [0.0, 0.0, peak]]
+        out = hess(m, [1, 2, 3], r_down)
+        self.assertEqual(out['verdict'], INC)
+        self.assertIn('floor', out['reason'])
+        r_up = math.nextafter(r_down, 1.0)
+        self.assertGreaterEqual(Fraction(r_up), exact_floor)
+        self.assertEqual(hess(m, [1, 2, 3], r_up)['verdict'], PASS)
+
+    def test_c3_gradient_failure_boundary_just_above_the_float_limit(self):
+        g = math.nextafter(1e-5, 1.0)
+        e = 2.3e-21  # at least the representation floor 2**-52 * g, and g - e is within 1 ulp of 1e-5
+        self.assertGreaterEqual(Fraction(e), health.CERT_EPS * Fraction(g))
+        self.assertGreaterEqual(Fraction(g) - Fraction(e), health.CERT_GRADIENT_LIMIT)
+        self.assertEqual(health.certify_gradient(g, e), FAIL)
+        self.assertEqual(health.certify_gradient(g, math.nextafter(e, 1.0)), FAIL)
+        self.assertEqual(health.certify_gradient(g, 1e-20), INC)  # g - e now below the limit
+
     def test_c3_negative_values_in_minus_one_to_zero_are_refused(self):
         m = [[1.0, 0.0], [0.0, 1.0]]
         for bad in (-0.5, -1e-300, math.nextafter(0.0, -1.0), -0.999):
@@ -569,6 +613,51 @@ class SecondReviewC4ConfirmationTests(unittest.TestCase):
         self.assertTrue(health._record_checks_valid(row, r_valid))
         with enabled():
             self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
+
+    def test_c4_roundoff_limit_is_enforced_even_when_the_record_is_self_consistent(self):
+        data, row = self.failing()
+        row['recomputed_objective'] = 3.5
+        row['objective_difference'] = 0.5
+        row['objective_roundoff_limit'] = 8 * 2.220446049250313e-16 * 3.5  # recorded values match the recomputation
+        self.assertFalse(health._record_checks_valid(row, health._r_block_valid(data)))
+        row['recomputed_objective'] = 3.0
+        row['objective_difference'] = 0.0
+        row['objective_roundoff_limit'] = 8 * 2.220446049250313e-16 * 3.0
+        self.assertTrue(health._record_checks_valid(row, health._r_block_valid(data)))
+
+    def test_c4_r_block_validity_is_checked_field_by_field(self):
+        data = certified_good()
+        self.assertTrue(health._r_block_valid(data))
+        mutations = {
+            'free indices partial': lambda f: f.update(free_indices=[1]),
+            'free indices duplicated': lambda f: f.update(free_indices=[1, 1, 2]),
+            'free indices non-int': lambda f: f.update(free_indices=[1.0, 2.0]),
+            'max_abs_gradient disagrees': lambda f: f.update(max_abs_gradient=5e-8),
+            'max_abs_gradient missing': lambda f: f.pop('max_abs_gradient'),
+            'objective differs': lambda f: f.update(recomputed_objective=3.5),
+            'pd flag not bool': lambda f: f.update(pd_hessian=1),
+            'pd flag missing': lambda f: f.pop('pd_hessian'),
+            'ridge penalised': lambda f: f.update(ridge_penalised=True),
+            'ridge flag not bool': lambda f: f.update(ridge_penalised=0),
+            'ridge tau finite': lambda f: f.update(ridge_tau=1.0),
+            'prior recorded': lambda f: f.update(fixed_prior_state='prior'),
+            'penalty unrecorded': lambda f: f.update(penalty_configuration_recorded=False),
+            'error recorded': lambda f: f.update(error='x'),
+            'error field missing': lambda f: f.pop('error'),
+            'gradient length differs': lambda f: f.update(gradient=[1e-7]),
+            'parameters non-finite': lambda f: f.update(parameters=[float('nan'), 0.0]),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label):
+                d = copy.deepcopy(data)
+                mutate(d['R'][1])
+                self.assertFalse(health._r_block_valid(d))
+        for bad in (None, {}, {'R': None}, {'R': {}}):
+            self.assertFalse(health._r_block_valid(bad))
+        # a failing R pd flag or a large R gradient is well-formed evidence, not garbage
+        d = copy.deepcopy(data)
+        d['R'][0]['pd_hessian'] = False
+        self.assertTrue(health._r_block_valid(d))
 
     def test_c4_gradient_certified_failure_has_the_same_requirements(self):
         data = certified_good()
