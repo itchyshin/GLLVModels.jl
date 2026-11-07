@@ -28,11 +28,17 @@ it still denotes a confirmed failure, never an incomplete-only state.
 import math
 import sys
 import re
+import time
+from fractions import Fraction
 
 ENGINES = ('R', 'Julia')
 CASES = ('no_fixed_effects', 'trait_intercepts', 'trait_intercepts_plus_covariate')
 GRADIENT_LIMIT = 1e-5  # Signed 2026-10-21 rule: strictly below this value.
-NUMERICAL_ADMISSION_IMPLEMENTED = False  # Hold: no Hessian rule is certified.
+NUMERICAL_ADMISSION_IMPLEMENTED = False  # Hold: certifier below awaits independent review.
+HESSIAN_COORDINATE = 'packed_free_index'  # Maintainer ruling 2026-11-07.
+CERT_MAX_FREE_DIMENSION = 32   # Refuse (INCOMPLETE) above this free-block size.
+CERT_MAX_SECONDS = 10.0        # Refuse (INCOMPLETE) when exact work exceeds this.
+CERT_GRADIENT_LIMIT = Fraction(1, 100000)  # Exact decimal 1e-5, strict upper bound.
 
 
 def finite_number(value):
@@ -128,6 +134,175 @@ def julia_prior_bound(provenance, authenticated_tree, case):
             provenance['case'] == case and provenance['route'] == 'gaussian_profile_default' and
             type(provenance['rank']) is int and provenance['rank'] == 1 and
             provenance['integration'] == 'exact' and provenance['prior'] == 'none')
+
+
+# ---------------------------------------------------------------------------
+# Numerical-admission certifier (diagnostic; enabled only by the hold flag).
+#
+# Object certified: the RECORDED symmetric packed Hessian restricted to the
+# recorded free indices ("packed free-index" coordinate). Nothing is
+# transferred to another parameterisation: away from a stationary point the
+# Hessian is not invariant (H_phi = J'HJ + sum_i g_i * Hess(theta_i)), so the
+# record must declare ``hessian_coordinate == 'packed_free_index'``.
+#
+# Method. Exact binary64 values are lifted to Fractions. Exact LDL^T without
+# pivoting is a Sylvester test: all pivots > 0 iff the block is positive
+# definite; the first pivot <= 0 proves it is not. With the declared entrywise
+# error radius r (plus the recorded symmetrisation asymmetry), any true
+# Hessian H satisfies |H - A| <= r entrywise on the k-by-k block, so by Weyl
+# and ||E||_2 <= ||E||_F <= k*r:   lambda_min(A) - k*r <= lambda_min(H)
+#                                  <= lambda_min(A) + k*r.
+# Hence  A - k*r*I positive definite  => H certified positive definite;
+#        A + k*r*I not positive definite => H certified not positive definite
+#        (indefinite or singular); anything between is INCOMPLETE.
+# Not covered: the justification of r itself, Hessian accuracy beyond r, and
+# the gradient error radius; both radii are caller declarations.
+# ---------------------------------------------------------------------------
+CERT_PASS, CERT_FAIL, CERT_INCOMPLETE = 'CERT_PASS', 'CERT_FAIL', 'CERT_INCOMPLETE'
+
+
+class _CertRefusal(Exception):
+    pass
+
+
+def _exact_pd(block, shift, deadline):
+    """Exact test that block - shift*I is positive definite (Fractions)."""
+    k = len(block)
+    a = [[block[i][j] - (shift if i == j else 0) for j in range(k)] for i in range(k)]
+    lower = [[Fraction(0)] * k for _ in range(k)]
+    diag = []
+    for j in range(k):
+        if time.monotonic() > deadline:
+            raise _CertRefusal('time cap exceeded')
+        pivot = a[j][j] - sum(lower[j][s] ** 2 * diag[s] for s in range(j))
+        if pivot <= 0:
+            return False
+        diag.append(pivot)
+        for i in range(j + 1, k):
+            lower[i][j] = (a[i][j] - sum(lower[i][s] * lower[j][s] * diag[s] for s in range(j))) / pivot
+    return True
+
+
+def certify_hessian(matrix, free_indices, coordinate, error_radius, asymmetry=0.0,
+                    pinned_indices=None, max_dimension=None, max_seconds=None):
+    """Certify the recorded packed free-index Hessian; return a verdict dict.
+
+    verdict is CERT_PASS (certified positive definite with margin exceeding
+    the declared error bound), CERT_FAIL (certified not positive definite)
+    or CERT_INCOMPLETE (cannot be certified, with a reason). The echoed
+    ``free_indices`` and ``excluded_indices`` show which block was decided.
+    """
+    max_dimension = CERT_MAX_FREE_DIMENSION if max_dimension is None else max_dimension
+    max_seconds = CERT_MAX_SECONDS if max_seconds is None else max_seconds
+    out = {'verdict': CERT_INCOMPLETE, 'reason': None, 'coordinate': coordinate,
+           'free_indices': None, 'excluded_indices': None, 'error_bound': None}
+
+    def refuse(reason):
+        out['reason'] = reason
+        return out
+    if coordinate != HESSIAN_COORDINATE:
+        return refuse('Hessian coordinate is not the declared packed free-index coordinate')
+    if not isinstance(matrix, list) or not matrix:
+        return refuse('matrix missing or malformed')
+    n = len(matrix)
+    if (any(not isinstance(row, list) or len(row) != n for row in matrix) or
+            not all(finite_number(x) for row in matrix for x in row)):
+        return refuse('matrix missing, non-square or non-finite')
+    if any(matrix[i][j] != matrix[j][i] for i in range(n) for j in range(i)):
+        return refuse('matrix is not exactly symmetric')
+    if (not isinstance(free_indices, list) or not free_indices or
+            any(type(i) is not int or not 1 <= i <= n for i in free_indices) or
+            len(set(free_indices)) != len(free_indices)):
+        return refuse('free indices missing or invalid')
+    excluded = [i for i in range(1, n + 1) if i not in set(free_indices)]
+    if pinned_indices is not None and (not isinstance(pinned_indices, list) or
+                                        sorted(pinned_indices) != excluded):
+        return refuse('recorded pinned indices do not match the complement of the free indices')
+    out['free_indices'], out['excluded_indices'] = list(free_indices), excluded
+    if not finite_number(error_radius) or error_radius <= 0:
+        return refuse('derivative error radius not recorded or not positive')
+    if not finite_number(asymmetry) or asymmetry < 0:
+        return refuse('asymmetry not recorded')
+    k = len(free_indices)
+    if k > max_dimension:
+        return refuse('free block of %d exceeds the size cap of %d' % (k, max_dimension))
+    bound = k * (Fraction(error_radius) + Fraction(asymmetry))
+    out['error_bound'] = bound
+    block = [[Fraction(matrix[i - 1][j - 1]) for j in free_indices] for i in free_indices]
+    deadline = time.monotonic() + max_seconds
+    try:
+        if _exact_pd(block, bound, deadline):
+            out['verdict'] = CERT_PASS
+        elif not _exact_pd(block, -bound, deadline):
+            out['verdict'] = CERT_FAIL
+        else:
+            return refuse('definiteness not decided: margin does not exceed the declared error bound')
+    except _CertRefusal as exc:
+        return refuse(str(exc))
+    return out
+
+
+def certify_gradient(max_abs_gradient, error_radius):
+    """Stated gradient bound: PASS only if g + e < 1e-5 (optimizer coordinates)."""
+    if not finite_number(max_abs_gradient) or max_abs_gradient < 0:
+        return CERT_INCOMPLETE
+    if not finite_number(error_radius) or error_radius <= 0:
+        return CERT_INCOMPLETE
+    g, e = Fraction(max_abs_gradient), Fraction(error_radius)
+    if g + e < CERT_GRADIENT_LIMIT:
+        return CERT_PASS
+    if g - e >= CERT_GRADIENT_LIMIT:
+        return CERT_FAIL
+    return CERT_INCOMPLETE
+
+
+def certify_fit(fit, engine='Julia'):
+    """Certificate for one recorded Julia fit: curvature and gradient bound."""
+    result = {'verdict': CERT_INCOMPLETE, 'reason': None, 'hessian': None, 'gradient': None}
+    if engine != 'Julia' or not isinstance(fit, dict):
+        result['reason'] = 'no recorded Hessian for this engine'
+        return result
+    if fit.get('penalty_state') != 'none':
+        result['reason'] = 'penalised or prior model: the no-prior diagnostic does not certify it'
+        return result
+    vector = fit.get('gradient')
+    dimension = len(vector) if isinstance(vector, list) else 0
+    h = certify_hessian(fit.get('hessian'), fit.get('free_indices'), fit.get('hessian_coordinate'),
+                        fit.get('hessian_error_radius'), fit.get('hessian_asymmetry'),
+                        fit.get('pinned_indices'))
+    if dimension and isinstance(fit.get('hessian'), list) and len(fit['hessian']) != dimension:
+        h = dict(h, verdict=CERT_INCOMPLETE, reason='Hessian size differs from the recorded gradient')
+    opt = fit.get('optimizer')
+    g = certify_gradient(opt.get('optimizer_max_abs_gradient') if isinstance(opt, dict) else None,
+                         fit.get('gradient_error_radius'))
+    result['hessian'], result['gradient'] = h, g
+    if h['verdict'] == CERT_FAIL or g == CERT_FAIL:
+        result['verdict'] = CERT_FAIL
+    elif h['verdict'] == CERT_PASS and g == CERT_PASS:
+        result['verdict'] = CERT_PASS
+    else:
+        result['reason'] = h['reason'] or 'gradient bound not certified'
+    return result
+
+
+def certify_evidence(evidence):
+    """Per-fit certificates; ``failure_confirmable`` needs a valid unique case set."""
+    certs, confirmable = [], True
+    fits = evidence.get('Julia') if isinstance(evidence, dict) else None
+    if not isinstance(fits, list) or len(fits) != len(CASES):
+        return [], False
+    cases = [f.get('case') if isinstance(f, dict) else None for f in fits]
+    if set(cases) != set(CASES) or len(set(cases)) != len(CASES):
+        confirmable = False
+    for fit in fits:
+        cert = certify_fit(fit)
+        bound = (isinstance(fit, dict) and fit.get('objective_verified') is True and
+                 fit.get('penalty_configuration_recorded') is True and
+                 'error' in fit and fit.get('error') is None)
+        if not bound:
+            confirmable = False
+        certs.append(cert)
+    return certs, confirmable
 
 
 def _classify_recorded(evidence):
@@ -284,12 +459,27 @@ def _classify_recorded(evidence):
 
 
 def classify(evidence):
-    """Classify six recorded diagnostics; no record is admitted while held.
+    """Classify six recorded diagnostics.
 
-    Missing evidence never becomes a pass, and while numerical admission is
-    unimplemented a would-be pass is reported as FIT_HEALTH_INCOMPLETE.
+    While ``NUMERICAL_ADMISSION_IMPLEMENTED`` is False every would-be pass is
+    FIT_HEALTH_INCOMPLETE and the certifier is not consulted. When enabled, a
+    pass additionally needs every Julia fit certified (curvature with margin
+    over the declared error bound, plus the stated gradient bound), and a
+    certified indefinite or singular Hessian on valid evidence is a failure.
+    Anything not certified stays INCOMPLETE.
     """
     verdict = _classify_recorded(evidence)
-    if verdict == 'FIT_HEALTH_PASS' and not NUMERICAL_ADMISSION_IMPLEMENTED:
-        return 'FIT_HEALTH_INCOMPLETE'
+    if not NUMERICAL_ADMISSION_IMPLEMENTED:
+        return 'FIT_HEALTH_INCOMPLETE' if verdict == 'FIT_HEALTH_PASS' else verdict
+    if verdict == 'FIT_HEALTH_INTEGRITY_REJECTED':
+        return verdict
+    certs, confirmable = certify_evidence(evidence)
+    certified_failure = confirmable and any(c['verdict'] == CERT_FAIL for c in certs)
+    all_certified = len(certs) == len(CASES) and all(c['verdict'] == CERT_PASS for c in certs)
+    if verdict == 'FIT_HEALTH_PASS':
+        if certified_failure:
+            return 'FIT_HEALTH_FAIL'
+        return verdict if all_certified else 'FIT_HEALTH_INCOMPLETE'
+    if certified_failure:
+        return 'FIT_HEALTH_FAIL' if verdict == 'FIT_HEALTH_FAIL' else 'FIT_HEALTH_FAIL_WITH_INCOMPLETE'
     return verdict
