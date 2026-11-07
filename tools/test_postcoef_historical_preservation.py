@@ -1,5 +1,6 @@
 """Preserve the historical non-discriminating case when adding three-fit evidence."""
 import json
+import copy
 import os
 import hashlib
 import sys
@@ -62,7 +63,8 @@ class HistoricalPreservationTests(unittest.TestCase):
 class SeparateCaseDraftTests(unittest.TestCase):
     def test_draft_has_distinct_receipt_and_exact_harness_identity(self):
         historical=(Path(__file__).resolve().parent.parent / LEGACY).read_bytes()
-        harness={'pass':True,'three_fit':{'julia_lengths':[0,5,6]}}
+        complete, report, oracle = live_fixture()
+        harness=copy.deepcopy(report['cases'][live.CID])
         comparison={'case_id':receipt.COEF_EMPTY_CID,'kind':'integer_equality','r_value':[0,5,6],
                     'julia_value':[0,5,6],'tolerance':0.5,'max_abs_diff':0,'discriminating':True}
         draft=receipt.draft_separate_postcoef_case(harness,comparison,historical)
@@ -70,7 +72,6 @@ class SeparateCaseDraftTests(unittest.TestCase):
         self.assertEqual(draft['harness_case_id'],receipt.COEF_EMPTY_CID)
         self.assertEqual(draft['comparison']['cases'][0]['case_id'],receipt.COEF_EMPTY_CID)
         self.assertEqual(draft['verdict'],'UNQUALIFIED')
-        complete, report, oracle = live_fixture()
         complete.update(draft)
         complete['verdict']='PASS'; self.assertIsNone(live.check_comparison(complete,report,oracle))
         complete['verdict']='UNQUALIFIED'
