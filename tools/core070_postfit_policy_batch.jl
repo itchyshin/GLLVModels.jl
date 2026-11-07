@@ -379,7 +379,8 @@ postcoef_three_fit = if parity_pin == "P1"
             penalty_state=nothing, nll_factory=GLLVModels._confint_reconstruct_nll,
             pinned_indices=GLLVModels._lambda_constraint_pinned_theta_indices,
             gradient_eval=(f, x) -> GLLVModels.ForwardDiff.gradient(f, x),
-            hessian_eval=(f, x) -> GLLVModels.ForwardDiff.hessian(f, x))
+            hessian_eval=(f, x) -> GLLVModels.ForwardDiff.hessian(f, x),
+            derivative_method="forwarddiff_exact")
         # Retain the engine's own flag as diagnostic evidence. The signed
         # Hessian and optimizer-gradient rule is checked independently.
         h["fit_converged"] = fits[i].converged
@@ -398,7 +399,12 @@ postcoef_three_fit = if parity_pin == "P1"
             end
             h["optimizer"] = postcoef_julia_optimizer_health(fits[i].optim_result, profile.objective;
                 minimizer_eval=GLLVModels.Optim.minimizer, minimum_eval=GLLVModels.Optim.minimum,
-                gradient_eval=(f,x) -> GLLVModels.ForwardDiff.gradient(f,x))
+                gradient_eval=(f,x) -> GLLVModels.ForwardDiff.gradient(f,x),
+                derivative_method="forwarddiff_exact")
+            # The certifier reads the gradient radius beside the optimizer-coordinate
+            # gradient it certifies; lift it unchanged (nothing if not declared).
+            h["gradient_error_radius"] = h["optimizer"]["gradient_error_radius"]
+            h["gradient_error_radius_basis"] = h["optimizer"]["gradient_error_radius_basis"]
             h["reconstruction"] = postcoef_julia_reconstruction_health(
                 h["optimizer"]["optimizer_parameters"], fits[i].pars.θ_packed, fits[i].logLik;
                 recover_eval=profile.recover)
