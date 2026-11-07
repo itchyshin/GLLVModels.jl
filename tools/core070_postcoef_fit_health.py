@@ -39,6 +39,7 @@ HESSIAN_COORDINATE = 'packed_free_index'  # Maintainer ruling 2026-11-07.
 CERT_MAX_FREE_DIMENSION = 32   # Refuse (INCOMPLETE) above this free-block size.
 CERT_MAX_SECONDS = 10.0        # Refuse (INCOMPLETE) when exact work exceeds this.
 CERT_GRADIENT_LIMIT = Fraction(1, 100000)  # Exact decimal 1e-5, strict upper bound.
+CERT_EPS = Fraction(1, 2 ** 52)  # Representation unit for the radius floors below.
 
 
 def finite_number(value):
@@ -184,13 +185,21 @@ def _exact_pd(block, shift, deadline):
 
 
 def certify_hessian(matrix, free_indices, coordinate, error_radius, asymmetry=0.0,
-                    pinned_indices=None, max_dimension=None, max_seconds=None):
+                    pinned_indices=None, max_dimension=None, max_seconds=None,
+                    parameter_count=None):
     """Certify the recorded packed free-index Hessian; return a verdict dict.
 
     verdict is CERT_PASS (certified positive definite with margin exceeding
     the declared error bound), CERT_FAIL (certified not positive definite)
     or CERT_INCOMPLETE (cannot be certified, with a reason). The echoed
     ``free_indices`` and ``excluded_indices`` show which block was decided.
+
+    ``pinned_indices`` and ``parameter_count`` (the length of the fit's own
+    recorded parameters vector) are mandatory: free and pinned indices must
+    partition exactly 1..parameter_count, and the matrix must have that size.
+    ``error_radius`` is a caller declaration, not provenance; the floor
+    k * 2**-52 * max|H_ij| over the free block (k = block size) is only a
+    necessary sanity bound against sub-representation radii.
     """
     max_dimension = CERT_MAX_FREE_DIMENSION if max_dimension is None else max_dimension
     max_seconds = CERT_MAX_SECONDS if max_seconds is None else max_seconds
@@ -214,16 +223,23 @@ def certify_hessian(matrix, free_indices, coordinate, error_radius, asymmetry=0.
             any(type(i) is not int or not 1 <= i <= n for i in free_indices) or
             len(set(free_indices)) != len(free_indices)):
         return refuse('free indices missing or invalid')
-    excluded = [i for i in range(1, n + 1) if i not in set(free_indices)]
-    if pinned_indices is not None and (not isinstance(pinned_indices, list) or
-                                        sorted(pinned_indices) != excluded):
-        return refuse('recorded pinned indices do not match the complement of the free indices')
+    if type(parameter_count) is not int or parameter_count != n:
+        return refuse('recorded parameter count missing or differs from the Hessian size')
+    if (not isinstance(pinned_indices, list) or any(type(i) is not int for i in pinned_indices) or
+            len(set(pinned_indices)) != len(pinned_indices) or
+            set(pinned_indices) & set(free_indices) or
+            set(pinned_indices) | set(free_indices) != set(range(1, parameter_count + 1))):
+        return refuse('free and pinned indices are not recorded as an exact partition of the parameters')
+    excluded = sorted(pinned_indices)
     out['free_indices'], out['excluded_indices'] = list(free_indices), excluded
     if not finite_number(error_radius) or error_radius <= 0:
         return refuse('derivative error radius not recorded or not positive')
     if not finite_number(asymmetry) or asymmetry < 0:
         return refuse('asymmetry not recorded')
     k = len(free_indices)
+    peak = max(abs(Fraction(matrix[i - 1][j - 1])) for i in free_indices for j in free_indices)
+    if Fraction(error_radius) < k * CERT_EPS * peak:
+        return refuse('declared radius is below the representation floor k*2^-52*max|H|')
     if k > max_dimension:
         return refuse('free block of %d exceeds the size cap of %d' % (k, max_dimension))
     bound = k * (Fraction(error_radius) + Fraction(asymmetry))
@@ -249,6 +265,8 @@ def certify_gradient(max_abs_gradient, error_radius):
     if not finite_number(error_radius) or error_radius <= 0:
         return CERT_INCOMPLETE
     g, e = Fraction(max_abs_gradient), Fraction(error_radius)
+    if e < CERT_EPS * g:  # representation floor; the radius itself stays a declaration
+        return CERT_INCOMPLETE
     if g + e < CERT_GRADIENT_LIMIT:
         return CERT_PASS
     if g - e >= CERT_GRADIENT_LIMIT:
@@ -267,14 +285,25 @@ def certify_fit(fit, engine='Julia'):
         return result
     vector = fit.get('gradient')
     dimension = len(vector) if isinstance(vector, list) else 0
+    parameters = fit.get('parameters')
     h = certify_hessian(fit.get('hessian'), fit.get('free_indices'), fit.get('hessian_coordinate'),
                         fit.get('hessian_error_radius'), fit.get('hessian_asymmetry'),
-                        fit.get('pinned_indices'))
+                        fit.get('pinned_indices'),
+                        parameter_count=len(parameters) if isinstance(parameters, list) else None)
     if dimension and isinstance(fit.get('hessian'), list) and len(fit['hessian']) != dimension:
         h = dict(h, verdict=CERT_INCOMPLETE, reason='Hessian size differs from the recorded gradient')
     opt = fit.get('optimizer')
-    g = certify_gradient(opt.get('optimizer_max_abs_gradient') if isinstance(opt, dict) else None,
-                         fit.get('gradient_error_radius'))
+    certified_max = opt.get('optimizer_max_abs_gradient') if isinstance(opt, dict) else None
+    g = certify_gradient(certified_max, fit.get('gradient_error_radius'))
+    free = fit.get('free_indices')
+    if (isinstance(vector, list) and isinstance(free, list) and free and
+            all(type(i) is int and 1 <= i <= dimension for i in free) and
+            all(finite_number(x) for x in vector)):
+        if max(abs(vector[i - 1]) for i in free) != certified_max:
+            # The gradient certificate and the Hessian must rest on the same recorded gradient.
+            g = CERT_INCOMPLETE
+            h = dict(h, verdict=CERT_INCOMPLETE,
+                     reason='optimizer gradient scalar disagrees with the fit gradient on the free indices')
     result['hessian'], result['gradient'] = h, g
     if h['verdict'] == CERT_FAIL or g == CERT_FAIL:
         result['verdict'] = CERT_FAIL
@@ -283,6 +312,30 @@ def certify_fit(fit, engine='Julia'):
     else:
         result['reason'] = h['reason'] or 'gradient bound not certified'
     return result
+
+
+def _record_checks_valid(fit):
+    """A certified failure is confirmed only on a record that passed its own checks.
+
+    Mirrors the gradient-failure path (bound case, verified profile) and adds
+    the Hessian pair (raw present, raw-versus-symmetrised valid) and the
+    parameter reconstruction.
+    """
+    vector = fit.get('gradient')
+    if not isinstance(vector, list) or not vector:
+        return False
+    if hessian_record_status(fit, len(vector)) != 'valid':
+        return False
+    reconstruction, parameters = fit.get('reconstruction'), fit.get('parameters')
+    if (not isinstance(reconstruction, dict) or reconstruction.get('parameters_match') is not True or
+            reconstruction.get('recovered_parameters') != parameters):
+        return False
+    opt = fit.get('optimizer')
+    if not isinstance(opt, dict):
+        return False
+    ov, mv = opt.get('optimizer_profile_value'), opt.get('optimizer_minimum')
+    return (opt.get('optimizer_profile_verified') is True and 'optimizer_error' in opt and
+            opt['optimizer_error'] is None and finite_number(ov) and finite_number(mv) and ov == mv)
 
 
 def certify_evidence(evidence):
@@ -301,6 +354,7 @@ def certify_evidence(evidence):
                  'error' in fit and fit.get('error') is None)
         if not bound:
             confirmable = False
+        cert['confirmable'] = bool(bound and _record_checks_valid(fit))
         certs.append(cert)
     return certs, confirmable
 
@@ -474,7 +528,7 @@ def classify(evidence):
     if verdict == 'FIT_HEALTH_INTEGRITY_REJECTED':
         return verdict
     certs, confirmable = certify_evidence(evidence)
-    certified_failure = confirmable and any(c['verdict'] == CERT_FAIL for c in certs)
+    certified_failure = confirmable and any(c['verdict'] == CERT_FAIL and c['confirmable'] for c in certs)
     all_certified = len(certs) == len(CASES) and all(c['verdict'] == CERT_PASS for c in certs)
     if verdict == 'FIT_HEALTH_PASS':
         if certified_failure:
