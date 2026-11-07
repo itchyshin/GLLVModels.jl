@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from copy import deepcopy
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 P1 = ROOT / "docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json"
@@ -20,6 +21,16 @@ import core070_verify_postfit_policy_batch as verifier
 def healthy_fixture():
     return deepcopy(verifier.synthetic_report(json.loads(P1.read_text()))['cases']
                     ['CORE070-POSTFIT-COEF-EMPTY-NATIVE']['three_fit']['fit_health'])
+
+
+def preliminary_health(test):
+    """Bypass only the fit-health numerical-admission hold for this test.
+
+    The real classifier never passes while held; non-health checks still run.
+    """
+    health = verifier.core070_postcoef_fit_health
+    held = patch.object(health, 'classify', health._classify_recorded)
+    held.start(); test.addCleanup(held.stop)
 
 
 class PostcoefContract(unittest.TestCase):
@@ -354,6 +365,9 @@ class PostcoefContract(unittest.TestCase):
         report = verifier.synthetic_report(contract)
         report.update(status="FAIL", all_checks=False, all_positive_pass=False)
         report["cases"]["CORE070-POSTFIT-COEF-EMPTY-NATIVE"] = {"pass": False, "three_fit": mutant}
+        with self.assertRaisesRegex(ValueError, "fit health"):
+            verifier.check_postcoef_control_outcome(real, report, "always_empty", 1, identity, identity, contract)
+        preliminary_health(self)
         verifier.check_postcoef_control_outcome(real, report, "always_empty", 1, identity, identity, contract)
         with self.assertRaises(ValueError):
             verifier.check_postcoef_control_outcome(real, report, "always_empty", 0, identity, identity, contract)
@@ -422,6 +436,9 @@ class PostcoefContract(unittest.TestCase):
                                 "spurious_coefficient": [1, 6, 7]},
             "fit_health": healthy_fixture(),
         }
+        with self.assertRaisesRegex(ValueError, "fit health"):
+            verifier.check_postcoef_three_fit_evidence(evidence)
+        preliminary_health(self)
         verifier.check_postcoef_three_fit_evidence(evidence)
         absent_names = deepcopy(evidence)
         absent_names["r_names"] = [None, None, None]

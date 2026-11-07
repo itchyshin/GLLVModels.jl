@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 import true_parity_assemble as assemble
 import core070_postcoef_live_ref as live
+import core070_postcoef_fit_health as live_health
 from test_core070_postcoef_live_ref import fixture as live_fixture
 
 import core070_postfit_p1_receipts as receipt
@@ -73,7 +74,10 @@ class SeparateCaseDraftTests(unittest.TestCase):
         self.assertEqual(draft['comparison']['cases'][0]['case_id'],receipt.COEF_EMPTY_CID)
         self.assertEqual(draft['verdict'],'UNQUALIFIED')
         complete.update(draft)
-        complete['verdict']='PASS'; self.assertIsNone(live.check_comparison(complete,report,oracle))
+        complete['verdict']='PASS'
+        with self.assertRaisesRegex(ValueError,'fit health'): live.check_comparison(complete,report,oracle)
+        held=patch.object(live,'classify_fit_health',live_health._classify_recorded); held.start(); self.addCleanup(held.stop)
+        self.assertIsNone(live.check_comparison(complete,report,oracle))
         complete['verdict']='UNQUALIFIED'
         with self.assertRaisesRegex(ValueError,'identity or harness'): live.check_comparison(complete,report,oracle)
         harness['three_fit']['julia_lengths'][0]=9

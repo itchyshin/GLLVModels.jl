@@ -2,6 +2,7 @@ import copy
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import core070_verify_postfit_policy_batch as v
 
@@ -21,6 +22,11 @@ class CandidateContract(unittest.TestCase):
     def test_report_requires_real_discriminating_evidence(self):
         contract = v.load_contract()
         report = v.synthetic_report(contract)
+        with self.assertRaisesRegex(ValueError, "fit health"):
+            v.check_report(report, contract, "unused")  # numerical admission is held
+        health = v.core070_postcoef_fit_health
+        held = patch.object(health, "classify", health._classify_recorded)
+        held.start(); self.addCleanup(held.stop)
         v.check_report(report, contract, "unused")
         case = report["cases"]["CORE070-POSTFIT-COEF-EMPTY-NATIVE"]
         for field, value in (("selected_accessor", "always_empty"),
