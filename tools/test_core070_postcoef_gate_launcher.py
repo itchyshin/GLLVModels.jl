@@ -11,7 +11,7 @@ import tempfile
 import unittest
 
 LAUNCHER = Path(__file__).with_name('core070_postcoef_gate_launcher.py')
-EXPECTED_GATE = 'UNBOUND'
+EXPECTED_GATE = 'b53f8221a6fa78a3efaf57667b51b5acb32aff0d'
 
 class GateHistoryTests(unittest.TestCase):
     def test_capture_only_gate_fails_closed(self):

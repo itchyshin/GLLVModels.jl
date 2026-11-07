@@ -14,7 +14,7 @@ import sys
 import tempfile
 
 # This must be set to a separately reviewed gate-code commit before use.
-TRUSTED_GATE_COMMIT = 'UNBOUND'
+TRUSTED_GATE_COMMIT = 'b53f8221a6fa78a3efaf57667b51b5acb32aff0d'
 
 ENTRIES = {'live': 'tools/core070_postcoef_live_ref.py',
            'identity': 'tools/core070_postcoef_live_ref.py',

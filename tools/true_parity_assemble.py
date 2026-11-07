@@ -736,7 +736,7 @@ def convergence_parity_problem(cp, p):
     return None
 
 
-POSTCOEF_LAUNCHER_SHA256 = 'd4dcb11f39c8c9f4bebcc0b2ed9eecb4d2483c7acad618b9f1f84eb793047b20'
+POSTCOEF_LAUNCHER_SHA256 = '57ad42a6e5b5ba29c705bf79397efbde6ebdcdc53e0833245849daca8cfbe6c2'
 
 
 def postcoef_launcher_problem(path):
