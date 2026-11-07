@@ -219,7 +219,8 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer
     info=AGHQFitInfo(request,:aghq,k,k,length(problem.grid.logw),selected.stop_reason,false,Inf,c,base_controls,
         result,deepcopy(selected.adaptation),data,_aghq_data_digest(data),mode_gradient)
     selected.parameter_shift==0 && @warn "AGHQ returned its warm start without parameter movement" reason=selected.stop_reason
-    return OrdinalPerTraitAGHQFit(unpack_lambda(t[p+1:p+rr],p,K),copy(t[1:p]),
+    Λaghq=unpack_lambda(t[p+1:p+rr],p,K);_warn_runaway_loadings(Λaghq,"Ordinal")
+    return OrdinalPerTraitAGHQFit(Λaghq,copy(t[1:p]),
         _unpack_cutpoints_pertrait(t[p+rr+1:end],problem.C),copy(problem.C),link,-selected.objective,
         selected.converged,selected.passes,copy(t),:observed,info)
 end

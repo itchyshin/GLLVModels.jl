@@ -250,7 +250,11 @@ really varies across species. Pass `disp_group = :species` for per-species `r`
 without covariates) and the R bridge keep per-trait `r`, matching gllvmTMB's
 length-`p` `log_phi_nbinom2`; with shared site covariates the per-trait route is
 [`fit_nb_gllvm_grouped_cov`](@ref) (per-trait `r` + shared `γ`). As `r → ∞` the
-negative binomial collapses to Poisson. For a single shared `r` with covariates,
+negative binomial collapses to Poisson. In per-trait NB fits, a species' `r` can
+be pushed out towards that Poisson boundary while the fit still reports
+`converged = true`. That species' overdispersion then goes into `Λ`, inflating
+`ΛΛᵀ`, so inspect the fitted `r` for each species before interpreting the shared
+covariance. For a single shared `r` with covariates,
 call [`fit_gllvm_cov`](@ref).
 
 The NB2 route is still experimental for demanding fits. The recorded R
