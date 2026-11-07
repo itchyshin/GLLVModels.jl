@@ -705,15 +705,26 @@ def boundary_context(row, root):
     return set(ctx), None
 
 
-# Maintainer ruling 2026-10-05 (D-319), N9: the checker's convergenceParityProblem (keep in step).
+# Signed 2026-10-21 P1 stopping rule, applied to exactly the four campaign rows named in its note.
+# Keep its constants and semantics aligned with the checker's convergenceParityProblem.
 CONVERGENCE_GRADIENT_BOUND = 1e-5
 CONVERGENCE_POINTS = ("returned", "newton_polished")
+CONVERGENCE_REQUIRED_ROWS = (
+    "data/RD-SPIDER-NB2", "family/ORDINAL-LOGIT-RSZ",
+    "isdm/ISDM-HEADLINE-RSZ", "data/RD-FUNGI-BINOMIAL",
+)
+
+
+def requires_convergence_parity(row, receipt):
+    """Require the signed gate only on its four campaign rows when a comparison is present."""
+    row_id = row.get("source_id") if isinstance(row, dict) else None
+    return row_id in CONVERGENCE_REQUIRED_ROWS and isinstance(receipt.get("comparison"), dict)
 
 
 def convergence_parity_problem(cp, p):
-    """None when a receipt's convergence_parity block holds (both engines at gradient max-abs <= 1e-5), else why not."""
+    """None when both Hessians are positive definite and gradients are strictly below 1e-5."""
     def why(m):
-        return f"convergence parity (maintainer ruling 2026-10-05 (D-319), N9): {m} in {p}"
+        return f"convergence parity (signed 2026-10-21 P1 stopping rule, N9): {m} in {p}"
     if not isinstance(cp, dict):
         return why("convergence_parity is not an object")
     gb = cp.get("gradient_bound")
@@ -727,10 +738,13 @@ def convergence_parity_problem(cp, p):
     for side in ("R", "julia"):
         e = eng.get(side)
         g = e.get("max_abs_gradient") if isinstance(e, dict) else None
+        pd_hessian = e.get("hessian_positive_definite") if isinstance(e, dict) else None
+        if pd_hessian is not True:
+            return why(f"{side} Hessian is not recorded positive definite")
         if not _fin(g) or g < 0:
             return why(f"{side} max_abs_gradient {json.dumps(g)} is not a finite number >= 0")
-        if g > CONVERGENCE_GRADIENT_BOUND:
-            return why(f"{side} max_abs_gradient {g} > 1e-5")
+        if g >= CONVERGENCE_GRADIENT_BOUND:
+            return why(f"{side} max_abs_gradient {g} is not strictly below 1e-5")
     return None
 
 
@@ -752,6 +766,9 @@ def numeric_receipt_problem(row, root, waive_status=False):
             bp = bridge_readback_problem(row, p)
             if bp:
                 return bp
+        if requires_convergence_parity(row, j) and "convergence_parity" not in j:
+            return (f"convergence parity (signed 2026-10-21 P1 stopping rule, N9): "
+                    f"required signed gate is missing in {p}")
         if "convergence_parity" in j:
             cp = convergence_parity_problem(j["convergence_parity"], p)
             if cp:

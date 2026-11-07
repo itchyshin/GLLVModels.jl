@@ -496,18 +496,22 @@ function boundaryContext(row) {
   return { ids: new Set(ctx) };
 }
 
-// Maintainer ruling 2026-10-05 (D-319), N9 (GATES.md "Rulings of 2026-10-05"; draft in PR #715): a C3 campaign
-// comparison counts only when both engines reach gradient max-abs 1e-5 at the point whose outputs are compared. A
-// receipt records this in a top-level `convergence_parity` block:
-//   { "gradient_bound": 1e-5, "compared_point": "returned" | "newton_polished",
-//     "engines": { "R": { "max_abs_gradient": g }, "julia": { "max_abs_gradient": g } } }
-// When the block is present, the bound must be exactly 1e-5 and both gradients finite, >= 0 and <= 1e-5, or the row
-// does not bind. A receipt without the block is judged as before (see GATES.md for why the rule is not applied to
-// the rows that already bind). Copied in tools/true_parity_assemble.py (convergence_parity_problem).
+// Signed P1 stop rule (2026-10-21): a comparison on its four named campaign rows binds only with a top-level
+// convergence_parity block for the compared point. It records both
+// engines' Hessian-positive-definite flags and max-absolute gradients. The bound is exactly 1e-5; each Hessian flag
+// must be true and each gradient must be strictly below the bound. Unmarked legacy rows keep their existing rule.
+// Copied in tools/true_parity_assemble.py (convergence_parity_problem).
 const CONVERGENCE_GRADIENT_BOUND = 1e-5;
 const CONVERGENCE_POINTS = new Set(['returned', 'newton_polished']);
+const CONVERGENCE_REQUIRED_ROWS = new Set([
+  'data/RD-SPIDER-NB2', 'family/ORDINAL-LOGIT-RSZ',
+  'isdm/ISDM-HEADLINE-RSZ', 'data/RD-FUNGI-BINOMIAL',
+]);
+function requiresConvergenceParity(row, receipt) {
+  return CONVERGENCE_REQUIRED_ROWS.has(row.source_id) && isPlainObject(receipt.comparison);
+}
 function convergenceParityProblem(cp, p) {
-  const why = (m) => `convergence parity (maintainer ruling 2026-10-05 (D-319), N9): ${m} in ${p}`;
+  const why = (m) => `convergence parity (signed 2026-10-21 P1 stopping rule, N9): ${m} in ${p}`;
   if (!isPlainObject(cp)) return why('convergence_parity is not an object');
   if (cp.gradient_bound !== CONVERGENCE_GRADIENT_BOUND) return why(`gradient_bound ${JSON.stringify(cp.gradient_bound)} is not 1e-5`);
   if (!CONVERGENCE_POINTS.has(cp.compared_point)) return why(`compared_point ${JSON.stringify(cp.compared_point)} is not returned or newton_polished`);
@@ -515,8 +519,10 @@ function convergenceParityProblem(cp, p) {
   for (const side of ['R', 'julia']) {
     const e = cp.engines[side];
     const g = isPlainObject(e) ? e.max_abs_gradient : undefined;
+    const pdHessian = isPlainObject(e) ? e.hessian_positive_definite : undefined;
+    if (pdHessian !== true) return why(`${side} Hessian is not recorded positive definite`);
     if (typeof g !== 'number' || !Number.isFinite(g) || g < 0) return why(`${side} max_abs_gradient ${JSON.stringify(g)} is not a finite number >= 0`);
-    if (g > CONVERGENCE_GRADIENT_BOUND) return why(`${side} max_abs_gradient ${g} > 1e-5`);
+    if (g >= CONVERGENCE_GRADIENT_BOUND) return why(`${side} max_abs_gradient ${g} is not strictly below 1e-5`);
   }
   return null;
 }
@@ -536,6 +542,9 @@ function numericReceiptStatus(row) {
     if (j.evidence_kind === 'live_bridge_readback') {
       const bp = bridgeReadbackProblem(row, p);
       if (bp) return { ok: false, reason: bp };
+    }
+    if (requiresConvergenceParity(row, j) && j.convergence_parity === undefined) {
+      return { ok: false, reason: `convergence parity (signed 2026-10-21 P1 stopping rule, N9): required signed gate is missing in ${p}` };
     }
     if (j.convergence_parity !== undefined) {
       const cp = convergenceParityProblem(j.convergence_parity, p);

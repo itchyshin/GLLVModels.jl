@@ -1485,25 +1485,64 @@ for (const [name, opts, why] of [
   });
 }
 
-// --- Maintainer ruling 2026-10-05 (D-319), N9: a receipt's convergence_parity block must show both engines at
-// gradient max-abs <= 1e-5. cpTree() adds the block to the base numeric receipt r1.json. ---
+// Signed 2026-10-21 P1 N9 gate: both engines need PD Hessians and gradients strictly below 1e-5.
+// cpTree() adds the block to the base numeric receipt r1.json.
 function cpTree(cp) {
   return ({ readJ, writeJ }) => { const r1 = readJ('receipts/r1.json'); r1.convergence_parity = cp; writeJ('receipts/r1.json', r1); };
 }
 const cpBlock = (rg, jg, over = {}) => ({ gradient_bound: 1e-5, compared_point: 'newton_polished',
-  engines: { R: { max_abs_gradient: rg }, julia: { max_abs_gradient: jg } }, ...over });
-test('N9 convergence parity: both engines at or below 1e-5 bind (the ordinal pre-run numbers, and exactly 1e-5)', () => {
-  for (const cp of [cpBlock(4.709e-7, 2.365e-6), cpBlock(1e-5, 1e-5), cpBlock(0, 0, { compared_point: 'returned' })]) {
+  engines: { R: { max_abs_gradient: rg, hessian_positive_definite: true },
+    julia: { max_abs_gradient: jg, hessian_positive_definite: true } }, ...over });
+test('N9 convergence parity: PD Hessians and gradients strictly below 1e-5 bind', () => {
+  for (const cp of [cpBlock(4.709e-7, 2.365e-6), cpBlock(0, 0, { compared_point: 'returned' })]) {
     const c1 = runTree(cpTree(cp), 'C1');
     assert.match(c1.stdout, /C1_MET$/m, `${JSON.stringify(cp)}\n${c1.stdout}`);
     assert.match(c1.stdout, /bound=2 bound_numeric=2\b/);
   }
 });
+test('N9 convergence parity: the exact 1e-5 boundary does not bind', () => {
+  const c1 = runTree(cpTree(cpBlock(1e-5, 1e-5)), 'C1');
+  assert.match(c1.stdout, /C1_NOT_MET$/m, c1.stdout);
+  assert.match(c1.stdout, /R max_abs_gradient 0\.00001 is not strictly below 1e-5/);
+  assert.match(runTree(cpTree(cpBlock(1e-5, 1e-5)), 'C8').stdout, /C8_NOT_MET$/m);
+});
+function requiredRowTree(sourceId, receiptExtra = {}) {
+  return ({ readJ, writeJ }) => {
+    for (const mapName of ['case-map.json', 'case-map-assembled.json']) {
+      const map = readJ(mapName);
+      map.rows[0].source_id = sourceId;
+      writeJ(mapName, map);
+    }
+    const r1 = readJ('receipts/r1.json');
+    Object.assign(r1, receiptExtra);
+    writeJ('receipts/r1.json', r1);
+  };
+}
+for (const sid of [
+  'family/ORDINAL-LOGIT-RSZ', 'isdm/ISDM-HEADLINE-RSZ',
+  'data/RD-SPIDER-NB2', 'data/RD-FUNGI-BINOMIAL',
+]) {
+  test(`N9 convergence parity: ${sid} needs the signed block`, () => {
+    const c1 = runTree(requiredRowTree(sid), 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m, c1.stdout);
+    assert.match(c1.stdout, new RegExp(`${sid.replace('/', '\\/')}:?`));
+    assert.match(c1.stdout, /required signed gate is missing/);
+  });
+}
+test('N9 convergence parity: a polished marker does not extend the signed four-row scope', () => {
+  const c1 = runTree(requiredRowTree('family/OTHER-ROW', { compared_point: 'newton_polished' }), 'C1');
+  assert.match(c1.stdout, /C1_MET$/m, c1.stdout);
+});
+test('N9 convergence parity: an unmarked legacy row without a block keeps current behavior', () => {
+  assert.match(runTree(() => {}, 'C1').stdout, /C1_MET$/m);
+});
 for (const [name, cp, why] of [
-  ["R stopped early (the ordinal row's unpolished 4.3e-4)", cpBlock(4.314e-4, 7.822e-6), /R max_abs_gradient 0\.0004314 > 1e-5/],
-  ['Julia above the bound', cpBlock(4.7e-7, 2e-5), /julia max_abs_gradient 0\.00002 > 1e-5/],
+  ["R stopped early (the ordinal row's unpolished 4.3e-4)", cpBlock(4.314e-4, 7.822e-6), /R max_abs_gradient 0\.0004314 is not strictly below 1e-5/],
+  ['Julia above the bound', cpBlock(4.7e-7, 2e-5), /julia max_abs_gradient 0\.00002 is not strictly below 1e-5/],
   ['a looser declared bound (1e-4)', cpBlock(4.7e-7, 2.4e-6, { gradient_bound: 1e-4 }), /gradient_bound 0\.0001 is not 1e-5/],
-  ['a missing Julia gradient', { gradient_bound: 1e-5, compared_point: 'returned', engines: { R: { max_abs_gradient: 1e-7 } } }, /julia max_abs_gradient undefined is not a finite number >= 0/],
+  ['a missing Julia gradient', { gradient_bound: 1e-5, compared_point: 'returned', engines: { R: { max_abs_gradient: 1e-7, hessian_positive_definite: true }, julia: { hessian_positive_definite: true } } }, /julia max_abs_gradient undefined is not a finite number >= 0/],
+  ['a missing R Hessian', cpBlock(1e-7, 2e-7, { engines: { R: { max_abs_gradient: 1e-7 }, julia: { max_abs_gradient: 2e-7, hessian_positive_definite: true } } }), /R Hessian is not recorded positive definite/],
+  ['a non-positive-definite Julia Hessian', cpBlock(1e-7, 2e-7, { engines: { R: { max_abs_gradient: 1e-7, hessian_positive_definite: true }, julia: { max_abs_gradient: 2e-7, hessian_positive_definite: false } } }), /julia Hessian is not recorded positive definite/],
   ['an unknown compared point', cpBlock(1e-7, 1e-7, { compared_point: 'best_of_both' }), /compared_point "best_of_both" is not returned or newton_polished/],
   ['a negative gradient', cpBlock(-1e-7, 1e-7), /R max_abs_gradient -1e-7 is not a finite number >= 0/],
   ['a block that is not an object', 'converged', /convergence_parity is not an object/],
@@ -1511,7 +1550,7 @@ for (const [name, cp, why] of [
   test(`N9 convergence parity: ${name} does not bind`, () => {
     const c1 = runTree(cpTree(cp), 'C1');
     assert.match(c1.stdout, /C1_NOT_MET$/m, name);
-    assert.match(c1.stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(convergence parity \(maintainer ruling 2026-10-05 \(D-319\), N9\): /, name);
+    assert.match(c1.stdout, /numeric_label_without_numeric_receipt=isdm\/CAP-ISDM-1FO-PREDICT-EXPORT\(convergence parity \(signed 2026-10-21 P1 stopping rule, N9\): /, name);
     assert.match(c1.stdout, why, name);
     assert.match(runTree(cpTree(cp), 'C8').stdout, /C8_NOT_MET$/m, name);
   });

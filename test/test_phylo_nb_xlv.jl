@@ -154,12 +154,12 @@ end
         Y, beta, Lambda, alpha_lv, r, sigma2, phy, X_lv)
     # Deterministic identity at the same parameters: sparse-augmented
     # `_phylo_nb_xlv_marginal_loglik` vs this file's dense-leaf oracle
-    # `_dense_leaf_phylo_nb_xlv_loglik`. On Julia 1.10.12 the gap is
-    # 1.3e-2 (ll_sparse = -112.424, ll_dense = -112.412), about 10^4
-    # times atol = 1e-6. That is a path bug, not optimiser or BLAS
-    # noise. Do not widen the contract. Tracked as #1018.
-    # `@test_broken` so CI flags the cell once the gap is closed.
-    @test_broken isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
+    # `_dense_leaf_phylo_nb_xlv_loglik`. The 1.3e-2 gap on Julia 1.10.12
+    # (#1018) was in the oracle's log-determinant; #1024 switched the dense
+    # oracle to the observed-information log-det and the identity now holds
+    # at atol = 1e-6, so this is a plain `@test` (it was `@test_broken`, which
+    # fails as an unexpected pass once the gap is closed).
+    @test isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
     @test isfinite(ll_sparse_aug)
 
     @test GLLVModels._phylo_nb_xlv_marginal_loglik(

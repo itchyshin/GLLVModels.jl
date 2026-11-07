@@ -86,7 +86,8 @@ def numeric_root(receipt_extra=None, **row_kw):
     """A root with one numeric row family/N citing RP, whose receipt holds GOOD_CMP."""
     kw = dict(tier="numeric", executable_case_ids=["C"], evidence={"receipt": [RP]})
     kw.update(row_kw)
-    root, tmp = with_root({"case-map-family.json": [row("family/N", **kw)]})
+    sid = kw.pop("sid", "family/N")
+    root, tmp = with_root({"case-map-family.json": [row(sid, **kw)]})
     (root / RP).write_text(json.dumps({"comparison": GOOD_CMP, **(receipt_extra or {})}))
     return root, tmp
 
@@ -304,6 +305,216 @@ def main():
     c, o = run(root, "--check", "--extra-map", str(extra), "--out-dir", str(tmp / "out"))
     expect("check_extra_map_with_out_dir_ok", c == 0 and "ASSEMBLE_OK" in o, o)
     shutil.rmtree(tmp)
+
+    # The three rows covered by the signed 2026-10-21 stop rule plus the signed spider failure stay held during regeneration.
+    writer_path = HERE / "true_parity" / "campaign" / "write_receipts.py"
+    writer_spec = importlib.util.spec_from_file_location("true_parity_campaign_writer", writer_path)
+    writer = importlib.util.module_from_spec(writer_spec)
+    writer_spec.loader.exec_module(writer)
+    held = [
+        "family/ORDINAL-LOGIT-RSZ",
+        "data/RD-FUNGI-BINOMIAL",
+        "isdm/ISDM-HEADLINE-RSZ",
+        "data/RD-SPIDER-NB2",
+    ]
+    held_specs = {
+        "family/ORDINAL-LOGIT-RSZ": ("family", "C3"),
+        "data/RD-FUNGI-BINOMIAL": ("data", "C4"),
+        "isdm/ISDM-HEADLINE-RSZ": ("isdm", "C3"),
+        "data/RD-SPIDER-NB2": ("data", "C4"),
+    }
+    def signed_snapshot_compatibility_controls():
+        ledger = A.ROOT / A.LEDGER
+        for sid in held:
+            fam = sid.split("/", 1)[0]
+            name = sid.rsplit("/", 1)[1]
+            old_receipt = json.loads((ledger / "receipts" / fam / "campaign" / f"{name}.json").read_text())
+            old_map_doc = json.loads((ledger / f"case-map-{fam}.json").read_text())
+            old_row = next(r for r in old_map_doc["rows"] if r["source_id"] == sid)
+            new_receipt = json.loads(json.dumps(old_receipt))
+            new_row = json.loads(json.dumps(old_row))
+            engines = new_receipt["engines"]
+            new_receipt["convergence_parity"] = writer.convergence_parity(
+                {"max_abs_gradient": engines["R"].get("max_abs_gradient"), "pdHess": engines["R"].get("pdHess")},
+                {"max_abs_gradient": engines["julia"].get("max_abs_gradient"), "pd_hessian": engines["julia"].get("pd_hessian")})
+            new_receipt["pass_rule"]["legs"][writer.N9_PASS_LEG] = False
+            new_receipt["row_status"] = "does not bind: " + writer.N9_PASS_LEG + "; " + old_receipt["row_status"][len("does not bind: "):]
+            new_row["evidence"]["tier"] = "measured, does not bind: " + writer.N9_PASS_LEG + "; " + old_row["evidence"]["tier"][len("measured, does not bind: "):]
+            if not writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, new_receipt, old_row, new_row):
+                return False, f"expected exact N9 annotation compatibility for {sid}"
+            altered = json.loads(json.dumps(new_receipt))
+            altered["comparison"]["cases"][0]["tolerance"] *= 2
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, altered, old_row, new_row):
+                return False, f"tolerance mutation accepted for {sid}"
+            promoted = json.loads(json.dumps(new_receipt))
+            promoted["verdict"] = "PASS"
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, promoted, old_row, new_row):
+                return False, f"FAIL promotion accepted for {sid}"
+            altered_gate = json.loads(json.dumps(new_receipt))
+            original_hessian = altered_gate["convergence_parity"]["engines"]["R"]["hessian_positive_definite"]
+            altered_gate["convergence_parity"]["engines"]["R"]["hessian_positive_definite"] = (
+                not original_hessian if isinstance(original_hessian, bool) else True)
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, altered_gate, old_row, new_row):
+                return False, f"fabricated N9 evidence accepted for {sid}"
+            numeric_hessian = json.loads(json.dumps(new_receipt))
+            hessian_value = numeric_hessian["convergence_parity"]["engines"]["R"]["hessian_positive_definite"]
+            numeric_hessian["convergence_parity"]["engines"]["R"]["hessian_positive_definite"] = int(hessian_value) if isinstance(hessian_value, bool) else 1
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, numeric_hessian, old_row, new_row):
+                return False, f"boolean Hessian replaced with an equal numeric value for {sid}"
+            numeric_leg = json.loads(json.dumps(new_receipt))
+            numeric_leg["pass_rule"]["legs"][writer.N9_PASS_LEG] = 0
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, numeric_leg, old_row, new_row):
+                return False, f"boolean pass-rule leg replaced with numeric zero for {sid}"
+            numeric_map = json.loads(json.dumps(new_row))
+            flags = numeric_map["measured_result"]["within_tolerance_by_case"]
+            case_id = next(iter(flags))
+            flags[case_id] = int(flags[case_id])
+            if writer.signed_fail_n9_snapshot_compatible(sid, old_receipt, new_receipt, old_row, numeric_map):
+                return False, f"boolean case-map flag replaced with an equal numeric value for {sid}"
+        return True, ""
+    compat_ok, compat_detail = signed_snapshot_compatibility_controls()
+    expect("signed_fail_n9_snapshot_allows_only_narrow_annotation", compat_ok, compat_detail)
+    synthetic_passes = [(sid, *held_specs[sid], {"verdict": "PASS"}, True, Path(sid + ".json")) for sid in held]
+    guard = getattr(writer, "enforce_signed_fail_rows", None)
+    expect("signed_stop_rows_have_regeneration_guard", callable(guard), "writer lacks enforce_signed_fail_rows")
+    if callable(guard):
+        try:
+            guard(synthetic_passes)
+            guarded = False
+        except ValueError as exc:
+            guarded = "signed stop rule" in str(exc).lower() and all(sid in str(exc) for sid in held)
+        expect("signed_stop_guard_rejects_all_four_passes", guarded, "a held PASS was not refused with row-specific context")
+        failed_receipts = [(sid, *held_specs[sid], {"verdict": "FAIL"}, False, Path(sid + ".json")) for sid in held]
+        try:
+            guard(failed_receipts[:-1])
+            missing_refused = False
+        except ValueError as exc:
+            missing_refused = held[-1] in str(exc) and "absent" in str(exc)
+        expect("signed_stop_guard_rejects_missing_spider_row", missing_refused, "a missing signed spider row was not refused")
+
+        # --apply must validate the signed stop rule before persisting any raw
+        # inputs. Stub only the campaign computation so this exercises main's
+        # real validation/write ordering without touching committed evidence.
+        with tempfile.TemporaryDirectory() as blocked_tmp:
+            blocked_root = Path(blocked_tmp) / "root"
+            blocked_root.mkdir()
+            raw_dir = Path(blocked_tmp) / "raw"
+            raw_dir.mkdir()
+            source = raw_dir / "source.json"
+            source.write_text("candidate raw evidence\n")
+            destination = blocked_root / "receipts" / "raw.json.gz"
+            pending = [(destination, source)]
+
+            def blocked_process(_raw, _out_root, _apply, quiet=False, *, pending_raw_writes=None):
+                if pending_raw_writes is not None:
+                    pending_raw_writes.extend(pending)
+                else:
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(b"premature write")
+                return synthetic_passes
+
+            old_process, old_argv = writer.process, sys.argv
+            try:
+                writer.process = blocked_process
+                sys.argv = [str(writer_path), "--raw", str(raw_dir), "--apply", "--root", str(blocked_root)]
+                with redirect_stdout(io.StringIO()):
+                    exit_code = writer.main()
+            except Exception as exc:
+                exit_code = f"raised {type(exc).__name__}: {exc}"
+            finally:
+                writer.process, sys.argv = old_process, old_argv
+            expect("signed_stop_apply_refuses_before_raw_writes",
+                   exit_code == 1 and not destination.exists(),
+                   f"exit={exit_code}, destination_exists={destination.exists()}")
+
+    held_receipts = {
+        "family/ORDINAL-LOGIT-RSZ": "family/campaign/ORDINAL-LOGIT-RSZ.json",
+        "data/RD-FUNGI-BINOMIAL": "data/campaign/RD-FUNGI-BINOMIAL.json",
+        "isdm/ISDM-HEADLINE-RSZ": "isdm/campaign/ISDM-HEADLINE-RSZ.json",
+        "data/RD-SPIDER-NB2": "data/campaign/RD-SPIDER-NB2.json",
+    }
+    for sid, rel in held_receipts.items():
+        rc = json.loads((A.ROOT / A.LEDGER / "receipts" / rel).read_text())
+        expect(f"{sid}_remains_signed_fail", rc["verdict"] == "FAIL" and not rc["pass_rule"]["legs"]["every_quantity_within_tolerance"], rc["row_status"])
+        q_by_name = {c["quantity"]: c["tolerance"] for c in rc["comparison"]["cases"]}
+        if sid == "isdm/ISDM-HEADLINE-RSZ":
+            required_tols = {
+                "predict_link": 1e-6, "predict_response": 1e-6,
+                "predict_newdata_offset0_link": 1e-6, "predict_newdata_offset0_response": 1e-6,
+            }
+        elif sid == "data/RD-SPIDER-NB2":
+            required_tols = {
+                "logLik": 1e-6, "beta": 1e-4, "LLt": 1e-4,
+                "linear predictor on the training data (link scale)": 1e-6,
+            }
+        else:
+            required_tols = {"LLt": 1e-4}
+        expect(f"{sid}_keeps_signed_tolerances", all(q_by_name.get(k) == v for k, v in required_tols.items()), str(q_by_name))
+
+    # data/RD-BEETLE-NB2: blocked by R pdHess false (2026-10-21 note); held FAIL on regeneration, outside the N9 four-row scope.
+    beetle_sid = "data/RD-BEETLE-NB2"
+    beetle_rc = json.loads((A.ROOT / A.LEDGER / "receipts/data/campaign/RD-BEETLE-NB2.json").read_text())
+    expect("data/RD-BEETLE-NB2_remains_fail_blocked_by_R_pdHess",
+           beetle_rc["verdict"] == "FAIL" and beetle_rc["pass_rule"]["legs"]["R_pdHess_true"] is False
+           and beetle_rc["engines"]["R"]["pdHess"] is False and "convergence_parity" not in beetle_rc, beetle_rc["row_status"])
+    beetle_tols = {c["quantity"]: c["tolerance"] for c in beetle_rc["comparison"]["cases"]}
+    expect("data/RD-BEETLE-NB2_keeps_tolerances",
+           beetle_tols == {"logLik": 1e-6, "beta": 1e-4, "LLt": 1e-4, "linear predictor on the training data (link scale)": 1e-6}, str(beetle_tols))
+    expect("data/RD-BEETLE-NB2_is_regeneration_held",
+           beetle_sid in writer.SIGNED_FAIL_ROWS and beetle_sid not in writer.CONVERGENCE_REQUIRED_ROWS,
+           "beetle must be in SIGNED_FAIL_ROWS and outside CONVERGENCE_REQUIRED_ROWS")
+    # data/RD-URBANISATION-BINOMIAL: numeric FAIL on beta and LLt; same regeneration-hold-only scope as beetle.
+    urban_sid = "data/RD-URBANISATION-BINOMIAL"
+    urban_rc = json.loads((A.ROOT / A.LEDGER / "receipts/data/campaign/RD-URBANISATION-BINOMIAL.json").read_text())
+    expect("data/RD-URBANISATION-BINOMIAL_remains_fail",
+           urban_rc["verdict"] == "FAIL" and not urban_rc["pass_rule"]["legs"]["every_quantity_within_tolerance"]
+           and "convergence_parity" not in urban_rc, urban_rc["row_status"])
+    urban_tols = {c["quantity"]: c["tolerance"] for c in urban_rc["comparison"]["cases"]}
+    expect("data/RD-URBANISATION-BINOMIAL_keeps_tolerances",
+           urban_tols == {"logLik": 1e-6, "beta": 1e-4, "LLt": 1e-4, "linear predictor on the training data (link scale)": 1e-6}, str(urban_tols))
+    expect("data/RD-URBANISATION-BINOMIAL_is_regeneration_held",
+           urban_sid in writer.SIGNED_FAIL_ROWS and urban_sid not in writer.CONVERGENCE_REQUIRED_ROWS,
+           "urbanisation must be in SIGNED_FAIL_ROWS and outside CONVERGENCE_REQUIRED_ROWS")
+    extra = [(beetle_sid, "data", "C4", Path("beetle.json")), (urban_sid, "data", "C4", Path("urban.json"))]
+    def six(pass_sid=None, drop_sid=None):
+        rows = [(sid, *held_specs[sid], {"verdict": "FAIL"}, False, Path(sid + ".json")) for sid in held]
+        for sid, fam, cell, path in extra:
+            if sid == drop_sid:
+                continue
+            ok = sid == pass_sid
+            rows.append((sid, fam, cell, {"verdict": "PASS" if ok else "FAIL"}, ok, path))
+        return rows
+    try:
+        writer.enforce_signed_fail_rows(six())
+        six_clean = True
+    except ValueError:
+        six_clean = False
+    expect("signed_stop_guard_accepts_six_held_fails", six_clean, "six held FAIL rows were refused")
+    try:
+        writer.enforce_signed_fail_rows(six(drop_sid=urban_sid), summary_only={urban_sid})
+        summary_ok = True
+    except ValueError:
+        summary_ok = False
+    expect("signed_stop_guard_allows_off_repo_urbanisation_summary_only", summary_ok, "--check without local raw was refused")
+    try:
+        writer.enforce_signed_fail_rows(six(drop_sid=beetle_sid), summary_only={urban_sid})
+        summary_leak = False
+    except ValueError as exc:
+        summary_leak = beetle_sid in str(exc) and "absent" in str(exc)
+    expect("signed_stop_guard_summary_only_does_not_excuse_other_rows", summary_leak, "summary_only excused a non-off-repo row")
+    for label, sid in (("beetle", beetle_sid), ("urbanisation", urban_sid)):
+        try:
+            writer.enforce_signed_fail_rows(six(pass_sid=sid))
+            refused = False
+        except ValueError as exc:
+            refused = sid in str(exc) and "signed stop rule" in str(exc).lower()
+        expect(f"signed_stop_guard_rejects_{label}_promotion", refused, f"a promoted {label} row was not refused")
+        try:
+            writer.enforce_signed_fail_rows(six(drop_sid=sid))
+            refused = False
+        except ValueError as exc:
+            refused = sid in str(exc) and "absent" in str(exc)
+        expect(f"signed_stop_guard_rejects_missing_{label}_row", refused, f"a missing {label} row was not refused")
 
     # Campaign receipts (itchyshin/GLLVModels.jl#684 item 4): every comparison block re-derives from the committed raw files.
     wr = subprocess.run([sys.executable, str(HERE / "true_parity" / "campaign" / "write_receipts.py"), "--check"],
@@ -1433,10 +1644,13 @@ def main():
     check("c4_only_r_engine_not_evidenced", c4_case({"engines": {"R": {"engine": "R gllvmTMB"}}}, "NUMERIC-UNVERIFIED"))
     check("c4_empty_engine_blocks_not_evidenced", c4_case({"engines": {"R": {}, "julia": {}}}, "NUMERIC-UNVERIFIED"))
 
-    # Maintainer ruling 2026-10-05 (D-319), N9: convergence parity; the checker gives the same verdict.
-    def cp_case(cp, want_status, contains=None):
+    # Signed P1 stopping rule (2026-10-21), N9: convergence parity; the checker gives the same verdict.
+    def cp_case(cp, want_status, contains=None, receipt_extra_override=None, **row_kw):
         def f():
-            root, tmp = numeric_root({"convergence_parity": cp})
+            receipt_extra = ({} if cp is None else {"convergence_parity": cp})
+            if receipt_extra_override is not None:
+                receipt_extra.update(receipt_extra_override)
+            root, tmp = numeric_root(receipt_extra, **row_kw)
             try:
                 c, o = run(root)
                 st = status_of(root)
@@ -1451,17 +1665,74 @@ def main():
         return f
     def cpb(rg, jg, **over):
         d = {"gradient_bound": 1e-5, "compared_point": "newton_polished",
-             "engines": {"R": {"max_abs_gradient": rg}, "julia": {"max_abs_gradient": jg}}}
+             "engines": {"R": {"max_abs_gradient": rg, "hessian_positive_definite": True},
+                         "julia": {"max_abs_gradient": jg, "hessian_positive_definite": True}}}
         d.update(over)
         return d
     check("convergence_parity_both_below_bound_evidenced", cp_case(cpb(4.709e-7, 2.365e-6), "EVIDENCED"))
-    check("convergence_parity_exactly_bound_evidenced", cp_case(cpb(1e-5, 1e-5), "EVIDENCED"))
-    check("convergence_parity_r_early_stop_unverified", cp_case(cpb(4.314e-4, 7.822e-6), "NUMERIC-UNVERIFIED", "R max_abs_gradient 0.0004314 > 1e-5"))
+    check("convergence_parity_exactly_bound_unverified",
+          cp_case(cpb(1e-5, 1e-5), "NUMERIC-UNVERIFIED", "R max_abs_gradient 1e-05 is not strictly below 1e-5"))
+    check("convergence_parity_r_early_stop_unverified",
+          cp_case(cpb(4.314e-4, 7.822e-6), "NUMERIC-UNVERIFIED", "R max_abs_gradient 0.0004314 is not strictly below 1e-5"))
     check("convergence_parity_looser_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=1e-4), "NUMERIC-UNVERIFIED", "is not 1e-5"))
     check("convergence_parity_bool_bound_unverified", cp_case(cpb(1e-7, 1e-7, gradient_bound=True), "NUMERIC-UNVERIFIED", "is not 1e-5"))
     check("convergence_parity_missing_julia_unverified",
-          cp_case({"gradient_bound": 1e-5, "compared_point": "returned", "engines": {"R": {"max_abs_gradient": 1e-7}}}, "NUMERIC-UNVERIFIED", "julia max_abs_gradient"))
+          cp_case({"gradient_bound": 1e-5, "compared_point": "returned", "engines": {"R": {"max_abs_gradient": 1e-7, "hessian_positive_definite": True}}}, "NUMERIC-UNVERIFIED", "julia Hessian"))
     check("convergence_parity_unknown_point_unverified", cp_case(cpb(1e-7, 1e-7, compared_point="best"), "NUMERIC-UNVERIFIED", "is not returned or newton_polished"))
+    check("convergence_parity_missing_r_hessian_unverified",
+          cp_case(cpb(1e-7, 1e-7, engines={"R": {"max_abs_gradient": 1e-7}, "julia": {"max_abs_gradient": 1e-7, "hessian_positive_definite": True}}), "NUMERIC-UNVERIFIED", "R Hessian"))
+    check("convergence_parity_non_pd_julia_hessian_unverified",
+          cp_case(cpb(1e-7, 1e-7, engines={"R": {"max_abs_gradient": 1e-7, "hessian_positive_definite": True}, "julia": {"max_abs_gradient": 1e-7, "hessian_positive_definite": False}}), "NUMERIC-UNVERIFIED", "julia Hessian"))
+    check("convergence_parity_required_fit_row_needs_gate",
+          lambda: (A.requires_convergence_parity({"source_id": "family/ORDINAL-LOGIT-RSZ"}, {"comparison": GOOD_CMP}),
+                   "required P1 fit row did not require convergence evidence"))
+    check("convergence_parity_does_not_expand_to_held_or_unlisted_rows",
+          lambda: (not any(A.requires_convergence_parity({"source_id": sid}, {"comparison": GOOD_CMP,
+                                                                               "compared_point": "newton_polished"})
+                           for sid in ("data/RD-URBANISATION-BINOMIAL", "data/RD-BEETLE-NB2", "family/OTHER-ROW")),
+                   "the signed four-row rule was extended beyond its named comparisons"))
+    expected_n9_rows = {"data/RD-SPIDER-NB2", "family/ORDINAL-LOGIT-RSZ",
+                        "isdm/ISDM-HEADLINE-RSZ", "data/RD-FUNGI-BINOMIAL"}
+    js_source = (HERE / "true_parity_check.mjs").read_text()
+    js_rows_block = re.search(r"const CONVERGENCE_REQUIRED_ROWS = new Set\(\[(.*?)\]\);", js_source, re.S)
+    js_n9_rows = set(re.findall(r"'([^']+)'", js_rows_block.group(1))) if js_rows_block else set()
+    check("convergence_parity_required_row_scope_matches_all_three_implementations",
+          lambda: (set(A.CONVERGENCE_REQUIRED_ROWS) == expected_n9_rows
+                   and set(writer.CONVERGENCE_REQUIRED_ROWS) == expected_n9_rows
+                   and js_n9_rows == expected_n9_rows,
+                   f"assembler={A.CONVERGENCE_REQUIRED_ROWS}, writer={writer.CONVERGENCE_REQUIRED_ROWS}, JS={js_n9_rows}"))
+    check("convergence_parity_polished_marker_outside_scope_keeps_legacy_behavior",
+          cp_case(None, "EVIDENCED", receipt_extra_override={"compared_point": "newton_polished"}))
+    check("convergence_parity_legacy_unmarked_row_keeps_current_rule", cp_case(None, "EVIDENCED"))
+    writer_cp = writer.convergence_parity(
+        {"max_abs_gradient": 1e-7, "pdHess": True},
+        {"max_abs_gradient": 2e-7, "pd_hessian": True})
+    check("convergence_parity_writer_records_both_pd_hessians",
+          lambda: (writer_cp["engines"]["R"]["hessian_positive_definite"] is True
+                   and writer_cp["engines"]["julia"]["hessian_positive_definite"] is True, str(writer_cp)))
+    check("convergence_parity_writer_requires_strict_gradients_and_both_hessians",
+          lambda: (writer.convergence_parity_within_bound(writer_cp)
+                   and not writer.convergence_parity_within_bound(writer.convergence_parity(
+                       {"max_abs_gradient": 1e-5, "pdHess": True},
+                       {"max_abs_gradient": 2e-7, "pd_hessian": True}))
+                   and not writer.convergence_parity_within_bound(writer.convergence_parity(
+                       {"max_abs_gradient": 1e-7},
+                       {"max_abs_gradient": 2e-7, "pd_hessian": True}))
+                   and not writer.convergence_parity_within_bound(None), "writer N9 leg accepted invalid evidence"))
+    writer_missing_cp = writer.convergence_parity({"pdHess": True}, {"pd_hessian": True})
+    check("convergence_parity_writer_records_missing_gradient_with_hessian_evidence",
+          lambda: (writer_missing_cp is not None
+                   and writer_missing_cp["engines"]["R"]["max_abs_gradient"] is None
+                   and writer_missing_cp["engines"]["julia"]["max_abs_gradient"] is None
+                   and writer_missing_cp["engines"]["R"]["hessian_positive_definite"] is True
+                   and writer_missing_cp["engines"]["julia"]["hessian_positive_definite"] is True
+                   and not writer.convergence_parity_within_bound(writer_missing_cp),
+                   "missing gradients were omitted or allowed to bind"))
+    check("signed_n9_snapshot_comparison_is_json_type_strict",
+          lambda: (not writer.json_exact_equal({"flag": True}, {"flag": 1})
+                   and not writer.json_exact_equal({"flag": False}, {"flag": 0})
+                   and writer.json_exact_equal({"flag": False}, {"flag": False}),
+                   "JSON equality collapsed booleans into integers"))
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
