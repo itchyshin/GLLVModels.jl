@@ -37,7 +37,11 @@ rejects inadmissible `K` before fitting.
 `fit_gaussian_gllvm` warm-starts from PPCA and usually converges in a step or
 two; the non-Gaussian fitters use L-BFGS over a Laplace marginal. Always check
 the `converged` flag — if it is `false`, try a different start or more
-iterations. Standardising responses to a common scale helps the Gaussian path.
+iterations. `converged = true` alone is not the go-ahead to read the results:
+it means the optimizer stopped at a stationary point, not that it found the
+global maximum. For non-Gaussian fits with `K ≥ 2`, refit from several starts
+(`n_init` currently covers Poisson only) and keep the highest log-likelihood
+before reading loadings or comparing AIC. Standardising responses to a common scale helps the Gaussian path.
 
 ## Fewer sites than species (`n < p`)
 
@@ -65,6 +69,29 @@ With binary responses, a response that is all-0 or all-1 drives its intercept
 to ±∞ (complete separation). `fit_binomial_gllvm` clamps the linear predictor
 for numerical safety, but a non-convergence flag or an extreme intercept is a
 sign to inspect that response.
+
+### Quasi-separation: the two engines flag it differently
+
+Quasi-separation (a response nearly separated by the latent variables) pushes a
+loading towards infinity. GLLVModels.jl and `gllvmTMB` reach essentially the same
+degenerate solution but report it differently:
+
+| | GLLVModels.jl | `gllvmTMB` 0.7.0 |
+|---|---|---|
+| Convergence flag | `converged = false` | `convergence = 0` (converged) |
+| Diagnostic | none beyond the flag; inspect the largest row norm of `fit.Λ` | runaway-loading warning (`max_loading`, relative size) |
+
+In one measured case (seed 42, binomial traits) the log-likelihoods agree to 0.02 units
+(Julia −5292.804, R −5292.786), with a largest loading of about 42 on the Julia
+side and 44 on the R side. A Julia fit with `converged = false` and a very large
+loading is therefore a likely quasi-separation, not necessarily an optimiser
+failure, while R can report convergence for the same solution. When checking one
+engine against the other, compare log-likelihoods, not the flags.
+
+!!! note "Open"
+    A Julia runaway-loading warning matching `gllvmTMB`'s, and whether the
+    `converged` flag should match R here, are not decided. The flag is part of the
+    parity contract and is the maintainer's call (#498).
 
 See also: [Get started](quickstart.md) · [Response families](response-families.md) · [Reference](api.md).
 

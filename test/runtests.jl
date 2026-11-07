@@ -74,6 +74,7 @@ println(_SHARD === nothing ?
     _shard_include("test_animal_dep.jl")
     _shard_include("test_docstring_animal_dep_twin.jl")
     _shard_include("test_animal_latent.jl")
+    _shard_include("test_animal_latent_slope_estimand_algebra.jl")
     _shard_include("test_docstring_animal_latent_twin.jl")
     _shard_include("test_spatial_dep.jl")
     _shard_include("test_kernel_indep.jl")
@@ -81,6 +82,7 @@ println(_SHARD === nothing ?
     _shard_include("test_kernel_latent.jl")
     _shard_include("test_fit.jl")
     _shard_include("test_gaussian_K_bounds.jl")
+    _shard_include("test_laplace_K_bounds.jl")
     _shard_include("test_fixed_effects.jl")
     _shard_include("test_reml.jl")
     _shard_include("test_lv_predictor.jl")
@@ -454,6 +456,7 @@ println(_SHARD === nothing ?
     _shard_include("test_confint_mask_refused.jl")
     _shard_include("test_predict_offset.jl")
     _shard_include("test_predict_offset_grouped.jl")
+    _shard_include("test_predict_offset_remaining_788.jl")
     _shard_include("test_predict_offset_shared.jl")
     _shard_include("test_predict_modes_training.jl")
     _shard_include("test_family_profile_open_lower.jl")
@@ -595,6 +598,8 @@ println(_SHARD === nothing ?
     _shard_include("test_mc_simulate_p1.jl")
     # P1 numeric twins of gllvmTMB extract_proportions (one-tier and two-level) and extract_residual_split (two-level Gaussian).
     _shard_include("test_variance_decomp_p1.jl")
+    # Post-fit parity vs gllvmTMB P1 fixtures: tier-local communality (refs #131) and confint default method (@test_broken, refs #1020).
+    _shard_include("test_postfit_communality_confint_default_parity.jl")
     # P1 numeric twin of the gllvmTMB namespace row animal_scalar (one shared animal variance on a pedigree A, Gaussian).
     _shard_include("test_animal_scalar_p1.jl")
     # P1 numeric twins of the gllvmTMB namespace rows extract_Gamma and extract_coevolution_modules (cross-lineage kernel tier, Gaussian).
@@ -612,6 +617,7 @@ println(_SHARD === nothing ?
     _shard_include("test_diagnostics_p1.jl")
     # P1 fit-level twins of core070 data rows (six bind; see tools/core070_data_p1_receipts.py) (offset and missing-response handling).
     _shard_include("test_data_twins_p1.jl")
+    _shard_include("test_parity_binomial_gaussian_fixtures.jl")
     _shard_include("test_predict_offset_twin_p1.jl")
     # P1 fit-level twin of data/DATA-OFF-PREDICT (training units, new offset, training modes kept; ruling D-319).
     _shard_include("test_off_predict_twin_p1.jl")
@@ -676,6 +682,8 @@ println(_SHARD === nothing ?
     # #750: getLV / predict / residuals / simulate docstring signatures list mask and offset.
     _shard_include("test_docstring_postfit_mask_offset_750.jl")
     _shard_include("test_docstring_confint_lv_effects.jl")
+    # #1021: no `](@ref)` survives Markdown parsing in a docstring or docs/src page (dead `./@ref` link).
+    _shard_include("test_docstring_ref_linebreaks.jl")
     # #763: an explicit mask that marks a `missing` cell observed throws an ArgumentError.
     _shard_include("test_mask_missing_763.jl")
     _shard_include("test_changelog_structure.jl")
