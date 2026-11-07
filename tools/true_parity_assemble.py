@@ -114,8 +114,12 @@ import hashlib
 import json
 import os
 import re
+import signal
+import stat
 import subprocess
 import sys
+import tempfile
+import textwrap
 import unicodedata
 from collections import Counter, OrderedDict
 from datetime import datetime, timedelta, timezone
@@ -737,6 +741,88 @@ def convergence_parity_problem(cp, p):
 
 
 POSTCOEF_LAUNCHER_SHA256 = '57ad42a6e5b5ba29c705bf79397efbde6ebdcdc53e0833245849daca8cfbe6c2'
+POSTCOEF_GATE_COMMIT = 'b53f8221a6fa78a3efaf57667b51b5acb32aff0d'
+POSTCOEF_OFFLINE_TIMEOUT_SECONDS = 180
+POSTCOEF_OFFLINE_OUTER_TIMEOUT_SECONDS = 330
+
+
+def run_postcoef_offline_isolated(repo, state, receipt_sha256):
+    """Run the pinned gate's offline checker without importing caller tools."""
+    launcher = ROOT / 'tools/core070_postcoef_gate_launcher.py'
+    launcher_fd = os.open(launcher, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+    with os.fdopen(launcher_fd, 'rb') as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise ValueError('POST-COEF launcher is not a regular file')
+        source = stream.read()
+    if hashlib.sha256(source).hexdigest() != POSTCOEF_LAUNCHER_SHA256:
+        raise ValueError('POST-COEF launcher differs from trusted caller binding')
+    pins = re.findall(rb"(?m)^TRUSTED_GATE_COMMIT = '([^']+)'$", source)
+    if pins != [POSTCOEF_GATE_COMMIT.encode('ascii')]:
+        raise ValueError('POST-COEF gate pin differs from launcher')
+    fd = os.open(ROOT, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0))
+    try:
+        bootstrap = r'''
+import hashlib, os, pathlib, stat, subprocess, sys
+fd=int(sys.argv[1]); pin=sys.argv[2]; repo=sys.argv[3]; state=sys.argv[4]; receipt=sys.argv[5]; child_timeout=float(sys.argv[6]); tmp=sys.argv[7]
+os.fchdir(fd)
+env={k:v for k,v in os.environ.items() if not k.startswith(('GIT_', 'PYTHON'))}
+env.update(GIT_NO_REPLACE_OBJECTS='1',GIT_CONFIG_NOSYSTEM='1',GIT_CONFIG_GLOBAL=os.devnull,
+           PYTHONDONTWRITEBYTECODE='1',PYTHONNOUSERSITE='1')
+root=pathlib.Path(tmp); template=root/'template'; template.mkdir(); checkout=root/'checkout'
+subprocess.run(['git','-c','core.hooksPath=/dev/null','clone','--quiet','--no-local','--no-hardlinks',
+                '--no-checkout','--template',str(template),'--','.',str(checkout)],
+               env=env,check=True,capture_output=True,timeout=60)
+def git(*args):
+    return subprocess.run(['git','-C',str(checkout),*args],env=env,check=True,capture_output=True,timeout=30).stdout
+git('-c','core.hooksPath=/dev/null','checkout','--quiet','--detach',pin)
+if git('rev-parse','HEAD').strip().decode()!=pin or os.path.lexists(checkout/'.git/objects/info/alternates'):
+    raise ValueError('isolated gate identity differs')
+paths=('tools','Project.toml','docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json')
+entries=git('ls-tree','-r','-z',pin,'--',*paths).split(b'\0')
+seen=set()
+for entry in filter(None,entries):
+    meta,raw=entry.split(b'\t',1); mode,kind,oid=meta.split(b' '); path=checkout/os.fsdecode(raw)
+    if mode not in (b'100644',b'100755') or kind!=b'blob' or path.is_symlink() or not path.is_file():
+        raise ValueError('isolated gate input is not a regular blob')
+    if len(oid) not in (40,64) or bool(path.stat().st_mode & stat.S_IXUSR)!=(mode==b'100755'):
+        raise ValueError('isolated gate input mode or object identity differs')
+    if raw.endswith(b'.pyc') or b'__pycache__' in raw.split(b'/'):
+        raise ValueError('isolated gate contains bytecode')
+    data=path.read_bytes(); alg=hashlib.sha1 if len(oid)==40 else hashlib.sha256
+    if alg(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest().encode()!=oid:
+        raise ValueError('isolated gate blob differs')
+    seen.add(raw)
+required={b'tools/core070_postcoef_offline_check.py',b'Project.toml',
+          b'docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json'}
+if not required.issubset(seen):
+    raise ValueError('isolated gate input is missing')
+if any((checkout/'tools').rglob('__pycache__')):
+    raise ValueError('isolated gate contains cached bytecode')
+proc=subprocess.run([sys.executable,'-I','-S','-B',str(checkout/'tools/core070_postcoef_offline_check.py'),
+                     '--repo',repo,'--state',state,'--receipt-sha256',receipt],cwd=checkout,
+                    env=env,capture_output=True,timeout=child_timeout)
+sys.stdout.buffer.write(proc.stdout);sys.stderr.buffer.write(proc.stderr);sys.exit(proc.returncode)
+'''
+        bootstrap = ('import os, signal, subprocess\ntry:\n' + textwrap.indent(bootstrap, '    ') +
+                     '\nexcept subprocess.TimeoutExpired:\n    os.killpg(os.getpgrp(), signal.SIGKILL)\n')
+        with tempfile.TemporaryDirectory(prefix='postcoef-offline-gate-') as tmp:
+            args = [sys.executable, '-I', '-S', '-B', '-c', bootstrap, str(fd), POSTCOEF_GATE_COMMIT,
+                    str(repo), str(state), receipt_sha256, str(POSTCOEF_OFFLINE_TIMEOUT_SECONDS), tmp]
+            proc = subprocess.Popen(args, pass_fds=(fd,), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True, start_new_session=True)
+            try:
+                stdout, stderr = proc.communicate(timeout=POSTCOEF_OFFLINE_OUTER_TIMEOUT_SECONDS)
+            except BaseException:
+                if proc.returncode is None:
+                    try:
+                        os.killpg(proc.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    proc.communicate()
+                raise
+            return subprocess.CompletedProcess(args, proc.returncode, stdout, stderr)
+    finally:
+        os.close(fd)
 
 
 def postcoef_launcher_problem(path):
@@ -798,7 +884,97 @@ def postcoef_capture_pointers_problem(case):
     return None
 
 
+def snapshot_postcoef_state(root, state, destination):
+    """Copy working evidence once, rejecting bytes that differ from selected Git blobs."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}
+    env.update(GIT_NO_REPLACE_OBJECTS='1', GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull)
+    def git(*args):
+        return subprocess.run(['git', '-C', str(root), *args], env=env, check=True,
+                              capture_output=True, timeout=30).stdout
+    head = git('rev-parse', '--verify', 'HEAD^{commit}').decode('ascii').strip()
+    if not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', head):
+        raise ValueError('invalid selected commit')
+    expected = {}
+    prefix = (POSTCOEF_CAPTURE_PREFIX + '/').encode()
+    for entry in filter(None, git('ls-tree', '-r', '-z', head, '--', POSTCOEF_CAPTURE_PREFIX).split(b'\0')):
+        meta, path = entry.split(b'\t', 1); mode, kind, oid = meta.split(b' ')
+        if mode not in (b'100644', b'100755') or kind != b'blob' or not path.startswith(prefix):
+            raise ValueError('selected capture entry is not a regular blob')
+        relative = path[len(prefix):].decode('utf-8')
+        if not relative or any(part in ('', '.', '..') for part in relative.split('/')) or len(oid) not in (40, 64):
+            raise ValueError('selected capture path is invalid')
+        expected[relative] = oid
+    if not expected:
+        raise ValueError('selected capture is empty')
+    if not hasattr(os, 'O_NOFOLLOW') or not hasattr(os, 'fwalk'):
+        raise NotImplementedError('safe capture snapshot is unavailable')
+    if not hasattr(os, 'O_DIRECTORY') or os.open not in os.supports_dir_fd:
+        raise NotImplementedError('safe capture directory traversal is unavailable')
+    try:
+        relative_state = Path(state).relative_to(Path(root))
+    except ValueError:
+        raise ValueError('capture directory is outside root') from None
+    if relative_state.as_posix() != POSTCOEF_CAPTURE_PREFIX:
+        raise ValueError('capture directory differs from fixed path')
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_DIRECTORY
+    state_fd = os.open(root, flags)
+    owned_fds = [state_fd]
+    found = set()
+    snapshot_failed = False
+    try:
+        for part in relative_state.parts:
+            state_fd = os.open(part, flags, dir_fd=state_fd)
+            owned_fds.append(state_fd)
+        def walk_error(error):
+            raise error
+        for base, dirs, files, dir_fd in os.fwalk('.', dir_fd=state_fd, follow_symlinks=False, onerror=walk_error):
+            for name in dirs:
+                if not stat.S_ISDIR(os.stat(name, dir_fd=dir_fd, follow_symlinks=False).st_mode):
+                    raise ValueError('capture contains a linked directory')
+            for name in files:
+                st = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+                if not stat.S_ISREG(st.st_mode):
+                    raise ValueError('capture contains a non-regular file')
+                relative = (Path(base) / name).as_posix().removeprefix('./')
+                if relative not in expected:
+                    continue
+                file_fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | getattr(os, 'O_NONBLOCK', 0), dir_fd=dir_fd)
+                with os.fdopen(file_fd, 'rb') as source:
+                    if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                        raise ValueError('capture file changed type')
+                    data = source.read()
+                oid = expected[relative]
+                algorithm = hashlib.sha1 if len(oid) == 40 else hashlib.sha256
+                if algorithm(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest().encode() != oid:
+                    raise ValueError('working capture differs from selected blob')
+                path = destination / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+                found.add(relative)
+    except BaseException:
+        snapshot_failed = True
+        raise
+    finally:
+        close_error = None
+        for fd in reversed(owned_fds):
+            try:
+                os.close(fd)
+            except BaseException as error:
+                if close_error is None:
+                    close_error = error
+        if not snapshot_failed and close_error is not None:
+            raise close_error
+    if found != set(expected):
+        raise ValueError('selected capture file is missing')
+    return head
+
+
 def postcoef_capture_problem(case, root, row):
+    with tempfile.TemporaryDirectory(prefix='postcoef-working-snapshot-') as tmp:
+        return _postcoef_capture_problem(case, root, row, Path(tmp))
+
+
+def _postcoef_capture_problem(case, root, row, snapshot):
     """Validate retained control evidence before accepting the POST-COEF case."""
     rel = f"{POSTCOEF_CAPTURE_PREFIX}/receipt.json"
     pointer_problem = postcoef_capture_pointers_problem(case)
@@ -832,6 +1008,13 @@ def postcoef_capture_problem(case, root, row):
     if root not in state.parents:
         return "POST-COEF capture path escapes root"
     try:
+        snapshot_head = snapshot_postcoef_state(root, state, snapshot)
+    except NotImplementedError:
+        return "POST-COEF safe capture snapshot unavailable"
+    except (OSError, UnicodeError, ValueError, subprocess.SubprocessError):
+        return "POST-COEF working capture differs from selected commit"
+    state = snapshot
+    try:
         transcript = (state / 'verify.txt').read_bytes()
         markers = (b'CORE070_POSTFIT_POLICY_BATCH_NEGATIVES_PASS 10',
                    b'CORE070_POSTFIT_POLICY_CONTRACT_NEGATIVES_PASS 4',
@@ -842,9 +1025,10 @@ def postcoef_capture_problem(case, root, row):
             return "POST-COEF verifier transcript differs"
     except (OSError, KeyError, TypeError):
         return "POST-COEF verifier transcript missing"
-    tool = ROOT / "tools/core070_postcoef_offline_check.py"
-    proc = subprocess.run([sys.executable, str(tool), "--repo", str(root), "--state", str(state),
-                           "--receipt-sha256", binding["sha256"]], capture_output=True, text=True)
+    try:
+        proc = run_postcoef_offline_isolated(root, state, binding["sha256"])
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return "POST-COEF capture validation failed: isolated checker unavailable"
     if proc.returncode != 0 or "ARTIFACT_INTEGRITY_PASS_RUNTIME_NOT_VERIFIED" not in proc.stdout.splitlines():
         return "POST-COEF capture validation failed: " + proc.stderr.strip()[:500]
     try:
@@ -874,6 +1058,8 @@ def postcoef_capture_problem(case, root, row):
         head = selected("rev-parse", "--verify", "HEAD^{commit}").strip()
         if not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", head):
             return "POST-COEF selected commit is invalid"
+        if head != snapshot_head:
+            return "POST-COEF selected commit changed during verification"
         case_rel = "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-THREE-FIT-NATIVE.json"
         map_rel = "docs/dev-log/core070/true-parity-latest/case-map-postfit.json"
         committed_case = json.loads(selected("show", f"{head}:{case_rel}"))

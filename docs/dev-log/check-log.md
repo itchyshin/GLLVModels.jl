@@ -22194,3 +22194,27 @@ A disposable Git fixture constructed an unbound source A from the local diff, a 
 The local caller candidate pins its launcher to capture-only gate `b53f8221a6fa78a3efaf57667b51b5acb32aff0d`; both callers bind the resulting launcher SHA-256 `57ad42a6e5b5ba29c705bf79397efbde6ebdcdc53e0833245849daca8cfbe6c2`. The launcher suite ran 18 tests: 17 passed and the capture-only refusal check was skipped on this bound child. The live-reference and contract checks passed 44 tests, and the Node synthetic reference check passed with runtime unverified. Independent review found no blocker to a local review commit of the binding; it did not authenticate the eventual caller commit or the real runtime.
 
 A disposable Git fixture used gate A, a caller child B and an evidence-only sibling D. The actual source trust and ancestry checks accepted A and D, rejected B as a capture source or evidence descendant, and the identity entry rejected receipt tampering. This is synthetic identity evidence, not full live verification. A separately authenticated caller, clean runtime at A, evidence checkout at D, validated numerical guards and separately approved capture remain necessary. No parity row, CI, push or merge changed.
+
+### 2026-11-07: offline-checker execution regression
+
+A new targeted regression exposes that the assembler executes a substituted caller-checkout offline checker after pointer and transcript checks, before rejecting an incomplete synthetic case. At the pre-fix HEAD, the new test failed as intended; that result was not a passing security or parity result. A private pinned-checkout experiment avoids the substituted checker on malformed evidence, but has not yet established a passing eligible transaction or working-state race protection. The existing admission logic and signed rules remain unchanged.
+
+### 2026-11-07: isolated offline checker and evidence snapshot WIP
+
+The transcript test now mocks only the offline checker and retains the missing and forged transcript controls. The candidate runs the gate-pinned offline checker from a private verified checkout and uses a selected-commit-bound working evidence snapshot for checking and comparison. New tests exercise a substituted caller checker, changed or linked selected artifacts, a changed selected commit, and cleanup on timeout and interruption. This remains a local uncommitted candidate.
+
+The affected Python run passed 52 tests. A synthetic positive fixture reached the required missing-live-runtime rejection while ignoring a forged caller checker; its pinned offline checker also rejected 12 artifact, receipt, marker and symlink mutations. The assembler controls and Node negative controls passed. These are synthetic and focused checks, not a real fit, full Julia suite or parity admission. Independent review found no new proven bypass under a trusted Git object store and private-temp assumption. Same-user mutation, external caller authentication, complete live A/B/D verification, numerical guard validation and POSIX/Windows behavior remain open.
+
+### 2026-11-07: isolated offline Python startup
+
+The local POST-COEF candidate now starts its isolated offline bootstrap and pinned checker with Python site initialization disabled. A new synthetic committed-checker regression failed before this change and passed afterward; it observes the checker's runtime flag and the bootstrap arguments. The focused Python suite passed 53 tests. A synthetic positive fixture using the real pinned offline checker passed and rejected 12 mutations, while a missing live runtime remained rejected. This does not isolate the already-running caller or separate live launcher, authenticate an actual capture, run a fit, or promote a parity row.
+
+The local assembler control command completed successfully and the Node true-parity negative controls reported all passed. These are source controls, not full Julia-suite or paired-fit results.
+
+### 2026-11-07: capture-directory traversal
+
+The local snapshot candidate opens each fixed capture-directory component relative to an open directory descriptor without following links. A static linked-ancestor regression failed before the change and passes afterward. Unsupported snapshot operations now reject the candidate with an explicit unavailable message; an injected unsupported-operation control and a missing directory-descriptor capability control pass. The focused Python suite passed 55 tests before the final diagnostic-only exception wording correction; the three affected targeted tests passed afterward. The synthetic pinned-checker fixture passed and rejected 12 mutations before that wording correction. This does not establish Windows support, guard every same-user race, authenticate the caller or prove a live capture.
+
+### 2026-11-07: snapshot descriptor cleanup
+
+The local candidate retains registered directory descriptors until cleanup, attempts each close even when one reports an error, and preserves a snapshot's own interruption. A separate regression checks that a close error is not hidden when the caller is handling an unrelated exception. Both targeted tests passed after demonstrating the respective defects, and the focused Python suite passed 57 tests. The synthetic pinned-checker fixture still passed and rejected 12 mutations. Review confirmed the two cleanup cases; interruption between an open and registration, an interrupted close, caller authentication and live capture verification remain outside this evidence.

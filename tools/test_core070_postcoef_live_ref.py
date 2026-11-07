@@ -53,6 +53,384 @@ def fixture():
 
 
 class LiveRefTests(unittest.TestCase):
+    def test_isolated_offline_interruption_terminates_checker_group(self):
+        import signal
+        import time
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-offline-interrupt-') as tmp:
+            root = Path(tmp); caller = root / 'caller'; tools = caller / 'tools'; tools.mkdir(parents=True)
+            started, escaped = root / 'started', root / 'escaped'
+            child = ('from pathlib import Path; import os,time; Path(' + repr(str(started)) +
+                     ').write_text(str(os.getpgrp())); time.sleep(1.5); Path(' + repr(str(escaped)) + ').write_text("escaped")')
+            checker = 'import subprocess,sys,time\nsubprocess.Popen([sys.executable,"-c",' + repr(child) + '])\ntime.sleep(8)\n'
+            def git(*args):
+                return subprocess.run(['git', '-C', str(caller), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            (tools / 'core070_postcoef_offline_check.py').write_text(checker)
+            (caller / 'Project.toml').write_text('name = "fixture"\n')
+            contract = caller / 'docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json'
+            contract.parent.mkdir(parents=True); contract.write_text('{}')
+            git('add', 'tools/core070_postcoef_offline_check.py', 'Project.toml', str(contract.relative_to(caller)))
+            git('commit', '-qm', 'trusted gate'); gate = git('rev-parse', 'HEAD')
+            launcher = tools / 'core070_postcoef_gate_launcher.py'; launcher.write_text("TRUSTED_GATE_COMMIT = '" + gate + "'\n")
+            git('add', str(launcher.relative_to(caller))); git('commit', '-qm', 'bound caller')
+            original = subprocess.Popen.communicate; interrupted = []; owned = []
+            def communicate(proc, *args, **kwargs):
+                if not interrupted:
+                    interrupted.append(True); owned.append(proc)
+                    deadline = time.monotonic() + 5
+                    while not started.exists() and time.monotonic() < deadline:
+                        time.sleep(0.02)
+                    self.assertTrue(started.exists(), 'fixture child must have started')
+                    raise KeyboardInterrupt
+                return original(proc, *args, **kwargs)
+            try:
+                with patch.object(assemble, 'ROOT', caller), patch.object(assemble, 'POSTCOEF_GATE_COMMIT', gate), \
+                     patch.object(assemble, 'POSTCOEF_LAUNCHER_SHA256', hashlib.sha256(launcher.read_bytes()).hexdigest()), \
+                     patch.object(subprocess.Popen, 'communicate', communicate):
+                    with self.assertRaises(KeyboardInterrupt):
+                        assemble.run_postcoef_offline_isolated(root, root, 'a' * 64)
+                time.sleep(1.8)
+                self.assertFalse(escaped.exists(), 'checker descendant survived interruption')
+            finally:
+                if owned and owned[0].returncode is None:
+                    try: os.killpg(owned[0].pid, signal.SIGKILL)
+                    except ProcessLookupError: pass
+                    original(owned[0])
+
+    def test_isolated_offline_outer_timeout_removes_private_checkout(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-outer-timeout-') as tmp:
+            root = Path(tmp); caller = root / 'caller'; tools = caller / 'tools'; tools.mkdir(parents=True)
+            record = root / 'checkout-record'
+            checker = ('from pathlib import Path\nPath(' + repr(str(record)) +
+                       ').write_text(str(Path(__file__).resolve().parents[1]))\nimport time\ntime.sleep(6)\n')
+            def git(*args):
+                return subprocess.run(['git', '-C', str(caller), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            (tools / 'core070_postcoef_offline_check.py').write_text(checker)
+            (caller / 'Project.toml').write_text('name = "fixture"\n')
+            contract = caller / 'docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json'
+            contract.parent.mkdir(parents=True); contract.write_text('{}')
+            git('add', 'tools/core070_postcoef_offline_check.py', 'Project.toml', str(contract.relative_to(caller)))
+            git('commit', '-qm', 'trusted gate'); gate = git('rev-parse', 'HEAD')
+            launcher = tools / 'core070_postcoef_gate_launcher.py'
+            launcher.write_text("TRUSTED_GATE_COMMIT = '" + gate + "'\n")
+            git('add', str(launcher.relative_to(caller))); git('commit', '-qm', 'bound caller')
+            with patch.object(assemble, 'ROOT', caller), patch.object(assemble, 'POSTCOEF_GATE_COMMIT', gate), \
+                 patch.object(assemble, 'POSTCOEF_LAUNCHER_SHA256', hashlib.sha256(launcher.read_bytes()).hexdigest()), \
+                 patch.object(assemble, 'POSTCOEF_OFFLINE_OUTER_TIMEOUT_SECONDS', 2, create=True):
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    assemble.run_postcoef_offline_isolated(root, root, 'a' * 64)
+            self.assertTrue(record.exists(), 'checker must record its private checkout')
+            self.assertFalse(Path(record.read_text()).exists(), 'outer timeout leaked the private checkout')
+
+    def test_isolated_offline_timeout_terminates_checker_descendant(self):
+        import shutil
+        import time
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-offline-timeout-') as tmp:
+            root = Path(tmp); caller = root / 'caller'; tools = caller / 'tools'; tools.mkdir(parents=True)
+            started, escaped, checkout_record = root / 'started', root / 'escaped', root / 'checkout-record'
+            child = ('from pathlib import Path; import time; Path(' + repr(str(started)) +
+                     ').write_text("started"); time.sleep(4); Path(' + repr(str(escaped)) + ').write_text("escaped")')
+            checker = ('from pathlib import Path\nPath(' + repr(str(checkout_record)) +
+                       ').write_text(str(Path(__file__).resolve().parents[1]))\n'
+                       'import subprocess,sys,time\nsubprocess.Popen([sys.executable,"-c",' + repr(child) +
+                       '])\ntime.sleep(8)\n')
+            def git(*args):
+                return subprocess.run(['git', '-C', str(caller), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            (tools / 'core070_postcoef_offline_check.py').write_text(checker)
+            (caller / 'Project.toml').write_text('name = "fixture"\n')
+            contract = caller / 'docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json'
+            contract.parent.mkdir(parents=True); contract.write_text('{}')
+            git('add', 'tools/core070_postcoef_offline_check.py', 'Project.toml', str(contract.relative_to(caller)))
+            git('commit', '-qm', 'trusted gate'); gate = git('rev-parse', 'HEAD')
+            launcher = tools / 'core070_postcoef_gate_launcher.py'
+            launcher.write_text("TRUSTED_GATE_COMMIT = '" + gate + "'\n")
+            git('add', str(launcher.relative_to(caller))); git('commit', '-qm', 'bound caller')
+            with patch.object(assemble, 'ROOT', caller), patch.object(assemble, 'POSTCOEF_GATE_COMMIT', gate), \
+                 patch.object(assemble, 'POSTCOEF_LAUNCHER_SHA256', hashlib.sha256(launcher.read_bytes()).hexdigest()), \
+                 patch.object(assemble, 'POSTCOEF_OFFLINE_TIMEOUT_SECONDS', 2, create=True):
+                result = assemble.run_postcoef_offline_isolated(root, root, 'a' * 64)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertTrue(started.exists(), 'fixture child must have started')
+            self.assertTrue(checkout_record.exists(), 'checker must record its private checkout')
+            checkout = Path(checkout_record.read_text())
+            self.assertTrue(checkout.parent.name.startswith('postcoef-offline-gate-'))
+            self.addCleanup(shutil.rmtree, checkout.parent, ignore_errors=True)
+            self.assertFalse(checkout.exists(), 'private checkout survived checker timeout')
+            time.sleep(2.5)
+            self.assertFalse(escaped.exists(), 'checker descendant survived the timeout')
+
+    def test_snapshot_rejects_changed_missing_and_linked_selected_artifacts(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-state-snapshot-') as tmp:
+            root = Path(tmp); state = root / assemble.POSTCOEF_CAPTURE_PREFIX; state.mkdir(parents=True)
+            def git(*args):
+                return subprocess.run(['git', '-C', str(root), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            names = ('receipt.json', 'r-oracle.json', 'results.tsv', 'oracle-verify-preload.log',
+                     'julia-control-always_empty.json', 'runner-snapshots/julia-launcher')
+            for name in names:
+                path = state / name; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(name.encode())
+            git('add', assemble.POSTCOEF_CAPTURE_PREFIX); git('commit', '-qm', 'selected evidence')
+            destination = root / 'snapshot'; destination.mkdir()
+            self.assertEqual(assemble.snapshot_postcoef_state(root, state, destination), git('rev-parse', 'HEAD'))
+            with patch.object(assemble.os, 'supports_dir_fd', set()), tempfile.TemporaryDirectory() as out:
+                with self.assertRaisesRegex(NotImplementedError, 'directory traversal'):
+                    assemble.snapshot_postcoef_state(root, state, Path(out))
+            for name in names:
+                with self.subTest(name=name), tempfile.TemporaryDirectory() as out:
+                    path = state / name; original = path.read_bytes(); path.write_bytes(original + b'changed')
+                    try:
+                        with self.assertRaisesRegex(ValueError, 'differs'):
+                            assemble.snapshot_postcoef_state(root, state, Path(out))
+                    finally:
+                        path.write_bytes(original)
+            path = state / 'r-oracle.json'; original = path.read_bytes(); path.unlink()
+            with tempfile.TemporaryDirectory() as out, self.assertRaisesRegex(ValueError, 'missing'):
+                assemble.snapshot_postcoef_state(root, state, Path(out))
+            outside = root / 'outside'; outside.write_bytes(original); path.symlink_to(outside)
+            with tempfile.TemporaryDirectory() as out, self.assertRaises(ValueError):
+                assemble.snapshot_postcoef_state(root, state, Path(out))
+
+    def test_snapshot_closes_registered_directories_on_interruption(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-fd-cleanup-') as tmp:
+            root = Path(tmp); state = root / assemble.POSTCOEF_CAPTURE_PREFIX; state.mkdir(parents=True)
+            (state / 'receipt.json').write_text('{}')
+            def git(*args):
+                return subprocess.run(['git', '-C', str(root), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            git('add', assemble.POSTCOEF_CAPTURE_PREFIX); git('commit', '-qm', 'selected evidence')
+            opened = []; real_open = os.open
+            def tracked_open(path, flags, *args, **kwargs):
+                fd = real_open(path, flags, *args, **kwargs)
+                if path == root or kwargs.get('dir_fd') is not None:
+                    opened.append(fd)
+                return fd
+            unrelated = real_open(os.devnull, os.O_RDONLY)
+            real_close = os.close; close_errors = []
+            def tracked_close(fd):
+                real_close(fd)
+                if fd in opened and not close_errors:
+                    close_errors.append(fd)
+                    raise OSError('simulated close error after close')
+            try:
+                with tempfile.TemporaryDirectory() as out, \
+                     patch.object(os, 'supports_dir_fd', os.supports_dir_fd | {tracked_open}), \
+                     patch.object(os, 'open', new=tracked_open), \
+                     patch.object(os, 'close', new=tracked_close), \
+                     patch.object(os, 'fwalk', side_effect=KeyboardInterrupt):
+                    with self.assertRaises(KeyboardInterrupt):
+                        assemble.snapshot_postcoef_state(root, state, Path(out))
+                self.assertGreater(len(opened), 1)
+                self.assertEqual(len(close_errors), 1)
+                for fd in opened:
+                    with self.assertRaises(OSError): os.fstat(fd)
+                os.fstat(unrelated)
+            finally:
+                os.close(unrelated)
+
+    def test_snapshot_reports_close_error_inside_callers_exception_handler(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-fd-outer-exception-') as tmp:
+            root = Path(tmp); state = root / assemble.POSTCOEF_CAPTURE_PREFIX; state.mkdir(parents=True)
+            (state / 'receipt.json').write_text('{}')
+            def git(*args):
+                return subprocess.run(['git', '-C', str(root), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            git('add', assemble.POSTCOEF_CAPTURE_PREFIX); git('commit', '-qm', 'selected evidence')
+            opened = []; real_open = os.open; real_close = os.close
+            def tracked_open(path, flags, *args, **kwargs):
+                fd = real_open(path, flags, *args, **kwargs)
+                if path == root: opened.append(fd)
+                return fd
+            def tracked_close(fd):
+                real_close(fd)
+                if opened and fd == opened[0]:
+                    raise OSError('simulated root close error')
+            with tempfile.TemporaryDirectory() as out, \
+                 patch.object(os, 'supports_dir_fd', os.supports_dir_fd | {tracked_open}), \
+                 patch.object(os, 'open', new=tracked_open), \
+                 patch.object(os, 'close', new=tracked_close):
+                try:
+                    raise RuntimeError('caller is handling this')
+                except RuntimeError:
+                    with self.assertRaisesRegex(OSError, 'simulated root close error'):
+                        assemble.snapshot_postcoef_state(root, state, Path(out))
+
+    def test_snapshot_refuses_a_symlinked_capture_ancestor(self):
+        import shutil
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-ancestor-link-') as tmp:
+            root = Path(tmp) / 'repo'; root.mkdir()
+            state = root / assemble.POSTCOEF_CAPTURE_PREFIX; state.mkdir(parents=True)
+            (state / 'receipt.json').write_text('{}')
+            def git(*args):
+                return subprocess.run(['git', '-C', str(root), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            git('add', assemble.POSTCOEF_CAPTURE_PREFIX); git('commit', '-qm', 'selected evidence')
+            ancestor = root / 'docs/dev-log/core070/true-parity-latest/receipts/postfit'
+            external = Path(tmp) / 'relocated'; shutil.move(str(ancestor), str(external))
+            ancestor.symlink_to(external, target_is_directory=True)
+            with tempfile.TemporaryDirectory() as out:
+                with self.assertRaises((ValueError, OSError)):
+                    assemble.snapshot_postcoef_state(root, state, Path(out))
+
+    def test_unsupported_snapshot_primitives_fail_closed(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-unsupported-snapshot-') as tmp:
+            root = Path(tmp); (root / assemble.POSTCOEF_CAPTURE_PREFIX).mkdir(parents=True)
+            case, _, _ = fixture()
+            case['postcoef_capture'] = {'receipt': assemble.POSTCOEF_CAPTURE_PREFIX + '/receipt.json',
+                                        'sha256': 'a' * 64}
+            with patch.object(assemble, 'snapshot_postcoef_state', side_effect=NotImplementedError('unsupported')):
+                self.assertEqual(assemble.postcoef_capture_problem(case, root, {}),
+                                 'POST-COEF safe capture snapshot unavailable')
+
+    def test_assembler_uses_same_snapshot_for_check_and_comparison(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-state-race-') as tmp:
+            root = Path(tmp); state = root / assemble.POSTCOEF_CAPTURE_PREFIX; state.mkdir(parents=True)
+            def git(*args):
+                return subprocess.run(['git', '-C', str(root), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            case, report, oracle = fixture()
+            receipt = b'{"fixture":true}'
+            (state / 'receipt.json').write_bytes(receipt)
+            (state / 'verify.txt').write_bytes(TRANSCRIPT)
+            (state / 'julia-results.json').write_text(json.dumps(report))
+            (state / 'r-oracle.json').write_text(json.dumps(oracle))
+            git('add', assemble.POSTCOEF_CAPTURE_PREFIX); git('commit', '-qm', 'synthetic state')
+            case['postcoef_capture'] = {'receipt': assemble.POSTCOEF_CAPTURE_PREFIX + '/receipt.json',
+                                        'sha256': hashlib.sha256(receipt).hexdigest()}
+            case['batch_verifier']['log_sha256'] = hashlib.sha256(TRANSCRIPT).hexdigest()
+            original = (state / 'r-oracle.json').read_bytes()
+            seen = []
+            def checker(repo, checked_state, digest):
+                checked_state = Path(checked_state); seen.append(checked_state)
+                (state / 'r-oracle.json').write_text('{"changed":"after offline check"}')
+                self.assertNotEqual(checked_state.resolve(), state.resolve())
+                self.assertEqual((checked_state / 'r-oracle.json').read_bytes(), original)
+                return subprocess.CompletedProcess([], 0, 'ARTIFACT_INTEGRITY_PASS_RUNTIME_NOT_VERIFIED\n', '')
+            with patch.object(assemble, 'run_postcoef_offline_isolated', side_effect=checker), \
+                 patch.dict(os.environ, {'GLLVM_POSTCOEF_RUNTIME_ROOT': ''}):
+                problem = assemble.postcoef_capture_problem(case, root, {})
+            self.assertEqual(len(seen), 1)
+            self.assertEqual(problem, 'POST-COEF runtime and oracle build not independently verified')
+
+    def test_assembler_rejects_selected_commit_change_after_snapshot(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-head-race-') as tmp:
+            root = Path(tmp); state = root / assemble.POSTCOEF_CAPTURE_PREFIX; state.mkdir(parents=True)
+            def git(*args):
+                return subprocess.run(['git', '-C', str(root), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            case, report, oracle = fixture(); receipt = b'{"fixture":true}'
+            (state / 'receipt.json').write_bytes(receipt); (state / 'verify.txt').write_bytes(TRANSCRIPT)
+            (state / 'julia-results.json').write_text(json.dumps(report)); (state / 'r-oracle.json').write_text(json.dumps(oracle))
+            git('add', assemble.POSTCOEF_CAPTURE_PREFIX); git('commit', '-qm', 'synthetic state')
+            case['postcoef_capture'] = {'receipt': assemble.POSTCOEF_CAPTURE_PREFIX + '/receipt.json',
+                                        'sha256': hashlib.sha256(receipt).hexdigest()}
+            case['batch_verifier']['log_sha256'] = hashlib.sha256(TRANSCRIPT).hexdigest()
+            def checker(repo, checked_state, digest):
+                (root / 'new-head').write_text('changed')
+                git('add', 'new-head'); git('commit', '-qm', 'change selected commit')
+                return subprocess.CompletedProcess([], 0, 'ARTIFACT_INTEGRITY_PASS_RUNTIME_NOT_VERIFIED\n', '')
+            with patch.object(assemble, 'run_postcoef_offline_isolated', side_effect=checker), \
+                 patch.dict(os.environ, {'GLLVM_POSTCOEF_RUNTIME_ROOT': str(root)}):
+                self.assertEqual(assemble.postcoef_capture_problem(case, root, {}),
+                                 'POST-COEF selected commit changed during verification')
+
+    def test_isolated_checker_disables_site_initialization(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-no-site-') as tmp:
+            root = Path(tmp); caller = root / 'caller'; tools = caller / 'tools'; tools.mkdir(parents=True)
+            def git(*args):
+                return subprocess.run(['git', '-C', str(caller), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            checker = tools / 'core070_postcoef_offline_check.py'
+            checker.write_text('import sys\nassert sys.flags.no_site, "site initialization enabled"\nprint("NO_SITE_CHECKER_PASS")\n')
+            (caller / 'Project.toml').write_text('name = "fixture"\n')
+            contract = caller / 'docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json'
+            contract.parent.mkdir(parents=True); contract.write_text('{}')
+            git('add', 'tools/core070_postcoef_offline_check.py', 'Project.toml', str(contract.relative_to(caller)))
+            git('commit', '-qm', 'gate'); gate = git('rev-parse', 'HEAD')
+            launcher = tools / 'core070_postcoef_gate_launcher.py'
+            launcher.write_text("TRUSTED_GATE_COMMIT = '" + gate + "'\n")
+            git('add', str(launcher.relative_to(caller))); git('commit', '-qm', 'caller')
+            original_popen = subprocess.Popen
+            with patch.object(assemble, 'ROOT', caller), patch.object(assemble, 'POSTCOEF_GATE_COMMIT', gate), \
+                 patch.object(assemble, 'POSTCOEF_LAUNCHER_SHA256', hashlib.sha256(launcher.read_bytes()).hexdigest()), \
+                 patch.object(subprocess, 'Popen', wraps=original_popen) as popen:
+                result = assemble.run_postcoef_offline_isolated(root, root, 'a' * 64)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('NO_SITE_CHECKER_PASS', result.stdout)
+            bootstrap = popen.call_args_list[0].args[0]
+            self.assertIn('-S', bootstrap[:bootstrap.index('-c')])
+
+    def test_isolated_offline_gate_pin_must_match_launcher(self):
+        import true_parity_assemble as assemble
+        with patch.object(assemble, 'POSTCOEF_GATE_COMMIT', '0' * 40):
+            with self.assertRaisesRegex(ValueError, 'gate pin'):
+                assemble.run_postcoef_offline_isolated(assemble.ROOT, assemble.ROOT, 'a' * 64)
+
+    def test_assembler_does_not_execute_substituted_offline_checker(self):
+        import true_parity_assemble as assemble
+        with tempfile.TemporaryDirectory(prefix='postcoef-forged-offline-') as tmp:
+            root = Path(tmp); caller = root / 'caller'; evidence = root / 'evidence'
+            tools = caller / 'tools'; tools.mkdir(parents=True)
+            def git(*args):
+                return subprocess.run(['git', '-C', str(caller), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            checker = tools / 'core070_postcoef_offline_check.py'
+            checker.write_text('raise SystemExit("trusted offline rejected")\n')
+            (caller / 'Project.toml').write_text('name = "fixture"\n')
+            contract = caller / 'docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json'
+            contract.parent.mkdir(parents=True); contract.write_text('{}')
+            git('add', 'tools/core070_postcoef_offline_check.py', 'Project.toml', str(contract.relative_to(caller)))
+            git('commit', '-qm', 'trusted gate'); gate = git('rev-parse', 'HEAD')
+            launcher = tools / 'core070_postcoef_gate_launcher.py'
+            launcher.write_text("TRUSTED_GATE_COMMIT = '" + gate + "'\n")
+            git('add', str(launcher.relative_to(caller))); git('commit', '-qm', 'bound caller')
+            state = evidence / assemble.POSTCOEF_CAPTURE_PREFIX; state.mkdir(parents=True)
+            (state / 'verify.txt').write_bytes(TRANSCRIPT)
+            (state / 'receipt.json').write_bytes(b'synthetic receipt')
+            def evidence_git(*args):
+                return subprocess.run(['git', '-C', str(evidence), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            evidence_git('init', '-q'); evidence_git('config', 'user.name', 'Fixture')
+            evidence_git('config', 'user.email', 'fixture@example.invalid')
+            evidence_git('add', assemble.POSTCOEF_CAPTURE_PREFIX); evidence_git('commit', '-qm', 'synthetic evidence')
+            marker = root / 'forged-executed'
+            checker.write_text(
+                'from pathlib import Path\nPath(' + repr(str(marker)) + ').write_text("executed")\n'
+                'print("ARTIFACT_INTEGRITY_PASS_RUNTIME_NOT_VERIFIED")\n')
+            case, _, _ = fixture()
+            case['postcoef_capture'] = {'receipt': assemble.POSTCOEF_CAPTURE_PREFIX + '/receipt.json',
+                                        'sha256': 'a' * 64}
+            case['batch_verifier']['log_sha256'] = hashlib.sha256(TRANSCRIPT).hexdigest()
+            launcher_hash = hashlib.sha256(launcher.read_bytes()).hexdigest()
+            with patch.object(assemble, 'ROOT', caller), patch.object(assemble, 'POSTCOEF_GATE_COMMIT', gate), \
+                 patch.object(assemble, 'POSTCOEF_LAUNCHER_SHA256', launcher_hash):
+                problem = assemble.postcoef_capture_problem(case, evidence, {})
+            self.assertIn('trusted offline rejected', problem)
+            self.assertFalse(marker.exists(), 'substituted checker must not run before rejection')
+
     def test_staged_capture_includes_preload_for_source_verifier(self):
         with tempfile.TemporaryDirectory() as tmp:
             state = Path(tmp)
@@ -193,9 +571,16 @@ class LiveRefTests(unittest.TestCase):
         case['postcoef_capture'] = {'receipt': f'{CAPTURE}/receipt.json', 'sha256': 'a' * 64}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); state = root / CAPTURE; state.mkdir(parents=True)
-            with patch.object(assemble.subprocess, 'run', side_effect=AssertionError('verifier must not run')):
+            def git(*args):
+                return subprocess.run(['git', '-C', str(root), *args], check=True,
+                                      capture_output=True, text=True).stdout.strip()
+            git('init', '-q'); git('config', 'user.name', 'Fixture'); git('config', 'user.email', 'fixture@example.invalid')
+            (state / 'receipt.json').write_text('{}')
+            git('add', str((state / 'receipt.json').relative_to(root))); git('commit', '-qm', 'missing transcript')
+            with patch.object(assemble, 'run_postcoef_offline_isolated', side_effect=AssertionError('verifier must not run')):
                 self.assertIn('transcript missing', assemble.postcoef_capture_problem(case, root, {}))
                 forged = b'forged\n'; (state / 'verify.txt').write_bytes(forged)
+                git('add', str((state / 'verify.txt').relative_to(root))); git('commit', '-qm', 'forged transcript')
                 case['batch_verifier']['log_sha256'] = hashlib.sha256(forged).hexdigest()
                 self.assertIn('transcript differs', assemble.postcoef_capture_problem(case, root, {}))
     def test_assembler_rejects_each_mismatched_identity_field(self):
