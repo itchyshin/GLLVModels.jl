@@ -337,5 +337,56 @@ class ReviewDefectTests(unittest.TestCase):
             self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
 
 
+class SecondReviewC1Tests(unittest.TestCase):
+    """C1: an unhashable or non-string case label must never crash the enabled classifier."""
+
+    def test_c1_unhashable_case_label_is_incomplete_not_a_crash(self):
+        for junk in (['x'], {'a': 1}, [], {}, None, 1, 1.5, True, ('t',), b'x'):
+            with self.subTest(case=junk):
+                data = certified_good()
+                data['Julia'][1]['case'] = junk
+                with enabled():
+                    self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+                self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+                self.assertEqual(health.certify_evidence(data), ([], False))
+
+    def test_c1_fuzz_classify_never_raises_with_the_flag_enabled(self):
+        import random
+        rnd = random.Random(20261107)
+        junk = [None, True, False, 0, 1, -1, 0.0, 1e-5, -1e-5, 1e-7, 2e-5, float('nan'), float('inf'),
+                'x', '', [], {}, ['x'], {'a': 1}, [1], [[1.0]], 1e300, 3.0, 5e-324]
+
+        def paths(o, p=()):
+            yield p
+            if isinstance(o, dict):
+                for k, v in o.items():
+                    yield from paths(v, p + (k,))
+            elif isinstance(o, list):
+                for i, v in enumerate(o):
+                    yield from paths(v, p + (i,))
+
+        def get(o, p):
+            for k in p:
+                o = o[k]
+            return o
+        outcomes = set()
+        with enabled():
+            for _ in range(5000):
+                d = certified_good()
+                for _ in range(rnd.choice([1, 1, 2, 3])):
+                    p = rnd.choice([q for q in paths(d) if q])
+                    parent, k = get(d, p[:-1]), p[-1]
+                    r = rnd.random()
+                    if r < .25:
+                        parent.pop(k, None) if isinstance(parent, dict) else parent.pop(k)
+                    elif r < .8:
+                        parent[k] = rnd.choice(junk)
+                    elif isinstance(parent[k], float) and math.isfinite(parent[k]):
+                        parent[k] = parent[k] * rnd.choice([-1, 2, 0.5, 1e3]) + rnd.choice([0, 1e-9])
+                outcomes.add(health.classify(d))  # an exception here fails the test
+        self.assertTrue(outcomes <= {'FIT_HEALTH_PASS', 'FIT_HEALTH_INCOMPLETE', 'FIT_HEALTH_FAIL',
+                                     'FIT_HEALTH_FAIL_WITH_INCOMPLETE', 'FIT_HEALTH_INTEGRITY_REJECTED'})
+
+
 if __name__ == '__main__':
     unittest.main()

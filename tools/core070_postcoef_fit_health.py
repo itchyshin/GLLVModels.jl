@@ -345,6 +345,8 @@ def certify_evidence(evidence):
     if not isinstance(fits, list) or len(fits) != len(CASES):
         return [], False
     cases = [f.get('case') if isinstance(f, dict) else None for f in fits]
+    if any(type(case) is not str for case in cases):  # unhashable or non-string labels: never reach set()
+        return [], False
     if set(cases) != set(CASES) or len(set(cases)) != len(CASES):
         confirmable = False
     for fit in fits:
