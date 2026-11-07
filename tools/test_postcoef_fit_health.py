@@ -110,8 +110,9 @@ class FitHealthTests(unittest.TestCase):
                 data['R'][0]['gradient'][0] = value
             with self.subTest(value=value): self.assertEqual(health.classify(data), expected)
 
-    def test_failed_hessian_is_failure_and_unknown_is_incomplete(self):
-        for value, expected in [(False, 'FIT_HEALTH_FAIL'), (None, 'FIT_HEALTH_INCOMPLETE'),
+    def test_float64_cholesky_false_and_unknown_are_incomplete(self):
+        # Neither a bare flag nor a Float64 Cholesky failure certifies a failure.
+        for value, expected in [(False, 'FIT_HEALTH_INCOMPLETE'), (None, 'FIT_HEALTH_INCOMPLETE'),
                                 (1, 'FIT_HEALTH_INCOMPLETE')]:
             data = good(); data['Julia'][1]['pd_hessian'] = value
             if value is False:
@@ -138,7 +139,9 @@ class FitHealthTests(unittest.TestCase):
             with self.subTest(mutation=mutation): self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
 
     def test_failure_is_not_hidden_by_incomplete_peer(self):
-        data = good(); data['R'][0]['pd_hessian'] = False; data['Julia'][2]['error'] = 'missing'
+        data = good(); row = data['R'][0]
+        row['gradient'][0] = 1e-3; row['max_abs_gradient'] = 1e-3
+        data['Julia'][2]['error'] = 'missing'
         self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
 
     def test_julia_objective_roundoff_bound_is_verified(self):
@@ -149,7 +152,7 @@ class FitHealthTests(unittest.TestCase):
         self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_PASS')
         self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
         row['objective_roundoff_limit'] *= 2
-        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
         data = good(); data['Julia'][0]['recomputed_objective'] += 1e-7
         self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
 
@@ -182,7 +185,7 @@ class FitHealthTests(unittest.TestCase):
         data = good(); del data['Julia'][0]['optimizer']
         self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
         data = good(); data['Julia'][0]['optimizer']['optimizer_gradient'][0] = 1e-3
-        self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
         data = good(); data['Julia'][0]['optimizer']['optimizer_profile_value'] = 4.0
         self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
 
@@ -209,24 +212,26 @@ class FitHealthTests(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertNotEqual(health.classify(data), 'FIT_HEALTH_PASS')
         data = good(); data['Julia'][0]['hessian_asymmetry_limit'] *= 2
-        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
 
     def test_indefinite_hessian_cannot_be_hidden(self):
+        # The stored matrix is no longer the symmetrised raw matrix.
         data = good(); data['Julia'][0]['hessian'][0][0] = -1.0
-        self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
 
     def test_raw_failing_gradient_cannot_be_hidden(self):
         data = good(); data['R'][0]['gradient'][0] = 1e-3
-        self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
 
     def test_malformed_case_and_large_gradient_are_incomplete(self):
         data = good(); data['R'][0]['case'] = []
         self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
 
     def test_reported_summary_cannot_hide_gradient_or_objective(self):
-        for mutation in ('gradient', 'objective', 'missing_vector', 'indices', 'prior', 'parameters'):
+        data = good(); data['R'][0]['gradient'][0] = 5e-7
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
+        for mutation in ('objective', 'missing_vector', 'indices', 'prior', 'parameters'):
             data = good(); row = data['R'][0]
-            if mutation == 'gradient': row['gradient'][0] = 5e-7
             if mutation == 'objective': row['recomputed_objective'] = 4.0
             if mutation == 'missing_vector': del row['gradient']
             if mutation == 'indices': row['free_indices'] = [0, 2]
@@ -236,6 +241,60 @@ class FitHealthTests(unittest.TestCase):
                 self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
         data = good(); data['R'][0]['max_abs_gradient'] = 10 ** 1000
         self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+
+
+    def test_bare_flags_and_scalars_are_incomplete_not_failure(self):
+        data = good(); data['R'][0]['pd_hessian'] = False
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        data = good(); data['Julia'][0]['pd_hessian'] = False
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        for engine in health.ENGINES:
+            data = good(); row = data[engine][0]
+            row['max_abs_gradient'] = 1e-3; del row['gradient']
+            with self.subTest(engine=engine):
+                self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        data = good(); data['Julia'][0]['optimizer']['optimizer_max_abs_gradient'] = 1e-3
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
+
+    def test_unbound_failing_vector_is_incomplete(self):
+        for key, value in [('objective_verified', False), ('error', 'unavailable')]:
+            data = good(); row = data['R'][0]
+            row['gradient'][0] = 1e-3; row['max_abs_gradient'] = 1e-3; row[key] = value
+            with self.subTest(engine='R', key=key):
+                self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        data = good(); opt = data['Julia'][0]['optimizer']
+        opt['optimizer_gradient'][0] = 1e-3; opt['optimizer_max_abs_gradient'] = 1e-3
+        opt['optimizer_profile_verified'] = False
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+
+    def test_gradient_straddling_signed_limit(self):
+        below = math.nextafter(health.GRADIENT_LIMIT, 0.0)
+        above = math.nextafter(health.GRADIENT_LIMIT, 1.0)
+        for value, recorded, held in [(below, 'FIT_HEALTH_PASS', 'FIT_HEALTH_INCOMPLETE'),
+                                      (health.GRADIENT_LIMIT, 'FIT_HEALTH_FAIL', 'FIT_HEALTH_FAIL'),
+                                      (above, 'FIT_HEALTH_FAIL', 'FIT_HEALTH_FAIL')]:
+            data = good(); row = data['R'][0]
+            row['gradient'][0] = value; row['max_abs_gradient'] = value
+            with self.subTest(engine='R', value=value):
+                self.assertEqual(health._classify_recorded(data), recorded)
+                self.assertEqual(health.classify(data), held)
+            data = good(); opt = data['Julia'][0]['optimizer']
+            opt['optimizer_gradient'][0] = -value; opt['optimizer_max_abs_gradient'] = value
+            with self.subTest(engine='Julia', value=value):
+                self.assertEqual(health._classify_recorded(data), recorded)
+                self.assertEqual(health.classify(data), held)
+
+    def test_integrity_rejection_precedes_failure(self):
+        data = good(); row = data['R'][0]
+        row['gradient'][0] = 1e-3; row['max_abs_gradient'] = 1e-3
+        data['R'][1]['gradient'][0] = 2e-7
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
+        data = good(); row = data['R'][0]
+        row['gradient'][0] = 1e-3; row['max_abs_gradient'] = -1e-3
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        data = good(); row = data['Julia'][0]
+        row['objective_difference'] = 1.0
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
 
 
 if __name__ == '__main__': unittest.main()
