@@ -369,9 +369,10 @@ INTEGER_TEXT = {
     "CORE070-POSTFIT-COEF-EMPTY-NATIVE": {
         "r_call": "coef.gllvmTMB_multi's empty-X_fix_names branch (R/vcov-coef.R:59-65 at P1 9539352f6), evaluated by "
                   "the batch on a synthetic object list(X_fix_names = character(0)), not on a fitted model",
-        "julia_surface": "StatsAPI.coef(fit::GllvmFit) on a real fit with no X (src/postfit.jl:633 at the measured "
+        "julia_surface": "StatsAPI.coef(fit::GllvmFit) on a real fit with no X (src/postfit.jl:652 at the measured "
                          "commit 681c4c3ca)",
-        "numeric_note": ("Integer equality on the coefficient-vector length: R 0, Julia 0. Basis of the extension: the "
+        "numeric_note": ("DIAGNOSTIC, NON-BINDING: the R side of this receipt is a synthetic object, not a fitted gllvmTMB model, and a 0 = 0 length cannot discriminate (D-319 N2). "
+                         "Integer equality on the coefficient-vector length: R 0, Julia 0. Basis of the extension: the "
                          "drafted N2 text of wave-plan-2026-10-03.md line 17 (lane kit LOOP/lanes/true-parity-latest), "
                          "which names POST-COEF-EMPTY alongside POSTFIT-SURFACE-nobs as rows integer_equality "
                          "(itchyshin/GLLVModels.jl#684 item 1) covers; signed with item N2 by maintainer ruling "
