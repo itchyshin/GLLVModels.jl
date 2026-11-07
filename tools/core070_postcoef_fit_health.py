@@ -2,6 +2,13 @@
 
 The caller must separately authenticate provenance and establish that each
 record describes the objective and free-parameter block actually fitted.
+
+Numerical admission is held: ``classify`` never returns ``FIT_HEALTH_PASS``
+while ``NUMERICAL_ADMISSION_IMPLEMENTED`` is False. The Float64 Cholesky in
+``hessian_pd`` is a screen, not a certificate: a fixed binary64 matrix with a
+negative exact determinant passes it. A would-be pass is therefore reported as
+``FIT_HEALTH_INCOMPLETE`` until a reviewed numerical rule (and a maintainer
+ruling on Hessian coordinates) replaces it.
 """
 import math
 import sys
@@ -10,6 +17,7 @@ import re
 ENGINES = ('R', 'Julia')
 CASES = ('no_fixed_effects', 'trait_intercepts', 'trait_intercepts_plus_covariate')
 GRADIENT_LIMIT = 1e-5  # Signed 2026-10-21 rule: strictly below this value.
+NUMERICAL_ADMISSION_IMPLEMENTED = False  # Hold: no Hessian rule is certified.
 
 
 def finite_number(value):
@@ -20,7 +28,11 @@ def finite_number(value):
 
 
 def hessian_pd(matrix, indices, dimension):
-    """Validate the retained symmetric matrix and Cholesky its free block."""
+    """Validate the retained symmetric matrix and Cholesky its free block.
+
+    Float64 screen only: True does not certify positive definiteness of the
+    recorded binary64 matrix, and False does not certify a failure.
+    """
     if (not isinstance(matrix, list) or len(matrix) != dimension or
         any(not isinstance(row, list) or len(row) != dimension or
             not all(finite_number(x) for x in row) for row in matrix)):
@@ -87,8 +99,8 @@ def julia_prior_bound(provenance, authenticated_tree, case):
             provenance['integration'] == 'exact' and provenance['prior'] == 'none')
 
 
-def classify(evidence):
-    """Classify six recorded diagnostics; missing evidence never becomes a pass."""
+def _classify_recorded(evidence):
+    """Classify six recorded diagnostics before the numerical-admission hold."""
     incomplete = False
     failed = False
     if not isinstance(evidence, dict) or set(evidence) != set(ENGINES):
@@ -220,3 +232,15 @@ def classify(evidence):
     if incomplete:
         return 'FIT_HEALTH_INCOMPLETE'
     return 'FIT_HEALTH_PASS'
+
+
+def classify(evidence):
+    """Classify six recorded diagnostics; no record is admitted while held.
+
+    Missing evidence never becomes a pass, and while numerical admission is
+    unimplemented a would-be pass is reported as FIT_HEALTH_INCOMPLETE.
+    """
+    verdict = _classify_recorded(evidence)
+    if verdict == 'FIT_HEALTH_PASS' and not NUMERICAL_ADMISSION_IMPLEMENTED:
+        return 'FIT_HEALTH_INCOMPLETE'
+    return verdict

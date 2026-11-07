@@ -11,10 +11,20 @@ class HealthContractTests(unittest.TestCase):
         self.report = verifier.synthetic_report(self.contract)
         self.case = self.report['cases']['CORE070-POSTFIT-COEF-EMPTY-NATIVE']['three_fit']
 
-    def test_synthetic_valid_health_is_accepted(self):
-        verifier.check_report(self.report, self.contract, 'unused')
+    def test_synthetic_valid_health_is_held(self):
+        # Numerical admission is held, so even nominal synthetic health rejects.
         self.assertEqual(len(self.case['fit_health']['R']), 3)
         self.assertEqual(len(self.case['fit_health']['Julia']), 3)
+        with self.assertRaisesRegex(ValueError, 'fit health is failed or incomplete'):
+            verifier.check_report(self.report, self.contract, 'unused')
+        with self.assertRaisesRegex(ValueError, 'fit health is failed or incomplete'):
+            verifier.check_postcoef_three_fit_evidence(self.case)
+
+    def test_float64_cholesky_counterexample_rejected_by_verifier(self):
+        from test_postcoef_fit_health import with_indefinite_julia_hessian
+        self.case['fit_health'] = with_indefinite_julia_hessian(self.case['fit_health'])
+        with self.assertRaisesRegex(ValueError, 'fit health is failed or incomplete'):
+            verifier.check_postcoef_three_fit_evidence(self.case)
 
     def test_each_failed_or_missing_diagnostic_rejected(self):
         for engine in ('R', 'Julia'):

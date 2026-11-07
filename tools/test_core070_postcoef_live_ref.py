@@ -52,6 +52,15 @@ def fixture():
     return case, report, oracle
 
 
+def preliminary_health():
+    """Bypass only the numerical-admission hold so non-health checks stay live.
+
+    The real classifier never returns a pass while the hold is in force; tests
+    of identity and comparison fields use the pre-hold verdict instead.
+    """
+    return patch.object(live, 'classify_fit_health', health._classify_recorded)
+
+
 class LiveRefTests(unittest.TestCase):
     def test_isolated_offline_interruption_terminates_checker_group(self):
         import signal
@@ -458,15 +467,29 @@ class LiveRefTests(unittest.TestCase):
         report['cases'][live.CID]['three_fit']['fit_health'] = rows
         for fit, row in zip(oracle['postcoef_three_fit']['fits'], rows['R']):
             fit['fit_health'] = copy.deepcopy(row)
-        live.check_comparison(case, report, oracle)
-        bad_case, bad_report, bad_oracle = copy.deepcopy((case, report, oracle))
-        bad_report['cases'][live.CID]['three_fit']['fit_health']['Julia'][0]['max_abs_gradient'] = 1e-5
-        with self.assertRaises(ValueError):
-            live.check_comparison(bad_case, bad_report, bad_oracle)
-        bad_case, bad_report, bad_oracle = copy.deepcopy((case, report, oracle))
-        bad_oracle['postcoef_three_fit']['fits'][0]['fit_health']['pd_hessian'] = False
-        with self.assertRaises(ValueError):
-            live.check_comparison(bad_case, bad_report, bad_oracle)
+        # The real classifier holds every record, so the nominal comparison rejects.
+        with self.assertRaisesRegex(ValueError, 'fit health failed or is incomplete'):
+            live.check_comparison(case, report, oracle)
+        with preliminary_health():
+            live.check_comparison(case, report, oracle)
+            bad_case, bad_report, bad_oracle = copy.deepcopy((case, report, oracle))
+            bad_report['cases'][live.CID]['three_fit']['fit_health']['Julia'][0]['max_abs_gradient'] = 1e-5
+            with self.assertRaises(ValueError):
+                live.check_comparison(bad_case, bad_report, bad_oracle)
+            bad_case, bad_report, bad_oracle = copy.deepcopy((case, report, oracle))
+            bad_oracle['postcoef_three_fit']['fits'][0]['fit_health']['pd_hessian'] = False
+            with self.assertRaises(ValueError):
+                live.check_comparison(bad_case, bad_report, bad_oracle)
+
+    def test_live_comparison_rejects_float64_cholesky_counterexample(self):
+        from test_postcoef_fit_health import with_indefinite_julia_hessian
+        case, report, oracle = fixture()
+        with_indefinite_julia_hessian(report['cases'][live.CID]['three_fit']['fit_health'])
+        # Before the hold this indefinite matrix reached a passing comparison.
+        with preliminary_health():
+            self.assertIsNone(live.check_comparison(case, report, oracle))
+        with self.assertRaisesRegex(ValueError, 'fit health failed or is incomplete'):
+            live.check_comparison(case, report, oracle)
 
     def test_assembler_rejects_untrusted_launcher_bytes_and_symlinks(self):
         from true_parity_assemble import postcoef_launcher_problem
@@ -607,11 +630,14 @@ class LiveRefTests(unittest.TestCase):
         case['case_id'] = 'CORE070-POSTFIT-COEF-THREE-FIT-NATIVE'
         case['harness_case_id'] = 'CORE070-POSTFIT-COEF-EMPTY-NATIVE'
         case['comparison']['cases'][0]['case_id'] = live.CID
-        self.assertIsNone(live.check_comparison(case, report, oracle))
-        for field, value in [('case_id', live.CID), ('harness_case_id', 'spoofed')]:
-            bad = copy.deepcopy(case); bad[field] = value
-            with self.subTest(field=field), self.assertRaises(ValueError):
-                live.check_comparison(bad, report, oracle)
+        with self.assertRaisesRegex(ValueError, 'fit health'):
+            live.check_comparison(case, report, oracle)
+        with preliminary_health():
+            self.assertIsNone(live.check_comparison(case, report, oracle))
+            for field, value in [('case_id', live.CID), ('harness_case_id', 'spoofed')]:
+                bad = copy.deepcopy(case); bad[field] = value
+                with self.subTest(field=field), self.assertRaises(ValueError):
+                    live.check_comparison(bad, report, oracle)
 
     def test_historical_binding_requires_same_non_discriminating_bytes(self):
         data = (Path(__file__).resolve().parent.parent / live.HISTORICAL_CASE).read_bytes()
@@ -629,6 +655,9 @@ class LiveRefTests(unittest.TestCase):
 
     def test_exact_comparison_and_mutations(self):
         case, report, oracle = fixture()
+        with self.assertRaisesRegex(ValueError, 'fit health'):
+            live.check_comparison(case, report, oracle)
+        held = preliminary_health(); held.start(); self.addCleanup(held.stop)
         self.assertIsNone(live.check_comparison(case, report, oracle))
         mutations = [
             lambda c: c['comparison']['cases'][0].__setitem__('case_id', live.RECEIPT_CID),

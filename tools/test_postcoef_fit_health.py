@@ -1,5 +1,6 @@
 """Controls for a non-admitting POST-COEF fit-health review."""
 import copy
+from fractions import Fraction
 import math
 import sys
 import unittest
@@ -30,9 +31,39 @@ def good():
     return result
 
 
+# Fixed synthetic binary64 matrix: its exact determinant is negative, yet the
+# Float64 Cholesky screen in hessian_pd accepts it. Not a fitted Hessian.
+INDEFINITE = [[0.7125132220060201, 1.3187153969993617, 0.8393195891806725],
+              [1.3187153969993617, 2.440670916094932, 1.5534078962627031],
+              [0.8393195891806725, 1.5534078962627031, 0.9886937547615938]]
+
+
+def exact_determinant(m):
+    (a, b, c), (d, e, f), (g, h, i) = [[Fraction(x) for x in row] for row in m]
+    return a*(e*i - f*h) - b*(d*i - f*g) + c*(d*h - e*g)
+
+
+def with_indefinite_julia_hessian(data):
+    row = data['Julia'][0]
+    row['parameters'] = [0.0] * 3; row['gradient'] = [1e-7, 0.0, 0.0]; row['free_indices'] = [1, 2, 3]
+    row['reconstruction']['recovered_parameters'] = [0.0] * 3
+    row['hessian'] = copy.deepcopy(INDEFINITE); row['hessian_raw'] = copy.deepcopy(INDEFINITE)
+    row['hessian_asymmetry_limit'] = 32 * sys.float_info.epsilon * 3 * max(1.0, max(abs(v) for r in INDEFINITE for v in r))
+    return data
+
+
 class FitHealthTests(unittest.TestCase):
-    def test_all_six_valid(self):
-        self.assertEqual(health.classify(good()), 'FIT_HEALTH_PASS')
+    def test_all_six_valid_is_held_incomplete(self):
+        self.assertFalse(health.NUMERICAL_ADMISSION_IMPLEMENTED)
+        self.assertEqual(health._classify_recorded(good()), 'FIT_HEALTH_PASS')
+        self.assertEqual(health.classify(good()), 'FIT_HEALTH_INCOMPLETE')
+
+    def test_float64_cholesky_counterexample_cannot_pass(self):
+        self.assertLess(exact_determinant(INDEFINITE), 0)
+        self.assertIs(health.hessian_pd(INDEFINITE, [1, 2, 3], 3), True)
+        data = with_indefinite_julia_hessian(good())
+        self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_PASS')
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
 
     def test_any_missing_fit_or_engine_is_incomplete(self):
         for engine in health.ENGINES:
@@ -57,7 +88,8 @@ class FitHealthTests(unittest.TestCase):
         row = data['Julia'][0]
         row['gradient'][0] = 1e-3
         row['max_abs_gradient'] = 1e-3
-        self.assertEqual(health.classify(data), 'FIT_HEALTH_PASS')
+        self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_PASS')
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
         row['optimizer']['optimizer_gradient'][0] = 1e-5
         row['optimizer']['optimizer_max_abs_gradient'] = 1e-5
         self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL')
@@ -114,7 +146,8 @@ class FitHealthTests(unittest.TestCase):
         row['recomputed_objective'] += 4 * math.ulp(3.0)
         row['objective_difference'] = abs(row['recomputed_objective'] - row['optimizer_objective'])
         row['objective_roundoff_limit'] = 8 * sys.float_info.epsilon * max(abs(row['recomputed_objective']), 3.0)
-        self.assertEqual(health.classify(data), 'FIT_HEALTH_PASS')
+        self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_PASS')
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
         row['objective_roundoff_limit'] *= 2
         self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
         data = good(); data['Julia'][0]['recomputed_objective'] += 1e-7
