@@ -776,6 +776,7 @@ def postcoef_evidence_paths():
     """Exact files permitted in the approved evidence-only linear descendants."""
     raw = f"{REC_REL}/postcoef-empty-p1/"
     names = [name for name in POLICY_CAPTURE_ARTIFACTS if name != "runner-snapshots"]
+    names += ["oracle-verify-preload.log"]
     names += ["verify.txt", "runner-snapshots/core070_postfit_policy_batch.R",
               "runner-snapshots/core070_postfit_policy_batch.jl", "runner-snapshots/julia-launcher"]
     files = {raw + name for name in names}

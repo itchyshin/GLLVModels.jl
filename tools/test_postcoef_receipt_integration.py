@@ -500,6 +500,16 @@ class EvidenceDescendantTests(unittest.TestCase):
         self.assertTrue(self.accepts(self.git("rev-parse", "HEAD").strip()))
     def test_exact_evidence_file(self):
         self.assertTrue(self.accepts(self.commit(self.RECEIPT, "evidence")))
+    def test_preload_log_only_at_postcoef_path(self):
+        rel = str(Path(self.RECEIPT).parent / "oracle-verify-preload.log")
+        self.assertTrue(self.accepts(self.commit(rel, "CORE070_ORACLE_VERIFY_PASS\n")))
+        self.assertNotIn("oracle-verify-preload.log", receipt.POLICY_CAPTURE_ARTIFACTS)
+        other = str(Path(self.LEGACY_RECEIPT).parent / "oracle-verify-preload.log")
+        self.assertFalse(self.accepts(self.commit(other, "CORE070_ORACLE_VERIFY_PASS\n")))
+    def test_neighbor_of_preload_log_remains_unapproved(self):
+        rel = str(Path(self.RECEIPT).parent / "oracle-verify-preload.log")
+        self.assertTrue(self.accepts(self.commit(rel, "CORE070_ORACLE_VERIFY_PASS\n")))
+        self.assertFalse(self.accepts(self.commit(rel + ".extra", "unexpected\n")))
     def test_legacy_batch_cannot_be_changed_as_evidence(self):
         self.assertFalse(self.accepts(self.commit(self.LEGACY_RECEIPT, '{"status":"PASS"}')))
     def test_unlisted_evidence(self):

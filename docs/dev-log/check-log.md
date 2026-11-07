@@ -22170,3 +22170,9 @@ The local source candidate records the signed optimizer-coordinate gradient, ful
 The independent review identified and the candidate corrected an omitted preload log in live staging and an active-prior classification gap. The focused Python suite passed 72 tests; the Julia collector suite passed 45 synthetic assertions; the R synthetic controls and the Node reference control passed. Local Julia-only synthetic fits exercised reconstruction, gradients and Hessians; one covariate fit failed the signed gradient condition. These checks are not a paired capture or full package suite.
 
 The objective-roundoff and Hessian-asymmetry guards are not validated error bounds. The trusted launcher still points to the earlier gate, and no source-matched paired capture, row admission, push or merge is claimed. The previous bootstrap full-suite attempts remain incomplete.
+
+### 2026-11-06: POST-COEF preload evidence path
+
+The maintainer approved adding `postcoef-empty-p1/oracle-verify-preload.log` to the POST-COEF evidence-only descendant paths. The generic historical capture artifact list is unchanged. Two new controls failed before the change and pass afterwards, including rejection of a neighboring path and the corresponding historical-batch path. A pre-existing test error in the draft-case fixture also reproduced with the parent receipt module; the fixture now retains the fit-health fields expected by the live checker.
+
+On the local review checkout, the descendant and historical-preservation checks passed 60 tests, and the live-reference and contract-consistency checks passed 44 tests. The trusted launcher still requires rebinding; the objective and Hessian roundoff guards remain unvalidated. No paired capture, row promotion, push, merge, or full-suite pass is claimed.
