@@ -692,5 +692,7 @@ println(_SHARD === nothing ?
     _shard_include("test_comparator_targets.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
+    _shard_include("test_nb_grouped_second_route_784.jl")
+    _shard_include("test_nb_grouped_mollusc_default_784.jl")
 end
 include("test_readme_quickstart.jl")
