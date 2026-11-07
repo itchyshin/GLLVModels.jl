@@ -175,7 +175,7 @@ link isa LogLink || throw(ArgumentError(
 
 Fitting is Laplace + L-BFGS with a finite-difference outer gradient. Beyond
 `K` (required) and `link`, the fitter takes `mask` and `offset`, warm-start
-`β_init` / `Λ_init`, and the usual `g_tol` / `iterations` /
+`β_init` / `λ_init`, and the usual `g_tol` / `iterations` /
 `newton_maxiter` / `newton_tol` controls. There is **no** `X`-covariate
 keyword on this route.
 

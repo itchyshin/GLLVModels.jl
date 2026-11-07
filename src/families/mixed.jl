@@ -603,7 +603,7 @@ one shared SVD (PPCA-style) + per-family default dispersions.
 function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer,
         links::Union{Nothing, AbstractVector} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing,
-        β_init = nothing, Λ_init = nothing, dispersion_init = nothing,
+        β_init = nothing, λ_init = nothing, dispersion_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, offset = nothing)
     p, n = size(Y)
@@ -632,7 +632,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
     # cell may carry a non-finite offset; its pseudodata is a fill value, left as is.
     offset === nothing || (Zemp .-= ifelse.(isfinite.(offset), offset, 0.0))
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -642,7 +642,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     # Log-dispersion tail seeded per family (or from dispersion_init overrides).

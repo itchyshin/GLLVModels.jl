@@ -284,7 +284,7 @@ The ELBO is derived for the logit link only: any other `link` throws `ArgumentEr
 """
 function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogitLink(),
-        β_init = nothing, Λ_init = nothing, φ_init = nothing,
+        β_init = nothing, λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9)
     _va_require_canonical_link("fit_beta_gllvm_va", link, LogitLink())
@@ -294,7 +294,7 @@ function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
 
     Zemp = [linkfun(link, clamp(float(Y[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -304,7 +304,7 @@ function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
     logφ0 = φ_init === nothing ? log(10.0) : log(float(φ_init))
 

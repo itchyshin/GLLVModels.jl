@@ -172,7 +172,7 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogitLink(), mask = nothing, offset = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Beta(1.0, 1.0), link),
-        β_init = nothing, Λ_init = nothing, φ_init = nothing,
+        β_init = nothing, λ_init = nothing, φ_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
@@ -224,7 +224,7 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
     _mask_warmstart!(Zemp, msk)
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
     Zc = Zemp .- β0
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         F = svd(Zc)
         kk = min(K, length(F.S))
         L = zeros(p, K)
@@ -233,7 +233,7 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
     logφ0 = φ_init === nothing ? log(10.0) : log(float(φ_init))
 

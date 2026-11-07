@@ -428,7 +428,7 @@ marginal *and* from the warm start, so the fit depends only on the observed cell
 """
 function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), ν_init::Real = 1.0, mask = nothing,
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_compoisson_gllvm")
@@ -448,7 +448,7 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
          _rescue_beta_init(collect(float.(β_init)), Zemp, nothing; mask = msk,
                            caller = "fit_compoisson_gllvm")   # #874 (rate is always log)
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -458,7 +458,7 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
     logν0 = log(float(ν_init))
 

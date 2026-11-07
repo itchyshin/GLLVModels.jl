@@ -180,7 +180,7 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Gamma(1.0, 1.0), link),
-        β_init = nothing, Λ_init = nothing, α_init = nothing,
+        β_init = nothing, λ_init = nothing, α_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
@@ -232,7 +232,7 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
          _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
                            guarded = _eta_cap_guarded(link), caller = "fit_gamma_gllvm")   # #874
     Zc = Zemp .- β0
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         F = svd(Zc)
         kk = min(K, length(F.S))
         L = zeros(p, K)
@@ -241,7 +241,7 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
     logα0 = α_init === nothing ? log(2.0) : log(float(α_init))
 

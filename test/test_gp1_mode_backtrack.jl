@@ -62,7 +62,7 @@ const GM = GLLVModels
         for (key, (βi, λi)) in sort!(collect(starts))
             Y = reshape(Int64.(fixture[key]["Y_column_major"]), p, n)
             f_default = GM.fit_gp1_gllvm(Y; K = K)
-            f_start = GM.fit_gp1_gllvm(Y; K = K, β_init = βi, Λ_init = reshape(λi, p, K))
+            f_start = GM.fit_gp1_gllvm(Y; K = K, β_init = βi, λ_init = reshape(λi, p, K))
             @test f_default.converged
             @test f_start.converged
             @test abs(f_default.loglik - f_start.loglik) < 1e-2

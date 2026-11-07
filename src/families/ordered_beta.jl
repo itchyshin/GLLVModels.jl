@@ -378,7 +378,7 @@ marginal *and* from the warm start, so the fit depends only on the observed cell
 """
 function fit_ordered_beta_gllvm(Y::AbstractMatrix; K::Integer,
         c0_init::Real = -1.0, c1_init::Real = 1.0, mask = nothing,
-        β_init = nothing, Λ_init = nothing, φ_init = nothing,
+        β_init = nothing, λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     _check_response_support(:unit_closed, Y, _resolve_obs_mask(mask, Y); caller = "fit_ordered_beta_gllvm")
@@ -395,7 +395,7 @@ function fit_ordered_beta_gllvm(Y::AbstractMatrix; K::Integer,
                 (1 - clamp(float(Yc[t, i]), 1e-3, 1 - 1e-3))) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -405,7 +405,7 @@ function fit_ordered_beta_gllvm(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
     logφ0 = φ_init === nothing ? log(10.0) : log(float(φ_init))
     c0_0  = float(c0_init)

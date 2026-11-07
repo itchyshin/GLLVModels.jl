@@ -206,9 +206,9 @@ K_count = 1
 Λ_start = reshape([0.12, -0.06, 0.08], 3, K_count)
 
 f_lbfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
-    β_init = β_start, Λ_init = Λ_start, optimizer = :lbfgs)
+    β_init = β_start, λ_init = Λ_start, optimizer = :lbfgs)
 f_bfgs = fit_gllvm(Y_count; family = Poisson(), K = K_count,
-    β_init = β_start, Λ_init = Λ_start, optimizer = :bfgs)
+    β_init = β_start, λ_init = Λ_start, optimizer = :bfgs)
 @show f_lbfgs.converged f_bfgs.converged
 @show f_lbfgs.loglik f_bfgs.loglik
 optimizer_info(f_lbfgs)

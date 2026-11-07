@@ -85,7 +85,7 @@ using Distributions
             Y, N, X_lv, β_true, Λ_true, alpha_true = _binary_xlv_fixture(link)
             fit = fit_binomial_gllvm(
                 Y; K = 1, N = N, link = link, X_lv = X_lv,
-                β_init = β_true, Λ_init = Λ_true, alpha_lv_init = alpha_true,
+                β_init = β_true, λ_init = Λ_true, alpha_lv_init = alpha_true,
                 iterations = 80, g_tol = 1e-5)
 
             @test fit.converged
@@ -168,7 +168,7 @@ using Distributions
         Y = [rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n]
 
         fit = fit_poisson_gllvm(Y; K = 1, X_lv = X_lv,
-            β_init = β, Λ_init = Λ, alpha_lv_init = alpha_lv,
+            β_init = β, λ_init = Λ, alpha_lv_init = alpha_lv,
             iterations = 150, g_tol = 1e-5)
 
         @test fit.converged
@@ -245,7 +245,7 @@ using Distributions
              for t in 1:p, s in 1:n]
 
         fit = fit_nb_gllvm(Y; K = 1, X_lv = X_lv,
-            β_init = β, Λ_init = Λ, alpha_lv_init = alpha_lv, r_init = r_true,
+            β_init = β, λ_init = Λ, alpha_lv_init = alpha_lv, r_init = r_true,
             iterations = 200, g_tol = 1e-5)
 
         @test fit.converged
@@ -322,7 +322,7 @@ using Distributions
         Y = [rand(Gamma(α_true, exp(η[t, s]) / α_true)) for t in 1:p, s in 1:n]
 
         fit = fit_gamma_gllvm(Y; K = 1, X_lv = X_lv,
-            β_init = β, Λ_init = Λ, alpha_lv_init = alpha_lv, α_init = α_true,
+            β_init = β, λ_init = Λ, alpha_lv_init = alpha_lv, α_init = α_true,
             iterations = 200, g_tol = 1e-5)
 
         @test fit.converged
@@ -397,7 +397,7 @@ using Distributions
         Y = [rand(Beta(μ[t, s] * φ_true, (1 - μ[t, s]) * φ_true)) for t in 1:p, s in 1:n]
 
         fit = fit_beta_gllvm(Y; K = 1, X_lv = X_lv,
-            β_init = β, Λ_init = Λ, alpha_lv_init = alpha_lv, φ_init = φ_true,
+            β_init = β, λ_init = Λ, alpha_lv_init = alpha_lv, φ_init = φ_true,
             iterations = 200, g_tol = 1e-5)
 
         @test fit.converged

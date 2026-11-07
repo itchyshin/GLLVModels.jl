@@ -332,7 +332,7 @@ matches TMB/`gllvmTMB`. Omitting it is exactly the default-path behaviour.
 function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), φ_init::Real = 1.0, p_init::Real = 1.5, mask = nothing,
         hessian::Symbol = _default_hessian(TweedieED(1.0, 1.5), link),
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     _check_response_support(:nonneg_real, Y, _resolve_obs_mask(mask, Y); caller = "fit_tweedie_gllvm")
@@ -351,7 +351,7 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
          _rescue_beta_init(collect(float.(β_init)), Zemp, nothing; mask = msk,
                            guarded = _eta_cap_guarded(link), caller = "fit_tweedie_gllvm")   # #874
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -361,7 +361,7 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
     logφ0 = log(float(φ_init))
     ξ0 = log((float(p_init) - 1.0) / (2.0 - float(p_init)))   # logit(p_init - 1)

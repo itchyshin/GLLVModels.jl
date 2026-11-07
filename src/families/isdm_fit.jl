@@ -122,7 +122,7 @@ end
 """
     fit_isdm_gllvm(formula::Expr, data; family::IsdmSources, trait = :trait,
                    unit = :cell_id, weights = nothing, n_trials = nothing, kwargs...) -> IsdmFit
-    fit_isdm_gllvm(table::IsdmTable; K = table.K, b_init = nothing, Λ_init = nothing,
+    fit_isdm_gllvm(table::IsdmTable; K = table.K, b_init = nothing, λ_init = nothing,
                    theta_diag_B_init = nothing, g_tol = 1e-6, iterations = 1000,
                    newton_maxiter = 100, newton_tol = 1e-9, gradient = :analytic) -> IsdmFit
 
@@ -175,7 +175,7 @@ function fit_isdm_gllvm(formula::Expr, data; family::IsdmSources, trait::Symbol 
 end
 
 function fit_isdm_gllvm(table::IsdmTable; K::Integer = table.K, b_init = nothing,
-        Λ_init = nothing, theta_diag_B_init = nothing, g_tol::Real = 1e-6,
+        λ_init = nothing, theta_diag_B_init = nothing, g_tol::Real = 1e-6,
         iterations::Integer = 1000,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
         gradient::Symbol = :analytic)
@@ -189,7 +189,7 @@ function fit_isdm_gllvm(table::IsdmTable; K::Integer = table.K, b_init = nothing
     pX = size(table.X, 2); p = length(table.trait_levels)
     b0, L0 = _isdm_start(table, Int(K))
     b_init === nothing || (b0 = collect(float.(b_init)))
-    Λ_init === nothing || (L0 = collect(float.(Λ_init)))
+    λ_init === nothing || (L0 = collect(float.(λ_init)))
     uniq = table.unique && K > 0
     # R starts theta_diag_B at log(1) on non-Gaussian fits (R/fit-multi.R:5765-5869).
     θd0 = theta_diag_B_init === nothing ? zeros(p) : collect(float.(theta_diag_B_init))

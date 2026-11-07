@@ -25,7 +25,7 @@ using Test, GLLVModels, Distributions, Random
     # Direct entry point takes it too.
     @test fit_poisson_gllvm(Y; K = 2, n_init = 5).loglik == f5.loglik
 
-    # Small problem: the global random stream is not consumed, a user Λ_init is start 1.
+    # Small problem: the global random stream is not consumed, a user λ_init is start 1.
     rng = Random.Xoshiro(1)
     Ys = [rand(rng, Poisson(exp(0.5 + 0.4 * sin(i + 2j)))) for i in 1:6, j in 1:30]
     Random.seed!(7); expected = rand()
@@ -33,8 +33,8 @@ using Test, GLLVModels, Distributions, Random
     fs = fit_gllvm(Ys; family = Poisson(), K = 1, n_init = 3)
     @test rand() == expected
     @test fs.loglik >= fit_gllvm(Ys; family = Poisson(), K = 1).loglik - 1e-9
-    fu = fit_poisson_gllvm(Ys; K = 1, n_init = 2, Λ_init = fill(0.1, 6, 1))
-    @test fu.loglik >= fit_poisson_gllvm(Ys; K = 1, Λ_init = fill(0.1, 6, 1)).loglik - 1e-9
+    fu = fit_poisson_gllvm(Ys; K = 1, n_init = 2, λ_init = fill(0.1, 6, 1))
+    @test fu.loglik >= fit_poisson_gllvm(Ys; K = 1, λ_init = fill(0.1, 6, 1)).loglik - 1e-9
 
     # Bad requests.
     @test_throws ArgumentError fit_gllvm(Ys; family = Poisson(), K = 1, n_init = 0)

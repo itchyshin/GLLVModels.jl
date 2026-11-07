@@ -539,7 +539,7 @@ start = empirical cumulative-proportion cutpoints + a normal-scores SVD loadings
 init. Unsupported links throw `ArgumentError` before response access.
 """
 function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
-        link::Link = LogitLink(), Λ_init = nothing, mask = nothing,
+        link::Link = LogitLink(), λ_init = nothing, mask = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
@@ -582,7 +582,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
     # Loadings warm start: SVD of a row-centred normal-scores latent proxy.
     Zproxy = [quantile(Normal(), clamp((Ys[t, i] - 0.5) / C, 1e-3, 1 - 1e-3))
               for t in 1:p, i in 1:n]
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zproxy .- (sum(Zproxy; dims = 2) ./ n)
         F = svd(Zc); kk = min(K, length(F.S))
         L = zeros(p, K)
@@ -591,7 +591,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
     Zc = Zproxy .- (sum(Zproxy; dims = 2) ./ n)
     alpha0 = if X_lv_fit === nothing
@@ -684,7 +684,7 @@ are supported; other links throw `ArgumentError` before response access. The sha
 [`fit_ordinal_gllvm`](@ref) is preserved for experiments and old tests.
 """
 function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
-        link::Link = LogitLink(), Λ_init = nothing, mask = nothing,
+        link::Link = LogitLink(), λ_init = nothing, mask = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     _check_ordinal_link(link)
@@ -702,7 +702,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
 
     Zproxy = [quantile(Normal(), clamp((Ys[t, i] - 0.5) / C[t], 1e-3, 1 - 1e-3))
               for t in 1:p, i in 1:n]
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zproxy .- (sum(Zproxy; dims = 2) ./ n)
         F = svd(Zc); kk = min(K, length(F.S))
         L = zeros(p, K)
@@ -711,7 +711,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     β0, ψ0 = _pack_initial_ordinal_pertrait(Ys, obs, C, link)
@@ -789,7 +789,7 @@ other links throw `ArgumentError` before response access.
 """
 function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
         X::AbstractArray{<:Real, 3}, K::Integer,
-        link::Link = LogitLink(), Λ_init = nothing, mask = nothing,
+        link::Link = LogitLink(), λ_init = nothing, mask = nothing,
         γ_fixed = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
@@ -815,7 +815,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
 
     Zproxy = [quantile(Normal(), clamp((Ys[t, i] - 0.5) / C[t], 1e-3, 1 - 1e-3))
               for t in 1:p, i in 1:n]
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zproxy .- (sum(Zproxy; dims = 2) ./ n)
         F = svd(Zc); kk = min(K, length(F.S))
         L = zeros(p, K)
@@ -824,7 +824,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     β0, ψ0 = _pack_initial_ordinal_pertrait(Ys, obs, C, link)

@@ -39,7 +39,7 @@ using LinearAlgebra
         β = log.([6.0, 4.0, 8.0, 5.0, 7.0])
         η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
         Y = [rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n]
-        fit = fit_poisson_gllvm(Y; K = K, X_lv = X_lv, β_init = β, Λ_init = Λ,
+        fit = fit_poisson_gllvm(Y; K = K, X_lv = X_lv, β_init = β, λ_init = Λ,
                                 alpha_lv_init = alpha, iterations = 200, g_tol = 1e-6)
         _check(confint_lv_effects(fit, Y, X_lv), fit)
     end
@@ -53,7 +53,7 @@ using LinearAlgebra
             N = fill(N0, p, n)
             Y = [rand(Binomial(N[t, s], μ[t, s])) for t in 1:p, s in 1:n]
             fit = fit_binomial_gllvm(Y; K = K, N = N, link = link, X_lv = X_lv,
-                                     β_init = β, Λ_init = Λ, alpha_lv_init = alpha,
+                                     β_init = β, λ_init = Λ, alpha_lv_init = alpha,
                                      iterations = 150, g_tol = 1e-6)
             _check(confint_lv_effects(fit, Y, X_lv; N = N), fit)
         end
@@ -64,7 +64,7 @@ using LinearAlgebra
         β = log.([6.0, 4.0, 8.0, 5.0, 7.0]); r = 10.0
         η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
         Y = [rand(NegativeBinomial(r, r / (r + exp(η[t, s])))) for t in 1:p, s in 1:n]
-        fit = fit_nb_gllvm(Y; K = K, X_lv = X_lv, β_init = β, Λ_init = Λ,
+        fit = fit_nb_gllvm(Y; K = K, X_lv = X_lv, β_init = β, λ_init = Λ,
                            alpha_lv_init = alpha, r_init = r, iterations = 200, g_tol = 1e-6)
         _check(confint_lv_effects(fit, Y, X_lv), fit)
     end
@@ -74,7 +74,7 @@ using LinearAlgebra
         β = log.([2.0, 1.5, 3.0, 2.5, 1.8]); a = 6.0
         η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
         Y = [rand(Gamma(a, exp(η[t, s]) / a)) for t in 1:p, s in 1:n]
-        fit = fit_gamma_gllvm(Y; K = K, X_lv = X_lv, β_init = β, Λ_init = Λ,
+        fit = fit_gamma_gllvm(Y; K = K, X_lv = X_lv, β_init = β, λ_init = Λ,
                               alpha_lv_init = alpha, α_init = a, iterations = 200, g_tol = 1e-6)
         _check(confint_lv_effects(fit, Y, X_lv), fit)
     end
@@ -85,7 +85,7 @@ using LinearAlgebra
         η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
         μ = 1.0 ./ (1.0 .+ exp.(-η))
         Y = [rand(Beta(μ[t, s] * φ, (1 - μ[t, s]) * φ)) for t in 1:p, s in 1:n]
-        fit = fit_beta_gllvm(Y; K = K, X_lv = X_lv, β_init = β, Λ_init = Λ,
+        fit = fit_beta_gllvm(Y; K = K, X_lv = X_lv, β_init = β, λ_init = Λ,
                              alpha_lv_init = alpha, φ_init = φ, iterations = 200, g_tol = 1e-6)
         _check(confint_lv_effects(fit, Y, X_lv), fit)
     end
@@ -140,7 +140,7 @@ using LinearAlgebra
         β = log.([6.0, 4.0, 8.0, 5.0, 7.0])
         η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
         Y = [rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n]
-        fit = fit_poisson_gllvm(Y; K = K, X_lv = X_lv, β_init = β, Λ_init = Λ,
+        fit = fit_poisson_gllvm(Y; K = K, X_lv = X_lv, β_init = β, λ_init = Λ,
                                 alpha_lv_init = alpha, iterations = 150, g_tol = 1e-6)
         cb = confint_lv_effects(fit, Y, X_lv; method = :bootstrap, n_boot = 50, seed = 1)
         @test cb.method == :bootstrap
@@ -191,14 +191,14 @@ using LinearAlgebra
             μ = clamp.(GLLVModels.linkinv.(Ref(LogitLink()), η), 1e-4, 1 - 1e-4); N = fill(40, p, n)
             Y = [rand(Binomial(N[t, s], μ[t, s])) for t in 1:p, s in 1:n]
             f = fit_binomial_gllvm(Y; K = 1, N = N, link = LogitLink(), X_lv = X_lv,
-                                   β_init = β, Λ_init = Λ, alpha_lv_init = alpha, iterations = 120)
+                                   β_init = β, λ_init = Λ, alpha_lv_init = alpha, iterations = 120)
             @test boot_ok(confint_lv_effects(f, Y, X_lv; N = N, method = :bootstrap, n_boot = 20, seed = 5))
         end
         @testset "nb2" begin
             Random.seed!(12); β = log.([6.0, 4, 8, 5, 7])
             η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
             Y = [rand(NegativeBinomial(10.0, 10.0 / (10.0 + exp(η[t, s])))) for t in 1:p, s in 1:n]
-            f = fit_nb_gllvm(Y; K = 1, X_lv = X_lv, β_init = β, Λ_init = Λ,
+            f = fit_nb_gllvm(Y; K = 1, X_lv = X_lv, β_init = β, λ_init = Λ,
                              alpha_lv_init = alpha, r_init = 10.0, iterations = 150)
             @test boot_ok(confint_lv_effects(f, Y, X_lv; method = :bootstrap, n_boot = 20, seed = 6))
         end
@@ -206,7 +206,7 @@ using LinearAlgebra
             Random.seed!(13); β = log.([2.0, 1.5, 3, 2.5, 1.8])
             η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
             Y = [rand(Gamma(6.0, exp(η[t, s]) / 6.0)) for t in 1:p, s in 1:n]
-            f = fit_gamma_gllvm(Y; K = 1, X_lv = X_lv, β_init = β, Λ_init = Λ,
+            f = fit_gamma_gllvm(Y; K = 1, X_lv = X_lv, β_init = β, λ_init = Λ,
                                 alpha_lv_init = alpha, α_init = 6.0, iterations = 150)
             @test boot_ok(confint_lv_effects(f, Y, X_lv; method = :bootstrap, n_boot = 20, seed = 7))
         end
@@ -215,7 +215,7 @@ using LinearAlgebra
             η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
             μ = 1.0 ./ (1.0 .+ exp.(-η))
             Y = [rand(Beta(μ[t, s] * 15, (1 - μ[t, s]) * 15)) for t in 1:p, s in 1:n]
-            f = fit_beta_gllvm(Y; K = 1, X_lv = X_lv, β_init = β, Λ_init = Λ,
+            f = fit_beta_gllvm(Y; K = 1, X_lv = X_lv, β_init = β, λ_init = Λ,
                                alpha_lv_init = alpha, φ_init = 15.0, iterations = 150)
             @test boot_ok(confint_lv_effects(f, Y, X_lv; method = :bootstrap, n_boot = 20, seed = 8))
         end
@@ -234,7 +234,7 @@ using LinearAlgebra
         zt2 = vec(X2 * a2) .+ randn(n2)                          # X2(n×2)·a2(2×1) = n-score mean
         η = β2 .+ Λ2 * reshape(zt2, 1, n2)
         Y2 = [rand(Poisson(exp(η[t, s]))) for t in 1:p2, s in 1:n2]
-        fit = fit_poisson_gllvm(Y2; K = 1, X_lv = X2, β_init = β2, Λ_init = Λ2,
+        fit = fit_poisson_gllvm(Y2; K = 1, X_lv = X2, β_init = β2, λ_init = Λ2,
                                 alpha_lv_init = a2, iterations = 200, g_tol = 1e-6)
         # Wald — 10 entries of vec(B_lv) (column-major over p×q_lv)
         ci = confint_lv_effects(fit, Y2, X2)
@@ -285,7 +285,7 @@ using LinearAlgebra
         β = log.([6.0, 4.0, 8.0, 5.0, 7.0])
         η = β .+ Λ * reshape(ztot(Random.default_rng()), 1, n)
         Y = [rand(Poisson(exp(η[t, s]))) for t in 1:p, s in 1:n]
-        xfit = fit_poisson_gllvm(Y; K = K, X_lv = X_lv, β_init = β, Λ_init = Λ,
+        xfit = fit_poisson_gllvm(Y; K = K, X_lv = X_lv, β_init = β, λ_init = Λ,
                                  alpha_lv_init = alpha, iterations = 150, g_tol = 1e-6)
         plain = fit_poisson_gllvm(Y; K = K, iterations = 150)
         @test_throws ArgumentError confint_lv_effects(plain, Y, X_lv)            # no α_lv
@@ -362,7 +362,7 @@ using LinearAlgebra
         ηc = βc .+ Lc * reshape(zc, 1, nc)
         Yc = [rand(Poisson(exp(ηc[t, s]))) for t in 1:pc, s in 1:nc]
         fc = fit_poisson_gllvm(Yc; K = Kc, X_lv = Xc, β_init = βc,
-                               Λ_init = Lc, alpha_lv_init = ac,
+                               λ_init = Lc, alpha_lv_init = ac,
                                iterations = 120, g_tol = 1e-6)
         idx = [1]
         cpr = confint_lv_effects(fc, Yc, Xc; method = :profile,
@@ -396,7 +396,7 @@ using LinearAlgebra
         Yc = [rand(Binomial(Nc[t, s], clamp(μc[t, s], 1e-4, 1 - 1e-4)))
               for t in 1:pc, s in 1:nc]
         fc = fit_binomial_gllvm(Yc; K = Kc, N = Nc, link = LogitLink(),
-                                X_lv = Xc, β_init = βc, Λ_init = Lc,
+                                X_lv = Xc, β_init = βc, λ_init = Lc,
                                 alpha_lv_init = ac, iterations = 160,
                                 g_tol = 1e-6)
         idx = [1]
@@ -431,7 +431,7 @@ using LinearAlgebra
         Yc = [rand(NegativeBinomial(rc, rc / (rc + exp(ηc[t, s]))))
               for t in 1:pc, s in 1:nc]
         fc = fit_nb_gllvm(Yc; K = Kc, X_lv = Xc, β_init = βc,
-                          Λ_init = Lc, alpha_lv_init = ac, r_init = rc,
+                          λ_init = Lc, alpha_lv_init = ac, r_init = rc,
                           iterations = 160, g_tol = 1e-6)
         @test fc.converged
         @test 0.25 < fc.r < 10.0
@@ -467,7 +467,7 @@ using LinearAlgebra
         Yc = [rand(Gamma(αc, exp(ηc[t, s]) / αc))
               for t in 1:pc, s in 1:nc]
         fc = fit_gamma_gllvm(Yc; K = Kc, X_lv = Xc, β_init = βc,
-                             Λ_init = Lc, alpha_lv_init = ac, α_init = αc,
+                             λ_init = Lc, alpha_lv_init = ac, α_init = αc,
                              iterations = 160, g_tol = 1e-6)
         @test fc.converged
         @test 0.5 < fc.α < 10.0
@@ -504,7 +504,7 @@ using LinearAlgebra
         Yc = [rand(Beta(μc[t, s] * φc, (1 - μc[t, s]) * φc))
               for t in 1:pc, s in 1:nc]
         fc = fit_beta_gllvm(Yc; K = Kc, X_lv = Xc, β_init = βc,
-                            Λ_init = Lc, alpha_lv_init = ac, φ_init = φc,
+                            λ_init = Lc, alpha_lv_init = ac, φ_init = φc,
                             iterations = 180, g_tol = 1e-6)
         @test fc.converged
         @test 2.0 < fc.φ < 50.0
@@ -543,7 +543,7 @@ using LinearAlgebra
         end
         @test all([all(vec(sum(Yc .== c; dims = 2)) .> 0) for c in 1:Cc])
 
-        fc = fit_ordinal_gllvm(Yc; K = Kc, X_lv = Xc, Λ_init = Lc,
+        fc = fit_ordinal_gllvm(Yc; K = Kc, X_lv = Xc, λ_init = Lc,
                                alpha_lv_init = ac, iterations = 500,
                                g_tol = 1e-6)
         @test fc.converged
@@ -586,7 +586,7 @@ using LinearAlgebra
             βs = log.([6.0, 4.0, 8.0])
             ηs = βs .+ Ls * reshape(zs, 1, ns)
             Ys = [rand(Poisson(exp(ηs[t, s]))) for t in 1:ps, s in 1:ns]
-            fs = fit_poisson_gllvm(Ys; K = 1, X_lv = Xs, β_init = βs, Λ_init = Ls,
+            fs = fit_poisson_gllvm(Ys; K = 1, X_lv = Xs, β_init = βs, λ_init = Ls,
                                    alpha_lv_init = as, iterations = 200, g_tol = 1e-6)
             cpr = confint_lv_effects(fs, Ys, Xs; method = :profile)
             @test cpr.method == :profile

@@ -69,17 +69,17 @@ GLLVModels.StatsAPI.bic(f::_FakeLVFit, Y::AbstractMatrix; mask = nothing) =
 GLLVModels.StatsAPI.bic(f::_FakeLVFit, n::Integer) = f.np * log(n) - 2f.ll
 
 # Loglik per K on a default start, and on a warm start (used only if the fitter
-# accepts Λ_init). K=3 is a bad optimum from the default start only.
+# accepts λ_init). K=3 is a bad optimum from the default start only.
 const _LL_DEFAULT = Dict(1 => -500.0, 2 => -400.0, 3 => -450.0, 4 => -395.0)
 const _LL_WARM    = Dict(3 => -390.0, 4 => -389.0)
 
 function _fake_fitter(calls; warm_ok::Bool, fail_at = nothing, unconv_at = nothing)
     return function (Y; family, K, kwargs...)
-        push!(calls, (K = K, warm = haskey(kwargs, :Λ_init), kwargs = kwargs))
+        push!(calls, (K = K, warm = haskey(kwargs, :λ_init), kwargs = kwargs))
         K == fail_at && error("singular at K=$K")
         p = size(Y, 1)
-        if haskey(kwargs, :Λ_init)
-            warm_ok || throw(ArgumentError("unsupported keyword Λ_init"))
+        if haskey(kwargs, :λ_init)
+            warm_ok || throw(ArgumentError("unsupported keyword λ_init"))
             ll = get(_LL_WARM, K, _LL_DEFAULT[K])
         else
             ll = _LL_DEFAULT[K]
@@ -111,7 +111,7 @@ end
         # so K=4 is retried too and accepted at −389.
         @test [c.K for c in warm] == [3, 4]
         @test only(filter(a -> a.K == 4, sel.attempts)).status === :warm_start
-        Λ0 = warm[1].kwargs[:Λ_init]
+        Λ0 = warm[1].kwargs[:λ_init]
         @test size(Λ0) == (6, 3)
         @test Λ0[:, 1:2] == fill(0.5, 6, 2)          # previous solution kept
         @test all(iszero, Λ0[1:2, 3])                  # lower-triangular new column
@@ -172,7 +172,7 @@ end
     Y = zeros(6, 40)
     # K = 3 is a common-inflation runaway (all rows × 40) with the best logLik.
     inflate = function (Y; family, K, kwargs...)
-        haskey(kwargs, :Λ_init) && return _FakeLVFit(-380.0, 10K, true, zeros(6), fill(0.5, 6, K))
+        haskey(kwargs, :λ_init) && return _FakeLVFit(-380.0, 10K, true, zeros(6), fill(0.5, 6, K))
         Λ = K == 3 ? fill(20.0, 6, K) : fill(0.5, 6, K)
         return _FakeLVFit(Dict(1 => -500.0, 2 => -400.0, 3 => -300.0)[K], 10K, true, zeros(6), Λ)
     end
@@ -288,12 +288,12 @@ end
         f = function (Y; family, K, kwargs...)
             push!(calls, (K = K, kw = kwargs))
             K == 2 && return mk(-300.0, 2; Λ = fill(20.0, 6, 2))       # runaway, refit too
-            haskey(kwargs, :Λ_init) && return mk(-350.0, K)
+            haskey(kwargs, :λ_init) && return mk(-350.0, K)
             return mk(Dict(1 => -500.0, 3 => -520.0)[K], K; Λ = K == 3 ? fill(0.5, 6, 3) : fill(0.5, 6, 1))
         end
         sel = select_lv(Y; family = Poisson(), Kmax = 3, _fitter = f)
-        w3 = only(filter(c -> c.K == 3 && haskey(c.kw, :Λ_init), calls))
-        Λ0 = w3.kw[:Λ_init]
+        w3 = only(filter(c -> c.K == 3 && haskey(c.kw, :λ_init), calls))
+        Λ0 = w3.kw[:λ_init]
         @test size(Λ0) == (6, 3)
         @test Λ0[:, 1] == fill(0.5, 6)                       # from accepted K = 1
         @test Λ0[1, 2] == 0 && all(iszero, Λ0[1:2, 3])        # lower-triangular padding
@@ -418,14 +418,14 @@ end
         calls = Any[]
         f = function (Y; family, K, kwargs...)
             push!(calls, (K = K, kwargs = kwargs))
-            if haskey(kwargs, :Λ_init)
+            if haskey(kwargs, :λ_init)
                 return _FakeLVFit(-380.0, 10K, true, zeros(6), fill(0.5, 6, K))
             end
             ll = K == 3 ? -450.0 : Dict(1 => -500.0, 2 => -400.0)[K]
             return _FakeLVFit(ll, 10K, true, zeros(6), fill(0.5, 6, K))
         end
         sel = select_lv(Y; family = Binomial(), Kmax = 3, _fitter = f)
-        warm = filter(c -> haskey(c.kwargs, :Λ_init), calls)
+        warm = filter(c -> haskey(c.kwargs, :λ_init), calls)
         @test !isempty(warm)                                    # the retry did happen
         @test all(c -> get(c.kwargs, :loading_ridge, nothing) == 2.0, calls)
     end
@@ -501,7 +501,7 @@ end
     # Judging acceptable() on the unpenalised ℓ would keep the cold fit as :ok.
     f = function (Y; family, K, loading_ridge = Inf, kwargs...)
         K == 1 && return _FakeRidgeFit(-500.0, 10, true, zeros(6), fill(1.0, 6, 1), loading_ridge)
-        haskey(kwargs, :Λ_init) &&
+        haskey(kwargs, :λ_init) &&
             return _FakeRidgeFit(-499.0, 20, true, zeros(6), fill(0.1, 6, 2), loading_ridge)
         return _FakeRidgeFit(-500.2, 20, true, zeros(6), fill(2.0, 6, 2), loading_ridge)
     end

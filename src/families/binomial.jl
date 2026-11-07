@@ -414,7 +414,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, mask = nothing,
         offset = nothing, gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(Binomial(), link),
-        β_init = nothing, Λ_init = nothing,
+        β_init = nothing, λ_init = nothing,
         X_lv::Union{Nothing, AbstractMatrix} = nothing,
         alpha_lv_init = nothing,
         loading_ridge::Real = Inf,
@@ -468,7 +468,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     _mask_warmstart!(Zemp, msk)
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
     Zc = Zemp .- β0
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         F = svd(Zc)
         kk = min(K, length(F.S))
         L = zeros(p, K)
@@ -477,7 +477,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
 
     alpha0 = if X_lv_fit === nothing

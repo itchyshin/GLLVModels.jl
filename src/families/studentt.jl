@@ -484,7 +484,7 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = IdentityLink(),
         hessian::Symbol = _default_hessian(StudentTFamily(4.0, 1.0), link),
         disp_group::Symbol = :shared,
-        β_init = nothing, Λ_init = nothing, σ_init = nothing, nu_init = nothing,
+        β_init = nothing, λ_init = nothing, σ_init = nothing, nu_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
@@ -505,7 +505,7 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
 
     Zemp = float.(Y)                                   # identity link ⇒ Z = Y
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
-    Λ0 = if Λ_init === nothing
+    Λ0 = if λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
         kk = min(K, length(F.S))
@@ -515,7 +515,7 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         end
         L
     else
-        collect(float.(Λ_init))
+        collect(float.(λ_init))
     end
     # Initial values: σ_0 = 1.0, ν_0 = 3.0 (matching gllvmTMB).
     σ0 = σ_init === nothing ? 1.0 : float(σ_init)

@@ -11,7 +11,7 @@
 # smaller K (accepted or not; a rejected fit is still a point inside every larger
 # model) by more than max(tol, 1e-6·|logLik|) is not a valid candidate. Before rejecting a non-monotone or unconverged fit, the sweep
 # refits that K once from the previous solution plus a small new column (a warm
-# start), where the family fitter accepts `β_init`/`Λ_init`. Every attempted K is
+# start), where the family fitter accepts `β_init`/`λ_init`. Every attempted K is
 # recorded in `attempts` with its status, so nothing is dropped silently.
 # Measured on origin/main 2847b5dbf (NB2, n = 300, p = 20, true K = 3): K = 3 and
 # K = 4 converged below K = 2, which made every criterion choose K = 2.
@@ -102,7 +102,7 @@ function _lv_warm_start(prev, K::Integer)
     for j in (Kp + 1):K          # lower-triangular padding: zeros above row j
         Λ0[j:end, j] .= 0.1
     end
-    return (β_init = copy(prev.β), Λ_init = Λ0)
+    return (β_init = copy(prev.β), λ_init = Λ0)
 end
 
 _lv_converged(fit) = hasproperty(fit, :converged) ? Bool(fit.converged) : true
@@ -241,7 +241,7 @@ thresholds are provisional. With `warm_start = true`, a rejected
 (non-monotone, unconverged or runaway) fit is first refitted once from the last
 accepted solution padded with small lower-triangular loading columns, for
 families whose fitter accepts
-`β_init`/`Λ_init`; the refit is kept only if it passes every check. Rejected fits stay in
+`β_init`/`λ_init`; the refit is kept only if it passes every check. Rejected fits stay in
 `attempts` with their reason and are never chosen. At least one `K` must be
 accepted or an error is thrown. Healthy sweeps never trigger a refit, so their
 results are unchanged. An interrupt is never swallowed.
