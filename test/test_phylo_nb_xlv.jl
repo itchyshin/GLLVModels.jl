@@ -154,11 +154,11 @@ end
         Y, beta, Lambda, alpha_lv, r, sigma2, phy, X_lv)
     # Deterministic identity at the same parameters: sparse-augmented
     # `_phylo_nb_xlv_marginal_loglik` vs this file's dense-leaf oracle
-    # `_dense_leaf_phylo_nb_xlv_loglik`. The earlier 1.3e-2 gap came from the
-    # oracle's log-det (fixed in #1024 by using observed information), so the
-    # identity now holds at atol = 1e-6 and is a plain `@test`, as in the
-    # Gamma file. `@test_broken` here reported an unexpected pass as an error
-    # on main (CI, 6 Nov).
+    # `_dense_leaf_phylo_nb_xlv_loglik`. The 1.3e-2 gap on Julia 1.10.12
+    # (#1018) was in the oracle's log-determinant; #1024 switched the dense
+    # oracle to the observed-information log-det and the identity now holds
+    # at atol = 1e-6, so this is a plain `@test` (it was `@test_broken`, which
+    # fails as an unexpected pass once the gap is closed).
     @test isapprox(ll_sparse_aug, ll_dense_leaf; atol = 1e-6)
     @test isfinite(ll_sparse_aug)
 
