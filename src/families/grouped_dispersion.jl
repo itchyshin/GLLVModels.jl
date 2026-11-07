@@ -685,7 +685,9 @@ objective; set `hessian=:fisher` to retain the expected-information approximatio
 as in [`fit_nb_gllvm`](@ref); `r_group` still starts at `r₀ = 10`.
 `optimizer` accepts `:lbfgs`, `:bfgs`, or a configured Optim method object.
 `nothing` preserves the historical initial LBFGS, boundary restarts, and
-conditional BFGS Poisson-ridge polish. Explicit LBFGS uses LBFGS for the initial
+conditional BFGS Poisson-ridge polish; when that LBFGS stage stops unconverged
+(log link), it also runs the explicit-BFGS stages from the same start and keeps
+the better fit. Explicit LBFGS uses LBFGS for the initial
 and boundary stages and skips the polish; explicit BFGS uses BFGS at every
 executed stage. [`optimizer_info`](@ref) retains the per-attempt results.
 """
@@ -757,6 +759,7 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     res = _nb_boundary_restart(negll, res, ls, opts, p + rr + 1; grad = grad,
                                stage_callback = callback)
     explicit = optimizer !== nothing
+    polished = !Optim.converged(res)
     if !explicit || ls isa Optim.BFGS
         θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + rr + 1;
             grad = grad, alg = explicit ? ls : Optim.BFGS(linesearch = Optim.LineSearches.BackTracking(order = 3)),
@@ -766,6 +769,34 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
         nll = Optim.minimum(res)
         conv0 = Optim.converged(res)
         iters0 = Optim.iterations(res)
+    end
+    # #784: when the default L-BFGS stage stops unconverged, the ridge polish fixes every
+    # group with r > 1e3 at the Poisson limit and can converge in a worse basin. On
+    # ade4::mollusc (15 taxa x 163 sites, K = 2) L-BFGS hit its cap with three taxa at
+    # r ≈ 3e3 (below the 1e6 boundary restart), and the polish reported converged = true
+    # at logLik -3129.5314, 8.37 below gllvmTMB; restarting those taxa from r = 1 at the
+    # polished point leads back to the limit. Dense BFGS from the same start (the
+    # explicit `optimizer = :bfgs` stages: initial fit, boundary restart, polish) reaches
+    # gllvmTMB's -3121.1644. Neither route wins everywhere (see the note above `grad`),
+    # so this runs only for fits that needed the polish and is kept only if it lowers
+    # the objective by more than 1e-6. Fits whose L-BFGS stage converges are unchanged.
+    if !explicit && polished && grad !== nothing
+        alt = OptimizerStage[]
+        alt_cb(name, method, result; accepted = false) =
+            _optimizer_stage!(alt, name, method, derivative, stage_controls, result; accepted)
+        bfgs = _COV_BFGS()
+        res2 = _optimize_with_analytic(negll, grad, θ0, bfgs, opts)
+        alt_cb(:bfgs_start, bfgs, res2; accepted = true)
+        res2 = _nb_boundary_restart(negll, res2, bfgs, opts, p + rr + 1; grad = grad,
+                                    stage_callback = alt_cb)
+        θ2, nll2, conv2, iters2 = _nb_poisson_ridge_polish(negll, res2, bfgs, opts, p + rr + 1;
+            grad = grad, alg = bfgs, stage_callback = alt_cb)
+        better = nll2 < nll - 1e-6
+        for s in alt
+            push!(stages, OptimizerStage(s.name, s.method, s.derivative, s.controls,
+                                         s.result, s.accepted && better))
+        end
+        better && ((θ̂, nll, conv0, iters0) = (θ2, nll2, conv2, iters0 + iters2))
     end
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)

@@ -691,5 +691,7 @@ println(_SHARD === nothing ?
     _shard_include("test_comparator_targets.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
+    # #784: NB2 per-species fit on ade4::mollusc stalled 8.37 logLik below gllvmTMB.
+    _shard_include("test_nb_grouped_mollusc_784.jl")
 end
 include("test_readme_quickstart.jl")
