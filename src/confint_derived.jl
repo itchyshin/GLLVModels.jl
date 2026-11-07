@@ -647,6 +647,7 @@ function bootstrap_ci_derived(fit::GllvmFit, derived_fn::Function;
                 replicates[b] = v
             end
         catch e
+            e isa InterruptException && rethrow()
             verbose && @info "bootstrap_ci_derived rep $b failed: $e"
         end
     end
@@ -735,7 +736,8 @@ function _derived_safe_nll(θ::AbstractVector, y::AbstractMatrix,
     T = eltype(θ)
     v = try
         gaussian_nll_packed(θ, y; spec = spec, X = X, Σ_phy = Σ_phy)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return T(_DERIVED_NLL_BARRIER)
     end
     return isfinite(v) ? v : T(_DERIVED_NLL_BARRIER)
@@ -812,7 +814,8 @@ function _derived_refit_with_fixed(fit::GllvmFit,
         end
         res = try
             Optim.optimize(nll_pen, θ0, method, opts; autodiff = :forward)
-        catch
+        catch e
+            e isa InterruptException && rethrow()
             return (NaN, false, θ0, NaN)
         end
         θ0 = Optim.minimizer(res)
@@ -832,7 +835,8 @@ function _derived_refit_with_fixed(fit::GllvmFit,
     end
     g_at_min = try
         derived_fn_packed(θ_min)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return (NaN, false, θ_min, NaN)
     end
     # Constraint-satisfaction gate, mirroring R's `.fix_and_refit_nll()`
