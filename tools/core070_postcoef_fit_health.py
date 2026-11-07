@@ -314,13 +314,53 @@ def certify_fit(fit, engine='Julia'):
     return result
 
 
-def _record_checks_valid(fit):
+def _r_block_valid(evidence):
+    """The R evidence block is well formed for this evidence (not missing or garbage).
+
+    Structural only: R's own pd flag or gradient size may still be a failure
+    elsewhere, but unusable R evidence cannot support confirming a Julia failure.
+    """
+    fits = evidence.get('R') if isinstance(evidence, dict) else None
+    if not isinstance(fits, list) or len(fits) != len(CASES) or not all(isinstance(f, dict) for f in fits):
+        return False
+    cases = [f.get('case') for f in fits]
+    if any(type(c) is not str for c in cases) or set(cases) != set(CASES) or len(set(cases)) != len(CASES):
+        return False
+    for fit in fits:
+        vector, parameters, indices = fit.get('gradient'), fit.get('parameters'), fit.get('free_indices')
+        if not (fit.get('objective_verified') is True and fit.get('penalty_configuration_recorded') is True and
+                'error' in fit and fit['error'] is None):
+            return False
+        if not (isinstance(vector, list) and vector and all(finite_number(x) for x in vector) and
+                isinstance(parameters, list) and len(parameters) == len(vector) and
+                all(finite_number(x) for x in parameters)):
+            return False
+        if not (isinstance(indices, list) and all(type(i) is int for i in indices) and
+                set(indices) == set(range(1, len(vector) + 1)) and len(set(indices)) == len(indices)):
+            return False
+        grad = fit.get('max_abs_gradient')
+        if not finite_number(grad) or grad < 0 or grad != max(abs(x) for x in vector):
+            return False
+        a, b = fit.get('optimizer_objective'), fit.get('recomputed_objective')
+        if not finite_number(a) or not finite_number(b) or a != b or type(fit.get('pd_hessian')) is not bool:
+            return False
+        if (fit.get('fixed_prior_state') != 'none' or fit.get('ridge_penalised') is not False or
+                fit.get('ridge_tau') != 'Inf'):
+            return False
+    return True
+
+
+def _record_checks_valid(fit, r_valid):
     """A certified failure is confirmed only on a record that passed its own checks.
 
     Mirrors the gradient-failure path (bound case, verified profile) and adds
-    the Hessian pair (raw present, raw-versus-symmetrised valid) and the
-    parameter reconstruction.
+    the Hessian pair (raw present, raw-versus-symmetrised valid), the parameter
+    and log-likelihood reconstruction, the recomputed objective within the
+    record's own recorded roundoff check, and a valid R evidence block
+    (``r_valid``, from ``_r_block_valid``).
     """
+    if r_valid is not True:
+        return False
     vector = fit.get('gradient')
     if not isinstance(vector, list) or not vector:
         return False
@@ -329,6 +369,20 @@ def _record_checks_valid(fit):
     reconstruction, parameters = fit.get('reconstruction'), fit.get('parameters')
     if (not isinstance(reconstruction, dict) or reconstruction.get('parameters_match') is not True or
             reconstruction.get('recovered_parameters') != parameters):
+        return False
+    objective, recomputed = fit.get('optimizer_objective'), fit.get('recomputed_objective')
+    recovered_loglik = reconstruction.get('recovered_loglik')
+    if (reconstruction.get('loglik_matches') is not True or 'error' not in reconstruction or
+            reconstruction['error'] is not None or not finite_number(objective) or
+            not finite_number(recomputed) or not finite_number(recovered_loglik) or
+            recovered_loglik != -objective):
+        return False
+    difference = abs(objective - recomputed)
+    limit = 8 * sys.float_info.epsilon * max(1.0, abs(objective), abs(recomputed))
+    recorded_difference, recorded_limit = fit.get('objective_difference'), fit.get('objective_roundoff_limit')
+    if (not finite_number(difference) or not finite_number(limit) or difference > limit or
+            not finite_number(recorded_difference) or not finite_number(recorded_limit) or
+            recorded_difference != difference or recorded_limit != limit):
         return False
     opt = fit.get('optimizer')
     if not isinstance(opt, dict):
@@ -341,6 +395,7 @@ def _record_checks_valid(fit):
 def certify_evidence(evidence):
     """Per-fit certificates; ``failure_confirmable`` needs a valid unique case set."""
     certs, confirmable = [], True
+    r_valid = _r_block_valid(evidence)
     fits = evidence.get('Julia') if isinstance(evidence, dict) else None
     if not isinstance(fits, list) or len(fits) != len(CASES):
         return [], False
@@ -356,7 +411,7 @@ def certify_evidence(evidence):
                  'error' in fit and fit.get('error') is None)
         if not bound:
             confirmable = False
-        cert['confirmable'] = bool(bound and _record_checks_valid(fit))
+        cert['confirmable'] = bool(bound and _record_checks_valid(fit, r_valid))
         certs.append(cert)
     return certs, confirmable
 

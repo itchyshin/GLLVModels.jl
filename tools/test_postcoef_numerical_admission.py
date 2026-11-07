@@ -388,5 +388,204 @@ class SecondReviewC1Tests(unittest.TestCase):
                                      'FIT_HEALTH_FAIL_WITH_INCOMPLETE', 'FIT_HEALTH_INTEGRITY_REJECTED'})
 
 
+class SecondReviewC3ExactnessTests(unittest.TestCase):
+    """C3: tests a float implementation would fail (exact Fraction decisions)."""
+
+    # Each matrix is decided differently by a pure-float LDL^T with float(shift) at the same radius.
+    # Found by search at the exact PASS/INCOMPLETE and FAIL/INCOMPLETE boundaries; verified below by a float oracle.
+    PASS_FLIPS = [([[1.0, 1.3751353334342902], [1.3751353334342902, 1.890997186190759]], 1.610729092553186e-10),
+                  ([[1.0, 0.6431982437247019], [0.6431982437247019, 0.41370398173054107]], 3.53680841551169e-10)]
+    INC_FLIP = ([[1.0, 1.0], [1.0, 1.1663355006277607]], 0.0398576363841728)  # float says PASS, exact INCOMPLETE
+    FAIL_FLIP = ([[1.0, 1.1285362149100029], [1.1285362149100029, 1.2735939877113645]], 1.4339230721875957e-10)  # float says INC
+
+    @staticmethod
+    def float_oracle(m, radius, asym=0.0):
+        k = len(m)
+        bound = float(k * (Fraction(radius) + Fraction(asym)))
+
+        def pd(shift):
+            a = [[m[i][j] - (shift if i == j else 0.0) for j in range(k)] for i in range(k)]
+            low, d = [[0.0] * k for _ in range(k)], []
+            for j in range(k):
+                p = a[j][j] - sum(low[j][t] ** 2 * d[t] for t in range(j))
+                if p <= 0:
+                    return False
+                d.append(p)
+                for i in range(j + 1, k):
+                    low[i][j] = (a[i][j] - sum(low[i][t] * low[j][t] * d[t] for t in range(j))) / p
+            return True
+        if pd(bound):
+            return PASS
+        return FAIL if not pd(-bound) else INC
+
+    def test_c3_float_arithmetic_mis_decides_where_exact_decides(self):
+        for m, r in self.PASS_FLIPS:
+            with self.subTest(kind='pass', r=r):
+                self.assertEqual(self.float_oracle(m, r), INC)  # the float oracle is wrong here
+                self.assertEqual(hess(m, [1, 2], r)['verdict'], PASS)
+                neg = [[-x for x in row] for row in m]
+                self.assertEqual(hess(neg, [1, 2], r)['verdict'], FAIL)
+        m, r = self.INC_FLIP
+        self.assertEqual(self.float_oracle(m, r), PASS)
+        self.assertEqual(hess(m, [1, 2], r)['verdict'], INC)
+        m, r = self.FAIL_FLIP
+        self.assertEqual(self.float_oracle(m, r), INC)
+        self.assertEqual(hess(m, [1, 2], r)['verdict'], FAIL)
+
+    def test_c3_bound_and_shift_rounding_flip_the_verdict(self):
+        # radius + asymmetry = 1 - 2**-54 exactly; float addition rounds it to 1.0, making the pivot 0.
+        r, a = 0.5, 0.5 - 2.0 ** -54
+        self.assertEqual(float(Fraction(r) + Fraction(a)), 1.0)
+        out = health.certify_hessian([[1.0]], [1], COORD, r, a, [], parameter_count=1)
+        self.assertEqual(out['verdict'], PASS)
+        self.assertEqual(out['error_bound'], 1 - Fraction(1, 2 ** 54))
+        # Same mirror image: A + bound*I is exactly indefinite only with the exact bound.
+        out = health.certify_hessian([[-1.0]], [1], COORD, r, a, [], parameter_count=1)
+        self.assertEqual(out['verdict'], FAIL)
+        out = health.certify_hessian([[1.0]], [1], COORD, r, 0.5, [], parameter_count=1)  # bound exactly 1
+        self.assertEqual(out['verdict'], INC)
+
+    def test_c3_gradient_limit_is_the_exact_decimal_not_the_float(self):
+        self.assertEqual(health.CERT_GRADIENT_LIMIT, Fraction(1, 100000))
+        self.assertNotEqual(health.CERT_GRADIENT_LIMIT, Fraction(1e-5))
+        limit = health.CERT_GRADIENT_LIMIT
+        g, e = 9e-06, 1e-06
+        total = Fraction(g) + Fraction(e)
+        self.assertTrue(limit <= total < Fraction(1e-5))  # lies between decimal 1e-5 and float(1e-5)
+        self.assertEqual(health.certify_gradient(g, e), INC)  # exact sum is not below the limit
+        below = math.nextafter(e, 0.0)  # neighbour below: exact sum strictly below the decimal limit
+        self.assertLess(Fraction(g) + Fraction(below), limit)
+        self.assertEqual(health.certify_gradient(g, below), PASS)
+        above = math.nextafter(e, 1.0)
+        self.assertGreaterEqual(Fraction(g) + Fraction(above), limit)
+        self.assertEqual(health.certify_gradient(g, above), INC)
+        # the float 1e-5 itself is above the decimal limit
+        self.assertEqual(health.certify_gradient(1e-5, 1e-20), INC)
+        self.assertEqual(health.certify_gradient(2e-5, 1e-6), FAIL)
+
+    def test_c3_negative_values_in_minus_one_to_zero_are_refused(self):
+        m = [[1.0, 0.0], [0.0, 1.0]]
+        for bad in (-0.5, -1e-300, math.nextafter(0.0, -1.0), -0.999):
+            with self.subTest(bad=bad):
+                self.assertEqual(hess(m, [1, 2], bad)['verdict'], INC)  # radius
+                out = health.certify_hessian(m, [1, 2], COORD, 1e-9, bad, [], parameter_count=2)  # asymmetry
+                self.assertEqual(out['verdict'], INC)
+                self.assertIn('asymmetry', out['reason'])
+                self.assertEqual(health.certify_gradient(bad, 1e-9), INC)  # max_abs_gradient
+                self.assertEqual(health.certify_gradient(1e-7, bad), INC)  # gradient radius
+        # a -0.0 asymmetry or gradient is a harmless zero
+        self.assertEqual(health.certify_hessian(m, [1, 2], COORD, 1e-9, -0.0, [], parameter_count=2)['verdict'], PASS)
+        self.assertEqual(health.certify_gradient(0.0, 1e-9), PASS)
+
+    def test_c3_standalone_parameter_count_must_match_the_matrix(self):
+        two = [[1.0, 0.0], [0.0, 1.0]]
+        for count in (3, 1, 0, None, True, 2.0, '2'):
+            with self.subTest(count=count):
+                out = health.certify_hessian(two, [1, 2], COORD, 1e-9, 0.0, [3], parameter_count=count)
+                self.assertEqual(out['verdict'], INC)
+        out = health.certify_hessian(two, [1, 2], COORD, 1e-9, 0.0, [3], parameter_count=3)  # 2x2, pc=3, pinned=[3]
+        self.assertEqual(out['verdict'], INC)
+        self.assertIn('parameter count', out['reason'])
+        three = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+        out = health.certify_hessian(three, [1, 2], COORD, 1e-9, 0.0, [3], parameter_count=2)
+        self.assertEqual(out['verdict'], INC)
+
+    def test_c3_recorded_pass_with_certified_failure_is_never_a_pass(self):
+        data = certified_good()
+        row = data['Julia'][0]
+        row['hessian'] = row['hessian_raw'] = [[-1.0, 0.0], [0.0, 1.0]]
+        with enabled(), patch.object(health, '_classify_recorded', return_value='FIT_HEALTH_PASS'):
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL')  # stricter than incomplete
+            row['reconstruction']['parameters_match'] = False  # the failure is no longer confirmable
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        # without the patch the recorded layer flags the Float64 mismatch, so a failure is never a PASS either
+        data = certified_good()
+        data['Julia'][0]['hessian'] = data['Julia'][0]['hessian_raw'] = [[-1.0, 0.0], [0.0, 1.0]]
+        with enabled():
+            self.assertNotEqual(health.classify(data), 'FIT_HEALTH_PASS')
+
+
+class SecondReviewC4ConfirmationTests(unittest.TestCase):
+    """C4: a certified failure also needs objective, log-likelihood and R-block consistency."""
+
+    @staticmethod
+    def failing():
+        data = certified_good()
+        row = data['Julia'][0]
+        row['hessian'] = row['hessian_raw'] = [[-1.0, 0.0], [0.0, 1.0]]
+        return data, row
+
+    def test_c4_baseline_failure_is_confirmed(self):
+        data, row = self.failing()
+        with enabled():
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
+        certs, confirmable = health.certify_evidence(data)
+        self.assertTrue(confirmable)
+        self.assertEqual((certs[0]['verdict'], certs[0]['confirmable']), (FAIL, True))
+
+    def test_c4_each_condition_downgrades_to_incomplete(self):
+        mutations = {
+            'recomputed objective differs beyond roundoff': lambda d, r: r.update(recomputed_objective=3.5),
+            'recorded objective difference missing': lambda d, r: r.pop('objective_difference'),
+            'recorded roundoff limit missing': lambda d, r: r.pop('objective_roundoff_limit'),
+            'loglik_matches false': lambda d, r: r['reconstruction'].update(loglik_matches=False),
+            'loglik_matches missing': lambda d, r: r['reconstruction'].pop('loglik_matches'),
+            'recovered loglik differs from fit': lambda d, r: r['reconstruction'].update(recovered_loglik=-4.0),
+            'recovered loglik missing': lambda d, r: r['reconstruction'].pop('recovered_loglik'),
+            'reconstruction error recorded': lambda d, r: r['reconstruction'].update(error='boom'),
+            'R block missing': lambda d, r: d.pop('R'),
+            'R block garbage string': lambda d, r: d.update(R='garbage'),
+            'R block empty list': lambda d, r: d.update(R=[]),
+            'R block short': lambda d, r: d['R'].pop(),
+            'R fit not a dict': lambda d, r: d['R'].__setitem__(0, 'x'),
+            'R parameters malformed': lambda d, r: d['R'][0].update(parameters='x'),
+            'R gradient non-finite': lambda d, r: d['R'][1].update(gradient=[float('nan'), 0.0]),
+            'R prior recorded': lambda d, r: d['R'][2].update(fixed_prior_state='prior'),
+            'R objective unverified': lambda d, r: d['R'][0].update(objective_verified=False),
+            'R case duplicated': lambda d, r: d['R'][2].update(case=d['R'][1]['case']),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label):
+                data, row = self.failing()
+                mutate(data, row)
+                with enabled():
+                    self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+                certs, confirmable = health.certify_evidence(data)
+                self.assertEqual(certs[0]['verdict'], FAIL)  # still certified, but not confirmable
+                self.assertFalse(certs[0]['confirmable'])
+
+    def test_c4_record_checks_reject_subthreshold_objective_disagreement_and_bad_r_flag(self):
+        data, row = self.failing()
+        r_valid = health._r_block_valid(data)
+        self.assertTrue(health._record_checks_valid(row, r_valid))
+        self.assertFalse(health._record_checks_valid(row, False))
+        self.assertFalse(health._record_checks_valid(row, None))
+        row['recomputed_objective'] = 3.0 + 4e-16  # inside the roundoff limit, but the record says difference 0.0
+        self.assertFalse(health._record_checks_valid(row, r_valid))
+        with enabled():
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
+        row['objective_difference'] = abs(3.0 - row['recomputed_objective'])  # recorded check now consistent
+        row['objective_roundoff_limit'] = 8 * 2.220446049250313e-16 * row['recomputed_objective']
+        self.assertTrue(health._record_checks_valid(row, r_valid))
+        with enabled():
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
+
+    def test_c4_gradient_certified_failure_has_the_same_requirements(self):
+        data = certified_good()
+        row = data['Julia'][0]
+        row['optimizer']['optimizer_gradient'] = [2e-5, 0.0]
+        row['optimizer']['optimizer_max_abs_gradient'] = 2e-5
+        row['gradient'], row['max_abs_gradient'] = [2e-5, 0.0], 2e-5
+        certs, confirmable = health.certify_evidence(data)
+        self.assertEqual((certs[0]['gradient'], certs[0]['verdict'], certs[0]['confirmable']), (FAIL, FAIL, True))
+        for label, mutate in {'loglik false': lambda d: d['Julia'][0]['reconstruction'].update(loglik_matches=False),
+                              'objective differs': lambda d: d['Julia'][0].update(recomputed_objective=3.5),
+                              'R garbage': lambda d: d.update(R=None)}.items():
+            with self.subTest(label):
+                d = copy.deepcopy(data)
+                mutate(d)
+                self.assertFalse(health.certify_evidence(d)[0][0]['confirmable'])
+
+
 if __name__ == '__main__':
     unittest.main()
