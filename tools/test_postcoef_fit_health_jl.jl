@@ -38,6 +38,47 @@ include("core070_postcoef_fit_health.jl")
     @test collect_health(f, x, 5.0; gradient=x -> [NaN, 0.0])["error"] !== nothing
 end
 
+@testset "certifier fields: coordinate, pinned indices, declared radii" begin
+    f(x) = sum(abs2, x)
+    args = (penalty_state="none", gradient_eval=x -> 2 .* x, hessian_eval=x -> Matrix(2.0I, 3, 3))
+    x = [1.0, -2.0, 0.5]
+    # Generic collector: no coordinate or radius unless the caller declares them.
+    h = postcoef_julia_fit_health("c", f, x, 5.25; free_indices=[1, 3], args...)
+    @test h["pinned_indices"] == [2]
+    @test h["hessian_coordinate"] === nothing
+    @test h["hessian_error_radius"] === nothing
+    h = postcoef_julia_fit_health("c", f, x, 5.25; free_indices=[1, 2, 3], args...,
+        hessian_coordinate="packed_free_index", derivative_method="forwarddiff_exact")
+    @test h["pinned_indices"] == Int[]
+    @test h["hessian_coordinate"] == "packed_free_index"
+    @test h["hessian_error_radius"] == 1024.0 * 2.0^-52 * 2.0
+    @test occursin("declared", h["hessian_error_radius_basis"])
+    # A non-AD method records no radius (certifier then reports INCOMPLETE).
+    h = postcoef_julia_fit_health("c", f, x, 5.25; free_indices=[1, 2, 3], args...,
+        hessian_coordinate="packed_free_index", derivative_method="finite_difference")
+    @test h["hessian_error_radius"] === nothing
+    # Adapter: pinned index set is the complement; coordinate is the packed one.
+    fit = (pars=(θ_packed=[1.0, -2.0, 0.5],), logLik=-5.25)
+    h = postcoef_julia_health_from_fit("c", fit, :data, nothing;
+        penalty_state="none", nll_factory=(f, y, X, phy) -> (x -> sum(abs2, x)),
+        pinned_indices=f -> [2], gradient_eval=(f, x) -> 2 .* x,
+        hessian_eval=(f, x) -> Matrix(2.0I, 3, 3), derivative_method="forwarddiff_exact")
+    @test h["free_indices"] == [1, 3] && h["pinned_indices"] == [2]
+    @test h["hessian_coordinate"] == "packed_free_index"
+    @test h["hessian_error_radius"] > 0
+    # Optimizer record carries the gradient radius only for the declared method.
+    result = (point=[0.0, 0.0], value=0.0)
+    oargs = (minimizer_eval=r -> r.point, minimum_eval=r -> r.value, gradient_eval=(g, z) -> 2 .* z .+ 1e-7)
+    o = postcoef_julia_optimizer_health(result, z -> sum(abs2, z); oargs...)
+    @test o["gradient_error_radius"] === nothing
+    o = postcoef_julia_optimizer_health(result, z -> sum(abs2, z); oargs..., derivative_method="forwarddiff_exact")
+    @test o["gradient_error_radius"] == 1024.0 * 2.0^-52
+    # Serialisation: shortest round-trip repr (the runner's to_json) is lossless.
+    for v in (0.1, 1e-7, 1024.0 * 2.0^-52, nextfloat(1.0), 5e-324, floatmax())
+        @test parse(Float64, repr(v)) === v
+    end
+end
+
 @testset "fit adapter forwards design and free indices" begin
     fit = (pars=(θ_packed=[1.0, -2.0],), logLik=-5.0)
     design = reshape([3.0, 4.0], 1, 2, 1)

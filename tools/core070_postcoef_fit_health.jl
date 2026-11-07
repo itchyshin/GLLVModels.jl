@@ -2,9 +2,37 @@
 # fitted objective, the data/design, free indices and actual prior configuration.
 using LinearAlgebra
 
+# Declared derivative-error radii (consumed by tools/core070_postcoef_fit_health.py
+# certify_hessian / certify_gradient). They are DECLARATIONS, not proofs, and
+# are recorded only when the caller names the derivative method as exact
+# forward-mode AD ("forwarddiff_exact"); any other method records no radius,
+# so the certifier then reports INCOMPLETE rather than trusting an invented one.
+#
+# Rationale. Forward-mode AD evaluates the exact derivative of the evaluated
+# floating-point program: there is no step size and no truncation error. The
+# only error is binary64 rounding in the primal and tangent recurrences, bounded
+# by gamma_m * (sum of absolute magnitudes of the contributing terms) with
+# gamma_m ~ m * 2^-53 for m sequential roundings. We declare
+#   radius = 2^10 * 2^-52 * max(1, S),
+# i.e. a budget of 1024 ulps (m up to ~2000 roundings) times a scale S. S is
+# max|H| for the Hessian, and max(|objective|, max|g|) for the gradient. S is a
+# PROXY for the term-magnitude sum: cancellation can make the true sum larger,
+# so the radius is not a theorem. The factor 2^10 and the proxy are the
+# declared assumptions a reviewer must accept or replace. The Python floor
+# k * 2^-52 * max|H| (k <= 32) is always below this radius because 2^10 > 32.
+const POSTCOEF_AD_ULP_BUDGET = 1024.0
+const POSTCOEF_AD_METHOD = "forwarddiff_exact"
+const POSTCOEF_HESSIAN_COORDINATE = "packed_free_index"
+postcoef_ad_radius(scale) = POSTCOEF_AD_ULP_BUDGET * 2.0^-52 * max(1.0, scale)
+const POSTCOEF_AD_HESSIAN_BASIS =
+    "declared: 2^10 * 2^-52 * max(1, max|H|); forward-mode AD exact, rounding-only; scale is a proxy, not a bound"
+const POSTCOEF_AD_GRADIENT_BASIS =
+    "declared: 2^10 * 2^-52 * max(1, |objective|, max|g|); forward-mode AD exact, rounding-only; scale is a proxy, not a bound"
+
 function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
                                    penalty_state, free_indices,
-                                   gradient_eval, hessian_eval)
+                                   gradient_eval, hessian_eval,
+                                   hessian_coordinate=nothing, derivative_method=nothing)
     out = Dict{String,Any}(
         "case" => case, "pd_hessian" => nothing, "max_abs_gradient" => nothing,
         "objective_verified" => false, "penalty_configuration_recorded" => false,
@@ -12,7 +40,9 @@ function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
         "hessian_raw" => nothing, "hessian_asymmetry" => nothing, "hessian_asymmetry_limit" => nothing,
         "optimizer_objective" => nothing, "recomputed_objective" => nothing, "objective_difference" => nothing,
         "objective_roundoff_limit" => nothing,
-        "free_indices" => nothing, "penalty_state" => penalty_state)
+        "free_indices" => nothing, "penalty_state" => penalty_state,
+        "pinned_indices" => nothing, "hessian_coordinate" => nothing,
+        "hessian_error_radius" => nothing, "hessian_error_radius_basis" => nothing)
     fail(message) = (out["error"] = message; out)
     if !(theta isa AbstractVector{<:Real}) || isempty(theta) || !all(isfinite, theta)
         return fail("fit parameters unavailable or non-finite")
@@ -24,6 +54,8 @@ function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
     end
     out["parameters"] = collect(Float64, theta)
     out["free_indices"] = collect(Int, free_indices)
+    # Complement of the free indices in 1..length(parameters), as the certifier requires.
+    out["pinned_indices"] = collect(Int, setdiff(1:length(theta), free_indices))
     out["penalty_configuration_recorded"] = penalty_state isa AbstractString &&
                                                penalty_state in ("none", "active")
     if !(optimizer_objective isa Real) || optimizer_objective isa Bool || !isfinite(optimizer_objective)
@@ -66,6 +98,13 @@ function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
         hessian_sym = (hessian + hessian') ./ 2
         out["hessian"] = [collect(Float64, hessian_sym[i, :]) for i in axes(hessian, 1)]
         out["pd_hessian"] = isposdef(Symmetric(hessian_sym[free_indices, free_indices]))
+        # Coordinate label is the caller's statement about `theta` and `objective`
+        # (the adapter passes the fit's own packed theta); never inferred here.
+        out["hessian_coordinate"] = hessian_coordinate isa AbstractString ? String(hessian_coordinate) : nothing
+        if derivative_method == POSTCOEF_AD_METHOD
+            out["hessian_error_radius"] = postcoef_ad_radius(maximum(abs, hessian))
+            out["hessian_error_radius_basis"] = POSTCOEF_AD_HESSIAN_BASIS
+        end
     catch err
         err isa InterruptException && rethrow()
         return fail("diagnostic evaluation failed: " * sprint(showerror, err))
@@ -77,7 +116,7 @@ end
 # and automatic derivatives. This adapter alone does not authenticate them.
 function postcoef_julia_health_from_fit(case, fit, Y, X;
                                        penalty_state, nll_factory, pinned_indices,
-                                       gradient_eval, hessian_eval)
+                                       gradient_eval, hessian_eval, derivative_method=nothing)
     try
         theta = fit.pars.θ_packed
         pinned = pinned_indices(fit)
@@ -91,7 +130,10 @@ function postcoef_julia_health_from_fit(case, fit, Y, X;
         return postcoef_julia_fit_health(case, objective, theta, -fit.logLik;
             penalty_state=penalty_state, free_indices=free,
             gradient_eval=x -> gradient_eval(objective, x),
-            hessian_eval=x -> hessian_eval(objective, x))
+            hessian_eval=x -> hessian_eval(objective, x),
+            # theta is fit.pars.θ_packed and the objective is the package's own
+            # packed-theta NLL, so the Hessian is in the packed coordinate.
+            hessian_coordinate=POSTCOEF_HESSIAN_COORDINATE, derivative_method=derivative_method)
     catch err
         err isa InterruptException && rethrow()
         return Dict{String,Any}("case" => case, "pd_hessian" => nothing,
@@ -104,8 +146,10 @@ end
 # Recompute the gradient in the optimizer's own coordinates. Provenance of the
 # supplied profile objective and equality to the fitted route must be reviewed.
 function postcoef_julia_optimizer_health(result, objective;
-                                         minimizer_eval, minimum_eval, gradient_eval)
+                                         minimizer_eval, minimum_eval, gradient_eval,
+                                         derivative_method=nothing)
     out = Dict{String,Any}("optimizer_parameters" => nothing,
+        "gradient_error_radius" => nothing, "gradient_error_radius_basis" => nothing,
         "optimizer_gradient" => nothing, "optimizer_max_abs_gradient" => nothing,
         "optimizer_minimum" => nothing, "optimizer_profile_value" => nothing,
         "optimizer_profile_verified" => false, "optimizer_error" => nothing)
@@ -126,6 +170,11 @@ function postcoef_julia_optimizer_health(result, objective;
             throw(ArgumentError("invalid optimizer gradient"))
         out["optimizer_gradient"] = collect(Float64, gradient)
         out["optimizer_max_abs_gradient"] = maximum(abs, gradient)
+        if derivative_method == POSTCOEF_AD_METHOD
+            out["gradient_error_radius"] = postcoef_ad_radius(max(abs(out["optimizer_profile_value"]),
+                                                                  out["optimizer_max_abs_gradient"]))
+            out["gradient_error_radius_basis"] = POSTCOEF_AD_GRADIENT_BASIS
+        end
     catch err
         err isa InterruptException && rethrow()
         out["optimizer_error"] = sprint(showerror, err)
