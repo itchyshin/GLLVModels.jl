@@ -53,9 +53,10 @@ try {
     'julia-stdout.log':Buffer.from('ok\n'),'julia-stderr.log':Buffer.alloc(0),'r-oracle.json':oracle,
     'runner-snapshots/core070_postfit_policy_batch.R':rRunner,'runner-snapshots/core070_postfit_policy_batch.jl':jRunner,
     'runner-snapshots/julia-launcher':launcher,'julia-Manifest.toml':manifest,
-    'oracle-verify-before.log':Buffer.from('verified\n'),'oracle-verify-after.log':Buffer.from('verified\n')};
+    'oracle-verify-preload.log':Buffer.from('CORE070_ORACLE_VERIFY_PASS\n'),'oracle-verify-before.log':Buffer.from('verified\n'),'oracle-verify-after.log':Buffer.from('verified\n')};
   for (const [field,name] of Object.entries({julia_results_sha256:'julia-results.json',raw_sha256:'results.tsv',
     diagnostics_sha256:'diagnostics.log',julia_stdout_sha256:'julia-stdout.log',julia_stderr_sha256:'julia-stderr.log',
+    oracle_verify_preload_sha256:'oracle-verify-preload.log',
     r_runner_sha256:'runner-snapshots/core070_postfit_policy_batch.R',oracle_verify_before_sha256:'oracle-verify-before.log',
     oracle_verify_after_sha256:'oracle-verify-after.log'})) record[field]=sha(files[name]);
   for (const mode of ['always_empty','spurious_coefficient']) {
@@ -98,6 +99,16 @@ try {
     try { assert.equal(inspect('FS').ok,false); assert.equal(inspect('HEAD').ok,true); }
     finally { writeFileSync(path,original); }
   }
+  const preloadPath=join(root,prefix,'oracle-verify-preload.log');
+  const savedPreload=readFileSync(preloadPath), preloadReceiptPath=join(root,prefix,'receipt.json');
+  try {
+    const forged=Buffer.from('no verification marker\n'); writeFileSync(preloadPath,forged);
+    assert.equal(inspect('FS').ok,false,'changed preload log');
+    const rec=structuredClone(record); rec.oracle_verify_preload_sha256=sha(forged);
+    const encoded=bytes(rec); writeFileSync(preloadReceiptPath,encoded);
+    const candidate={...caseReceipt,postcoef_capture:{...caseReceipt.postcoef_capture,sha256:sha(encoded)}};
+    assert.equal(inspect('FS',candidate).ok,false,'rehashed preload log without pass marker');
+  } finally { writeFileSync(preloadPath,savedPreload); writeFileSync(preloadReceiptPath,recordBytes); }
   const controlPath=join(root,prefix,'julia-control-always_empty.json');
   const originalControl=readFileSync(controlPath), receiptPath=join(root,prefix,'receipt.json');
   try {

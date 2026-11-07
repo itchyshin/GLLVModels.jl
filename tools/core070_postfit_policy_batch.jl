@@ -38,6 +38,7 @@ if parity_pin == "P1"
     @eval using SHA
     @eval using Libdl
     @eval using Pkg
+    include(joinpath(@__DIR__, "core070_postcoef_fit_health.jl"))
 end
 
 # ---------------------------------------------------------------------------
@@ -340,6 +341,73 @@ postcoef_three_fit = if parity_pin == "P1"
     fits = [gllvm(@formula(y ~ 0), Y, site_data; K = 1),
             gllvm(@formula(y ~ 1), Y, site_data; K = 1),
             gllvm(@formula(y ~ 1 + x), Y, site_data; K = 1)]
+    # Use the same trait-intercept + shared-covariate design as the formula
+    # route. For the intercept-only fit, the stored mean-design marker is used.
+    covariate_formula = @formula(y ~ 1 + x)
+    X_health = GLLVModels._pervar_formula_design(
+        covariate_formula.rhs, GLLVModels.Tables.columntable(site_data), p, n;
+        contrasts = Dict{Symbol,Any}())
+    health_cases = ("no_fixed_effects", "trait_intercepts", "trait_intercepts_plus_covariate")
+    designs = (nothing, nothing, X_health)
+    function postcoef_profile_objective(fit, data, design)
+        model = fit.model
+        # These captures use the unconstrained, no-phy, no-diagonal Gaussian
+        # formula route with its default (unprofiled) mean and no suff stats.
+        (model.K_W == 0 && !model.has_diag && model.K_phy == 0 && !model.has_phy_unique &&
+         isempty(GLLVModels._lambda_constraint_pinned_theta_indices(fit))) ||
+            error("unsupported profile route")
+        X = GLLVModels._mean_X(fit, design, size(data, 2))
+        q = fit.pars.β === nothing ? 0 : length(fit.pars.β)
+        mask = GLLVModels._pars_fixed_mask(fit.pars, :β_fixed, q)
+        free = GLLVModels._free_coeff_indices(mask)
+        length(free) == q || error("unsupported fixed coefficient mask")
+        Xfit = X === nothing || isempty(free) ? nothing : Array{Float64,3}(X[:, :, free])
+        spec = (q=q, p=model.p, K_B=model.K, K_W=model.K_W, has_diag=model.has_diag,
+                K_phy=model.K_phy, has_phy_unique=model.has_phy_unique)
+        objective = θ -> GLLVModels.gaussian_profile_nll(θ, data; spec=spec, X=Xfit,
+            Σ_phy=nothing, profile_beta=false, suff=nothing)
+        function recover(θ)
+            rec = GLLVModels.profile_recover(θ, data; spec=spec, X=Xfit,
+                Σ_phy=nothing, profile_beta=false)
+            return (parameters=vcat(rec.β, [log(rec.σ_eps)], GLLVModels.pack_lambda(rec.Λ_B)),
+                    loglik=rec.logLik)
+        end
+        return (objective=objective, recover=recover)
+    end
+    julia_health = [begin
+        h = postcoef_julia_health_from_fit(health_cases[i], fits[i], Y, designs[i];
+            penalty_state=nothing, nll_factory=GLLVModels._confint_reconstruct_nll,
+            pinned_indices=GLLVModels._lambda_constraint_pinned_theta_indices,
+            gradient_eval=(f, x) -> GLLVModels.ForwardDiff.gradient(f, x),
+            hessian_eval=(f, x) -> GLLVModels.ForwardDiff.hessian(f, x))
+        # Retain the engine's own flag as diagnostic evidence. The signed
+        # Hessian and optimizer-gradient rule is checked independently.
+        h["fit_converged"] = fits[i].converged
+        try
+            profile = postcoef_profile_objective(fits[i], Y, designs[i])
+            # This source tree and exact unconstrained Gaussian route were
+            # audited to contain no fixed-effect or ridge prior. The gate
+            # independently authenticates the tree and runner source.
+            audited_tree = "df63c52066625049087a321bb9b010f8d834ddcf"
+            if p1_capture["source_tree"] == audited_tree && fits[i].integration === nothing && fits[i].model.K == 1
+                h["penalty_state"] = "none"
+                h["penalty_configuration_recorded"] = true
+                h["penalty_provenance"] = Dict("source_tree" => audited_tree,
+                    "case" => health_cases[i], "route" => "gaussian_profile_default",
+                    "rank" => 1, "integration" => "exact", "prior" => "none")
+            end
+            h["optimizer"] = postcoef_julia_optimizer_health(fits[i].optim_result, profile.objective;
+                minimizer_eval=GLLVModels.Optim.minimizer, minimum_eval=GLLVModels.Optim.minimum,
+                gradient_eval=(f,x) -> GLLVModels.ForwardDiff.gradient(f,x))
+            h["reconstruction"] = postcoef_julia_reconstruction_health(
+                h["optimizer"]["optimizer_parameters"], fits[i].pars.θ_packed, fits[i].logLik;
+                recover_eval=profile.recover)
+        catch err
+            err isa InterruptException && rethrow()
+            h["optimizer"] = Dict("optimizer_error" => sprint(showerror, err))
+        end
+        h
+    end for i in 1:3]
     access = GLLVModels.StatsAPI.coef
     always_empty(f) = Float64[]
     spurious(f) = vcat(access(f), 0.0)
@@ -356,6 +424,8 @@ postcoef_three_fit = if parity_pin == "P1"
          "r_names" => [x["names"] for x in r_pair["fits"]],
          "julia_names" => [hasproperty(v, :names) ? collect(getproperty(v, :names)) : nothing
                            for v in actual],
+         "fit_health" => Dict("R" => [x["fit_health"] for x in r_pair["fits"]],
+                              "Julia" => julia_health),
          "selected_accessor" => control,
          "control_lengths" => Dict(
              "always_empty" => [length(always_empty(f)) for f in fits],

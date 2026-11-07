@@ -153,10 +153,13 @@ export function inspectPostcoefArtifacts({root, ref, caseReceipt}) {
       ['runner-snapshots/core070_postfit_policy_batch.jl',id.julia_runner_sha256],
       ['runner-snapshots/julia-launcher',runtime.executable_sha256],
       ['julia-Manifest.toml',runtime.manifest_sha256],
+      ['oracle-verify-preload.log',receipt.oracle_verify_preload_sha256],
       ['oracle-verify-before.log',receipt.oracle_verify_before_sha256],
       ['oracle-verify-after.log',receipt.oracle_verify_after_sha256],
     ];
     const values = new Map(files.map(([name,hash]) => [name,read(name,hash)]));
+    if (!values.get('oracle-verify-preload.log').toString('utf8').split('\n').includes('CORE070_ORACLE_VERIFY_PASS'))
+      return failure('oracle preload verification marker');
     const report=JSON.parse(values.get('julia-results.json').toString('utf8'));
     const oracle=JSON.parse(values.get('r-oracle.json').toString('utf8'));
     if (!isDeepStrictEqual(report.postcoef_capture_identity,id) || !isDeepStrictEqual(report.postcoef_runtime,runtime))

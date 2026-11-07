@@ -77,7 +77,7 @@ def main():
     runtime = rec.get('postcoef_runtime'); need(isinstance(runtime, dict) and report.get('postcoef_runtime') == runtime, 'runtime record mismatch')
     checked('julia-Manifest.toml', runtime.get('manifest_sha256'))
     checked('runner-snapshots/julia-launcher', runtime.get('executable_sha256'))
-    for when in ('before','after'):
+    for when in ('preload','before','after'):
         log = checked(f'oracle-verify-{when}.log', rec.get(f'oracle_verify_{when}_sha256'))
         need('CORE070_ORACLE_VERIFY_PASS' in log.read_text().splitlines(), f'oracle {when} marker')
     controls = rec.get('postcoef_controls'); need(isinstance(controls, dict) and set(controls) == {'always_empty', 'spurious_coefficient'}, 'control set')

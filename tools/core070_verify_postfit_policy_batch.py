@@ -32,6 +32,8 @@ import sys as _sys  # noqa: E402
 _sys.path.insert(0, str(ROOT / "tools"))
 from parity_oracle import R_REF_PINS, SELECTED_PIN  # noqa: E402  (GLLVM_PARITY_PIN; P0 default; unknown pin exits)
 import core070_source_pin_check  # noqa: E402  (PR #569 review finding 2: library pin + version)
+import core070_postcoef_fit_health  # noqa: E402
+from core070_json_semantics import json_value_equal  # noqa: E402
 CONTRACT_PATH = ROOT / ("docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json"
                         if SELECTED_PIN == "P1" else "docs/dev-log/core070/postfit-policy-batch-contract.json")
 REFERENCE_COMMIT = R_REF_PINS[SELECTED_PIN] if SELECTED_PIN == "P1" else "b4d5fee64def88bc768dda1f1f77c29b295edd86"
@@ -51,6 +53,8 @@ def need(ok, message):
 
 def check_postcoef_three_fit_evidence(evidence):
     need(isinstance(evidence, dict), "three-fit evidence must be an object")
+    need(core070_postcoef_fit_health.classify(evidence.get("fit_health")) == "FIT_HEALTH_PASS",
+         "POST-COEF fit health is failed or incomplete under the signed rule")
     need(evidence.get("selected_accessor") == "real", "evidence used a mutated accessor")
     expected = [0, 5, 6]
     for key in ("r_lengths", "julia_lengths", "r_design_columns"):
@@ -96,6 +100,10 @@ def check_postcoef_r_oracle_binding(evidence, oracle):
         need(all(fit_key in fit for fit in fits), f"R oracle is missing {fit_key}")
         need(report_key in evidence and evidence[report_key] == [fit[fit_key] for fit in fits],
              f"{report_key} does not match the retained R oracle")
+    need(all("fit_health" in fit for fit in fits) and
+         isinstance(evidence.get("fit_health"), dict) and
+         json_value_equal(evidence["fit_health"].get("R"), [fit["fit_health"] for fit in fits]),
+         "R fit health does not match the retained R oracle")
 
 
 def check_postcoef_control_outcome(real, report, kind, exit_code, real_identity, control_identity, contract):
@@ -185,7 +193,8 @@ def check_postcoef_committed_files(repo, state, commit, contract_rel):
                (relative.as_posix(), repo / relative, repo)]
     for rel in ("Project.toml", "tools/parity_oracle.py", "tools/core070_source_pin_check.py",
                 "tools/core070_source_pin.R", "tools/core070_oracle_pins.toml",
-                "tools/core070_postcoef_depot_check.py"):
+                "tools/core070_postcoef_depot_check.py", "tools/core070_json_semantics.py", "tools/core070_postcoef_fit_health.py",
+                "tools/core070_postcoef_fit_health.R", "tools/core070_postcoef_fit_health.jl"):
         entries.append((rel, repo / rel, repo))
     for git_path, local_path, allowed in entries:
         local_path = local_path.resolve()
@@ -365,7 +374,7 @@ def check_postcoef_oracle_build(repo, state, receipt):
     except (OSError, ValueError) as exc:
         raise ValueError("oracle build receipt is malformed") from exc
     check_postcoef_r_runtime(receipt, build_metadata)
-    for when in ("before", "after"):
+    for when in ("preload", "before", "after"):
         path = (state / f"oracle-verify-{when}.log").resolve()
         need(state in path.parents and path.is_file() and
              sha(path) == receipt.get(f"oracle_verify_{when}_sha256") and
@@ -537,6 +546,14 @@ def verify_state(state=DEFAULT_STATE):
         check_postcoef_runtime(ROOT, state, receipt, report, controls)
         evidence = report["cases"]["CORE070-POSTFIT-COEF-EMPTY-NATIVE"].get("three_fit")
         check_postcoef_three_fit_evidence(evidence)
+        need(all(core070_postcoef_fit_health.julia_prior_bound(
+            fit.get("penalty_provenance"), identity.get("source_tree"), fit.get("case"))
+            for fit in evidence["fit_health"]["Julia"]),
+            "Julia penalty provenance differs from the authenticated source tree")
+        need(all(core070_postcoef_fit_health.historical_r_prior_bound(
+            fit.get("prior_provenance"), receipt.get("oracle_build_sha256"))
+            for fit in evidence["fit_health"]["R"]),
+            "R prior provenance differs from the authenticated oracle build")
         try:
             r_oracle = json.loads((state / "r-oracle.json").read_text())
         except (OSError, ValueError) as exc:
@@ -574,7 +591,16 @@ def synthetic_report(contract):
             "selected_accessor": "real", "r_lengths": [0, 5, 6], "julia_lengths": [0, 5, 6],
             "r_design_columns": [0, 5, 6], "r_values": [[], [0.0] * 5, [0.0] * 6],
             "r_names": [None, None, None], "julia_names": [None, None, None],
-            "control_lengths": {"always_empty": [0, 0, 0], "spurious_coefficient": [1, 6, 7]}}
+            "control_lengths": {"always_empty": [0, 0, 0], "spurious_coefficient": [1, 6, 7]},
+            "fit_health": {engine: [dict(case=case, pd_hessian=True, max_abs_gradient=1e-7,
+                                           parameters=[0.0, 0.0], gradient=[1e-7, 0.0], free_indices=[1, 2],
+                                           optimizer_objective=3.0, recomputed_objective=3.0,
+                                           objective_verified=True, penalty_configuration_recorded=True,
+                                           error=None, **({'fixed_prior_state': 'none', 'ridge_tau': 'Inf',
+                                                           'ridge_penalised': False} if engine == 'R'
+                                                          else {'reconstruction': {'recovered_parameters': [0.0, 0.0], 'recovered_loglik': -3.0, 'parameters_match': True, 'loglik_matches': True, 'error': None}, 'penalty_state': 'none', 'objective_difference': 0.0, 'objective_roundoff_limit': 5.329070518200751e-15, 'hessian': [[1.0, 0.0], [0.0, 1.0]], 'hessian_raw': [[1.0, 0.0], [0.0, 1.0]], 'hessian_asymmetry': 0.0, 'hessian_asymmetry_limit': 1.4210854715202004e-14, 'optimizer': {'optimizer_parameters': [0.0, 0.0], 'optimizer_gradient': [1e-7, 0.0], 'optimizer_max_abs_gradient': 1e-7, 'optimizer_minimum': 3.0, 'optimizer_profile_value': 3.0, 'optimizer_profile_verified': True, 'optimizer_error': None}}))
+                                    for case in core070_postcoef_fit_health.CASES]
+                           for engine in core070_postcoef_fit_health.ENGINES}}
     negatives = {
         nc["control_id"]: {"behaved": True}
         for nc in contract["negative_controls"]

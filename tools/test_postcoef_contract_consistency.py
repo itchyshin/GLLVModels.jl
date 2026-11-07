@@ -17,6 +17,10 @@ P0 = ROOT / "docs/dev-log/core070/postfit-policy-batch-contract.json"
 sys.path.insert(0, str(ROOT / "tools"))
 import core070_verify_postfit_policy_batch as verifier
 
+def healthy_fixture():
+    return deepcopy(verifier.synthetic_report(json.loads(P1.read_text()))['cases']
+                    ['CORE070-POSTFIT-COEF-EMPTY-NATIVE']['three_fit']['fit_health'])
+
 
 class PostcoefContract(unittest.TestCase):
     def test_depot_tree_hash_rejects_changes_but_ignores_generated_coverage(self):
@@ -197,6 +201,10 @@ class PostcoefContract(unittest.TestCase):
             for name in ("parity_oracle.py", "core070_source_pin_check.py", "core070_source_pin.R", "core070_oracle_pins.toml"):
                 (repo / "tools" / name).write_text(name)
             (repo / "tools/core070_postcoef_depot_check.py").write_text("depot checker")
+            health_helpers = ("core070_json_semantics.py", "core070_postcoef_fit_health.py", "core070_postcoef_fit_health.R",
+                              "core070_postcoef_fit_health.jl")
+            for name in health_helpers:
+                (repo / "tools" / name).write_text(name)
             (repo / "Project.toml").write_text("project")
             (repo / "docs" / "contract.json").write_text("{}")
             subprocess.run(["git", "init", "-q", str(repo)], check=True)
@@ -205,6 +213,11 @@ class PostcoefContract(unittest.TestCase):
                             "user.email=test@example.invalid", "commit", "-qm", "fixture"], check=True)
             commit = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
             verifier.check_postcoef_committed_files(repo, state, commit, "docs/contract.json")
+            for name in health_helpers:
+                (repo / "tools" / name).write_text("tampered")
+                with self.subTest(name=name), self.assertRaises(ValueError):
+                    verifier.check_postcoef_committed_files(repo, state, commit, "docs/contract.json")
+                (repo / "tools" / name).write_text(name)
             (repo / "tools/core070_verify_postfit_policy_batch.py").write_text("changed")
             with self.assertRaises(ValueError):
                 verifier.check_postcoef_committed_files(repo, state, commit, "docs/contract.json")
@@ -230,7 +243,7 @@ class PostcoefContract(unittest.TestCase):
             (build / "build.json").write_text(json.dumps({"r_version": "R test -- nickname"}))
             r_executable = base / "R"
             r_executable.write_text("R")
-            for name in ("oracle-verify-before.log", "oracle-verify-after.log"):
+            for name in ("oracle-verify-preload.log", "oracle-verify-before.log", "oracle-verify-after.log"):
                 (state / name).write_text("CORE070_ORACLE_VERIFY_PASS\n")
             digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
             receipt = {"postcoef_capture_identity": {"source_commit": commit},
@@ -239,9 +252,15 @@ class PostcoefContract(unittest.TestCase):
                        "oracle_builder_sha256": digest(builder),
                        "r_executable_path": str(r_executable), "r_executable_sha256": digest(r_executable),
                        "r_version": "R test", "r_full_version": "R test -- nickname", "r_platform": "test",
+                       "oracle_verify_preload_sha256": digest(state / "oracle-verify-preload.log"),
                        "oracle_verify_before_sha256": digest(state / "oracle-verify-before.log"),
                        "oracle_verify_after_sha256": digest(state / "oracle-verify-after.log")}
             verifier.check_postcoef_oracle_build(repo, state, receipt)
+            preload = state / "oracle-verify-preload.log"
+            preload.write_text("tampered\n")
+            with self.assertRaises(ValueError):
+                verifier.check_postcoef_oracle_build(repo, state, receipt)
+            preload.write_text("CORE070_ORACLE_VERIFY_PASS\n")
             (build / "build.json").write_text("changed")
             with self.assertRaises(ValueError):
                 verifier.check_postcoef_oracle_build(repo, state, receipt)
@@ -325,6 +344,7 @@ class PostcoefContract(unittest.TestCase):
                 "julia_names": [None] * 3,
                 "control_lengths": {"always_empty": [0, 0, 0],
                                     "spurious_coefficient": [1, 6, 7]}}
+        real['fit_health'] = healthy_fixture()
         mutant = deepcopy(real)
         mutant["selected_accessor"] = "always_empty"
         mutant["julia_lengths"] = [0, 0, 0]
@@ -364,10 +384,13 @@ class PostcoefContract(unittest.TestCase):
     def test_report_matches_the_retained_r_oracle(self):
         fits = [{"length": n, "fixed_columns": n, "values": [0.0] * n,
                  "names": None} for n in (0, 5, 6)]
+        fit_health = healthy_fixture()
+        for fit, health_row in zip(fits, fit_health['R']):
+            fit['fit_health'] = deepcopy(health_row)
         oracle = {"postcoef_three_fit": {"fits": fits}}
         evidence = {"r_lengths": [0, 5, 6], "r_design_columns": [0, 5, 6],
                     "r_values": [[], [0.0] * 5, [0.0] * 6],
-                    "r_names": [None, None, None]}
+                    "r_names": [None, None, None], "fit_health": fit_health}
         verifier.check_postcoef_r_oracle_binding(evidence, oracle)
         bad = deepcopy(evidence)
         bad["r_values"][1][0] = 7.0
@@ -397,6 +420,7 @@ class PostcoefContract(unittest.TestCase):
             "julia_names": [None, None, None],
             "control_lengths": {"always_empty": [0, 0, 0],
                                 "spurious_coefficient": [1, 6, 7]},
+            "fit_health": healthy_fixture(),
         }
         verifier.check_postcoef_three_fit_evidence(evidence)
         absent_names = deepcopy(evidence)

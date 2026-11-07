@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 import core070_postcoef_live_ref as live
+import core070_postcoef_fit_health as health
 
 ROOT = 'docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle'
 PIN = '9539352f66f2db2cc26b1c393e67212a359b60c9'
@@ -23,7 +24,14 @@ TRANSCRIPT = (b'CORE070_POSTFIT_POLICY_BATCH_NEGATIVES_PASS 10\n'
 
 
 def fixture():
-    actual = {'pass': True, 'three_fit': {'julia_lengths': [0, 5, 6]}}
+    health_rows = {engine: [dict(case=name, pd_hessian=True, max_abs_gradient=1e-7,
+                                 parameters=[0.0, 0.0], gradient=[1e-7, 0.0], free_indices=[1, 2],
+                                 optimizer_objective=3.0, recomputed_objective=3.0,
+                                 objective_verified=True, penalty_configuration_recorded=True, error=None,
+                                 **({'fixed_prior_state': 'none', 'ridge_tau': 'Inf', 'ridge_penalised': False}
+                                    if engine == 'R' else {'reconstruction': {'recovered_parameters': [0.0, 0.0], 'recovered_loglik': -3.0, 'parameters_match': True, 'loglik_matches': True, 'error': None}, 'penalty_state': 'none', 'objective_difference': 0.0, 'objective_roundoff_limit': 5.329070518200751e-15, 'hessian': [[1.0, 0.0], [0.0, 1.0]], 'hessian_raw': [[1.0, 0.0], [0.0, 1.0]], 'hessian_asymmetry': 0.0, 'hessian_asymmetry_limit': 1.4210854715202004e-14, 'optimizer': {'optimizer_parameters': [0.0, 0.0], 'optimizer_gradient': [1e-7, 0.0], 'optimizer_max_abs_gradient': 1e-7, 'optimizer_minimum': 3.0, 'optimizer_profile_value': 3.0, 'optimizer_profile_verified': True, 'optimizer_error': None}}))
+                            for name in health.CASES] for engine in health.ENGINES}
+    actual = {'pass': True, 'three_fit': {'julia_lengths': [0, 5, 6], 'fit_health': health_rows}}
     case = {
         'case_id': live.RECEIPT_CID, 'harness_case_id': live.CID, 'source_ids': ['postfit-policy/POST-COEF-EMPTY'],
         'verdict': 'PASS', 'harness_pass': True, 'evidence_kind': 'numeric_r_vs_julia',
@@ -39,11 +47,49 @@ def fixture():
             'tolerance': 0.5, 'discriminating': True}]},
     }
     report = {'cases': {live.CID: actual}}
-    oracle = {'postcoef_three_fit': {'fits': [{'length': n} for n in (0, 5, 6)]}}
+    oracle = {'postcoef_three_fit': {'fits': [{'length': n, 'fit_health': copy.deepcopy(row)}
+                                             for n, row in zip((0, 5, 6), health_rows['R'])]}}
     return case, report, oracle
 
 
 class LiveRefTests(unittest.TestCase):
+    def test_staged_capture_includes_preload_for_source_verifier(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            calls = []
+            def selected(name):
+                calls.append(name)
+                return b'CORE070_ORACLE_VERIFY_PASS\n' if name == 'oracle-verify-preload.log' else b'fixture\n'
+            live.stage_capture_files(state, live.FILES, selected)
+            # The same staged directory is passed to the source verifier.
+            source_verifier = lambda path: (path / 'oracle-verify-preload.log').read_bytes()
+            self.assertEqual(source_verifier(state), b'CORE070_ORACLE_VERIFY_PASS\n')
+            self.assertIn('oracle-verify-preload.log', calls)
+            self.assertEqual(len(calls), len(set(calls)))
+
+    def test_live_comparison_rejects_failed_or_unbound_fit_health(self):
+        import core070_postcoef_fit_health as health
+        case, report, oracle = fixture()
+        rows = {engine: [dict(case=name, pd_hessian=True, max_abs_gradient=1e-7,
+                              parameters=[0.0, 0.0], gradient=[1e-7, 0.0], free_indices=[1, 2],
+                                 optimizer_objective=3.0, recomputed_objective=3.0,
+                                 objective_verified=True, penalty_configuration_recorded=True, error=None,
+                                 **({'fixed_prior_state': 'none', 'ridge_tau': 'Inf', 'ridge_penalised': False}
+                                    if engine == 'R' else {'reconstruction': {'recovered_parameters': [0.0, 0.0], 'recovered_loglik': -3.0, 'parameters_match': True, 'loglik_matches': True, 'error': None}, 'penalty_state': 'none', 'objective_difference': 0.0, 'objective_roundoff_limit': 5.329070518200751e-15, 'hessian': [[1.0, 0.0], [0.0, 1.0]], 'hessian_raw': [[1.0, 0.0], [0.0, 1.0]], 'hessian_asymmetry': 0.0, 'hessian_asymmetry_limit': 1.4210854715202004e-14, 'optimizer': {'optimizer_parameters': [0.0, 0.0], 'optimizer_gradient': [1e-7, 0.0], 'optimizer_max_abs_gradient': 1e-7, 'optimizer_minimum': 3.0, 'optimizer_profile_value': 3.0, 'optimizer_profile_verified': True, 'optimizer_error': None}}))
+                         for name in health.CASES] for engine in health.ENGINES}
+        report['cases'][live.CID]['three_fit']['fit_health'] = rows
+        for fit, row in zip(oracle['postcoef_three_fit']['fits'], rows['R']):
+            fit['fit_health'] = copy.deepcopy(row)
+        live.check_comparison(case, report, oracle)
+        bad_case, bad_report, bad_oracle = copy.deepcopy((case, report, oracle))
+        bad_report['cases'][live.CID]['three_fit']['fit_health']['Julia'][0]['max_abs_gradient'] = 1e-5
+        with self.assertRaises(ValueError):
+            live.check_comparison(bad_case, bad_report, bad_oracle)
+        bad_case, bad_report, bad_oracle = copy.deepcopy((case, report, oracle))
+        bad_oracle['postcoef_three_fit']['fits'][0]['fit_health']['pd_hessian'] = False
+        with self.assertRaises(ValueError):
+            live.check_comparison(bad_case, bad_report, bad_oracle)
+
     def test_assembler_rejects_untrusted_launcher_bytes_and_symlinks(self):
         from true_parity_assemble import postcoef_launcher_problem
         launcher = Path(__file__).with_name('core070_postcoef_gate_launcher.py')
@@ -216,10 +262,62 @@ class LiveRefTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     live.check_comparison(bad, report, oracle)
 
+    def test_capture_sources_must_match_trusted_gate_bytes(self):
+        trusted = {path: ('trusted ' + path).encode() for path in live.TRUSTED_CAPTURE_FILES}
+        captured = dict(trusted)
+        self.assertIsNone(live.check_trusted_capture_sources(captured.__getitem__, trusted.__getitem__))
+        for path in live.TRUSTED_CAPTURE_FILES:
+            changed = dict(captured); changed[path] += b' tampered'
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'trusted gate'):
+                live.check_trusted_capture_sources(changed.__getitem__, trusted.__getitem__)
+
+    def test_committed_transitive_dependency_substitution_is_rejected(self):
+        with tempfile.TemporaryDirectory(prefix='postcoef-committed-dep-') as tmp:
+            root = Path(tmp)
+            def git(*args):
+                return subprocess.run(['git', '-C', tmp, *args], check=True, capture_output=True).stdout
+            git('init', '-q'); git('config', 'user.email', 'test@example.invalid'); git('config', 'user.name', 'test')
+            for rel in live.TRUSTED_CAPTURE_FILES:
+                path = root / rel; path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('trusted ' + rel)
+            git('add', *live.TRUSTED_CAPTURE_FILES); git('commit', '-qm', 'trusted fixture')
+            trusted = git('rev-parse', 'HEAD').decode().strip()
+            path = root / 'tools/core070_json_semantics.py'; path.write_text('modified dependency')
+            git('add', 'tools/core070_json_semantics.py'); git('commit', '-qm', 'modified dependency')
+            modified = git('rev-parse', 'HEAD').decode().strip()
+            read_trusted = lambda rel: live.blob(root, trusted, rel)
+            self.assertIsNone(live.check_trusted_capture_sources(read_trusted, read_trusted))
+            with self.assertRaisesRegex(ValueError, 'core070_json_semantics.py'):
+                live.check_trusted_capture_sources(lambda rel: live.blob(root, modified, rel), read_trusted)
+
+    def test_added_shadow_module_rejected_by_capture_trust(self):
+        with tempfile.TemporaryDirectory(prefix='postcoef-shadow-') as tmp:
+            root = Path(tmp) / 'capture'; root.mkdir()
+            trusted = Path(tmp) / 'trusted'
+            def git(*args):
+                return subprocess.run(['git', '-C', str(root), *args], check=True, capture_output=True).stdout
+            git('init', '-q'); git('config', 'user.email', 'test@example.invalid'); git('config', 'user.name', 'test')
+            for rel in live.TRUSTED_CAPTURE_FILES:
+                path = root / rel; path.parent.mkdir(parents=True, exist_ok=True); path.write_text('trusted ' + rel)
+            (root / 'tools/core070_postcoef_gate_launcher.py').write_text('trusted launcher')
+            git('add', *live.TRUSTED_CAPTURE_FILES, 'tools/core070_postcoef_gate_launcher.py'); git('commit', '-qm', 'trusted fixture')
+            subprocess.run(['git', 'clone', '-q', '--no-local', str(root), str(trusted)], check=True)
+            source = git('rev-parse', 'HEAD').decode().strip()
+            self.assertIsNone(live.check_capture_trust(root, source, trusted))
+            (root / 'tools/core070_postcoef_gate_launcher.py').write_text('separately rebound launcher')
+            git('add', 'tools/core070_postcoef_gate_launcher.py'); git('commit', '-qm', 'rebind launcher')
+            rebound = git('rev-parse', 'HEAD').decode().strip()
+            self.assertIsNone(live.check_capture_trust(root, rebound, trusted))
+            (root / 'tools/tomllib.py').write_text('raise SystemExit(0)')
+            git('add', 'tools/tomllib.py'); git('commit', '-qm', 'shadow module')
+            changed = git('rev-parse', 'HEAD').decode().strip()
+            with self.assertRaisesRegex(ValueError, 'tools tree'):
+                live.check_capture_trust(root, changed, trusted)
+
     def test_case_must_reference_exact_capture_build(self):
         case, _, _ = fixture()
         pin = {'reference_commit': PIN, 'archive_sha256': 'a' * 64,
-               'namespace_sha256': 'b' * 64, 'source_tree_sha256': 'c' * 64,
+               'namespace_sha256': 'b' * 64, 'source_tree_sha256': '86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db',
                'installed_tree_sha256': 'd' * 64, 'marker_sha256': 'e' * 64,
                'version': '0.7.1'}
         build = {k: pin[k] for k in ('reference_commit', 'archive_sha256', 'source_tree_sha256',
@@ -227,12 +325,27 @@ class LiveRefTests(unittest.TestCase):
         build['gllvmTMB_version'] = pin['version']
         build_bytes = json.dumps(build).encode()
         source = {k: pin[k] for k in ('reference_commit', 'archive_sha256', 'namespace_sha256', 'source_tree_sha256')}
-        record = {'postcoef_capture_identity': {'source_tree': '1' * 40}, 'source_pin': pin,
+        record = {'postcoef_capture_identity': {'source_tree': 'df63c52066625049087a321bb9b010f8d834ddcf'}, 'source_pin': pin,
                   'oracle_build_sha256': hashlib.sha256(build_bytes).hexdigest()}
-        case.update(glvmodels_src_tree='1' * 40, gllvmtmb_version='0.7.1',
+        case.update(glvmodels_src_tree='df63c52066625049087a321bb9b010f8d834ddcf', gllvmtmb_version='0.7.1',
                     oracle_build_receipt=f'{ROOT}/build-totoro-20261104.json', oracle_source_receipt=f'{ROOT}/source.json')
         files = {case['oracle_build_receipt']: build_bytes, case['oracle_source_receipt']: json.dumps(source).encode()}
+        for row in case['harness_fields']['three_fit']['fit_health']['Julia']:
+            row['penalty_provenance'] = dict(source_tree=record['postcoef_capture_identity']['source_tree'],
+                case=row['case'], route='gaussian_profile_default', rank=1, integration='exact', prior='none')
+        for row in case['harness_fields']['three_fit']['fit_health']['R']:
+            row['prior_provenance'] = dict(pin='P1', reference_commit=PIN,
+                source_tree_sha256=pin['source_tree_sha256'], version=pin['version'],
+                oracle_build_sha256=record['oracle_build_sha256'], call_verified=True, call_text='gllvmTMB(formula = f, data = df_long, trait = "trait", unit = "site", family = gaussian(), control = gllvmTMBcontrol(n_init = 1L, se = TRUE))')
         self.assertIsNone(live.check_case_source_binding(case, record, files.__getitem__))
+        bad = copy.deepcopy(case)
+        bad['harness_fields']['three_fit']['fit_health']['Julia'][0]['penalty_provenance']['source_tree'] = 'f' * 40
+        with self.assertRaisesRegex(ValueError, 'Julia penalty provenance'):
+            live.check_case_source_binding(bad, record, files.__getitem__)
+        bad = copy.deepcopy(case)
+        bad['harness_fields']['three_fit']['fit_health']['R'][0]['prior_provenance']['oracle_build_sha256'] = 'f' * 64
+        with self.assertRaisesRegex(ValueError, 'prior provenance'):
+            live.check_case_source_binding(bad, record, files.__getitem__)
         for changed in ('glvmodels_src_tree', 'oracle_build_receipt', 'gllvmtmb_version'):
             bad = copy.deepcopy(case); bad[changed] = 'wrong'
             with self.subTest(field=changed), self.assertRaises((ValueError, KeyError)):
@@ -356,6 +469,21 @@ class SourceSelftestTests(unittest.TestCase):
         self.assertTrue(all(marker in output.splitlines() for marker in live.SELFTEST_MARKERS))
         self.assertFalse((self.root/'tools/__pycache__').exists())
         self.assertFalse(escaped.exists())
+    def test_staged_preload_reaches_source_verifier_process(self):
+        verifier = self.root / live.SOURCE_FILES[0]
+        with verifier.open('a') as out:
+            out.write("\nstate = Path(sys.argv[sys.argv.index('--state') + 1])\n")
+            out.write("assert (state / 'oracle-verify-preload.log').read_text() == 'CORE070_ORACLE_VERIFY_PASS\\n'\n")
+        self.git('add', live.SOURCE_FILES[0]); self.git('commit', '-qm', 'verify preload')
+        source = self.git('rev-parse', 'HEAD')
+        live.stage_capture_files(self.state, live.FILES,
+            lambda name: b'CORE070_ORACLE_VERIFY_PASS\n' if name == 'oracle-verify-preload.log' else b'fixture\n')
+        output = live.run_source_selftest(self.root, source, self.state, self.runtime)
+        self.assertTrue(all(marker in output.splitlines() for marker in live.SELFTEST_MARKERS))
+        (self.state / 'oracle-verify-preload.log').unlink()
+        with self.assertRaisesRegex(ValueError, 'self-test rejected'):
+            live.run_source_selftest(self.root, source, self.state, self.runtime)
+
     def test_shared_source_does_not_leak_object_alternates(self):
         shared = self.root.parent / 'shared-source'
         subprocess.run(['git', 'clone', '--quiet', '--shared', str(self.root), str(shared)], check=True)
@@ -383,6 +511,20 @@ class SourceSelftestTests(unittest.TestCase):
         verifier=self.root/live.SOURCE_FILES[0]; verifier.write_text('print("forged")\n')
         with self.assertRaisesRegex(ValueError,'differs'): live.run_source_selftest(self.root,self.source,self.state,self.runtime)
         with self.assertRaisesRegex(ValueError,'Python'): live.run_source_selftest(self.root,self.source,self.state,{'python_executable_path':'/invalid/python'})
+
+    def test_changed_health_collector_is_rejected(self):
+        names = ['tools/core070_postcoef_fit_health.py', 'tools/core070_postcoef_fit_health.R',
+                 'tools/core070_postcoef_fit_health.jl']
+        for name in names:
+            (self.root / name).write_text('recorded collector\n')
+        self.git('add', *names); self.git('commit', '-qm', 'collector fixture')
+        source = self.git('rev-parse', 'HEAD')
+        live.run_source_selftest(self.root, source, self.state, self.runtime)
+        for name in names:
+            path = self.root / name; path.write_text('tampered collector\n')
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'differs'):
+                live.run_source_selftest(self.root, source, self.state, self.runtime)
+            path.write_text('recorded collector\n')
     def test_missing_selftest_marker_is_rejected(self):
         verifier=self.root/live.SOURCE_FILES[0]; verifier.write_text('print("incomplete")\n')
         self.git('add',live.SOURCE_FILES[0]); self.git('commit','-qm','incomplete verifier')

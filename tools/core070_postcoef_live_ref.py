@@ -16,6 +16,7 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from core070_json_semantics import json_value_equal
+from core070_postcoef_fit_health import classify as classify_fit_health, historical_r_prior_bound, julia_prior_bound
 from core070_postfit_p1_receipts import postcoef_git_env, postcoef_ref_compatible
 
 PREFIX = 'docs/dev-log/core070/true-parity-latest/receipts/postfit/postcoef-empty-p1'
@@ -50,11 +51,20 @@ def check_verifier_transcript(case, data):
     if not all(marker in data.splitlines() for marker in markers):
         raise ValueError('verifier transcript markers missing')
 FILES = ['receipt.json', 'results.tsv', 'diagnostics.log', 'julia-results.json', 'r-oracle.json',
-         'julia-Manifest.toml', 'julia-stdout.log', 'julia-stderr.log', 'oracle-verify-before.log',
+         'julia-Manifest.toml', 'julia-stdout.log', 'julia-stderr.log', 'oracle-verify-preload.log', 'oracle-verify-before.log',
          'oracle-verify-after.log', 'runner-snapshots/core070_postfit_policy_batch.R',
          'runner-snapshots/core070_postfit_policy_batch.jl', 'runner-snapshots/julia-launcher'] + [
     f'julia-control-{mode}.{suffix}' for mode in ('always_empty', 'spurious_coefficient')
     for suffix in ('json', 'exit', 'stdout.log', 'stderr.log')]
+
+
+def stage_capture_files(state, files, read_selected):
+    """Stage the selected immutable bytes required by the source verifier."""
+    state = Path(state)
+    for name in files:
+        dest = state / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(read_selected(name))
 
 
 def git(repo, *args):
@@ -73,6 +83,14 @@ def blob(repo, commit, rel):
 
 def check_comparison(case, report, oracle):
     actual = report['cases'][CID]
+    health = actual.get('three_fit', {}).get('fit_health')
+    if classify_fit_health(health) != 'FIT_HEALTH_PASS':
+        raise ValueError('POST-COEF fit health failed or is incomplete')
+    fits = oracle.get('postcoef_three_fit', {}).get('fits')
+    if (not isinstance(fits, list) or len(fits) != 3 or
+            not all(isinstance(fit, dict) and 'fit_health' in fit for fit in fits) or
+            not json_value_equal(health['R'], [fit['fit_health'] for fit in fits])):
+        raise ValueError('POST-COEF R fit health differs from retained oracle')
     comparisons = case.get('comparison', {}).get('cases', [])
     if (case.get('case_id') != RECEIPT_CID or case.get('harness_case_id') != CID or case.get('source_ids') != ['postfit-policy/POST-COEF-EMPTY'] or
         case.get('verdict') != 'PASS' or case.get('harness_pass') is not True or
@@ -136,6 +154,18 @@ def check_case_source_binding(case, record, read_selected):
             raise ValueError('case oracle build identity mismatch: ' + key)
     if build.get('gllvmTMB_version') != source_pin.get('version') or case.get('gllvmtmb_version') != source_pin.get('version'):
         raise ValueError('case oracle build version mismatch')
+    health = case.get('harness_fields', {}).get('three_fit', {}).get('fit_health', {})
+    julia_fits = health.get('Julia') if isinstance(health, dict) else None
+    if (not isinstance(julia_fits, list) or len(julia_fits) != 3 or
+        not all(isinstance(fit, dict) and julia_prior_bound(
+            fit.get('penalty_provenance'), identity.get('source_tree'), fit.get('case'))
+            for fit in julia_fits)):
+        raise ValueError('Julia penalty provenance differs from authenticated source tree')
+    fits = health.get('R') if isinstance(health, dict) else None
+    if (not isinstance(fits, list) or len(fits) != 3 or
+        not all(isinstance(fit, dict) and historical_r_prior_bound(
+            fit.get('prior_provenance'), record.get('oracle_build_sha256')) for fit in fits)):
+        raise ValueError('R prior provenance differs from authenticated oracle build')
     source_path = case.get('oracle_source_receipt')
     if source_path != f'{root}/source.json':
         raise ValueError('case oracle source path is invalid')
@@ -187,8 +217,38 @@ def verification_identity(repo, head, runtime_root):
 SOURCE_FILES = ('tools/core070_verify_postfit_policy_batch.py', 'tools/parity_oracle.py',
                 'tools/core070_source_pin_check.py', 'tools/core070_oracle_pins.toml',
                 'tools/core070_postcoef_depot_check.py', 'tools/core070_build_oracle.py',
+                'tools/core070_postcoef_fit_health.py', 'tools/core070_json_semantics.py', 'tools/core070_postcoef_fit_health.R',
+                'tools/core070_postcoef_fit_health.jl',
                 'tools/core070_source_pin.R', 'Project.toml',
                 'docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json')
+# These inputs execute or define the captured health transaction. The gate
+# checkout is independently pinned by the launcher; capture commits cannot
+# grant trust to their own modified verifier or runner.
+TRUSTED_CAPTURE_FILES = SOURCE_FILES + ('tools/core070_postfit_policy_batch.R',
+                                        'tools/core070_postfit_policy_batch.jl')
+
+
+def check_trusted_capture_sources(read_capture, read_trusted):
+    for rel in TRUSTED_CAPTURE_FILES:
+        if read_capture(rel) != read_trusted(rel):
+            raise ValueError('capture source differs from trusted gate: ' + rel)
+
+
+def check_capture_trust(repo, source, trusted_root):
+    # Exact tools tree also rules out extra Python shadow modules. This is
+    # anchored only when trusted_root is the separately pinned gate checkout.
+    def trusted_inventory(root, revision):
+        entries = git(root, 'ls-tree', '-r', '-z', revision, '--', 'tools').split(b'\0')
+        # The launcher is rebound after the trusted gate commit is made.
+        # Its identity is separately checked by the caller binding.
+        return sorted(e for e in entries if e and not e.endswith(b'\ttools/core070_postcoef_gate_launcher.py'))
+    if trusted_inventory(repo, source) != trusted_inventory(trusted_root, 'HEAD'):
+        raise ValueError('capture tools tree differs from trusted gate')
+    trusted_root = Path(trusted_root)
+    check_trusted_capture_sources(lambda rel: blob(repo, source, rel),
+                                  lambda rel: (trusted_root / rel).read_bytes())
+
+
 SELFTEST_MARKERS = ('CORE070_POSTFIT_POLICY_BATCH_NEGATIVES_PASS 10',
                     'CORE070_POSTFIT_POLICY_CONTRACT_NEGATIVES_PASS 4',
                     'CORE070_POSTFIT_POLICY_SOURCE_PIN_NEGATIVES_PASS 5',
@@ -287,17 +347,15 @@ def verify(repo, head, runtime_root):
     check_case_source_binding(case, record, lambda rel: blob(repo, head, rel))
     source = record.get('postcoef_capture_identity', {}).get('source_commit', '')
     case_commit = case.get('glvmodels_commit', '')
+    trusted_root = Path(__file__).resolve().parent.parent
+    check_capture_trust(repo, source, trusted_root)
     if not (postcoef_ref_compatible(repo, source, case_commit) and postcoef_ref_compatible(repo, case_commit, head)):
         raise ValueError('selected ref is not an approved evidence-only descendant')
     if git(runtime_root, 'rev-parse', 'HEAD').decode().strip() != source:
         raise ValueError('runtime checkout is not the capture commit')
     if git(runtime_root, 'status', '--porcelain=v1', '--untracked-files=all'):
         raise ValueError('runtime checkout has tracked or untracked changes')
-    for rel in ('tools/core070_verify_postfit_policy_batch.py', 'tools/parity_oracle.py',
-                'tools/core070_source_pin_check.py', 'tools/core070_oracle_pins.toml',
-                'tools/core070_postcoef_depot_check.py', 'tools/core070_build_oracle.py',
-                'tools/core070_source_pin.R', 'Project.toml',
-                'docs/dev-log/core070/true-parity-latest/postfit-policy-batch-contract-p1.json'):
+    for rel in SOURCE_FILES:
         local = (runtime_root / rel).resolve()
         if runtime_root not in local.parents or not local.is_file() or local.read_bytes() != blob(runtime_root, source, rel):
             raise ValueError('runtime source differs from captured commit: ' + rel)
@@ -309,10 +367,7 @@ def verify(repo, head, runtime_root):
         files.append('julia-LocalPreferences.toml')
     with tempfile.TemporaryDirectory(prefix='postcoef-live-ref-') as tmp:
         state = Path(tmp)
-        for name in files:
-            dest = state / name
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(blob(repo, head, f'{PREFIX}/{name}'))
+        stage_capture_files(state, files, lambda name: blob(repo, head, f'{PREFIX}/{name}'))
         report = json.loads((state / 'julia-results.json').read_text())
         oracle = json.loads((state / 'r-oracle.json').read_text())
         check_comparison(case, report, oracle)

@@ -1,0 +1,153 @@
+using Test, LinearAlgebra
+include("core070_postcoef_fit_health.jl")
+
+@testset "non-admitting Julia fit-health collector" begin
+    f(x) = sum(abs2, x)
+    grad(x) = 2 .* x
+    hess(x) = Matrix(2.0I, 2, 2)
+    x = [1.0, -2.0]
+    collect_health(obj, theta, expected; prior="none", free=[1,2], gradient=grad, hessian=hess) =
+        postcoef_julia_fit_health("no_fixed_effects", obj, theta, expected;
+            penalty_state=prior, free_indices=free, gradient_eval=gradient, hessian_eval=hessian)
+    h = collect_health(f, x, 5.0)
+    @test h["parameters"] == x
+    @test h["pd_hessian"] === true
+    @test h["hessian"] == [[2.0, 0.0], [0.0, 2.0]]
+    near(x) = [2.0 1e-15; 0.0 2.0]
+    @test collect_health(f, x, 5.0; hessian=near)["error"] === nothing
+    asymmetric(x) = [2.0 0.1; 0.0 2.0]
+    @test collect_health(f, x, 5.0; hessian=asymmetric)["error"] !== nothing
+    @test h["max_abs_gradient"] == 4.0
+    @test h["objective_verified"] === true
+    @test h["penalty_configuration_recorded"] === true
+    @test h["error"] === nothing
+    @test collect_health(f, x, 6.0)["objective_verified"] === false
+    roundoff = collect_health(f, x, 5.0 + 4eps(5.0))
+    @test roundoff["objective_verified"] === true
+    @test roundoff["objective_difference"] > 0
+    @test collect_health(f, x, 5.0 + 1e-7)["objective_verified"] === false
+    @test collect_health(f, x, 5.0; prior=nothing)["penalty_configuration_recorded"] === false
+    indefinite(x) = x[1]^2 - x[2]^2
+    bad = collect_health(indefinite, x, -3.0; gradient=x -> [2x[1], -2x[2]],
+                         hessian=x -> [2.0 0.0; 0.0 -2.0])
+    @test bad["pd_hessian"] === false
+    missing = collect_health(f, [NaN, 1.0], 0.0)
+    @test missing["max_abs_gradient"] === nothing
+    @test missing["error"] !== nothing
+    @test collect_health(f, x, 5.0; free=[1,1])["error"] !== nothing
+    @test collect_health(f, x, 5.0; gradient=x -> [NaN, 0.0])["error"] !== nothing
+end
+
+@testset "fit adapter forwards design and free indices" begin
+    fit = (pars=(θ_packed=[1.0, -2.0],), logLik=-5.0)
+    design = reshape([3.0, 4.0], 1, 2, 1)
+    seen = Ref{Any}(nothing)
+    factory(f, y, X, phy) = (seen[] = (y, X, phy); x -> sum(abs2, x))
+    h = postcoef_julia_health_from_fit("trait_intercepts_plus_covariate", fit, :data, design;
+        penalty_state="none", nll_factory=factory, pinned_indices=f -> [2],
+        gradient_eval=(f, x) -> 2 .* x,
+        hessian_eval=(f, x) -> Matrix(2.0I, 2, 2))
+    @test seen[] === (:data, design, nothing)
+    @test h["free_indices"] == [1]
+    @test h["max_abs_gradient"] == 2.0
+    @test h["objective_verified"] === true
+end
+
+@testset "profile optimizer diagnostics" begin
+    result = (point=[0.0, 0.0], value=0.0)
+    args = (minimizer_eval=r -> r.point, minimum_eval=r -> r.value,
+            gradient_eval=(f,x) -> 2 .* x)
+    h = postcoef_julia_optimizer_health(result, x -> sum(abs2,x); args...)
+    @test h["optimizer_parameters"] == [0.0, 0.0]
+    @test h["optimizer_gradient"] == [0.0, 0.0]
+    @test h["optimizer_profile_verified"] === true
+    @test h["optimizer_max_abs_gradient"] == 0.0
+    bad = postcoef_julia_optimizer_health((point=[0.0,0.0],value=1.0), x -> sum(abs2,x); args...)
+    @test bad["optimizer_profile_verified"] === false
+    bad = postcoef_julia_optimizer_health(result, x -> sum(abs2,x);
+        minimizer_eval=r -> r.point, minimum_eval=r -> r.value,
+        gradient_eval=(f,x) -> [NaN, 0.0])
+    @test bad["optimizer_error"] !== nothing
+end
+
+# Fixed-point control for cancellation between equivalent objective routes.
+# This does not exercise a fitted model or establish an error bound.
+module ObjectiveCancellationControl
+using Test, LinearAlgebra
+include(joinpath(@__DIR__, "..", "src", "packing.jl"))
+include(joinpath(@__DIR__, "..", "src", "profile.jl"))
+include(joinpath(@__DIR__, "..", "src", "likelihood.jl"))
+include(joinpath(@__DIR__, "core070_postcoef_fit_health.jl"))
+
+@testset "profile/full cancellation remains diagnostic" begin
+    p, n = 10, 40
+    spec = (q=0, p=p, K_B=1, K_W=0, has_diag=false, K_phy=0, has_phy_unique=false)
+    base = [sin(0.37*t*s) + 0.11*t - 0.04*s for t=1:p, s=1:n]
+    theta = [sin(t*0.7)*0.3 for t=1:p]
+    a0 = gaussian_profile_nll(theta, base; spec=spec, profile_beta=false)
+    Y = exp(-a0/(p*n)) .* base
+    recovered = profile_recover(theta, Y; spec=spec, profile_beta=false)
+    fulltheta = vcat([log(recovered.σ_eps)], pack_lambda(recovered.Λ_B))
+    profile_value = gaussian_profile_nll(theta, Y; spec=spec, profile_beta=false)
+    full(v) = gaussian_nll_packed(v, Y; spec=spec)
+    h = postcoef_julia_fit_health("synthetic", full, fulltheta, profile_value;
+        penalty_state="none", free_indices=collect(eachindex(fulltheta)),
+        gradient_eval=x -> zeros(length(x)),
+        hessian_eval=x -> Matrix{Float64}(I, length(x), length(x)))
+    @test h["error"] === nothing
+    @test h["objective_difference"] == abs(profile_value - full(fulltheta))
+    @test h["objective_verified"] == (h["objective_difference"] <= h["objective_roundoff_limit"])
+    @test h["gradient"] !== nothing && h["hessian"] !== nothing
+    # Objective-sensitivity probes: changed data or parameters must not reuse the
+    # original profile value. These checks are diagnostic, not a parity bound.
+    changed_Y = copy(Y)
+    changed_Y[1, 1] += 0.1
+    changed_theta = copy(theta)
+    changed_theta[1] += 0.1
+    changed_data_value = gaussian_profile_nll(theta, changed_Y; spec=spec, profile_beta=false)
+    changed_parameter_value = gaussian_profile_nll(changed_theta, Y; spec=spec, profile_beta=false)
+    @test changed_data_value != profile_value
+    @test changed_parameter_value != profile_value
+    recover(v) = begin
+        rec = profile_recover(v, Y; spec=spec, profile_beta=false)
+        (parameters=vcat(rec.β, [log(rec.σ_eps)], pack_lambda(rec.Λ_B)), loglik=rec.logLik)
+    end
+    original = recover(theta)
+    h2 = postcoef_julia_reconstruction_health(theta, original.parameters, original.loglik; recover_eval=recover)
+    @test h2["parameters_match"] && h2["loglik_matches"]
+    changed = copy(original.parameters); changed[end] += 0.1
+    @test !postcoef_julia_reconstruction_health(theta, changed, original.loglik; recover_eval=recover)["parameters_match"]
+end
+
+@testset "reconstruction on fixed-effect design shapes" begin
+    p, n = 5, 8
+    Y = [sin(0.37*t*s)+0.11*t-0.04*s for t=1:p, s=1:n]
+    for q in (5, 6)
+        X = zeros(p, n, q)
+        for t=1:p, site=1:n
+            X[t,site,t] = 1.0
+            if q == 6; X[t,site,6] = (site-4.5)/4; end
+        end
+        spec = (q=q, p=p, K_B=1, K_W=0, has_diag=false, K_phy=0, has_phy_unique=false)
+        theta = vcat([0.05*i for i=1:q], [0.4,-0.2,0.3,0.1,-0.1])
+        recover(v) = begin
+            rec = profile_recover(v, Y; spec=spec, X=X, profile_beta=false)
+            (parameters=vcat(rec.β, [log(rec.σ_eps)], pack_lambda(rec.Λ_B)), loglik=rec.logLik)
+        end
+        actual = recover(theta)
+        h = postcoef_julia_reconstruction_health(theta, actual.parameters, actual.loglik; recover_eval=recover)
+        @test h["parameters_match"] && h["loglik_matches"] && h["error"] === nothing
+        altered = copy(actual.parameters); altered[1] += 0.1
+        @test !postcoef_julia_reconstruction_health(theta, altered, actual.loglik; recover_eval=recover)["parameters_match"]
+    end
+end
+end
+
+@testset "diagnostic fit reconstruction binding" begin
+    recover(x) = (parameters=[x[1], 2*x[2]], loglik=-3.0)
+    h = postcoef_julia_reconstruction_health([1.0, 2.0], [1.0, 4.0], -3.0; recover_eval=recover)
+    @test h["parameters_match"] && h["loglik_matches"] && h["error"] === nothing
+    @test !postcoef_julia_reconstruction_health([1.0, 2.0], [1.0, 5.0], -3.0; recover_eval=recover)["parameters_match"]
+    @test !postcoef_julia_reconstruction_health([1.0, 2.0], [1.0, 4.0], -4.0; recover_eval=recover)["loglik_matches"]
+    @test postcoef_julia_reconstruction_health([1.0, 2.0], [1.0, NaN], -3.0; recover_eval=recover)["error"] !== nothing
+end
