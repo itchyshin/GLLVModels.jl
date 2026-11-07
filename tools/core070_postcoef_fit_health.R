@@ -8,7 +8,12 @@ postcoef_r_fit_health <- function(case, fit, gradient_eval, objective_eval, fixe
               error = NULL, parameters = NULL, gradient = NULL, free_indices = NULL, optimizer_objective = NULL,
               recomputed_objective = NULL, ridge_tau = NULL,
               ridge_penalised = NULL, fixed_prior_state = fixed_prior_state,
-              optimizer_convergence_code = NULL)
+              optimizer_convergence_code = NULL,
+              # Honest absence: only sdreport's pdHess flag is retained, so no
+              # Hessian matrix, Hessian coordinate or error radius is recorded and
+              # R cannot be certified. Gradient is at fit$opt$par (TMB optimizer
+              # coordinates); no gradient error radius is recorded.
+              hessian_available = FALSE, gradient_coordinate = 'tmb_opt_par')
   error <- function(message) { out$error <<- message; out }
   if (!is.list(fit) || !is.list(fit$opt) || is.null(fit$tmb_obj) ||
       !is.numeric(fit$opt$par) || !length(fit$opt$par) ||
