@@ -22176,3 +22176,15 @@ The objective-roundoff and Hessian-asymmetry guards are not validated error boun
 The maintainer approved adding `postcoef-empty-p1/oracle-verify-preload.log` to the POST-COEF evidence-only descendant paths. The generic historical capture artifact list is unchanged. Two new controls failed before the change and pass afterwards, including rejection of a neighboring path and the corresponding historical-batch path. A pre-existing test error in the draft-case fixture also reproduced with the parent receipt module; the fixture now retains the fit-health fields expected by the live checker.
 
 On the local review checkout, the descendant and historical-preservation checks passed 60 tests, and the live-reference and contract-consistency checks passed 44 tests. The trusted launcher still requires rebinding; the objective and Hessian roundoff guards remain unvalidated. No paired capture, row promotion, push, merge, or full-suite pass is claimed.
+
+### 2026-11-06: POST-COEF preload ancestry through launcher
+
+A synthetic Git fixture now exercises the real launcher ancestry entry with the approved preload log. The selected descendant is accepted, while a neighboring unapproved path is rejected. Removing the approved path from a temporary copy makes the new control fail with the expected ancestry rejection.
+
+The launcher suite ran 17 tests: 16 passed and one failed because pinned gate `775931935736b118f4f00b52ff82621a0cb5ee88` is not an ancestor of the current-main review branch. The object exists locally, but its merge base with the review branch is `333358471821e8259548ce9f32d752636fb3388a`. This is not a trusted current-branch gate. No pin, capture, parity row, push or merge was changed.
+
+### 2026-11-06: capture-only gate candidate
+
+The local gate candidate explicitly sets its launcher pin to `UNBOUND`; ancestry, identity and live entry attempts fail closed. Both caller hashes bind those launcher bytes. The launcher suite ran 18 tests: 17 passed and the bound-gate ancestry test was skipped because this is capture-only source. The live-reference and contract suites passed 44 tests, the Node synthetic reference check passed with runtime unverified, and the assembler and checker negative controls passed.
+
+A disposable Git fixture constructed an unbound source A from the local diff, a separately bound caller child B and an evidence-only sibling D. It exercised the actual source trust, ancestry and identity entries, including receipt tampering, explicit rejection on A and a reachable gate on B. This does not authenticate B independently or execute a real capture or live verification. A separate evidence checkout and a shared or otherwise verified object store are required by the assembler. The numerical roundoff guards remain unvalidated. The capture-only candidate remains local; no CI, row promotion, push or merge occurred.

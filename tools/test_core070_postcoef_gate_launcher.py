@@ -11,10 +11,31 @@ import tempfile
 import unittest
 
 LAUNCHER = Path(__file__).with_name('core070_postcoef_gate_launcher.py')
-EXPECTED_GATE = '775931935736b118f4f00b52ff82621a0cb5ee88'
+EXPECTED_GATE = 'UNBOUND'
 
 class GateHistoryTests(unittest.TestCase):
-    def test_trusted_gate_is_reachable_from_candidate_history(self):
+    def test_capture_only_gate_fails_closed(self):
+        if EXPECTED_GATE != 'UNBOUND':
+            self.skipTest('bound caller; capture-only control is not applicable')
+        repo = LAUNCHER.parent.parent
+        source = LAUNCHER.read_bytes()
+        fd = os.open(repo, os.O_RDONLY)
+        try:
+            bootstrap = ("__file__ = " + repr(str(LAUNCHER)) + "; __gate_root_fd__ = " + str(fd) +
+                         "; exec(compile(bytes.fromhex(" + repr(source.hex()) + "), __file__, 'exec'))")
+            for mode in ('ancestry', 'identity', 'live'):
+                args = ([str(repo), 'source', 'head'] if mode == 'ancestry' else
+                        ['--repo', str(repo), '--head', 'head', '--runtime-root', str(repo)])
+                result = subprocess.run([sys.executable, '-B', '-I', '-c', bootstrap, mode, *args],
+                                        pass_fds=(fd,), capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0, mode)
+                self.assertIn('trusted gate commit is not configured', result.stderr)
+        finally:
+            os.close(fd)
+
+    def test_bound_gate_reachable_from_candidate_history(self):
+        if EXPECTED_GATE == 'UNBOUND':
+            self.skipTest('capture-only source has no bound gate')
         repo = LAUNCHER.parent.parent
         result = subprocess.run(['git', '-C', str(repo), 'merge-base', '--is-ancestor',
                                  EXPECTED_GATE, 'HEAD'], capture_output=True)
@@ -146,6 +167,34 @@ class GateLauncherTests(unittest.TestCase):
         p = self.launch('live')
         self.assertNotEqual(p.returncode, 0)
         self.assertIn('not configured', p.stderr)
+
+    def test_real_ancestry_entry_accepts_only_approved_preload_path(self):
+        source_tools = Path(__file__).parent
+        names = ('core070_postcoef_ref_compatible.py', 'core070_postfit_p1_receipts.py',
+                 'core070_json_semantics.py', 'core070_postcoef_transition.py', 'core070_oracle_pins.toml')
+        for name in names:
+            (self.tools / name).write_bytes((source_tools / name).read_bytes())
+        self.git('add', *['tools/' + name for name in names]); self.git('commit', '-qm', 'real gate')
+        trusted = self.git('rev-parse', 'HEAD')
+        (self.tools / LAUNCHER.name).write_text(launcher_with_pin(trusted))
+        fd = os.open(self.root, os.O_RDONLY); self.addCleanup(os.close, fd)
+        source = (self.tools / LAUNCHER.name).read_bytes()
+        bootstrap = ("__file__ = " + repr(str(self.tools / LAUNCHER.name)) +
+                     "; __gate_root_fd__ = " + str(fd) +
+                     "; exec(compile(bytes.fromhex(" + repr(source.hex()) + "), __file__, 'exec'))")
+        command = [sys.executable, '-B', '-I', '-c', bootstrap, 'ancestry', str(self.root), trusted]
+        rel = 'docs/dev-log/core070/true-parity-latest/receipts/postfit/postcoef-empty-p1/oracle-verify-preload.log'
+        path = self.root / rel; path.parent.mkdir(parents=True)
+        path.write_text('CORE070_ORACLE_VERIFY_PASS\n')
+        self.git('add', rel); self.git('commit', '-qm', 'approved evidence')
+        good = subprocess.run([*command, self.git('rev-parse', 'HEAD')], pass_fds=(fd,), capture_output=True, text=True)
+        self.assertEqual(good.returncode, 0, good.stderr + good.stdout)
+        self.assertEqual(good.stdout.strip(), 'POSTCOEF_REF_COMPATIBLE')
+        extra = rel + '.extra'; (self.root / extra).write_text('unapproved\n')
+        self.git('add', extra); self.git('commit', '-qm', 'unapproved evidence')
+        bad = subprocess.run([*command, self.git('rev-parse', 'HEAD')], pass_fds=(fd,), capture_output=True, text=True)
+        self.assertNotEqual(bad.returncode, 0)
+        self.assertEqual(bad.stdout.strip(), 'POSTCOEF_REF_INCOMPATIBLE')
 
     def test_relative_repository_path_is_rejected(self):
         p = subprocess.run([sys.executable, '-B', '-I', str(self.tools / LAUNCHER.name),
