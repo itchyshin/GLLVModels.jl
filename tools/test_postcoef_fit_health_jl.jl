@@ -53,10 +53,14 @@ end
     @test h["hessian_coordinate"] == "packed_free_index"
     @test h["hessian_error_radius"] == 1024.0 * 2.0^-52 * 2.0
     @test occursin("declared", h["hessian_error_radius_basis"])
+    # NOT RUN here (no Julia in the review lane): radius status and the packed-gradient radius.
+    @test h["radius_status"] == "declared_unproven"
+    @test h["packed_gradient_error_radius"] == 1024.0 * 2.0^-52 * 5.25
     # A non-AD method records no radius (certifier then reports INCOMPLETE).
     h = postcoef_julia_fit_health("c", f, x, 5.25; free_indices=[1, 2, 3], args...,
         hessian_coordinate="packed_free_index", derivative_method="finite_difference")
     @test h["hessian_error_radius"] === nothing
+    @test h["radius_status"] === nothing && h["packed_gradient_error_radius"] === nothing  # NOT RUN here
     # Adapter: pinned index set is the complement; coordinate is the packed one.
     fit = (pars=(θ_packed=[1.0, -2.0, 0.5],), logLik=-5.25)
     h = postcoef_julia_health_from_fit("c", fit, :data, nothing;
@@ -66,12 +70,34 @@ end
     @test h["free_indices"] == [1, 3] && h["pinned_indices"] == [2]
     @test h["hessian_coordinate"] == "packed_free_index"
     @test h["hessian_error_radius"] > 0
+    # NOT RUN here: the adapter records the fit's own lambda_constraint map (nothing if no callback).
+    @test h["lambda_constraint_map"] === nothing
+    lcm = Dict{String,Any}("layout" => POSTCOEF_LAMBDA_MAP_LAYOUT, "p" => 2, "K" => 1, "q_free" => 0,
+                           "entries" => Any[Any[nothing], Any[-2.0]])
+    h = postcoef_julia_health_from_fit("c", fit, :data, nothing;
+        penalty_state="none", nll_factory=(f, y, X, phy) -> (x -> sum(abs2, x)),
+        pinned_indices=f -> [2], gradient_eval=(f, x) -> 2 .* x,
+        hessian_eval=(f, x) -> Matrix(2.0I, 3, 3), derivative_method="forwarddiff_exact",
+        lambda_map=f -> lcm)
+    @test h["lambda_constraint_map"] === lcm
+    # Map helper (NOT RUN here): layout, free (NaN or no constraint) as nothing, pins as numbers.
+    mfit = (model=(p=3, K=1, K_W=0, has_diag=false, K_phy=0, has_phy_unique=false),
+            pars=(lambda_constraint=[NaN; NaN; 0.5;;],))
+    m = postcoef_lambda_constraint_map(mfit; q_free=1)
+    @test m["layout"] == "beta_free,sigma_eps,lambda_b_packed" && m["p"] == 3 && m["K"] == 1 && m["q_free"] == 1
+    @test m["entries"] == Any[Any[nothing], Any[nothing], Any[0.5]]
+    @test postcoef_lambda_constraint_map((model=(p=3, K=1, K_W=0, has_diag=true, K_phy=0, has_phy_unique=false),
+                                          pars=(lambda_constraint=nothing,)); q_free=0) === nothing
+    @test postcoef_lambda_constraint_map((model=mfit.model, pars=(lambda_constraint=nothing,)); q_free=0)["entries"] ==
+          Any[Any[nothing], Any[nothing], Any[nothing]]
     # Optimizer record carries the gradient radius only for the declared method.
     result = (point=[0.0, 0.0], value=0.0)
     oargs = (minimizer_eval=r -> r.point, minimum_eval=r -> r.value, gradient_eval=(g, z) -> 2 .* z .+ 1e-7)
     o = postcoef_julia_optimizer_health(result, z -> sum(abs2, z); oargs...)
     @test o["gradient_error_radius"] === nothing
+    @test o["radius_status"] === nothing  # NOT RUN here
     o = postcoef_julia_optimizer_health(result, z -> sum(abs2, z); oargs..., derivative_method="forwarddiff_exact")
+    @test o["radius_status"] == "declared_unproven"  # NOT RUN here
     @test o["gradient_error_radius"] == 1024.0 * 2.0^-52
     # Serialisation: shortest round-trip repr (the runner's to_json) is lossless.
     for v in (0.1, 1e-7, 1024.0 * 2.0^-52, nextfloat(1.0), 5e-324, floatmax())
@@ -188,6 +214,7 @@ end
     recover(x) = (parameters=[x[1], 2*x[2]], loglik=-3.0)
     h = postcoef_julia_reconstruction_health([1.0, 2.0], [1.0, 4.0], -3.0; recover_eval=recover)
     @test h["parameters_match"] && h["loglik_matches"] && h["error"] === nothing
+    @test h["optimizer_parameters"] == [1.0, 2.0]  # NOT RUN here: the point the reconstruction was recovered from
     @test !postcoef_julia_reconstruction_health([1.0, 2.0], [1.0, 5.0], -3.0; recover_eval=recover)["parameters_match"]
     @test !postcoef_julia_reconstruction_health([1.0, 2.0], [1.0, 4.0], -4.0; recover_eval=recover)["loglik_matches"]
     @test postcoef_julia_reconstruction_health([1.0, 2.0], [1.0, NaN], -3.0; recover_eval=recover)["error"] !== nothing

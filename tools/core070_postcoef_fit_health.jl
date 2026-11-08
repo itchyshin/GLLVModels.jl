@@ -23,6 +23,11 @@ using LinearAlgebra
 const POSTCOEF_AD_ULP_BUDGET = 1024.0
 const POSTCOEF_AD_METHOD = "forwarddiff_exact"
 const POSTCOEF_HESSIAN_COORDINATE = "packed_free_index"
+# Every recorded radius is stamped with this status. There is no derivation of the
+# radii for the Laplace objective (nor an independent one for the closed form), so
+# the certifier carries the status through to a PASS as a visible qualifier.
+const POSTCOEF_RADIUS_STATUS = "declared_unproven"
+const POSTCOEF_LAMBDA_MAP_LAYOUT = "beta_free,sigma_eps,lambda_b_packed"
 postcoef_ad_radius(scale) = POSTCOEF_AD_ULP_BUDGET * 2.0^-52 * max(1.0, scale)
 const POSTCOEF_AD_HESSIAN_BASIS =
     "declared: 2^10 * 2^-52 * max(1, max|H|); forward-mode AD exact, rounding-only; scale is a proxy, not a bound"
@@ -32,7 +37,8 @@ const POSTCOEF_AD_GRADIENT_BASIS =
 function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
                                    penalty_state, free_indices,
                                    gradient_eval, hessian_eval,
-                                   hessian_coordinate=nothing, derivative_method=nothing)
+                                   hessian_coordinate=nothing, derivative_method=nothing,
+                                   lambda_constraint_map=nothing)
     out = Dict{String,Any}(
         "case" => case, "pd_hessian" => nothing, "max_abs_gradient" => nothing,
         "objective_verified" => false, "penalty_configuration_recorded" => false,
@@ -42,7 +48,9 @@ function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
         "objective_roundoff_limit" => nothing,
         "free_indices" => nothing, "penalty_state" => penalty_state,
         "pinned_indices" => nothing, "hessian_coordinate" => nothing,
-        "hessian_error_radius" => nothing, "hessian_error_radius_basis" => nothing)
+        "hessian_error_radius" => nothing, "hessian_error_radius_basis" => nothing,
+        "packed_gradient_error_radius" => nothing, "radius_status" => nothing,
+        "lambda_constraint_map" => lambda_constraint_map)
     fail(message) = (out["error"] = message; out)
     if !(theta isa AbstractVector{<:Real}) || isempty(theta) || !all(isfinite, theta)
         return fail("fit parameters unavailable or non-finite")
@@ -82,6 +90,12 @@ function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
         end
         out["gradient"] = collect(Float64, gradient)
         out["max_abs_gradient"] = maximum(abs, gradient[free_indices])
+        if derivative_method == POSTCOEF_AD_METHOD
+            # Radius of the packed gradient at theta (a separate bound from the optimizer-coordinate one).
+            out["packed_gradient_error_radius"] = postcoef_ad_radius(
+                max(abs(out["recomputed_objective"]), out["max_abs_gradient"]))
+            out["radius_status"] = POSTCOEF_RADIUS_STATUS
+        end
         hessian = hessian_eval(theta)
         if !(hessian isa AbstractMatrix{<:Real}) || size(hessian) != (length(theta), length(theta)) ||
            !all(isfinite, hessian)
@@ -104,6 +118,7 @@ function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
         if derivative_method == POSTCOEF_AD_METHOD
             out["hessian_error_radius"] = postcoef_ad_radius(maximum(abs, hessian))
             out["hessian_error_radius_basis"] = POSTCOEF_AD_HESSIAN_BASIS
+            out["radius_status"] = POSTCOEF_RADIUS_STATUS
         end
     catch err
         err isa InterruptException && rethrow()
@@ -116,7 +131,8 @@ end
 # and automatic derivatives. This adapter alone does not authenticate them.
 function postcoef_julia_health_from_fit(case, fit, Y, X;
                                        penalty_state, nll_factory, pinned_indices,
-                                       gradient_eval, hessian_eval, derivative_method=nothing)
+                                       gradient_eval, hessian_eval, derivative_method=nothing,
+                                       lambda_map=nothing)
     try
         theta = fit.pars.θ_packed
         pinned = pinned_indices(fit)
@@ -126,6 +142,9 @@ function postcoef_julia_health_from_fit(case, fit, Y, X;
             throw(ArgumentError("pinned parameter indices unavailable or invalid"))
         end
         free = setdiff(collect(eachindex(theta)), pinned)
+        # The fit's own lambda_constraint map, from which the certifier recomputes
+        # the pinned indices; the declared `pinned` above is never trusted alone.
+        lcmap = lambda_map === nothing ? nothing : lambda_map(fit)
         objective = nll_factory(fit, Y, X, nothing)
         return postcoef_julia_fit_health(case, objective, theta, -fit.logLik;
             penalty_state=penalty_state, free_indices=free,
@@ -133,7 +152,8 @@ function postcoef_julia_health_from_fit(case, fit, Y, X;
             hessian_eval=x -> hessian_eval(objective, x),
             # theta is fit.pars.θ_packed and the objective is the package's own
             # packed-theta NLL, so the Hessian is in the packed coordinate.
-            hessian_coordinate=POSTCOEF_HESSIAN_COORDINATE, derivative_method=derivative_method)
+            hessian_coordinate=POSTCOEF_HESSIAN_COORDINATE, derivative_method=derivative_method,
+            lambda_constraint_map=lcmap)
     catch err
         err isa InterruptException && rethrow()
         return Dict{String,Any}("case" => case, "pd_hessian" => nothing,
@@ -152,7 +172,8 @@ function postcoef_julia_optimizer_health(result, objective;
         "gradient_error_radius" => nothing, "gradient_error_radius_basis" => nothing,
         "optimizer_gradient" => nothing, "optimizer_max_abs_gradient" => nothing,
         "optimizer_minimum" => nothing, "optimizer_profile_value" => nothing,
-        "optimizer_profile_verified" => false, "optimizer_error" => nothing)
+        "optimizer_profile_verified" => false, "optimizer_error" => nothing,
+        "radius_status" => nothing)
     try
         x = minimizer_eval(result)
         x isa AbstractVector{<:Real} && !isempty(x) && all(isfinite, x) ||
@@ -174,6 +195,7 @@ function postcoef_julia_optimizer_health(result, objective;
             out["gradient_error_radius"] = postcoef_ad_radius(max(abs(out["optimizer_profile_value"]),
                                                                   out["optimizer_max_abs_gradient"]))
             out["gradient_error_radius_basis"] = POSTCOEF_AD_GRADIENT_BASIS
+            out["radius_status"] = POSTCOEF_RADIUS_STATUS
         end
     catch err
         err isa InterruptException && rethrow()
@@ -185,7 +207,8 @@ end
 # Diagnostic reconstruction binding; admission still uses the existing gate.
 function postcoef_julia_reconstruction_health(optimizer_parameters, fitted_parameters, fitted_loglik; recover_eval)
     out = Dict{String,Any}("recovered_parameters" => nothing, "recovered_loglik" => nothing,
-        "parameters_match" => false, "loglik_matches" => false, "error" => nothing)
+        "parameters_match" => false, "loglik_matches" => false, "error" => nothing,
+        "optimizer_parameters" => nothing)
     try
         rec = recover_eval(optimizer_parameters)
         pars = rec.parameters
@@ -193,6 +216,9 @@ function postcoef_julia_reconstruction_health(optimizer_parameters, fitted_param
             length(pars) == length(fitted_parameters) && all(isfinite, pars) &&
             all(isfinite, fitted_parameters) && isfinite(rec.loglik) && isfinite(fitted_loglik) ||
             throw(ArgumentError("invalid reconstruction"))
+        # The point this reconstruction was recovered from; the certifier requires it to be
+        # the optimizer block's own point.
+        out["optimizer_parameters"] = collect(Float64, optimizer_parameters)
         out["recovered_parameters"] = collect(Float64, pars)
         out["recovered_loglik"] = Float64(rec.loglik)
         out["parameters_match"] = pars == fitted_parameters
@@ -202,4 +228,21 @@ function postcoef_julia_reconstruction_health(optimizer_parameters, fitted_param
         out["error"] = sprint(showerror, err)
     end
     out
+end
+
+# The fit's own lambda_constraint map for the certifier's pin binding (consumed by
+# tools/core070_postcoef_fit_health.py _lambda_pin_binding). Layout: q_free betas,
+# one log sigma, then the packed loadings (src/packing.jl _lower_index;
+# src/confint_profile.jl _profile_all_term_names). Only the plain route (no W block,
+# no diagonal, no phylogenetic term) has this layout: any other route yields
+# `nothing`, which the certifier refuses. null = free entry, number = pinned value.
+function postcoef_lambda_constraint_map(fit; q_free)
+    model = fit.model
+    (model.K_W == 0 && !model.has_diag && model.K_phy == 0 && !model.has_phy_unique) || return nothing
+    p, K = Int(model.p), Int(model.K)
+    M = hasproperty(fit.pars, :lambda_constraint) ? fit.pars.lambda_constraint : nothing
+    free(v) = v isa Real && isnan(v)  # the package's own free marker
+    entries = [Any[(M === nothing || free(M[i, k])) ? nothing : Float64(M[i, k]) for k in 1:K] for i in 1:p]
+    Dict{String,Any}("layout" => POSTCOEF_LAMBDA_MAP_LAYOUT, "p" => p, "K" => K,
+                     "q_free" => Int(q_free), "entries" => entries)
 end

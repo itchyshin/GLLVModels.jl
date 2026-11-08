@@ -380,7 +380,9 @@ postcoef_three_fit = if parity_pin == "P1"
             pinned_indices=GLLVModels._lambda_constraint_pinned_theta_indices,
             gradient_eval=(f, x) -> GLLVModels.ForwardDiff.gradient(f, x),
             hessian_eval=(f, x) -> GLLVModels.ForwardDiff.hessian(f, x),
-            derivative_method="forwarddiff_exact")
+            derivative_method="forwarddiff_exact",
+            lambda_map=f -> postcoef_lambda_constraint_map(f; q_free=length(GLLVModels._free_coeff_indices(
+                GLLVModels._pars_fixed_mask(f.pars, :β_fixed, f.pars.β === nothing ? 0 : length(f.pars.β))))))
         # Retain the engine's own flag as diagnostic evidence. The signed
         # Hessian and optimizer-gradient rule is checked independently.
         h["fit_converged"] = fits[i].converged
