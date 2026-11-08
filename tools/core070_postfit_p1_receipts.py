@@ -1025,8 +1025,94 @@ def postcoef_source_compatible(repo, source, head):
     return postcoef_ref_compatible(repo, source, head)
 
 
+# The only non-evidence commit kind: one "bind commit" whose parent is the
+# capture source S. It may move exactly the five POST-COEF gate pins in these
+# four files, to S and to the sha256 of the rebound launcher. Every other byte
+# of tools/ (and of the repository) must equal S, so the gate commit S, the
+# capture tools tree and the caller pins stay one fixed, reviewable identity.
+POSTCOEF_BIND_PINS = (
+    ("launcher_commit", "tools/core070_postcoef_gate_launcher.py",
+     rb"(?m)^TRUSTED_GATE_COMMIT = '([0-9a-f]{40})'$"),
+    ("test_commit", "tools/test_core070_postcoef_gate_launcher.py",
+     rb"(?m)^EXPECTED_GATE = '([0-9a-f]{40})'$"),
+    ("assemble_commit", "tools/true_parity_assemble.py",
+     rb"(?m)^POSTCOEF_GATE_COMMIT = '([0-9a-f]{40})'$"),
+    ("assemble_sha", "tools/true_parity_assemble.py",
+     rb"(?m)^POSTCOEF_LAUNCHER_SHA256 = '([0-9a-f]{64})'$"),
+    ("mjs_sha", "tools/true_parity_check.mjs",
+     rb"update\(launcherBytes\)\.digest\('hex'\) !==\s*'([0-9a-f]{64})'"),
+)
+POSTCOEF_BIND_FILES = frozenset(path for _, path, _ in POSTCOEF_BIND_PINS)
+POSTCOEF_BIND_LAUNCHER = "tools/core070_postcoef_gate_launcher.py"
+
+
+def postcoef_bind_commit_ok(run, source, commit):
+    """Accept only a commit on S that rebinds the five gate pins to S."""
+    if not re.fullmatch(r"[0-9a-f]{40}", source):
+        return False
+    diff = run("diff-tree", "--no-commit-id", "--name-status", "-r", "-z", "--no-renames", source, commit)
+    if diff.returncode:
+        return False
+    parts = diff.stdout.split(b"\0")
+    if parts and parts[-1] == b"":
+        parts.pop()
+    if len(parts) % 2:
+        return False
+    changed = {}
+    for status, name in zip(parts[::2], parts[1::2]):
+        try:
+            changed[name.decode("utf-8")] = status
+        except UnicodeDecodeError:
+            return False
+    if set(changed) != POSTCOEF_BIND_FILES or any(status != b"M" for status in changed.values()):
+        return False
+    texts = {}
+    for path in POSTCOEF_BIND_FILES:
+        modes = []
+        for rev in (source, commit):
+            entry = run("ls-tree", "-z", rev, "--", path)
+            found = re.fullmatch(rb"(100644|100755) blob [0-9a-f]+\t" + re.escape(path.encode()) + rb"\0",
+                                 entry.stdout) if not entry.returncode else None
+            if not found:
+                return False
+            modes.append(found.group(1))
+        if modes[0] != modes[1]:
+            return False
+        before, after = run("show", f"{source}:{path}"), run("show", f"{commit}:{path}")
+        if before.returncode or after.returncode:
+            return False
+        texts[path] = [before.stdout, after.stdout]
+    # Masking is injective only if no original already holds the token it inserts. Otherwise a
+    # bind could move a pin value onto a token-bearing line or comment and still mask equal.
+    for name, path, _ in POSTCOEF_BIND_PINS:
+        if any(b"<" + name.encode() + b">" in text for text in texts[path]):
+            return False
+    masked = {path: list(pair) for path, pair in texts.items()}
+    values = {}
+    for name, path, pattern in POSTCOEF_BIND_PINS:
+        for side in (0, 1):
+            matches = list(re.finditer(pattern, masked[path][side]))
+            if len(matches) != 1:
+                return False
+            match = matches[0]
+            if side:
+                values[name] = match.group(1).decode("ascii")
+            text = masked[path][side]
+            masked[path][side] = text[:match.start(1)] + b"<" + name.encode() + b">" + text[match.end(1):]
+    if any(before != after for before, after in masked.values()):
+        return False
+    launcher_sha = hashlib.sha256(texts[POSTCOEF_BIND_LAUNCHER][1]).hexdigest()
+    return (values["launcher_commit"] == values["test_commit"] == values["assemble_commit"] == source and
+            values["assemble_sha"] == values["mjs_sha"] == launcher_sha)
+
+
 def postcoef_ref_compatible(repo, source, head):
-    """Apply the approved linear evidence-only rule to two immutable commits."""
+    """Apply the approved linear evidence-only rule to two immutable commits.
+
+    The first commit after `source` may instead be the single bind commit
+    accepted by postcoef_bind_commit_ok; nothing else outside the evidence
+    paths is allowed.
+    """
     if not all(isinstance(x, str) and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", x)
                for x in (source, head)):
         return False
@@ -1042,6 +1128,9 @@ def postcoef_ref_compatible(repo, source, head):
         parents = run("rev-list", "--parents", "-n", "1", commit)
         if parents.returncode or parents.stdout.decode("ascii").split() != [commit, previous]:
             return False
+        if previous == source and postcoef_bind_commit_ok(run, source, commit):
+            previous = commit
+            continue
         diff = run("diff-tree", "--no-commit-id", "--name-status", "-r", "-z", "--no-renames", previous, commit)
         if diff.returncode:
             return False
