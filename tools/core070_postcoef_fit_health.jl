@@ -34,6 +34,20 @@ const POSTCOEF_AD_HESSIAN_BASIS =
 const POSTCOEF_AD_GRADIENT_BASIS =
     "declared: 2^10 * 2^-52 * max(1, |objective|, max|g|); forward-mode AD exact, rounding-only; scale is a proxy, not a bound"
 
+# penalty_state from the keyword arguments actually passed to the Gaussian
+# `gllvm(@formula(...), Y, data; kwargs...)` call. That route has no prior,
+# ridge or penalty argument (src/formula.jl, src/fit.jl at the audited tree),
+# so only the default family and `K` prove "none". A keyword naming a prior,
+# ridge or penalty is "active"; anything else is unproven and stays `nothing`
+# (unrecorded), which the certifier refuses.
+function postcoef_julia_penalty_state(call_kwargs)
+    call_kwargs isa NamedTuple || return nothing
+    names = keys(call_kwargs)
+    any(k -> occursin(r"prior|ridge|penal"i, String(k)), names) && return "active"
+    all(==(:K), names) || return nothing
+    return "none"
+end
+
 function postcoef_julia_fit_health(case, objective, theta, optimizer_objective;
                                    penalty_state, free_indices,
                                    gradient_eval, hessian_eval,

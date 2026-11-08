@@ -338,9 +338,11 @@ postcoef_three_fit = if parity_pin == "P1"
     r_pair = oracle["postcoef_three_fit"]
     site_data = (x = Float64.(r_pair["x"]),)
     length(site_data.x) == n || error("POST-COEF shared x has the wrong length")
-    fits = [gllvm(@formula(y ~ 0), Y, site_data; K = 1),
-            gllvm(@formula(y ~ 1), Y, site_data; K = 1),
-            gllvm(@formula(y ~ 1 + x), Y, site_data; K = 1)]
+    # One keyword set for all three fits; penalty_state is derived from it.
+    postcoef_fit_kwargs = (K = 1,)
+    fits = [gllvm(@formula(y ~ 0), Y, site_data; postcoef_fit_kwargs...),
+            gllvm(@formula(y ~ 1), Y, site_data; postcoef_fit_kwargs...),
+            gllvm(@formula(y ~ 1 + x), Y, site_data; postcoef_fit_kwargs...)]
     # Use the same trait-intercept + shared-covariate design as the formula
     # route. For the intercept-only fit, the stored mean-design marker is used.
     covariate_formula = @formula(y ~ 1 + x)
@@ -376,7 +378,7 @@ postcoef_three_fit = if parity_pin == "P1"
     end
     julia_health = [begin
         h = postcoef_julia_health_from_fit(health_cases[i], fits[i], Y, designs[i];
-            penalty_state=nothing, nll_factory=GLLVModels._confint_reconstruct_nll,
+            penalty_state=postcoef_julia_penalty_state(postcoef_fit_kwargs), nll_factory=GLLVModels._confint_reconstruct_nll,
             pinned_indices=GLLVModels._lambda_constraint_pinned_theta_indices,
             gradient_eval=(f, x) -> GLLVModels.ForwardDiff.gradient(f, x),
             hessian_eval=(f, x) -> GLLVModels.ForwardDiff.hessian(f, x),
@@ -388,13 +390,13 @@ postcoef_three_fit = if parity_pin == "P1"
         h["fit_converged"] = fits[i].converged
         try
             profile = postcoef_profile_objective(fits[i], Y, designs[i])
-            # This source tree and exact unconstrained Gaussian route were
-            # audited to contain no fixed-effect or ridge prior. The gate
-            # independently authenticates the tree and runner source.
+            # penalty_state was derived from the fit call keywords above; the
+            # provenance is attached only when that derivation says "none" on
+            # this audited source tree and exact unconstrained Gaussian route.
+            # The gate independently authenticates the tree and runner source.
             audited_tree = "df63c52066625049087a321bb9b010f8d834ddcf"
-            if p1_capture["source_tree"] == audited_tree && fits[i].integration === nothing && fits[i].model.K == 1
-                h["penalty_state"] = "none"
-                h["penalty_configuration_recorded"] = true
+            if h["penalty_state"] == "none" && h["penalty_configuration_recorded"] === true &&
+               p1_capture["source_tree"] == audited_tree && fits[i].integration === nothing && fits[i].model.K == 1
                 h["penalty_provenance"] = Dict("source_tree" => audited_tree,
                     "case" => health_cases[i], "route" => "gaussian_profile_default",
                     "rank" => 1, "integration" => "exact", "prior" => "none")

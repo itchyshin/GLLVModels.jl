@@ -27,6 +27,18 @@ include("core070_postcoef_fit_health.jl")
     @test roundoff["objective_difference"] > 0
     @test collect_health(f, x, 5.0 + 1e-7)["objective_verified"] === false
     @test collect_health(f, x, 5.0; prior=nothing)["penalty_configuration_recorded"] === false
+    # penalty_state comes from the fit call keywords, not from an assumption.
+    @test postcoef_julia_penalty_state((K = 1,)) == "none"
+    @test postcoef_julia_penalty_state(NamedTuple()) == "none"
+    @test postcoef_julia_penalty_state((K = 1, prior = 1.0)) == "active"
+    @test postcoef_julia_penalty_state((K = 1, ridge_tau = 2.0)) == "active"
+    @test postcoef_julia_penalty_state((K = 1, beta_prior_sd = 10.0)) == "active"
+    @test postcoef_julia_penalty_state((K = 1, Penalty = :l2)) == "active"
+    @test postcoef_julia_penalty_state((K = 1, optimizer = :LBFGS)) === nothing
+    @test postcoef_julia_penalty_state((K = 1, family = :Poisson)) === nothing
+    @test postcoef_julia_penalty_state(Dict(:K => 1)) === nothing
+    @test collect_health(f, x, 5.0; prior=postcoef_julia_penalty_state((K = 1, prior = 1.0)))["penalty_state"] == "active"
+    @test collect_health(f, x, 5.0; prior=postcoef_julia_penalty_state((K = 1, optimizer = 1)))["penalty_configuration_recorded"] === false
     indefinite(x) = x[1]^2 - x[2]^2
     bad = collect_health(indefinite, x, -3.0; gradient=x -> [2x[1], -2x[2]],
                          hessian=x -> [2.0 0.0; 0.0 -2.0])
