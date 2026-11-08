@@ -1934,5 +1934,48 @@ class FourthReviewTests(unittest.TestCase):
             health.pass_radius_status(scaled_evidence())
 
 
+class FifthReviewTests(unittest.TestCase):
+    """Exact optimizer-point binding to the packed parameters; a PASS requires confirmable."""
+
+    def test_optimizer_point_must_equal_packed_parameters_without_log_sigma(self):
+        data = certified_good()
+        with enabled():
+            self.assertEqual(health.classify(copy.deepcopy(data)), 'FIT_HEALTH_PASS')
+        row = data['Julia'][0]
+        row['optimizer']['optimizer_parameters'] = [123.0]
+        row['reconstruction']['optimizer_parameters'] = [123.0]  # parameters stay [0.0, 0.0]
+        self.assertEqual(health.certify_fit(row)['verdict'], INC)
+        with enabled():
+            self.assertNotEqual(health.classify(data), 'FIT_HEALTH_PASS')
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+
+    def test_optimizer_binding_is_exact_and_skips_only_the_log_sigma_slot(self):
+        row = certified_good()['Julia'][0]
+        row['parameters'] = [0.0, 0.5]  # q_free = 0: index 1 is log sigma, the point is parameters[1:]
+        row['optimizer']['optimizer_parameters'] = [0.5]
+        row['reconstruction']['optimizer_parameters'] = [0.5]
+        self.assertIsNone(health._optimizer_binding(row))
+        for point in ([0.5 + 2.0 ** -52], [0.0]):  # no tolerance; log sigma is not the point
+            row['optimizer']['optimizer_parameters'] = list(point)
+            row['reconstruction']['optimizer_parameters'] = list(point)
+            self.assertIsInstance(health._optimizer_binding(row), str)
+
+    def test_a_pass_requires_confirmable_even_if_other_checks_drift(self):
+        data = certified_good()
+        with enabled():
+            self.assertEqual(health.classify(copy.deepcopy(data)), 'FIT_HEALTH_PASS')
+            real = health.certify_evidence
+            def unconfirmable(evidence):
+                certs, confirmable = real(evidence)
+                return certs, False
+            def cert_unconfirmable(evidence):
+                certs, confirmable = real(evidence)
+                certs[0]['confirmable'] = False
+                return certs, confirmable
+            for fake in (unconfirmable, cert_unconfirmable):
+                with patch.object(health, 'certify_evidence', fake):
+                    self.assertEqual(health.classify(copy.deepcopy(data)), 'FIT_HEALTH_INCOMPLETE')
+
+
 if __name__ == '__main__':
     unittest.main()

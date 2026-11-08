@@ -409,7 +409,9 @@ def _optimizer_binding(fit):
     The block must be well formed (point and gradient finite vectors of equal
     length, scalar equal to the vector maximum, profile verified), its minimum
     must agree with the fit's own objective within the objective roundoff rule,
-    and the reconstruction must have been recovered from exactly this point.
+    the point must equal, as exact values, the packed ``parameters`` with the
+    log sigma slot (index q_free + 1) removed, and the reconstruction must have
+    been recovered from exactly this point.
     """
     opt, rec = fit.get('optimizer'), fit.get('reconstruction')
     if not isinstance(opt, dict) or not isinstance(rec, dict):
@@ -420,6 +422,10 @@ def _optimizer_binding(fit):
     expected = _optimizer_length(fit)
     if expected is None or len(point) != expected:
         return 'optimizer point length is not the length the lambda_constraint_map layout implies'
+    theta, q_free = fit.get('parameters'), fit['lambda_constraint_map']['q_free']
+    if (not isinstance(theta, list) or len(theta) != len(point) + 1 or
+            point != theta[:q_free] + theta[q_free + 1:]):
+        return 'optimizer point is not the packed parameters with the log sigma slot removed'
     if opt.get('optimizer_max_abs_gradient') != max(abs(x) for x in gradient):
         return 'optimizer gradient scalar is not the maximum of the optimizer gradient vector'
     value, minimum = opt.get('optimizer_profile_value'), opt.get('optimizer_minimum')
@@ -821,7 +827,8 @@ def _classify(evidence):
     except Exception:  # a hostile record refuses only the certified paths, never the recorded verdict
         certs, confirmable = [], False
     certified_failure = confirmable and any(c['verdict'] == CERT_FAIL and c['confirmable'] for c in certs)
-    all_certified = len(certs) == len(CASES) and all(c['verdict'] == CERT_PASS for c in certs)
+    all_certified = (confirmable and len(certs) == len(CASES) and
+                     all(c['verdict'] == CERT_PASS and c.get('confirmable') is True for c in certs))
     if verdict == 'FIT_HEALTH_PASS':
         if certified_failure:
             return 'FIT_HEALTH_FAIL'
