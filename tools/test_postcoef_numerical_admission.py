@@ -1183,6 +1183,30 @@ class OptimizerBindingTests(unittest.TestCase):
                 self.assertIsInstance(health._optimizer_binding(r), str)
                 self.assertEqual(health.certify_fit(r)['verdict'], INC)
 
+    def test_reconstruction_point_is_type_checked_elementwise(self):
+        """Sixth review 1.1: JSON false/true must not stand in for 0.0/1.0 in the reconstruction point."""
+        base = self.row()
+        point = base['optimizer']['optimizer_parameters']
+        self.assertEqual(base['reconstruction']['optimizer_parameters'], point)
+        for j, x in enumerate(point):
+            variants = {'str': str(x), 'None': None, 'differing int': 5, 'list': [x], 'dict': {}}
+            if x == 0:
+                variants['false'] = False
+            if x == 1:
+                variants['true'] = True
+            for label, bad in variants.items():
+                with self.subTest(index=j, variant=label):
+                    r = self.row()
+                    r['reconstruction']['optimizer_parameters'][j] = bad
+                    self.assertIsInstance(health._optimizer_binding(r), str)
+                    self.assertEqual(health.certify_fit(r)['verdict'], INC)
+        for label, bad in {'tuple-free scalar false': False, 'scalar 0': 0, 'string': 'ab', 'empty list': []}.items():
+            with self.subTest(whole=label):
+                r = self.row()
+                r['reconstruction']['optimizer_parameters'] = bad
+                self.assertIsInstance(health._optimizer_binding(r), str)
+                self.assertEqual(health.certify_fit(r)['verdict'], INC)
+
     def test_objective_agreement_follows_the_roundoff_rule_exactly(self):
         """|minimum - objective| <= 8 eps max(1, |minimum|, |objective|), boundary included."""
         def with_values(objective, minimum):

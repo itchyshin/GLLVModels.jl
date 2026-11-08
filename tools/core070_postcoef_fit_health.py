@@ -530,7 +530,8 @@ def _optimizer_binding(fit):
     if not finite_number(objective) or abs(minimum - objective) > (
             8 * sys.float_info.epsilon * max(1.0, abs(minimum), abs(objective))):
         return 'optimizer minimum disagrees with the fitted objective'
-    if rec.get('optimizer_parameters') != point:
+    recovered_point = rec.get('optimizer_parameters')
+    if not _finite_vector(recovered_point) or recovered_point != point:
         return 'reconstruction was not recovered from the recorded optimizer point'
     if opt.get('radius_status') != RADIUS_STATUS or fit.get('radius_status') != RADIUS_STATUS:
         return 'derivative error radii are not recorded as declared_unproven'
