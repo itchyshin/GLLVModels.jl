@@ -21,9 +21,228 @@ _shard_pos = Ref(0)
 _THREADED_FILES = ("test_bootstrap_sigma_r.jl",)
 _REQUIRE_THREADS = something(tryparse(Int, get(ENV, "GLLVM_TEST_REQUIRE_THREADS", "")), 0)
 
+# --- Duration-balanced assignment for the 4-way CI split --------------------
+# Position sharding is fair by count, not by time. Measured per-file times
+# (Totoro, Julia 1.10.12, 1 thread, 2026-11-09; see ci-speed-report-20261109)
+# put the position shards at about 4103/5683/4187/3271 s (max/mean 1.32). This
+# table is greedy longest-first on those times, giving about 4311 s each. It applies ONLY when N == 4. Any other N, and any
+# file not listed here (a newly added test), falls back to the position rule, so
+# every file still runs in exactly one shard. A speed hint, not a contract:
+# refresh it when the suite changes a lot.
+const _SHARD4_TABLE = Dict{String,Int}()
+for (_k, _files) in enumerate((
+    (
+        "test_none_dep.jl", "test_phylo_dep.jl", "test_animal_latent_slope_estimand_algebra.jl",
+        "test_spatial_dep.jl", "test_kernel_dep.jl", "test_fixed_effects.jl",
+        "test_reml.jl", "test_signed_sigma_phy.jl", "test_precision_multivariate.jl",
+        "test_destination_b_grouping_invariance.jl", "test_grouped_profile_foundation.jl", "test_grouped_profile_refit.jl",
+        "test_grouped_profile_interval.jl", "test_joint_phylo_grouped_alias_public.jl", "test_joint_phylo_grouped_interior.jl",
+        "test_confint.jl", "test_profile_sigma_phy_identity.jl", "test_profile_rootfind.jl",
+        "test_confint_bootstrap.jl", "test_confint_method_routes.jl", "test_profile_derived_fix.jl",
+        "test_aghq_frozen.jl", "test_aghq_outer.jl", "test_aghq_public_poisson.jl",
+        "test_aghq_delta_gamma.jl", "test_aghq_binomial.jl", "test_aghq_gate.jl",
+        "test_nb2_precision.jl", "test_beta_laplace.jl", "test_ordinal_laplace.jl",
+        "test_poisson_fit.jl", "test_poisson_n_init.jl", "test_gamma_curvature_cross_kernel.jl",
+        "test_xlv_nb_binomial_wired.jl", "test_latte_kernel_identity.jl", "test_gp1_verdict.jl",
+        "test_nb_boundary_restart.jl", "test_nb_cov_ridge_polish_grad.jl", "test_nb_cov_two_starts.jl",
+        "test_fit_verdict_gradient.jl", "test_nb1_grouped_mode_search.jl", "test_link_honoured.jl",
+        "test_tweedie.jl", "test_studentt_input_validation.jl", "test_studentt_core070.jl",
+        "test_studentt_boundary_honesty.jl", "test_studentt_retained_precision.jl", "test_ordinal_fit.jl",
+        "test_fit_gllvm.jl", "test_com_poisson_mode_search.jl", "test_gaussian_pervar.jl",
+        "test_formula_pervar.jl", "test_gaussian_wald_pd_hessian.jl", "test_select_lv_759.jl",
+        "test_binomial_ridge.jl", "test_structured_cov.jl", "test_source_covariance.jl",
+        "test_symmetric_admission.jl", "test_gaussian_sources.jl", "test_grouped_gaussian.jl",
+        "test_destination_b_b1_unit_obs_paired_fit.jl", "test_destination_b_b1_cluster2_paired_fit.jl", "test_destination_b_b1_joint_gaussian_paired_fit.jl",
+        "test_b1_fixed_coordinate_curvature_protocol.jl", "test_precision_fit_admission.jl", "test_precision_shared_residual.jl",
+        "test_phylo_latent_twin.jl", "test_destination_b_phylo_uncertainty.jl", "test_destination_b_nongaussian_public.jl",
+        "test_destination_b_fixed_effects.jl", "test_source_fit_optimizer_health.jl", "test_spde_delaunay_scale.jl",
+        "test_phylo_poisson_xlv.jl", "test_phylo_binomial_xlv_mode.jl", "test_phylo_beta_xlv_mode.jl",
+        "test_phylo_ordinal_xlv_mode.jl", "test_twopart_substrate.jl", "test_delta_shared_predictor.jl",
+        "test_delta_postfit.jl", "test_hurdle_poisson.jl", "test_twopart_hessian_kwarg.jl",
+        "test_zi_twin.jl", "test_masked_gaussian_posdef.jl", "test_mi_fitter.jl",
+        "test_weights_byte_identity.jl", "test_nb_grouped_wald_speed_552.jl", "test_confint_offset.jl",
+        "test_predict_offset.jl", "test_confint_bootstrap_verdict_poisson.jl", "test_confint_bootstrap_verdict_beta.jl",
+        "test_confint_bootstrap_verdict_tweedie.jl", "test_confint_bootstrap_verdict_ordinal.jl", "test_confint_bootstrap_verdict_zi.jl",
+        "test_confint_bootstrap_verdict_truncated.jl", "test_confint_bootstrap_verdict_betabinomial.jl", "test_confint_bootstrap_verdict_nb.jl",
+        "test_second_order_s2_cloglog_ratified.jl", "test_second_order_r_libs.jl", "test_diagnostics.jl",
+        "test_se_machinery.jl", "test_nobs_pn_convention.jl", "test_cov_mode_search_gamma.jl",
+        "test_formula_input.jl", "test_optimizer_selection.jl", "test_simulate.jl",
+        "test_quadratic.jl", "test_ordered_beta.jl", "test_variational_negbin.jl",
+        "test_random_slopes.jl", "test_bridge_grouped_dispersion.jl", "test_mixed_contract.jl",
+        "test_bridge_zip_nox.jl", "test_lv_profile_pd_hessian.jl", "test_bridge_missing_mask.jl",
+        "test_hessian_kwarg.jl", "test_known_sentinel_defects.jl", "test_curvature_census.jl",
+        "test_phylo_contrasts_struct.jl", "test_edge_incidence_solveQ.jl", "test_branch_re_convergence.jl",
+        "test_ordinal_link_input.jl", "test_relaxed_clock_boundary_876.jl", "test_cv_unsupported_773.jl",
+        "test_gaussian_intercept.jl", "test_docs_snippets_734_738.jl", "test_namespace_numeric_p1_twin_b.jl",
+        "test_bridge_readback_p1.jl", "test_confint_inspect_p1.jl", "test_predict_offset_twin_p1.jl",
+        "test_cov_ord_latent_p1.jl", "test_cov_phylo_twins_p1.jl", "test_temporal_api.jl",
+        "test_temporal_oracles.jl", "test_isdm.jl", "test_robustness_sweep.jl",
+        "test_derived_ci_sweep.jl", "test_nb_grouped_postfit.jl", "test_phylo_sparse_solvers.jl",
+        "test_docstring_ref_linebreaks.jl", "test_mask_missing_763.jl",
+    ),
+    (
+        "test_package_rename_alias.jl", "test_animal_latent.jl", "test_docstring_animal_latent_twin.jl",
+        "test_kernel_latent.jl", "test_laplace_K_bounds.jl", "test_grouped_profile_inversion.jl",
+        "test_grouped_profile_dense_oracle.jl", "test_joint_phylo_grouped_gaussian.jl", "test_joint_phylo_grouped_postfit.jl",
+        "test_destination_b_precision_public.jl", "test_marginal_target_intervals.jl", "test_lowrank_cholesky.jl",
+        "test_families.jl", "test_cloglog_likelihood.jl", "test_aghq_grid.jl",
+        "test_aghq_adapt.jl", "test_aghq_gaussian.jl", "test_aghq_public_gaussian.jl",
+        "test_censored_poisson.jl", "test_truncnb2_precision.jl", "test_truncnb2_mode_search.jl",
+        "test_negbin_laplace.jl", "test_nb_n_init.jl", "test_laplace_dual_safety.jl",
+        "test_laplace_grad.jl", "test_grouped_laplace.jl", "test_grouped_analytic_grad.jl",
+        "test_laplace_grad_identity.jl", "test_masked_dispersion_grad.jl", "test_nb1.jl",
+        "test_grouped_dispersion.jl", "test_grouped_dispersion_tweedie_nb1.jl", "test_grouped_init_kwargs.jl",
+        "test_nb_beta_x_identity.jl", "test_nb1_x_identity.jl", "test_betabinomial_x_identity.jl",
+        "test_zinb_x_identity.jl", "test_beta_fit.jl", "test_issue_719_docs_deploy_guard.jl",
+        "test_studentt.jl", "test_studentt_normalizer_precision.jl", "test_studentt_grouped_mode_search.jl",
+        "test_lognormal.jl", "test_ordinal_pertrait.jl", "test_gaussian_pervar_design.jl",
+        "test_gaussian_fixed_residual.jl", "test_gaussian_pervar_fallback.jl", "test_issue_737_omega_doc.jl",
+        "test_vcov_full_covariance.jl", "test_ordination.jl", "test_select_lv_print.jl",
+        "test_c1_behaviour_p1.jl", "test_cross_kernel.jl", "test_cross_kernel_fit.jl",
+        "test_destination_b_public.jl", "test_destination_b_b1_unit_paired_fit.jl", "test_destination_b_b1_balanced_complete_crossed_design.jl",
+        "test_precision_multivariate_fit.jl", "test_destination_b_tree_precision.jl", "test_destination_b_tree_reference_checker.jl",
+        "test_destination_b_a4_s4_public_dense_bridge.jl", "test_destination_b_adapter_consumer.jl", "test_destination_b_pedigree_reference_checker.jl",
+        "test_cross_objective_helpers.jl", "test_gaussian_source_design.jl", "test_gaussian_source_bindings.jl",
+        "test_bridge_phylo_precision.jl", "test_bridge_sources.jl", "test_spde.jl",
+        "test_spde_latent_binomial_trials.jl", "test_spde_latent_mode_flag_747.jl", "test_xlv_refit_converged.jl",
+        "test_twopart_alloc_equiv.jl", "test_delta_fit.jl", "test_delta_disp_group.jl",
+        "test_twopart_input_check.jl", "test_beta_binomial_verdict_515.jl", "test_beta_binomial_phi_continuity_872.jl",
+        "test_zero_inflated.jl", "test_masked_gaussian_converged_735.jl", "test_missing_predictor_z.jl",
+        "test_missing_predictor_dispersion.jl", "test_fd_hessian.jl", "test_predict_offset_grouped.jl",
+        "test_predict_offset_shared.jl", "test_family_profile_open_lower.jl", "test_confint_bootstrap_verdict_binomial.jl",
+        "test_confint_bootstrap_verdict_gamma.jl", "test_confint_bootstrap_verdict_nb1.jl", "test_confint_bootstrap_verdict_hurdle_delta.jl",
+        "test_confint_bootstrap_boundary_per_param.jl", "test_second_order_truncnb2_ci.jl", "test_second_order_betabinomial_shared_ci.jl",
+        "test_second_order_studentt_ci.jl", "test_covariates.jl", "test_fourthcorner.jl",
+        "test_constrained_ordination.jl", "test_structural_confint.jl", "test_ordered_beta_mode_search.jl",
+        "test_variational_dgamma.jl", "test_variational_exponential.jl", "test_twolevel.jl",
+        "test_random_slopes_poisson.jl", "test_bridge_capabilities.jl", "test_bridge_mixed.jl",
+        "test_bridge_lognormal.jl", "test_bridge_integer_counts.jl", "test_bridge_lv_predictor.jl",
+        "test_phylo_eta_realized.jl", "test_confint_hessian_twopart_truncnb2.jl", "test_phylo_contrasts.jl",
+        "test_phylo_branch_re.jl", "test_core070_interface_registry.jl", "test_core070_link_boundaries.jl",
+        "test_parity_trial_inputs.jl", "test_em_phylo.jl", "test_em_phylo_sigma_eps_floor.jl",
+        "test_nparams_em_branch_re.jl", "test_relaxed_clock.jl", "test_relaxed_clock_estep_clade.jl",
+        "test_cv.jl", "test_extractors.jl", "test_namespace_numeric_p1_twin.jl",
+        "test_predict_missing_p1.jl", "test_data_twins_p1.jl", "test_parity_binomial_gaussian_fixtures.jl",
+        "test_data_twins_2_p1.jl", "test_off_all_count_twin_p1.jl", "test_totoro_323_track_a_harness.jl",
+        "test_temporal_lowrank.jl", "test_temporal_composed_receipts.jl", "test_isdm_cloglog_internals.jl",
+        "test_zinb_observed_laplace.jl", "test_convergence_553_554.jl", "test_eta_clamp_869.jl",
+        "test_derived_decisions.jl", "test_n_lt_p.jl", "test_comparator_targets.jl",
+    ),
+    (
+        "test_shard_selection.jl", "test_animal_dep.jl", "test_docstring_animal_dep_twin.jl",
+        "test_kernel_indep.jl", "test_phy.jl", "test_destination_b_kernel_crosscheck.jl",
+        "test_destination_b_grouping_interval_matrix.jl", "test_joint_covariance_dense_gram.jl", "test_extract_phylo_signal_joint.jl",
+        "test_ppca_init.jl", "test_confint_derived.jl", "test_confint_derived_wald.jl",
+        "test_takahashi_selinv.jl", "test_em_sparse_estep_default.jl", "test_node_gradient.jl",
+        "test_binomial_laplace.jl", "test_aghq_multistart.jl", "test_aghq_ordinal.jl",
+        "test_aghq_tweedie.jl", "test_gaussian_empty_design.jl", "test_aghq_p1_twin.jl",
+        "test_aghq_kd_bound.jl", "test_poisson_laplace.jl", "test_truncated_poisson.jl",
+        "test_truncated_nbinom2.jl", "test_truncnb2_laplace_breakdown.jl", "test_truncnb2_pertrait_boundary_restart.jl",
+        "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl", "test_phylo_binomial_xlv.jl",
+        "test_chibar2_variance_lrt_p1_twin.jl", "test_poisson_grad_perf.jl", "test_destination_b_joint_identification.jl",
+        "test_destination_b_joint_other_families.jl", "test_destination_b_joint_nb2_replication.jl", "test_laplace_alloc_equiv.jl",
+        "test_nb_fit.jl", "test_gp1_laplace.jl", "test_gamma_beta_upper_boundary.jl",
+        "test_nb_grouped_upper_warn.jl", "test_gamma_shape_upper_warn.jl", "test_nb1_scalar_gradient_gate.jl",
+        "test_nb2_grouped_mode_search.jl", "test_gamma_x_identity.jl", "test_gamma_grouped_mode_search.jl",
+        "test_beta_grouped_mode_search.jl", "test_grouped_getlv_offset.jl", "test_gamma_fit.jl",
+        "test_issue_721_link_docs.jl", "test_tweedie_grouped_mode_search_503.jl", "test_tweedie_power_contract.jl",
+        "test_tweedie_cdf.jl", "test_exponential.jl", "test_studentt_boundary.jl",
+        "test_multinomial.jl", "test_multinomial_separation.jl", "test_ordinal_probit.jl",
+        "test_ordinal_logit_twin.jl", "test_issue_749_fit_gllvm_doc.jl", "test_truncated_formula.jl",
+        "test_ledermann_pervar_k.jl", "test_gaussian_pervar_heywood_736.jl", "test_aicbic_newfits.jl",
+        "test_statsapi.jl", "test_extract_latent_scores.jl", "test_model_selection.jl",
+        "test_select_lv_p1_twin.jl", "test_model_comparison.jl", "test_issue_108_anova_docs.jl",
+        "test_b1_fixed_point_marginal_curvature_protocol.jl", "test_phylo_latent_rounding_floor.jl", "test_destination_b_phylo_independent_receipt.jl",
+        "test_destination_b_a4_s4_tree_julia_own_optimum.jl", "test_destination_b_phylo_uncertainty_cli.jl", "test_precision_objective_failures.jl",
+        "test_bridge_precision_multivariate.jl", "test_grouped_nongaussian_postfit.jl", "test_formula_structured_terms.jl",
+        "test_bridge_gradient_payload.jl", "test_phylo_precision_animal.jl", "test_coevolution_blockna.jl",
+        "test_coevolution_glm_765.jl", "test_spde_fit.jl", "test_spde_latent.jl",
+        "test_phylo_glm.jl", "test_phylo_xlv_verdict.jl", "test_twopart_mode_search.jl",
+        "test_hurdle_nb.jl", "test_beta_binomial_mode_search.jl", "test_beta_binomial_grouped_verdict_515.jl",
+        "test_zi_recovery.jl", "test_missing_predictor_fiml.jl", "test_missing_predictor_poisson.jl",
+        "test_missing_predictor_multi.jl", "test_confint_family.jl", "test_predict_modes_training.jl",
+        "test_truncnb2_ci_boundary.jl", "test_confint_bootstrap_ordered_beta.jl", "test_confint_bootstrap_verdict_rest.jl",
+        "test_second_order_ordinal_pertrait_ci.jl", "test_second_order_delta_followup.jl", "test_second_order_lognormal_ci.jl",
+        "test_second_order_tweedie_grouped_ci.jl", "test_second_order_multinomial_ci.jl", "test_cov_analytic_grad.jl",
+        "test_species_covariates.jl", "test_row_random.jl", "test_variational_binomial.jl",
+        "test_va_vs_laplace.jl", "test_bridge_gaussian_offset.jl", "test_grouped_hessian_consistency.jl",
+        "test_core070_receipts.jl", "test_core070_shape_boundaries.jl", "test_sparse_phy_identities.jl",
+        "test_em_squarem.jl", "test_gaussian_formula_covariates.jl", "test_dunn_smyth_tail_767.jl",
+        "test_predict_delta_shared_820.jl", "test_postfit_communality_confint_default_parity.jl", "test_animal_scalar_p1.jl",
+        "test_cross_lineage_extract_internals.jl", "test_weights_twins_p1.jl", "test_destination_b_s4_public_phylo_dep_probe_harness.jl",
+        "test_temporal_fit_receipts.jl", "test_temporal_helpers.jl", "test_temporal_composed.jl",
+        "test_zip_zinb_stall.jl", "test_zip_observed_laplace.jl", "test_zip_betaz_wald_926.jl",
+        "test_input_validation.jl", "test_tweedie_speed.jl", "test_response_support_730_va_ordinal.jl",
+        "test_bootstrap_decisions.jl", "test_clamp_and_replicate_retention_docs.jl", "test_truncpois_boot_782.jl",
+        "test_spde_projector_validation.jl", "test_lambda_constraint_wald_794.jl", "test_branch_re_helpers.jl",
+        "test_docstring_confint_lv_effects.jl", "test_changelog_structure.jl",
+    ),
+    (
+        "test_likelihood.jl", "test_packing.jl", "test_fit.jl",
+        "test_gaussian_K_bounds.jl", "test_lv_predictor.jl", "test_W_and_diag.jl",
+        "test_unidentified_tier_warning.jl", "test_sparse_phy.jl", "test_phylo_precision.jl",
+        "test_destination_b_reference.jl", "test_grouped_profile_public.jl", "test_joint_covariance_identification.jl",
+        "test_joint_phylo_grouped_fit.jl", "test_em_fa.jl", "test_confint_profile.jl",
+        "test_em_louis.jl", "test_em_observed_information_pd.jl", "test_fit_phylo.jl",
+        "test_aghq_poisson.jl", "test_aghq_nb2.jl", "test_profile_failure_bounds.jl",
+        "test_aghq_public_binomial.jl", "test_truncnb2_dispersion_boundary.jl", "test_nb2_ad_large_r.jl",
+        "test_gamma_laplace.jl", "test_binomial_fit.jl", "test_issue_783_curvature_docs.jl",
+        "test_phylo_xlv.jl", "test_phylo_beta_xlv.jl", "test_phylo_nb_xlv.jl",
+        "test_boundary_inference.jl", "test_grouped_laplace_identity.jl", "test_grouped_identification_diagnostics.jl",
+        "test_destination_b_joint_poisson.jl", "test_destination_b_quadrature.jl", "test_gp1_mode_backtrack.jl",
+        "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_nb_grouped_poisson_ridge.jl",
+        "test_beta_grouped_convergence.jl", "test_nb1_poisson_ridge.jl", "test_grouped_getlv_mode.jl",
+        "test_ordinal_x_identity.jl", "test_zip_x_identity.jl", "test_zinb_cov_iterations.jl",
+        "test_issue_725_extractor_docs.jl", "test_tweedie_engine_health.jl", "test_tweedie_grouped_engine_health.jl",
+        "test_studentt_disp_group.jl", "test_mode_search_623.jl", "test_zib_x_identity.jl",
+        "test_ordinal_level_check.jl", "test_unified_api.jl", "test_com_poisson.jl",
+        "test_formula_default_x_guard.jl", "test_postfit.jl", "test_postfit_zib_tweedie.jl",
+        "test_extract_gamma.jl", "test_grouped_fit.jl", "test_destination_b_b1_cluster_paired_fit.jl",
+        "test_phylo_latent_paired_p1.jl", "test_destination_b_phylo_reference_checker.jl", "test_destination_b_pedigree_precision.jl",
+        "test_destination_b_a4_s4_public_r_formula_receipt.jl", "test_destination_b_dense_uncertainty.jl", "test_bridge_precision_shared_residual.jl",
+        "test_grouped_nongaussian_fit.jl", "test_destination_b_postfit.jl", "test_gaussian_sources_fixed_residual.jl",
+        "test_cross_objective_known_answer.jl", "test_formula_sources.jl", "test_coevolution_kronecker.jl",
+        "test_coevolution_glm.jl", "test_spde_mesh.jl", "test_spde_delaunay.jl",
+        "test_spde_latent_postfit.jl", "test_phylo_glm_families.jl", "test_delta_gamma.jl",
+        "test_beta_hurdle.jl", "test_beta_binomial.jl", "test_missing_data.jl",
+        "test_missing_response.jl", "test_missing_response_extra.jl", "test_missing_predictor_phylo.jl",
+        "test_offset.jl", "test_weights.jl", "test_confint_mask_refused.jl",
+        "test_predict_offset_remaining_788.jl", "test_confint_bootstrap_verdict_misc.jl", "test_confint_bootstrap_verdict_bhob.jl",
+        "test_second_order_truncpois_ci.jl", "test_summary_table.jl", "test_formula.jl",
+        "test_formula_no_intercept_default.jl", "test_row_effects.jl", "test_rrr.jl",
+        "test_ordination_uncertainty.jl", "test_structural_confint_edge.jl", "test_variational.jl",
+        "test_variational_gamma.jl", "test_variational_beta.jl", "test_bridge_ci.jl",
+        "test_mixed_mode_search.jl", "test_bridge_x.jl", "test_bridge_zib.jl",
+        "test_bridge_truncated_poisson.jl", "test_bridge_truncated_input.jl", "test_lv_ci.jl",
+        "test_confint_hessian_consistency.jl", "test_saturation_health.jl", "test_edge_incidence.jl",
+        "test_branch_re_marginal_fallback.jl", "test_family11_p1_boundary.jl", "test_em_squarem_safety.jl",
+        "test_spatial_cov.jl", "test_loading_profile_stage0.jl", "test_loading_profile_stage1_harness.jl",
+        "test_loading_profile_confirmatory.jl", "test_derived_ci_surfaces.jl", "test_postfit_tables.jl",
+        "test_postfit_twins_p1.jl", "test_mc_simulate_p1.jl", "test_variance_decomp_p1.jl",
+        "test_cross_lineage_p1.jl", "test_namespace_gaussian_w1_p1.jl", "test_diagnostics_p1.jl",
+        "test_off_predict_twin_p1.jl", "test_off_mixed_twin_p1.jl", "test_temporal_likelihood_internals.jl",
+        "test_convergence_sweep.jl", "test_zerostep_verdict_sweep.jl", "test_eta_clamp_rescue_874.jl",
+        "test_response_support_730.jl", "test_wtier_crosscov.jl", "test_random_slope_internals.jl",
+        "test_response_support_730_siblings.jl", "test_interrupt_rethrow.jl", "test_extractors_invariants.jl",
+        "test_docstring_postfit_mask_offset_750.jl", "test_bootstrap_sigma_r.jl",
+    ),
+))
+    for _f in _files
+        _SHARD4_TABLE[_f] = _k
+    end
+end
+
+# Does the include at 1-based position `pos` (file `path`) belong to this run?
+function _in_shard(path::AbstractString, pos::Integer)
+    _SHARD === nothing && return true
+    k, N = _SHARD
+    N == 4 && haskey(_SHARD4_TABLE, path) && return _SHARD4_TABLE[path] == k
+    return (pos - 1) % N == k - 1
+end
+
 function _shard_include(path::AbstractString)
     _shard_pos[] += 1
-    if _SHARD === nothing || (_shard_pos[] - 1) % _SHARD[2] == _SHARD[1] - 1
+    if _in_shard(path, _shard_pos[])
         if _REQUIRE_THREADS > 0 && path in _THREADED_FILES
             @testset "threaded file $path needs Julia threads" begin
                 @test Threads.nthreads() >= _REQUIRE_THREADS
@@ -47,8 +266,10 @@ _RUN_QUALITY = _SHARD === nothing || _SHARD[1] == 1
 # (harmless to selection, which uses the runtime `_shard_pos` counter, but
 # wrong in the log). Carried over from PR #278.
 _n_test_files = count("\n    _shard_include(\"", read(@__FILE__, String))
-_n_selected = _SHARD === nothing ? _n_test_files :
-    length(_shard_indices(_n_test_files, _SHARD[1], _SHARD[2]))
+_n_selected = count(enumerate(m.captures[1] for m in eachmatch(
+    r"\n    _shard_include\(\"([^\"]+)\"\)", read(@__FILE__, String)))) do (i, f)
+    _in_shard(f, i)
+end
 _n_reported = _n_selected + (_RUN_QUALITY ? 1 : 0)
 
 println(_SHARD === nothing ?
