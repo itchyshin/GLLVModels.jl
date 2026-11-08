@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import core070_postcoef_fit_health as health
 from test_postcoef_fit_health import good
+from test_postcoef_numerical_admission import bind
 
 BUDGET = 1024.0 * 2.0 ** -52
 
@@ -43,11 +44,19 @@ def writer_record(matrix, free, max_gradient=1e-7, exact_ad=True):
     opt.update(optimizer_parameters=[0.0] * n, optimizer_gradient=grad,
                optimizer_max_abs_gradient=max_gradient,
                gradient_error_radius=None, gradient_error_radius_basis=None)
-    row['gradient_error_radius'] = None
+    row['gradient_error_radius'] = row['packed_gradient_error_radius'] = None
+    pinned = [i for i in range(1, n + 1) if i not in free]
+    if pinned and pinned[0] == 1:
+        raise ValueError('packed index 1 (log sigma) cannot be pinned by a lambda constraint')
+    bind(row, pinned)
+    if not exact_ad:  # the writer records no radius and no status without the exact-AD declaration
+        row.pop('radius_status')
+        opt.pop('radius_status')
     if exact_ad:
         row['hessian_error_radius'] = hessian_radius(matrix)
         row['gradient_error_radius'] = opt['gradient_error_radius'] = gradient_radius(
             opt['optimizer_profile_value'], max_gradient)
+        row['packed_gradient_error_radius'] = gradient_radius(row['recomputed_objective'], max_gradient)
     return json.loads(json.dumps(row))  # exactly what a JSON round trip delivers
 
 
@@ -115,6 +124,21 @@ class WriterFieldTests(unittest.TestCase):
             self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
             data['Julia'][1]['hessian_error_radius'] = None
             self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+
+    def test_writer_records_carry_status_binding_map_and_both_radii(self):
+        m = [[2.0, 0.5, 0.0], [0.5, 1.5, 0.0], [0.0, 0.0, -9.0]]
+        row = writer_record(m, [1, 2])
+        self.assertEqual(row['radius_status'], 'declared_unproven')
+        self.assertEqual(row['optimizer']['radius_status'], 'declared_unproven')
+        self.assertEqual(row['reconstruction']['optimizer_parameters'], row['optimizer']['optimizer_parameters'])
+        self.assertEqual(row['lambda_constraint_map']['entries'], [[None], [0.0]])
+        self.assertEqual(row['packed_gradient_error_radius'], gradient_radius(3.0, 1e-7))
+        self.assertEqual(health.certify_fit(row)['radius_status'], 'declared_unproven')
+        for key in ('radius_status', 'packed_gradient_error_radius', 'lambda_constraint_map'):
+            lost = copy.deepcopy(row)
+            lost.pop(key)
+            with self.subTest(key=key):
+                self.assertEqual(health.certify_fit(lost)['verdict'], health.CERT_INCOMPLETE)
 
     def test_r_records_have_no_hessian_to_certify(self):
         self.assertEqual(health.certify_fit(good()['R'][0], engine='R')['verdict'], health.CERT_INCOMPLETE)

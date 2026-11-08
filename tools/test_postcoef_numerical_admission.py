@@ -1,5 +1,6 @@
 """Controls for the exact/interval numerical-admission certifier (diagnostic)."""
 import copy
+import json
 import math
 import unittest
 from fractions import Fraction
@@ -12,12 +13,34 @@ COORD = 'packed_free_index'
 PASS, FAIL, INC = health.CERT_PASS, health.CERT_FAIL, health.CERT_INCOMPLETE
 
 
+def lambda_map(n, pinned=(), values=None):
+    """lambda_constraint_map of a K = 1 fit with n packed parameters (q_free = 0, p = n - 1).
+
+    Packed index 1 is log sigma; index j >= 2 is the loading of trait j - 1.
+    """
+    entries = [[None] for _ in range(n - 1)]
+    for j in pinned:
+        entries[j - 2][0] = 0.0 if values is None else values[j]
+    return {'layout': health.LAMBDA_MAP_LAYOUT, 'p': n - 1, 'K': 1, 'q_free': 0, 'entries': entries}
+
+
+def bind(row, pinned=()):
+    """Add the binding fields a certifiable Julia record carries (parameters assumed 0.0 at pins)."""
+    n = len(row['parameters'])
+    row['lambda_constraint_map'] = lambda_map(n, pinned)
+    row['radius_status'] = 'declared_unproven'
+    row['optimizer']['radius_status'] = 'declared_unproven'
+    row['reconstruction']['optimizer_parameters'] = list(row['optimizer']['optimizer_parameters'])
+    return row
+
+
 def certified_good():
     """good() plus the fields a certifiable Julia record must declare."""
     data = good()
     for row in data['Julia']:
         row.update(hessian_coordinate=COORD, hessian_error_radius=1e-9, gradient_error_radius=1e-9,
-                   pinned_indices=[])
+                   packed_gradient_error_radius=1e-9, pinned_indices=[])
+        bind(row)
     return data
 
 
@@ -142,9 +165,9 @@ class CertifierTests(unittest.TestCase):
         out = hess(ident(n + 1), list(range(1, n + 2)))
         self.assertEqual(out['verdict'], INC)
         self.assertIn('size cap', out['reason'])
-        out = health.certify_hessian(ident(3), [1, 2, 3], COORD, 1e-9, 0.0, [], max_seconds=-1.0, parameter_count=3)
+        out = health.certify_hessian(ident(3), [1, 2, 3], COORD, 1e-9, 0.0, [], max_work=0, parameter_count=3)
         self.assertEqual(out['verdict'], INC)
-        self.assertIn('time cap', out['reason'])
+        self.assertIn('work cap', out['reason'])
         out = health.certify_hessian(ident(3), [1, 2, 3], COORD, 1e-9, 0.0, [], max_dimension=2, parameter_count=3)
         self.assertEqual(out['verdict'], INC)
 
@@ -190,6 +213,9 @@ def three_parameter_julia(rows, free, pinned=None):
         r['hessian'] = copy.deepcopy(m)
         r['hessian_raw'] = copy.deepcopy(m)
         r['hessian_asymmetry_limit'] = 32 * 2.220446049250313e-16 * 3 * 5.0
+        r['optimizer']['optimizer_parameters'] = [0.0] * 3
+        r['optimizer']['optimizer_gradient'] = [1e-7, 0.0, 0.0]
+        bind(r, pinned or ())
         if pinned is None:
             r.pop('pinned_indices', None)
         else:
@@ -323,18 +349,26 @@ class ReviewDefectTests(unittest.TestCase):
             data['Julia'][1]['max_abs_gradient'] = 5e-8
             self.assertEqual(health.classify(data), 'FIT_HEALTH_INTEGRITY_REJECTED')
 
-    def test_fit_and_optimizer_gradient_scalars_must_agree(self):
+    def test_fit_and_optimizer_gradients_are_two_separate_bounds(self):
+        # M3/W4: the packed gradient at the Hessian point and the optimizer-coordinate
+        # gradient are different quantities; each must clear the limit on its own
+        # radius. Equality of their maxima is neither required nor sufficient.
         data = certified_good()
         row = data['Julia'][0]
-        # internally consistent optimizer record, but not the fit's own gradient
         row['optimizer'].update(optimizer_gradient=[1e-9, 0.0], optimizer_max_abs_gradient=1e-9)
-        cert = health.certify_fit(row)
-        self.assertNotEqual(cert['verdict'], PASS)
-        self.assertEqual(cert['gradient'], INC)
-        # The baseline records these as distinct objects (test_julia_limit_uses_optimizer_coordinates),
-        # so the certifier, not the baseline classifier, refuses to certify a disagreement.
+        self.assertEqual(health.certify_fit(row)['verdict'], PASS)  # 1e-9 vs 1e-7: both far below the limit
         with enabled():
-            self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_PASS')
+        # packed gradient large, optimizer gradient small: blocked, and never a failure
+        row['gradient'], row['max_abs_gradient'] = [5e-3, 0.0], 5e-3
+        cert = health.certify_fit(row)
+        self.assertEqual((cert['verdict'], cert['gradient']), (INC, INC))
+        # optimizer gradient above the signed limit with a small packed gradient: a certified failure
+        data = certified_good()
+        row = data['Julia'][0]
+        row['optimizer'].update(optimizer_gradient=[2e-5, 0.0], optimizer_max_abs_gradient=2e-5)
+        cert = health.certify_fit(row)
+        self.assertEqual((cert['verdict'], cert['gradient']), (FAIL, FAIL))
 
 
 class SecondReviewC1Tests(unittest.TestCase):
@@ -478,10 +512,12 @@ class SecondReviewC3ExactnessTests(unittest.TestCase):
         self.assertIn('engine', out['reason'])
         # Hessian size must equal the recorded gradient length
         row = certified_good()['Julia'][0]
-        row['gradient'] = [1e-7, 0.0, 0.0]
+        row['gradient'], row['parameters'] = [1e-7, 0.0, 0.0], [0.0] * 3
+        row['optimizer'].update(optimizer_parameters=[0.0] * 3, optimizer_gradient=[1e-7, 0.0, 0.0])
+        bind(row)  # a 3-parameter record whose Hessian is still 2 x 2
         out = health.certify_fit(row)
         self.assertEqual(out['verdict'], INC)
-        self.assertIn('Hessian size', out['hessian']['reason'])
+        self.assertIn('parameter count', out['hessian']['reason'])
 
     def test_c3_floors_are_compared_exactly(self):
         # k = 3: the exact floor 3*2**-52*peak is not a binary64 number; a radius equal to its
@@ -654,6 +690,10 @@ class SecondReviewC4ConfirmationTests(unittest.TestCase):
                 self.assertFalse(health._r_block_valid(d))
         for bad in (None, {}, {'R': None}, {'R': {}}):
             self.assertFalse(health._r_block_valid(bad))
+        zero = copy.deepcopy(data)
+        for row in zero['R']:
+            row.update(gradient=[0.0, 0.0], max_abs_gradient=0.0)
+        self.assertTrue(health._r_block_valid(zero))  # an exactly zero gradient is well formed
         # a failing R pd flag or a large R gradient is well-formed evidence, not garbage
         d = copy.deepcopy(data)
         d['R'][0]['pd_hessian'] = False
@@ -674,6 +714,1057 @@ class SecondReviewC4ConfirmationTests(unittest.TestCase):
                 d = copy.deepcopy(data)
                 mutate(d)
                 self.assertFalse(health.certify_evidence(d)[0][0]['confirmable'])
+
+
+
+INCOMPLETE_V, INTEGRITY_V = 'FIT_HEALTH_INCOMPLETE', 'FIT_HEALTH_INTEGRITY_REJECTED'
+EPS = 2.220446049250313e-16
+
+
+def rec_of(mutate, engine='Julia', index=2):
+    """_classify_recorded verdict of good() after ``mutate(row, data)`` on one row.
+
+    The recorded layer is asserted directly: ``classify`` converts every
+    would-be pass to INCOMPLETE while the hold flag is False, so a test that
+    only asserts classify() == INCOMPLETE cannot see a deleted rejection branch.
+    """
+    data = good()
+    mutate(data[engine][index], data)
+    return health._classify_recorded(data)
+
+
+class RejectionBranchTests(unittest.TestCase):
+    """F2 (third review): every would-be-pass rejection branch of _classify_recorded is pinned.
+
+    The defect is applied to the last row of the last engine so that no later
+    check can mask a deleted branch, and the exact verdict is asserted.
+    """
+
+    def check(self, table, engine, index=2):
+        for label, mutate, expected in table:
+            for idx in {index, 0}:
+                with self.subTest(engine=engine, row=idx, defect=label):
+                    self.assertEqual(rec_of(mutate, engine, idx), expected)
+
+    @staticmethod
+    def set_(**kw):
+        return lambda row, data: row.update(kw)
+
+    @staticmethod
+    def drop(*keys):
+        return lambda row, data: [row.pop(k) for k in keys]
+
+    def test_baseline_good_record_is_a_recorded_pass(self):
+        self.assertEqual(health._classify_recorded(good()), 'FIT_HEALTH_PASS')
+
+    def test_evidence_shape_defects(self):
+        for label, mutate in {
+            'extra engine key': lambda d: d.update(Extra=[]),
+            'engine block not a list': lambda d: d.update(R='x'),
+            'engine block a string of three characters': lambda d: d.update(R='abc'),
+            'engine block a tuple of three fits': lambda d: d.update(R=tuple(d['R'])),
+            'Julia block not a list': lambda d: d.update(Julia={}),
+            'R fit not a dict': lambda d: d['R'].__setitem__(2, 'x'),
+            'Julia fit not a dict': lambda d: d['Julia'].__setitem__(2, 'x'),
+            'Julia block too short': lambda d: d['Julia'].pop(),
+            'Julia block empty': lambda d: d.update(Julia=[]),
+            'R block empty': lambda d: d.update(R=[]),
+            'extra Julia row with an unhashable case': lambda d: d['Julia'].append(
+                dict(copy.deepcopy(d['Julia'][0]), case=['x'])),
+            'extra R row with an unhashable case': lambda d: d['R'].append(dict(copy.deepcopy(d['R'][0]), case={})),
+            'Julia block too long': lambda d: d['Julia'].append(copy.deepcopy(d['Julia'][0])),
+            'duplicate case': lambda d: d['Julia'][2].update(case=d['Julia'][1]['case']),
+            'unknown case': lambda d: d['Julia'][2].update(case='other'),
+            'unhashable case': lambda d: d['Julia'][2].update(case=['x']),
+            'non-string case': lambda d: d['R'][2].update(case=3),
+        }.items():
+            with self.subTest(label):
+                data = good()
+                mutate(data)
+                self.assertEqual(health._classify_recorded(data), INCOMPLETE_V)
+        data = good()
+        data['R'][1]['case'] = data['R'][0]['case']
+        data['R'][2].update(gradient=[2e-5, 0.0], max_abs_gradient=2e-5)  # failing, but its case set is invalid
+        self.assertEqual(health._classify_recorded(data), INCOMPLETE_V)  # an unbound case set confirms no failure
+        data = good()
+        data['R'][2].update(gradient=[2e-5, 0.0], max_abs_gradient=2e-5)
+        self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_FAIL')
+        data['Julia'][1]['case'] = 'other'  # another engine's invalid case set does not unconfirm R's failure
+        self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
+
+    def test_common_row_defects_on_both_engines(self):
+        s, d = self.set_, self.drop
+        common = [
+            ('objective unverified', s(objective_verified=False), INCOMPLETE_V),
+            ('objective_verified missing', d('objective_verified'), INCOMPLETE_V),
+            ('penalty configuration unrecorded', s(penalty_configuration_recorded=False), INCOMPLETE_V),
+            ('error recorded', s(error='x'), INCOMPLETE_V),
+            ('error key missing', d('error'), INCOMPLETE_V),
+            ('pd flag false', s(pd_hessian=False), INCOMPLETE_V),
+            ('pd flag non-bool', s(pd_hessian=1), INCOMPLETE_V),
+            ('pd flag None', s(pd_hessian=None), INCOMPLETE_V),
+            ('pd flag missing', d('pd_hessian'), INCOMPLETE_V),
+            ('gradient scalar NaN', s(max_abs_gradient=float('nan')), INCOMPLETE_V),
+            ('gradient scalar negative', s(max_abs_gradient=-1e-7), INCOMPLETE_V),
+            ('gradient scalar bool', s(max_abs_gradient=True), INCOMPLETE_V),
+            ('gradient scalar missing', d('max_abs_gradient'), INCOMPLETE_V),
+            ('gradient scalar contradicts vector', s(max_abs_gradient=5e-8), INTEGRITY_V),
+            ('gradient vector missing', d('gradient'), INCOMPLETE_V),
+            ('gradient vector empty', s(gradient=[]), INCOMPLETE_V),
+            ('gradient vector non-finite', s(gradient=[float('nan'), 0.0]), INCOMPLETE_V),
+            ('parameters missing', d('parameters'), INCOMPLETE_V),
+            ('parameters shorter than gradient', s(parameters=[0.0]), INCOMPLETE_V),
+            ('parameters non-finite', s(parameters=[float('inf'), 0.0]), INCOMPLETE_V),
+            ('free indices missing', d('free_indices'), INCOMPLETE_V),
+            ('free indices empty', s(free_indices=[]), INCOMPLETE_V),
+            ('free index out of range', s(free_indices=[1, 3]), INCOMPLETE_V),
+            ('free index zero', s(free_indices=[0, 1]), INCOMPLETE_V),
+            ('free index duplicated', s(free_indices=[1, 1]), INCOMPLETE_V),
+            ('free index float', s(free_indices=[1.0, 2.0]), INCOMPLETE_V),
+            ('recomputed objective NaN', s(recomputed_objective=float('nan')), INCOMPLETE_V),
+            ('recomputed objective missing', d('recomputed_objective'), INCOMPLETE_V),
+            ('optimizer objective missing', d('optimizer_objective'), INCOMPLETE_V),
+        ]
+        for engine in health.ENGINES:
+            self.check(common, engine)
+
+    def test_r_row_defects(self):
+        s, d = self.set_, self.drop
+        table = [
+            ('free indices partial (R needs all)', s(free_indices=[1]), INCOMPLETE_V),
+            ('recomputed objective differs', s(recomputed_objective=3.5), INCOMPLETE_V),
+            ('ridge penalised', s(ridge_penalised=True, ridge_tau=1.0), INCOMPLETE_V),
+            ('ridge flag int', s(ridge_penalised=0), INCOMPLETE_V),
+            ('ridge on with tau the string Inf', s(ridge_penalised=True, ridge_tau='Inf'), INCOMPLETE_V),
+            ('ridge on with tau NaN', s(ridge_penalised=True, ridge_tau=float('nan')), INCOMPLETE_V),
+            ('ridge on with tau zero', s(ridge_penalised=True, ridge_tau=0.0), INCOMPLETE_V),
+            ('ridge on with tau negative', s(ridge_penalised=True, ridge_tau=-1.0), INCOMPLETE_V),
+            ('ridge on with tau missing', lambda r, dta: (r.update(ridge_penalised=True), r.pop('ridge_tau')),
+             INCOMPLETE_V),
+            ('ridge flag missing', d('ridge_penalised'), INCOMPLETE_V),
+            ('ridge off but tau finite', s(ridge_tau=1.0), INCOMPLETE_V),
+            ('ridge tau missing', d('ridge_tau'), INCOMPLETE_V),
+            ('prior recorded', s(fixed_prior_state='prior'), INCOMPLETE_V),
+            ('prior missing', d('fixed_prior_state'), INCOMPLETE_V),
+            ('failing gradient is a confirmed failure', s(gradient=[2e-5, 0.0], max_abs_gradient=2e-5), 'FIT_HEALTH_FAIL'),
+            ('failing gradient, objective unverified', s(gradient=[2e-5, 0.0], max_abs_gradient=2e-5,
+                                                        objective_verified=False), INCOMPLETE_V),
+            ('failing gradient, error recorded', s(gradient=[2e-5, 0.0], max_abs_gradient=2e-5, error='x'),
+             INCOMPLETE_V),
+            ('failing gradient, parameters mismatched', s(gradient=[2e-5, 0.0], max_abs_gradient=2e-5,
+                                                         parameters=[0.0]), INCOMPLETE_V),
+        ]
+        self.check(table, 'R')
+
+    def test_julia_row_defects(self):
+        s, d = self.set_, self.drop
+        rec = lambda **kw: (lambda row, data: row['reconstruction'].update(kw))
+        opt = lambda **kw: (lambda row, data: row['optimizer'].update(kw))
+        table = [
+            ('penalty state ridge', s(penalty_state='ridge'), INCOMPLETE_V),
+            ('penalty state missing', d('penalty_state'), INCOMPLETE_V),
+            ('reconstruction missing', d('reconstruction'), INCOMPLETE_V),
+            ('parameters_match false', rec(parameters_match=False), INCOMPLETE_V),
+            ('loglik_matches false', rec(loglik_matches=False), INCOMPLETE_V),
+            ('reconstruction error recorded', rec(error='x'), INCOMPLETE_V),
+            ('reconstruction error key missing', lambda r, dta: r['reconstruction'].pop('error'), INCOMPLETE_V),
+            ('recovered parameters differ', rec(recovered_parameters=[0.0, 1.0]), INCOMPLETE_V),
+            ('recovered parameters missing', lambda r, dta: r['reconstruction'].pop('recovered_parameters'),
+             INCOMPLETE_V),
+            ('recovered parameters non-finite', rec(recovered_parameters=[0.0, float('nan')]), INCOMPLETE_V),
+            ('recovered loglik wrong', rec(recovered_loglik=-4.0), INCOMPLETE_V),
+            ('recovered loglik NaN', rec(recovered_loglik=float('nan')), INCOMPLETE_V),
+            ('optimizer block missing', d('optimizer'), INCOMPLETE_V),
+            ('profile unverified', opt(optimizer_profile_verified=False), INCOMPLETE_V),
+            ('optimizer error recorded', opt(optimizer_error='x'), INCOMPLETE_V),
+            ('optimizer error key missing', lambda r, dta: r['optimizer'].pop('optimizer_error'), INCOMPLETE_V),
+            ('profile value differs from minimum', opt(optimizer_profile_value=3.5), INCOMPLETE_V),
+            ('profile value NaN', opt(optimizer_profile_value=float('nan')), INCOMPLETE_V),
+            ('optimizer minimum missing', lambda r, dta: r['optimizer'].pop('optimizer_minimum'), INCOMPLETE_V),
+            ('optimizer point empty', opt(optimizer_parameters=[]), INCOMPLETE_V),
+            ('optimizer point non-finite', opt(optimizer_parameters=[0.0, float('nan')]), INCOMPLETE_V),
+            ('optimizer gradient length differs', opt(optimizer_gradient=[1e-7]), INCOMPLETE_V),
+            ('optimizer gradient non-finite', opt(optimizer_gradient=[float('inf'), 0.0]), INCOMPLETE_V),
+            ('optimizer scalar NaN', opt(optimizer_max_abs_gradient=float('nan')), INCOMPLETE_V),
+            ('optimizer scalar negative', opt(optimizer_max_abs_gradient=-1e-7), INCOMPLETE_V),
+            ('optimizer scalar contradicts vector', opt(optimizer_max_abs_gradient=5e-8), INTEGRITY_V),
+            ('optimizer gradient fails with a bound record',
+             opt(optimizer_gradient=[2e-5, 0.0], optimizer_max_abs_gradient=2e-5), 'FIT_HEALTH_FAIL'),
+            ('optimizer gradient fails, objective unverified',
+             lambda r, dta: (r['optimizer'].update(optimizer_gradient=[2e-5, 0.0], optimizer_max_abs_gradient=2e-5),
+                             r.update(objective_verified=False)), INCOMPLETE_V),
+            ('optimizer gradient fails, profile unverified',
+             lambda r, dta: r['optimizer'].update(optimizer_gradient=[2e-5, 0.0], optimizer_max_abs_gradient=2e-5,
+                                                  optimizer_profile_verified=False), INCOMPLETE_V),
+            ('Hessian asymmetry missing', d('hessian_asymmetry'), INCOMPLETE_V),
+            ('Hessian asymmetry limit missing', d('hessian_asymmetry_limit'), INCOMPLETE_V),
+            ('Hessian raw missing', d('hessian_raw'), INCOMPLETE_V),
+            ('Hessian missing', d('hessian'), INCOMPLETE_V),
+            ('stored Hessian is not the symmetrised raw', lambda r, dta: r['hessian'][0].__setitem__(0, 2.0),
+             INTEGRITY_V),
+            ('recorded asymmetry differs', s(hessian_asymmetry=1e-9), INTEGRITY_V),
+            ('recorded asymmetry limit differs', s(hessian_asymmetry_limit=1.0), INTEGRITY_V),
+            ('Hessian indefinite under the Float64 screen',
+             lambda r, dta: (r.update(pd_hessian=False), r['hessian'][0].__setitem__(0, -1.0),
+                             r['hessian_raw'][0].__setitem__(0, -1.0)), INCOMPLETE_V),
+            ('Hessian screen disagrees with the flag',
+             lambda r, dta: (r['hessian'][0].__setitem__(0, -1.0), r['hessian_raw'][0].__setitem__(0, -1.0)),
+             INCOMPLETE_V),
+            ('recomputed objective beyond roundoff (record self-consistent)',
+             s(recomputed_objective=3.5, objective_difference=0.5, objective_roundoff_limit=8 * EPS * 3.5),
+             INCOMPLETE_V),
+            ('recorded objective difference differs', s(objective_difference=1e-9), INTEGRITY_V),
+            ('recorded objective limit differs', s(objective_roundoff_limit=1.0), INTEGRITY_V),
+            ('recorded objective difference missing', d('objective_difference'), INCOMPLETE_V),
+            ('recorded objective limit missing', d('objective_roundoff_limit'), INCOMPLETE_V),
+        ]
+        self.check(table, 'Julia')
+
+    def test_boundaries_that_are_accepted(self):
+        """Exact boundary values accepted by the recorded rules (kills < versus <= swaps)."""
+        data = good()
+        for engine in health.ENGINES:
+            for row in data[engine]:
+                row.update(gradient=[0.0, 0.0], max_abs_gradient=0.0)
+        for row in data['Julia']:
+            row['optimizer'].update(optimizer_gradient=[0.0, 0.0], optimizer_max_abs_gradient=0.0)
+        self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_PASS')  # zero gradient is a valid scalar
+        # Objective roundoff: difference exactly equal to the limit (|objective| < 1 so the limit is 8 eps).
+        data = good()
+        row = data['Julia'][0]
+        r = 0.5 + 8 * EPS
+        row.update(optimizer_objective=0.5, recomputed_objective=r, objective_difference=8 * EPS,
+                   objective_roundoff_limit=8 * EPS)
+        row['optimizer'].update(optimizer_minimum=0.5, optimizer_profile_value=0.5)
+        row['reconstruction'].update(recovered_loglik=-0.5)
+        self.assertEqual(abs(0.5 - r), 8 * EPS)
+        self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_PASS')
+        # The floor of 1.0 in the limit: 12 eps at |objective| < 1 is beyond the limit 8 eps.
+        row.update(recomputed_objective=0.5 + 12 * EPS, objective_difference=12 * EPS)
+        self.assertEqual(health._classify_recorded(data), INCOMPLETE_V)
+        # Hessian asymmetry exactly equal to its bound (n = 2, max|H| <= 1 so the bound is 64 eps).
+        raw = [[1.0, 0.5], [0.5 + 64 * EPS, 1.0]]
+        sym = [[1.0, (0.5 + 0.5 + 64 * EPS) / 2], [(0.5 + 0.5 + 64 * EPS) / 2, 1.0]]
+        fit = {'hessian_raw': raw, 'hessian': sym, 'hessian_asymmetry': 64 * EPS,
+               'hessian_asymmetry_limit': 64 * EPS}
+        self.assertEqual(health.hessian_record_status(fit, 2), 'valid')
+        raw[1][0] = 0.5 + 96 * EPS  # asymmetry 96 eps > 64 eps with the 1.0 floor: not valid
+        sym[0][1] = sym[1][0] = (0.5 + 0.5 + 96 * EPS) / 2
+        fit.update(hessian_asymmetry=96 * EPS)
+        self.assertEqual(health.hessian_record_status(fit, 2), 'incomplete')
+
+    def test_gradient_on_a_non_free_index_is_not_part_of_the_recorded_maximum(self):
+        data = good()
+        for row in data['Julia']:
+            row.update(free_indices=[1], gradient=[1e-7, 5e-3])  # the second coordinate is pinned
+            row['optimizer'].update(optimizer_gradient=[1e-7, 0.0])
+        self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_PASS')
+        data['Julia'][1]['gradient'] = [1e-7, 0.0]
+        data['Julia'][1]['max_abs_gradient'] = 5e-3  # a scalar that includes a non-free entry contradicts the free maximum
+        self.assertEqual(health._classify_recorded(data), INTEGRITY_V)
+
+    def test_every_rejected_record_also_fails_closed_with_the_flag_enabled(self):
+        with enabled():
+            for label, engines, mutate in (
+                    ('reconstruction mismatch', ('Julia',), lambda r: r['reconstruction'].update(
+                        loglik_matches=False, recovered_loglik=-999.0)),
+                    ('objective unverified', health.ENGINES, lambda r: r.update(objective_verified=False)),
+                    ('pd flag False', health.ENGINES, lambda r: r.update(pd_hessian=False))):
+                for engine in engines:
+                    with self.subTest(label, engine=engine):
+                        data = certified_good()
+                        mutate(data[engine][0])
+                        self.assertNotEqual(health.classify(data), 'FIT_HEALTH_PASS')
+
+
+
+def k2_map(pinned_values, q_free=1):
+    """lambda_constraint_map for p = 3, K = 2 and the given {(i, k): value} pins.
+
+    Packed layout with q_free = 1: [beta, log sigma, L11, L22, L21, L31, L32] (indices 1..7).
+    """
+    entries = [[None, None] for _ in range(3)]
+    for (i, k), v in pinned_values.items():
+        entries[i - 1][k - 1] = v
+    return {'layout': health.LAMBDA_MAP_LAYOUT, 'p': 3, 'K': 2, 'q_free': q_free, 'entries': entries}
+
+
+class PinBindingTests(unittest.TestCase):
+    """W1: the pinned indices are recomputed from the fit's own lambda_constraint map."""
+
+    @staticmethod
+    def row(pinned_values, pinned, theta=None):
+        theta = theta if theta is not None else [0.1, -0.2, 1.0, 0.9, 0.0, 0.0, 0.0]
+        theta = list(theta)
+        return {'lambda_constraint_map': k2_map(pinned_values), 'pinned_indices': list(pinned), 'parameters': theta}
+
+    def test_map_derived_pins_for_every_loading_position(self):
+        cases = [({(2, 1): 0.25}, [5]), ({(3, 1): -0.5}, [6]), ({(3, 2): 0.75}, [7]),
+                 ({(1, 1): 1.0}, [3]), ({(2, 2): 0.9}, [4]),
+                 ({(2, 1): 0.25, (3, 1): -0.5, (3, 2): 0.75}, [5, 6, 7]), ({}, [])]
+        for pins, indices in cases:
+            with self.subTest(pins=pins):
+                theta = [0.1, -0.2, 1.0, 0.9, 0.0, 0.0, 0.0]
+                for (i, k), v in pins.items():
+                    theta[{(1, 1): 2, (2, 2): 3, (2, 1): 4, (3, 1): 5, (3, 2): 6}[(i, k)]] = v
+                row = self.row(pins, indices, theta)
+                self.assertIsNone(health._lambda_pin_binding(row))
+                self.assertIsNotNone(health._lambda_pin_binding(dict(row, pinned_indices=[1] if not indices else [])))
+        # a structural zero (above the diagonal) is not in theta: a number there pins nothing
+        row = self.row({(1, 2): 0.5}, [])
+        self.assertIsNone(health._lambda_pin_binding(row))
+        row = self.row({(1, 2): 0.5, (2, 1): 0.25}, [5], [0.1, -0.2, 1.0, 0.9, 0.25, 0.0, 0.0])
+        self.assertIsNone(health._lambda_pin_binding(row))
+
+    def test_a_rank_three_layout(self):
+        # p = 4, K = 3, q_free = 0: theta = [log sigma, L11, L22, L33, L21, L31, L41, L32, L42, L43] (10 entries)
+        entries = [[None] * 3 for _ in range(4)]
+        theta = [0.0] * 10
+        for (i, k), index, value in (((2, 1), 5, 0.5), ((3, 1), 6, 0.6), ((4, 1), 7, 0.7), ((3, 2), 8, 0.8),
+                                     ((4, 2), 9, 0.9), ((4, 3), 10, 1.1), ((2, 2), 3, 1.2)):
+            entries[i - 1][k - 1] = value
+            theta[index - 1] = value
+            row = {'lambda_constraint_map': {'layout': health.LAMBDA_MAP_LAYOUT, 'p': 4, 'K': 3, 'q_free': 0,
+                                             'entries': [list(r) for r in entries]},
+                   'parameters': list(theta), 'pinned_indices': sorted(
+                       j for j in (5, 6, 7, 8, 9, 10, 3) if theta[j - 1] != 0.0)}
+            with self.subTest(pinned=(i, k)):
+                self.assertIsNone(health._lambda_pin_binding(row))
+                wrong = dict(row, pinned_indices=[j + 1 if j < 10 else 9 for j in row['pinned_indices']])
+                self.assertIsInstance(health._lambda_pin_binding(wrong), str)
+        short = dict(row, parameters=theta[:-1])
+        self.assertIsInstance(health._lambda_pin_binding(short), str)  # 9 entries is not a rank-3 layout
+        self.assertIsInstance(health._lambda_pin_binding(dict(row, parameters=theta + [0.0])), str)
+
+    def test_binding_refuses_a_mismatch(self):
+        good_row = self.row({(2, 1): 0.25}, [5], [0.1, -0.2, 1.0, 0.9, 0.25, 0.0, 0.0])
+        self.assertIsNone(health._lambda_pin_binding(good_row))
+        wrong = {
+            'no map': lambda r: r.pop('lambda_constraint_map'),
+            'map not a dict': lambda r: r.update(lambda_constraint_map=[1]),
+            'extra key': lambda r: r['lambda_constraint_map'].update(extra=1),
+            'missing key': lambda r: r['lambda_constraint_map'].pop('entries'),
+            'wrong layout': lambda r: r['lambda_constraint_map'].update(layout='other'),
+            'p is bool': lambda r: r['lambda_constraint_map'].update(p=True),
+            'p is float': lambda r: r['lambda_constraint_map'].update(p=3.0),
+            'K is float': lambda r: r['lambda_constraint_map'].update(K=2.0),
+            'q_free is float': lambda r: r['lambda_constraint_map'].update(q_free=1.0),
+            'p zero': lambda r: r['lambda_constraint_map'].update(p=0),
+            'K zero': lambda r: r['lambda_constraint_map'].update(K=0),
+            'K above p': lambda r: r['lambda_constraint_map'].update(K=4),
+            'q_free negative': lambda r: r['lambda_constraint_map'].update(q_free=-1),
+            'entries not a list': lambda r: r['lambda_constraint_map'].update(entries='x'),
+            'entries too few rows': lambda r: r['lambda_constraint_map']['entries'].pop(),
+            'entries row not a list': lambda r: r['lambda_constraint_map']['entries'].__setitem__(0, 'ab'),
+            'entries row too short': lambda r: r['lambda_constraint_map']['entries'][0].pop(),
+            'entry NaN': lambda r: r['lambda_constraint_map']['entries'][2].__setitem__(0, float('nan')),
+            'entry bool': lambda r: r['lambda_constraint_map']['entries'][2].__setitem__(0, True),
+            'entry string': lambda r: r['lambda_constraint_map']['entries'][2].__setitem__(0, 'x'),
+            'theta too short': lambda r: r['parameters'].pop(),
+            'theta too long': lambda r: r['parameters'].append(0.0),
+            'parameters not a list': lambda r: r.update(parameters='x'),
+            'declared pins missing one': lambda r: r.update(pinned_indices=[]),
+            'declared pins have an extra': lambda r: r.update(pinned_indices=[5, 6]),
+            'declared pins are other indices': lambda r: r.update(pinned_indices=[6]),
+            'declared pins not a list': lambda r: r.update(pinned_indices=None),
+            'theta not at the pinned value': lambda r: r['parameters'].__setitem__(4, 0.2499),
+            'theta at the pin differs in the last index': lambda r: (
+                r['lambda_constraint_map']['entries'][2].__setitem__(1, 0.5),
+                r.update(pinned_indices=[5, 7])),
+        }
+        for label, mutate in wrong.items():
+            with self.subTest(label):
+                r = copy.deepcopy(good_row)
+                mutate(r)
+                self.assertIsInstance(health._lambda_pin_binding(r), str)
+
+    def test_layouts_with_other_dimensions(self):
+        # K = 1, no betas: theta = [log sigma, L11, L21, L31]
+        m = {'layout': health.LAMBDA_MAP_LAYOUT, 'p': 3, 'K': 1, 'q_free': 0,
+             'entries': [[None], [None], [0.5]]}
+        row = {'lambda_constraint_map': m, 'pinned_indices': [4], 'parameters': [0.0, 1.0, 0.0, 0.5]}
+        self.assertIsNone(health._lambda_pin_binding(row))
+        row['pinned_indices'] = [3]
+        self.assertIsInstance(health._lambda_pin_binding(row), str)
+        # K = p = 2, q_free = 2: theta = [b1, b2, log sigma, L11, L22, L21]
+        m = {'layout': health.LAMBDA_MAP_LAYOUT, 'p': 2, 'K': 2, 'q_free': 2,
+             'entries': [[None, None], [0.3, None]]}
+        row = {'lambda_constraint_map': m, 'pinned_indices': [6], 'parameters': [0.0, 0.0, 0.0, 1.0, 1.0, 0.3]}
+        self.assertIsNone(health._lambda_pin_binding(row))
+        row['parameters'] = [0.0, 0.0, 0.0, 1.0, 1.0]  # a K = p fit has K(K+1)/2 loadings: length 5 is wrong
+        self.assertIsInstance(health._lambda_pin_binding(row), str)
+
+    def test_a_hidden_bad_coordinate_is_not_certified(self):
+        """review3 W1 repro: coordinate 3 relabelled as pinned, no map or an empty map."""
+        m = [[2.0, 0.5, 0.0], [0.5, 1.5, 0.0], [0.0, 0.0, -9.0]]
+        row = writer_like(m, free=[1, 2], gradient=[1e-8, 2e-8, 5.0])
+        self.assertEqual(health.certify_fit(row)['verdict'], PASS)  # honest pin: bound, theta at the pinned value
+        liar = copy.deepcopy(row)
+        liar.pop('lambda_constraint_map')
+        out = health.certify_fit(liar)
+        self.assertEqual(out['verdict'], INC)
+        self.assertIn('lambda_constraint_map', out['reason'])
+        liar = copy.deepcopy(row)
+        liar['lambda_constraint_map'] = lambda_map(3)  # a map that pins nothing
+        out = health.certify_fit(liar)
+        self.assertEqual(out['verdict'], INC)
+        self.assertIn('pinned indices differ', out['reason'])
+        tampered = copy.deepcopy(row)
+        tampered['parameters'][2] = 0.001
+        tampered['reconstruction']['recovered_parameters'][2] = 0.001
+        self.assertEqual(health.certify_fit(tampered)['verdict'], INC)
+
+
+def writer_like(matrix, free, gradient, radius=1e-9):
+    """A certifiable Julia row for ``matrix`` (n x n, K = 1, q_free = 0) with the complement of free pinned at 0."""
+    n = len(matrix)
+    row = copy.deepcopy(good()['Julia'][0])
+    pinned = [i for i in range(1, n + 1) if i not in free]
+    row.update(parameters=[0.0] * n, gradient=list(gradient), free_indices=list(free), pinned_indices=pinned,
+               max_abs_gradient=max(abs(gradient[i - 1]) for i in free),
+               hessian=copy.deepcopy(matrix), hessian_raw=copy.deepcopy(matrix), hessian_asymmetry=0.0,
+               hessian_asymmetry_limit=32 * EPS * n * max(1.0, max(abs(x) for r in matrix for x in r)),
+               hessian_coordinate=COORD, hessian_error_radius=radius, gradient_error_radius=radius,
+               packed_gradient_error_radius=radius)
+    row['reconstruction']['recovered_parameters'] = [0.0] * n
+    top = row['max_abs_gradient']
+    row['optimizer'].update(optimizer_parameters=[0.0] * n, optimizer_gradient=[top] + [0.0] * (n - 1),
+                            optimizer_max_abs_gradient=top)
+    return bind(row, pinned)
+
+
+
+class OptimizerBindingTests(unittest.TestCase):
+    """F1: the optimizer-coordinate block is bound to the fit (objective, point, status)."""
+
+    def row(self):
+        return certified_good()['Julia'][0]
+
+    def test_bound_block_certifies(self):
+        self.assertIsNone(health._optimizer_binding(self.row()))
+        self.assertEqual(health.certify_fit(self.row())['verdict'], PASS)
+
+    def test_each_unbound_leaf_is_refused(self):
+        opt = lambda **kw: (lambda r: r['optimizer'].update(**kw))
+        cases = {
+            'optimizer missing': lambda r: r.pop('optimizer'),
+            'reconstruction missing': lambda r: r.pop('reconstruction'),
+            'optimizer not a dict': lambda r: r.update(optimizer=[]),
+            'reconstruction not a dict': lambda r: r.update(reconstruction=[]),
+            'point empty': opt(optimizer_parameters=[]),
+            'point not finite': opt(optimizer_parameters=[0.0, float('nan')]),
+            'point not a list': opt(optimizer_parameters='ab'),
+            'gradient not finite': opt(optimizer_gradient=[float('inf'), 0.0]),
+            'gradient empty': opt(optimizer_gradient=[]),
+            'gradient length differs': opt(optimizer_gradient=[1e-7]),
+            'scalar is not the maximum': opt(optimizer_max_abs_gradient=5e-8),
+            'scalar missing': lambda r: r['optimizer'].pop('optimizer_max_abs_gradient'),
+            'profile unverified': opt(optimizer_profile_verified=False),
+            'profile verified not a bool': opt(optimizer_profile_verified=1),
+            'optimizer error recorded': opt(optimizer_error='x'),
+            'optimizer error key missing': lambda r: r['optimizer'].pop('optimizer_error'),
+            'profile value differs': opt(optimizer_profile_value=3.0 + 1e-9),
+            'profile value NaN': opt(optimizer_profile_value=float('nan'), optimizer_minimum=float('nan')),
+            'minimum NaN': opt(optimizer_minimum=float('nan')),
+            'minimum disagrees with the fitted objective': opt(optimizer_profile_value=999.0, optimizer_minimum=999.0),
+            'fitted objective missing': lambda r: r.pop('optimizer_objective'),
+            'fitted objective NaN': lambda r: r.update(optimizer_objective=float('nan')),
+            'reconstruction from another point': lambda r: r['reconstruction'].update(optimizer_parameters=[42.0, 0.0]),
+            'reconstruction point missing': lambda r: r['reconstruction'].pop('optimizer_parameters'),
+            'optimizer radius status missing': lambda r: r['optimizer'].pop('radius_status'),
+            'optimizer radius status proven': opt(radius_status='proven'),
+            'record radius status missing': lambda r: r.pop('radius_status'),
+            'record radius status proven': lambda r: r.update(radius_status='proven'),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(label):
+                r = self.row()
+                mutate(r)
+                self.assertIsInstance(health._optimizer_binding(r), str)
+                self.assertEqual(health.certify_fit(r)['verdict'], INC)
+
+    def test_objective_agreement_follows_the_roundoff_rule_exactly(self):
+        """|minimum - objective| <= 8 eps max(1, |minimum|, |objective|), boundary included."""
+        def with_values(objective, minimum):
+            r = self.row()
+            r.update(optimizer_objective=objective)
+            r['optimizer'].update(optimizer_minimum=minimum, optimizer_profile_value=minimum)
+            return r
+        self.assertIsNone(health._optimizer_binding(with_values(0.5, 0.5 + 8 * EPS)))  # equal to the limit
+        self.assertIsInstance(health._optimizer_binding(with_values(0.5, 0.5 + 8.5 * EPS)), str)
+        self.assertIsNone(health._optimizer_binding(with_values(0.5 + 8 * EPS, 0.5)))
+        big = 4096.0  # limit scales with the larger magnitude: 8 eps * 4096
+        self.assertIsNone(health._optimizer_binding(with_values(big, big + 8 * EPS * big)))
+        self.assertIsInstance(health._optimizer_binding(with_values(big, big + 9 * EPS * big)), str)
+
+    def test_review3_f1_repros_are_refused(self):
+        r = self.row()
+        r['optimizer'].update(optimizer_minimum=999.0, optimizer_profile_value=999.0)
+        self.assertEqual(health.certify_fit(r)['verdict'], INC)  # (A) contradictory objective
+        r = self.row()
+        r['optimizer'].update(optimizer_parameters=[42.0, 0.0], optimizer_gradient=[1e-7, 0.0])
+        self.assertEqual(health.certify_fit(r)['verdict'], INC)  # (B) point not the reconstruction's
+        data = certified_good()
+        data['Julia'][0]['optimizer'].update(optimizer_minimum=999.0, optimizer_profile_value=999.0)
+        with enabled():
+            self.assertNotEqual(health.classify(data), 'FIT_HEALTH_PASS')
+
+
+class CertifyFitTests(unittest.TestCase):
+    """M2, M3/W4, F3, F5 and W2/W3 at the per-fit level."""
+
+    def test_m2_certify_fit_alone_needs_the_packed_gradient_vector(self):
+        vec = 'packed gradient vector missing'
+        free = 'free indices missing or invalid'
+        for label, mutate, reason in (
+            ('vector missing', lambda r: r.pop('gradient'), vec),
+            ('vector empty', lambda r: r.update(gradient=[]), vec),
+            ('vector not a list', lambda r: r.update(gradient='ab'), vec),
+            ('vector non-finite', lambda r: r.update(gradient=[float('nan'), 0.0]), vec),
+            ('vector shorter than parameters', lambda r: r.update(gradient=[1e-7]), vec),
+            ('parameters missing', lambda r: r.pop('parameters'), vec),
+            ('parameters non-finite', lambda r: r.update(parameters=[float('inf'), 0.0]), vec),
+            ('free indices missing', lambda r: r.pop('free_indices'), free),
+            ('free indices empty', lambda r: r.update(free_indices=[]), free),
+            ('free indices not a list', lambda r: r.update(free_indices='12'), free),
+            ('free index out of range', lambda r: r.update(free_indices=[1, 3]), free),
+            ('free index zero', lambda r: r.update(free_indices=[0, 1]), free),
+            ('free index duplicated', lambda r: r.update(free_indices=[1, 1]), free),
+            ('free index bool', lambda r: r.update(free_indices=[True, 2]), free),
+            ('free index float', lambda r: r.update(free_indices=[1.0, 2]), free),
+            ('scalar is not the free maximum', lambda r: r.update(max_abs_gradient=5e-8), 'not the maximum over the free'),
+            ('scalar missing', lambda r: r.pop('max_abs_gradient'), 'not the maximum over the free'),
+        ):
+            with self.subTest(label):
+                row = certified_good()['Julia'][0]
+                mutate(row)
+                out = health.certify_fit(row)
+                self.assertEqual(out['verdict'], INC)
+                self.assertIn(reason, out['reason'])  # refused for this reason, not by a caught exception
+
+    def test_m3_the_two_gradient_bounds_are_independent_and_both_required(self):
+        base = certified_good()['Julia'][0]
+        self.assertEqual(health.certify_fit(base)['verdict'], PASS)
+        for key in ('gradient_error_radius', 'packed_gradient_error_radius'):
+            for bad in (None, 0.0, -1e-9, float('nan'), True, '1e-9', 1e-30):
+                with self.subTest(key=key, bad=bad):
+                    row = copy.deepcopy(base)
+                    row[key] = bad
+                    self.assertEqual(health.certify_fit(row)['verdict'], INC)
+        # a packed gradient large enough to straddle the limit blocks a pass but is never a failure
+        row = copy.deepcopy(base)
+        row.update(gradient=[2e-5, 0.0], max_abs_gradient=2e-5)
+        out = health.certify_fit(row)
+        self.assertEqual((out['verdict'], out['gradient']), (INC, INC))
+        # ... and its radius matters: the radius may not close the gap
+        row = copy.deepcopy(base)
+        row.update(gradient=[9e-6, 0.0], max_abs_gradient=9e-6, packed_gradient_error_radius=2e-6)
+        self.assertEqual(health.certify_fit(row)['verdict'], INC)
+        row['packed_gradient_error_radius'] = 5e-7
+        self.assertEqual(health.certify_fit(row)['verdict'], PASS)
+        # optimizer gradient is the signed rule: its failure is a failure, its straddle is not
+        for opt_value, verdict in ((2e-5, FAIL), (9e-6, INC), (9e-7, PASS)):
+            row = copy.deepcopy(base)
+            row['optimizer'].update(optimizer_gradient=[opt_value, 0.0], optimizer_max_abs_gradient=opt_value)
+            row['gradient_error_radius'] = 1e-6
+            with self.subTest(opt_value=opt_value):
+                self.assertEqual(health.certify_fit(row)['verdict'], verdict)
+
+    def test_pinned_coordinate_gradient_is_not_part_of_the_free_maximum(self):
+        m = [[2.0, 0.5, 0.0], [0.5, 1.5, 0.0], [0.0, 0.0, -9.0]]
+        row = writer_like(m, [1, 2], [1e-8, 2e-8, 5.0])  # pinned third coordinate with a large gradient
+        self.assertEqual(row['max_abs_gradient'], 2e-8)
+        self.assertEqual(health.certify_fit(row)['verdict'], PASS)
+        row['gradient'] = [5.0, 2e-8, 1e-8]  # large gradient on a free coordinate
+        row['max_abs_gradient'] = 5.0
+        self.assertEqual(health.certify_fit(row)['verdict'], INC)
+        row = writer_like(m, [1, 2], [2e-8, 1e-8, 5.0])
+        row['max_abs_gradient'] = 5.0  # a scalar that includes the pinned entry is not the free maximum
+        self.assertEqual(health.certify_fit(row)['verdict'], INC)
+
+    def test_reasons_name_the_blocking_part(self):
+        row = certified_good()['Julia'][0]
+        row['packed_gradient_error_radius'] = 1e-30  # below the representation floor of the gradient
+        out = health.certify_fit(row)
+        self.assertEqual(out['reason'], 'gradient bound not certified')
+        row['packed_gradient_error_radius'] = None
+        self.assertEqual(health.certify_fit(row)['reason'], 'gradient error radius not recorded or not positive')
+        row = certified_good()['Julia'][0]
+        row['hessian_error_radius'] = None
+        self.assertIn('radius', health.certify_fit(row)['reason'])
+
+    def test_f3_a_gradient_radius_of_exactly_zero_is_refused(self):
+        self.assertEqual(health.certify_gradient(0.0, 0.0), INC)
+        self.assertEqual(health.certify_gradient(1e-7, 0.0), INC)
+        self.assertEqual(health.certify_gradient(1e-7, -0.0), INC)
+        data = certified_good()
+        for row in data['Julia']:
+            row.update(gradient=[0.0, 0.0], max_abs_gradient=0.0, gradient_error_radius=0.0,
+                       packed_gradient_error_radius=0.0)
+            row['optimizer'].update(optimizer_gradient=[0.0, 0.0], optimizer_max_abs_gradient=0.0)
+        with enabled():
+            self.assertEqual(health._classify_recorded(data), 'FIT_HEALTH_PASS')
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+            for row in data['Julia']:
+                row['gradient_error_radius'] = row['packed_gradient_error_radius'] = 1e-9
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_PASS')  # zero gradient, positive radius
+
+    def test_f4_the_radius_floor_uses_the_peak_of_the_free_block(self):
+        eps = 2.0 ** -52
+        # off-diagonal peak 3.0 in the free block {2, 3} of a 3 x 3 matrix
+        m = [[1.0, 0.0, 0.0], [0.0, 0.5, 3.0], [0.0, 3.0, 0.5]]
+        floor = 2 * eps * 3.0
+        out = hess(m, [2, 3], math.nextafter(floor, 0.0), pinned_indices=[1])
+        self.assertEqual(out['verdict'], INC)
+        self.assertIn('floor', out['reason'])
+        self.assertEqual(hess(m, [2, 3], floor, pinned_indices=[1])['verdict'], FAIL)  # indefinite: certified
+        # the pinned coordinate does not raise the floor
+        m = [[1e30, 0.0, 0.0], [0.0, 1.0, 0.5], [0.0, 0.5, 1.0]]
+        self.assertEqual(hess(m, [2, 3], 1e-9, pinned_indices=[1])['verdict'], PASS)
+        # peak in the last free cell of a free block that does not start at index 1
+        m = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 4.0]]
+        floor = 2 * eps * 4.0
+        self.assertEqual(hess(m, [2, 3], math.nextafter(floor, 0.0), pinned_indices=[1])['verdict'], INC)
+        self.assertEqual(hess(m, [2, 3], floor, pinned_indices=[1])['verdict'], PASS)
+        m = [[1.0, 0.0], [0.0, 4.0]]
+        floor = 2 * eps * 4.0
+        self.assertEqual(hess(m, [1, 2], math.nextafter(floor, 0.0))['verdict'], INC)
+        self.assertEqual(hess(m, [1, 2], floor)['verdict'], PASS)
+        # peak in a leading cell only
+        m = [[4.0, 0.0], [0.0, 1.0]]
+        self.assertEqual(hess(m, [1, 2], math.nextafter(floor, 0.0))['verdict'], INC)
+        self.assertEqual(hess(m, [2, 1], floor)['verdict'], PASS)
+
+    def test_f5_a_certified_hessian_failure_needs_a_well_formed_optimizer_block_and_radii(self):
+        def failing():
+            data = certified_good()
+            row = data['Julia'][0]
+            row['hessian'] = row['hessian_raw'] = [[-1.0, 0.0], [0.0, 1.0]]
+            return data, row
+        data, row = failing()
+        with enabled():
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_FAIL_WITH_INCOMPLETE')
+        for label, mutate in {
+            'optimizer parameters a string': lambda r: r['optimizer'].update(optimizer_parameters='x'),
+            'gradient radius a bool': lambda r: r.update(gradient_error_radius=True),
+            'gradient radius missing': lambda r: r.pop('gradient_error_radius'),
+            'gradient radius zero': lambda r: r.update(gradient_error_radius=0.0),
+            'packed radius zero': lambda r: r.update(packed_gradient_error_radius=0.0),
+            'packed radius negative': lambda r: r.update(packed_gradient_error_radius=-1e-9),
+            'packed radius missing': lambda r: r.pop('packed_gradient_error_radius'),
+            'optimizer gradient missing': lambda r: r['optimizer'].pop('optimizer_gradient'),
+            'optimizer scalar wrong': lambda r: r['optimizer'].update(optimizer_max_abs_gradient=5e-8),
+            'unbound optimizer point': lambda r: r['reconstruction'].update(optimizer_parameters=[7.0, 0.0]),
+        }.items():
+            with self.subTest(label):
+                data, row = failing()
+                mutate(row)
+                with enabled():
+                    self.assertNotIn(health.classify(data), ('FIT_HEALTH_FAIL', 'FIT_HEALTH_FAIL_WITH_INCOMPLETE'))
+                self.assertEqual(health.certify_fit(row)['verdict'], INC)
+
+    def test_w2_pass_carries_the_declared_unproven_radius_status(self):
+        row = certified_good()['Julia'][0]
+        self.assertEqual(health.certify_fit(row)['radius_status'], 'declared_unproven')
+        self.assertEqual(health.RADIUS_STATUS, 'declared_unproven')
+        row['hessian_error_radius'] = None
+        self.assertIsNone(health.certify_fit(row)['radius_status'])  # nothing certified, nothing qualified
+        data = certified_good()
+        with enabled():
+            verdict = health.classify(data)
+            self.assertEqual(verdict, 'FIT_HEALTH_PASS')
+            self.assertEqual(verdict.radius_status, 'declared_unproven')
+            self.assertEqual(json.loads(json.dumps(verdict)), 'FIT_HEALTH_PASS')  # still a plain string
+            data['Julia'][1]['radius_status'] = 'proven'  # no proof procedure exists: refused
+            other = health.classify(data)
+            self.assertEqual(other, 'FIT_HEALTH_INCOMPLETE')
+            self.assertIsNone(getattr(other, 'radius_status', None))
+        self.assertIsNone(getattr(health.classify(certified_good()), 'radius_status', None))  # held: no pass at all
+
+
+class EvidenceBindingTests(unittest.TestCase):
+    """F7: case and dimension binding across the six records (necessary consistency only)."""
+
+    @staticmethod
+    def with_q(data, qs):
+        for row, q in zip(data['Julia'], qs):
+            row['lambda_constraint_map']['q_free'] = q
+        return data
+
+    def test_consistent_evidence_is_bound(self):
+        data = certified_good()
+        self.assertIsNone(health._evidence_binding(data))
+        # Different dimensions per case: p = 1, K = 1 gives q_free + 2 packed parameters; R and Julia
+        # optimizer points follow with one constant offset (R carries one more parameter here).
+        data = self.with_q(certified_good(), [0, 1, 2])
+        for i, q in enumerate([0, 1, 2]):
+            data['Julia'][i]['parameters'] = [0.0] * (q + 2)
+            data['Julia'][i]['optimizer']['optimizer_parameters'] = [0.0] * (q + 1)
+            data['R'][i]['parameters'] = [0.0] * (q + 2)
+        self.assertIsNone(health._evidence_binding(data))
+        data['R'][2]['parameters'] = [0.0] * 5  # offset no longer constant
+        self.assertIsInstance(health._evidence_binding(data), str)
+
+    def test_each_inconsistency_is_refused(self):
+        def reason(mutate):
+            data = certified_good()
+            mutate(data)
+            return health._evidence_binding(data)
+        cases = {
+            'p differs across cases': lambda d: d['Julia'][1]['lambda_constraint_map'].update(p=2),
+            'K differs across cases': lambda d: d['Julia'][2]['lambda_constraint_map'].update(K=2),
+            'no-fixed-effects case has coefficients': lambda d: self.with_q(d, [1, 1, 1]),
+            'coefficient counts decrease': lambda d: self.with_q(d, [0, 2, 1]),
+            'q_free not an int': lambda d: d['Julia'][1]['lambda_constraint_map'].update(q_free=0.0),
+            'map missing': lambda d: d['Julia'][1].pop('lambda_constraint_map'),
+            'optimizer point missing': lambda d: d['Julia'][1]['optimizer'].pop('optimizer_parameters'),
+            'R parameters missing': lambda d: d['R'][1].pop('parameters'),
+            'R/Julia counts bound to different cases': lambda d: d['R'][2].update(parameters=[0.0, 0.0, 0.0],
+                                                                                  gradient=[1e-7, 0.0, 0.0],
+                                                                                  free_indices=[1, 2, 3]),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(label):
+                self.assertIsInstance(reason(mutate), str)
+
+    def test_unbound_evidence_cannot_pass_or_confirm_a_failure(self):
+        data = certified_good()
+        data['Julia'][2]['lambda_constraint_map'].update(p=2)  # layout length also off: certify_fit refuses it too
+        with enabled():
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        # internally consistent per row, inconsistent across rows: still refused
+        data = certified_good()
+        row = data['Julia'][2]
+        three_parameter_julia([row], [1, 2], pinned=None)
+        row.pop('pinned_indices', None)
+        row['pinned_indices'] = []
+        row['free_indices'] = [1, 2, 3]
+        row['hessian'] = row['hessian_raw'] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+        row['hessian_asymmetry_limit'] = 32 * EPS * 3
+        bind(row, ())
+        self.assertEqual(health.certify_fit(row)['verdict'], PASS)  # the row alone is certifiable
+        with enabled():
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+            certs, confirmable = health.certify_evidence(data)
+        self.assertEqual([c['verdict'] for c in certs], [INC, INC, INC])  # an unbound case set passes nothing
+        self.assertFalse(confirmable)
+        self.assertTrue(all(c['confirmable'] is False for c in certs))
+        # a failure on an unbound case set is not confirmed either
+        data = certified_good()
+        data['Julia'][0]['hessian'] = data['Julia'][0]['hessian_raw'] = [[-1.0, 0.0], [0.0, 1.0]]
+        self.assertTrue(health.certify_evidence(data)[1])
+        data['Julia'][1]['lambda_constraint_map']['q_free'] = 5  # decreasing counts along the case order
+        data['Julia'][1]['parameters'] = [0.0] * 7
+        data['Julia'][2]['lambda_constraint_map']['q_free'] = 0
+        certs, confirmable = health.certify_evidence(data)
+        self.assertFalse(confirmable)
+        self.assertEqual((certs[0]['verdict'], certs[0]['confirmable']), (FAIL, False))
+        with enabled():
+            self.assertNotEqual(health.classify(data), 'FIT_HEALTH_FAIL')
+
+    def test_certify_evidence_shape_results(self):
+        self.assertEqual(health.certify_evidence({}), ([], False))
+        self.assertEqual(health.certify_evidence({'Julia': 'x', 'R': []}), ([], False))
+        short = certified_good()
+        short['Julia'].pop()
+        self.assertEqual(health.certify_evidence(short), ([], False))
+        dup = certified_good()
+        dup['Julia'][2]['case'] = dup['Julia'][1]['case']
+        certs, confirmable = health.certify_evidence(dup)
+        self.assertEqual((len(certs), confirmable), (3, False))
+        other = certified_good()
+        other['Julia'][2]['case'] = 'other'  # a unique string that is not a case: the set differs, the count does not
+        certs, confirmable = health.certify_evidence(other)
+        self.assertEqual((len(certs), confirmable), (3, False))
+        unbound = certified_good()
+        unbound['Julia'][2]['objective_verified'] = False
+        certs, confirmable = health.certify_evidence(unbound)
+        self.assertFalse(confirmable)
+        self.assertTrue(certs[0]['confirmable'])  # the other rows are unaffected
+        ok_certs, ok_conf = health.certify_evidence(certified_good())
+        self.assertTrue(ok_conf)
+        self.assertEqual([c['verdict'] for c in ok_certs], [PASS] * 3)
+        self.assertTrue(all(c['confirmable'] for c in ok_certs))
+        bad_r = certified_good()
+        bad_r['R'] = 'garbage'
+        certs, confirmable = health.certify_evidence(bad_r)
+        self.assertEqual([c['verdict'] for c in certs], [PASS] * 3)  # still certified, never confirmable
+        self.assertFalse(any(c['confirmable'] for c in certs))
+
+
+
+class WorkCapTests(unittest.TestCase):
+    """M5: the verdict is a function of the record alone; a deterministic work cap replaces wall-clock."""
+
+    def test_no_clock_is_consulted(self):
+        self.assertFalse(hasattr(health, 'time'))
+        self.assertFalse(hasattr(health, 'CERT_MAX_SECONDS'))
+        with patch('time.monotonic', side_effect=AssertionError('the certifier must not read the clock')):
+            self.assertEqual(hess([[2.0, 0.5], [0.5, 1.0]], [1, 2])['verdict'], PASS)
+
+    def test_work_meter_arithmetic(self):
+        w = health._Work(10)
+        self.assertEqual((w.cap, w.used), (10, 0))
+        w.charge(Fraction(1))  # numerator 1 bit + denominator 1 bit = 2 bits: 1 + 2 // 64
+        self.assertEqual(w.used, 1)
+        w.charge(Fraction(2 ** 31 - 1, 2 ** 31), Fraction(2 ** 31 - 1, 2 ** 31))  # 31 + 32 bits each
+        self.assertEqual(w.used, 1 + 1 + 126 // 64)
+        w.charge(Fraction(2 ** 63 - 1, 1), Fraction(1))  # 63 + 1 + 1 + 1 = 66 bits
+        self.assertEqual(w.used, 1 + 2 + 1 + 66 // 64)
+        w = health._Work(10)
+        w.charge(Fraction(2 ** 62))  # exactly 64 bits (63 + 1): the divisor is 64, not 65
+        self.assertEqual(w.used, 2)
+        w = health._Work(3)
+        for _ in range(3):
+            w.charge(Fraction(1))  # used == cap is allowed
+        with self.assertRaises(health._CertRefusal):
+            w.charge(Fraction(1))  # cap + 1 is refused
+        w = health._Work(0)
+        with self.assertRaises(health._CertRefusal):
+            w.charge(Fraction(1))
+
+    def test_work_units_are_deterministic_and_recorded(self):
+        ident = lambda k: [[1.0 if i == j else 0.0 for j in range(k)] for i in range(k)]
+        first = hess(ident(3), [1, 2, 3])
+        self.assertEqual(first['verdict'], PASS)
+        self.assertEqual(first['work_units'], hess(ident(3), [1, 2, 3])['work_units'])
+        self.assertEqual(hess([[2.0]], [1])['work_units'], 0)  # one pivot, no multiply-adds
+        self.assertEqual(hess([[2.0, 0.5], [0.5, 1.0]], [1, 2])['work_units'], 9)  # the pinned count is deterministic
+        self.assertEqual(first['work_units'], 21)
+        self.assertEqual(hess([[-1.0]], [1])['work_units'], 0)
+        refused = hess(ident(3), [1, 2, 3], coordinate='nope')
+        self.assertEqual(refused['work_units'], 0)  # refused before any work
+        # FAIL runs the second (indefinite) pass as well
+        self.assertEqual(hess([[1.0, 2.0], [2.0, 1.0]], [1, 2])['verdict'], FAIL)
+
+    def test_cap_refusal_is_reproducible_and_clock_free(self):
+        ident = lambda k: [[1.0 if i == j else 0.0 for j in range(k)] for i in range(k)]
+        need = hess(ident(3), [1, 2, 3])['work_units']
+        ok = health.certify_hessian(ident(3), [1, 2, 3], COORD, 1e-9, 0.0, [], max_work=need, parameter_count=3)
+        self.assertEqual(ok['verdict'], PASS)
+        low = health.certify_hessian(ident(3), [1, 2, 3], COORD, 1e-9, 0.0, [], max_work=need - 1, parameter_count=3)
+        self.assertEqual(low['verdict'], INC)
+        self.assertIn('work cap', low['reason'])
+        self.assertEqual(low['work_units'], need)  # the meter stops at the first charge above the cap
+        for _ in range(2):
+            again = health.certify_hessian(ident(3), [1, 2, 3], COORD, 1e-9, 0.0, [], max_work=need - 1,
+                                           parameter_count=3)
+            self.assertEqual((again['verdict'], again['reason']), (low['verdict'], low['reason']))
+
+    def test_the_default_cap_admits_a_full_block_and_refuses_an_enormous_exact_computation(self):
+        self.assertEqual(health.CERT_MAX_WORK, 2000000)
+        self.assertEqual(health.CERT_MAX_FREE_DIMENSION, 32)
+        import random
+        rnd = random.Random(3)
+
+        def block(span):
+            n = 32
+            m = [[0.0] * n for _ in range(n)]
+            for i in range(n):
+                for j in range(i):
+                    m[i][j] = m[j][i] = rnd.uniform(-1, 1) * 2.0 ** rnd.randint(-span, span)
+            for i in range(n):
+                m[i][i] = 1e3 * 2.0 ** rnd.randint(-span, span) + sum(abs(x) for x in m[i])
+            return m
+        for span, verdict, reason in ((40, PASS, None), (300, INC, 'work cap')):
+            m = block(span)
+            peak = max(abs(x) for r in m for x in r)
+            out = health.certify_hessian(m, list(range(1, 33)), COORD, 1024 * 2.0 ** -52 * max(1.0, peak), 0.0, [],
+                                         parameter_count=32)
+            with self.subTest(span=span):
+                self.assertEqual(out['verdict'], verdict)
+                if reason:
+                    self.assertIn(reason, out['reason'])
+
+    def test_size_cap_literals(self):
+        ident = lambda k: [[1.0 if i == j else 0.0 for j in range(k)] for i in range(k)]
+        self.assertEqual(hess(ident(32), list(range(1, 33)))['verdict'], PASS)
+        out = hess(ident(33), list(range(1, 34)))
+        self.assertEqual(out['verdict'], INC)
+        self.assertIn('size cap of 32', out['reason'])
+
+
+class HostileObjectTests(unittest.TestCase):
+    """F6: classify and certify_fit never raise on objects whose comparison or hashing raises."""
+
+    class Boom:
+        __hash__ = None
+
+        def __eq__(self, other):
+            raise RuntimeError('boom')
+        __ne__ = __eq__
+        __lt__ = __gt__ = __le__ = __ge__ = __eq__
+
+        def __bool__(self):
+            raise RuntimeError('boom')
+
+    def test_classify_returns_incomplete_never_raises(self):
+        for flag in (False, True):
+            for engine in health.ENGINES:
+                keys = ['case', 'pd_hessian', 'max_abs_gradient', 'gradient', 'parameters', 'free_indices', 'error']
+                keys += (['fixed_prior_state', 'ridge_tau'] if engine == 'R' else
+                         ['penalty_state', 'hessian', 'optimizer', 'reconstruction', 'lambda_constraint_map',
+                          'hessian_error_radius', 'radius_status'])
+                for key in keys:
+                    with self.subTest(flag=flag, engine=engine, key=key):
+                        data = certified_good()
+                        data[engine][0][key] = self.Boom()
+                        with patch.object(health, 'NUMERICAL_ADMISSION_IMPLEMENTED', flag):
+                            self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        data = certified_good()
+        data['Julia'][0]['penalty_state'] = self.Boom()
+        with self.assertRaises(RuntimeError):
+            health._classify_recorded(data)  # the unguarded layer still raises: only classify is total
+
+    def test_certify_fit_returns_incomplete_never_raises(self):
+        row = certified_good()['Julia'][0]
+        row['hessian_error_radius'] = self.Boom()
+        out = health.certify_fit(row)
+        self.assertEqual(out['verdict'], INC)
+        self.assertEqual(set(out), {'verdict', 'reason', 'hessian', 'gradient', 'radius_status'})
+        self.assertEqual(health.certify_fit(self.Boom())['verdict'], INC)
+
+    def test_deep_nesting_and_cycles_are_incomplete(self):
+        data = certified_good()
+        cycle = []
+        cycle.append(cycle)
+        data['Julia'][0]['hessian'] = cycle
+        with enabled():
+            self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+        deep = []
+        for _ in range(100000):
+            deep = [deep]
+        data = certified_good()
+        data['R'][0]['gradient'] = deep
+        self.assertEqual(health.classify(data), 'FIT_HEALTH_INCOMPLETE')
+
+
+class HelperUnitTests(unittest.TestCase):
+    """Direct controls for the helper predicates (F2/F8 survivors)."""
+
+    def test_finite_vector(self):
+        self.assertTrue(health._finite_vector([1.0, 2]))
+        for bad in ([], (1.0,), 'ab', None, [float('nan')], [1.0, True], [1.0, '2'], [1, float('inf')]):
+            self.assertFalse(health._finite_vector(bad))
+
+    def test_hessian_pd_shape_and_numeric_checks(self):
+        ident = [[1.0, 0.0], [0.0, 1.0]]
+        self.assertIs(health.hessian_pd(ident, [1, 2], 2), True)
+        for label, matrix in {'not a list': 'ab', 'rows tuples': ((1.0, 0.0), (0.0, 1.0)),
+                              'ragged': [[1.0, 0.0], [0.0]], 'non-finite': [[1.0, 0.0], [0.0, float('nan')]],
+                              'asymmetric': [[1.0, 0.1], [0.0, 1.0]], 'wrong size': [[1.0]],
+                              'bool entry': [[True, 0.0], [0.0, 1.0]]}.items():
+            with self.subTest(label):
+                self.assertIsNone(health.hessian_pd(matrix, [1, 2], 2))
+        self.assertIsNone(health.hessian_pd([[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]], [1, 2], 2))
+        self.assertIsNone(health.hessian_pd([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], [1, 2], 3))
+        # pivots: exactly zero is not positive definite; the 3 x 3 recursion uses both products
+        self.assertIs(health.hessian_pd([[1.0, 1.0], [1.0, 1.0]], [1, 2], 2), False)
+        self.assertIs(health.hessian_pd([[1.0, 1.1], [1.1, 1.0]], [1, 2], 2), False)
+        self.assertIs(health.hessian_pd([[0.0]], [1], 1), False)
+        dense = [[1.0, 0.5, 0.5], [0.5, 1.0, 0.5], [0.5, 0.5, 1.0]]
+        self.assertIs(health.hessian_pd(dense, [1, 2, 3], 3), True)
+        notpd = [[1.0, 0.9, 0.9], [0.9, 1.0, -0.9], [0.9, -0.9, 1.0]]
+        self.assertIs(health.hessian_pd(notpd, [1, 2, 3], 3), False)
+        self.assertIs(health.hessian_pd([[4.0, 2.0, 2.0], [2.0, 5.0, 3.0], [2.0, 3.0, 6.0]], [1, 2, 3], 3), True)
+        # only the free block matters
+        pinned = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -5.0]]
+        self.assertIs(health.hessian_pd(pinned, [1, 2], 3), True)
+        self.assertIs(health.hessian_pd(pinned, [1, 3], 3), False)
+
+    def test_hessian_record_status_shape_and_precedence(self):
+        def fit(raw, sym=None, asym=0.0, limit=None):
+            n = len(raw)
+            limit = 32 * EPS * n * max(1.0, max(abs(x) for r in raw for x in r)) if limit is None else limit
+            return {'hessian_raw': raw, 'hessian': sym if sym is not None else raw,
+                    'hessian_asymmetry': asym, 'hessian_asymmetry_limit': limit}
+        ident = [[1.0, 0.0], [0.0, 1.0]]
+        self.assertEqual(health.hessian_record_status(fit(ident), 2), 'valid')
+        self.assertTrue(health.hessian_roundoff_valid(fit(ident), 2))
+        self.assertFalse(health.hessian_roundoff_valid(fit(ident, asym=1e-9), 2))
+        self.assertFalse(health.hessian_roundoff_valid(fit(ident, sym=[[1.0, 0.1], [0.1, 1.0]]), 2))
+        self.assertFalse(health.hessian_roundoff_valid({}, 2))
+        for label, bad in {'raw missing': lambda f: f.pop('hessian_raw'), 'sym missing': lambda f: f.pop('hessian'),
+                           'raw ragged': lambda f: f.update(hessian_raw=[[1.0, 0.0], [0.0]]),
+                           'sym ragged': lambda f: f.update(hessian=[[1.0], [0.0, 1.0]]),
+                           'raw non-finite': lambda f: f.update(hessian_raw=[[1.0, 0.0], [0.0, float('inf')]]),
+                           'raw not a list of lists': lambda f: f.update(hessian_raw=['ab', 'cd']),
+                           'raw wrong size': lambda f: f.update(hessian_raw=[[1.0]]),
+                           'asym missing': lambda f: f.pop('hessian_asymmetry'),
+                           'limit missing': lambda f: f.pop('hessian_asymmetry_limit'),
+                           'asym NaN': lambda f: f.update(hessian_asymmetry=float('nan')),
+                           'limit NaN': lambda f: f.update(hessian_asymmetry_limit=float('nan'))}.items():
+            with self.subTest(label):
+                f = fit(copy.deepcopy(ident))
+                bad(f)
+                self.assertEqual(health.hessian_record_status(f, 2), 'incomplete')
+        # a non-finite asymmetry (finite entries whose difference overflows) cannot be 'valid'
+        huge = [[1.0, 1e308], [-1e308, 1.0]]
+        self.assertEqual(health.hessian_record_status(fit(huge, sym=[[1.0, 0.0], [0.0, 1.0]], asym=float('inf')), 2),
+                         'incomplete')
+        # ... and a finite recorded value does not turn that into an integrity finding
+        self.assertEqual(health.hessian_record_status(fit(huge, sym=[[1.0, 0.0], [0.0, 1.0]], asym=1.0), 2),
+                         'incomplete')
+        # sym that is not the symmetrised raw: integrity, which outranks a bad recorded scalar
+        f = fit([[1.0, 0.5], [0.5, 1.0]], sym=[[1.0, 0.4], [0.4, 1.0]])
+        self.assertEqual(health.hessian_record_status(f, 2), 'integrity')
+        f['hessian_asymmetry'] = float('nan')
+        self.assertEqual(health.hessian_record_status(f, 2), 'integrity')
+
+    def test_certify_hessian_shape_refusals(self):
+        ok = [[2.0, 0.5], [0.5, 1.0]]
+        self.assertEqual(hess(ok, [1, 2])['verdict'], PASS)
+        for matrix in (None, [], 'ab', 5):
+            out = health.certify_hessian(matrix, [1], COORD, 1e-9, 0.0, [], parameter_count=1)
+            self.assertEqual((out['verdict'], out['reason']), (INC, 'matrix missing or malformed'))
+        for label, matrix in {'None': None, 'empty': [], 'string': 'ab', 'ragged': [[1.0, 0.0], [0.0]],
+                              'tuple rows': ((1.0, 0.0), (0.0, 1.0)), 'non-square': [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+                              'NaN': [[1.0, 0.0], [0.0, float('nan')]], 'bool': [[True, 0.0], [0.0, 1.0]],
+                              'int huge': [[10 ** 400, 0], [0, 1]]}.items():
+            with self.subTest(label):
+                out = health.certify_hessian(matrix, [1, 2], COORD, 1e-9, 0.0, [], parameter_count=2)
+                self.assertEqual(out['verdict'], INC)
+        for label, free in {'None': None, 'empty': [], 'string': '12', 'zero': [0, 1], 'above': [1, 3],
+                            'float': [1.0, 2.0], 'bool': [True, 2], 'duplicate': [1, 1]}.items():
+            with self.subTest(free=label):
+                self.assertEqual(health.certify_hessian(ok, free, COORD, 1e-9, 0.0, [], parameter_count=2)['verdict'], INC)
+        out = health.certify_hessian(ok, [1, 2], COORD, 1e-9, float('nan'), [], parameter_count=2)
+        self.assertEqual(out['verdict'], INC)
+        out = health.certify_hessian(ok, [1, 2], COORD, 1e-9, 0.0, [], max_dimension=1, parameter_count=2)
+        self.assertEqual(out['verdict'], INC)
+        out = health.certify_hessian(ok, [1, 2], COORD, 1e-9, 0.0, [], max_dimension=2, parameter_count=2)
+        self.assertEqual(out['verdict'], PASS)  # exactly at the cap is allowed
+
+    def test_record_checks_valid_direct(self):
+        data = certified_good()
+        row = data['Julia'][0]
+        r_valid = health._r_block_valid(data)
+        self.assertTrue(health._record_checks_valid(row, r_valid))
+        for label, bad in {'gradient missing': lambda r: r.pop('gradient'), 'gradient empty': lambda r: r.update(gradient=[]),
+                           'gradient a string': lambda r: r.update(gradient='ab'),
+                           'optimizer missing': lambda r: r.pop('optimizer'),
+                           'optimizer not a dict': lambda r: r.update(optimizer=[]),
+                           'profile unverified': lambda r: r['optimizer'].update(optimizer_profile_verified=False),
+                           'optimizer error key missing': lambda r: r['optimizer'].pop('optimizer_error'),
+                           'optimizer error recorded': lambda r: r['optimizer'].update(optimizer_error='x'),
+                           'value NaN': lambda r: r['optimizer'].update(optimizer_profile_value=float('nan')),
+                           'minimum NaN': lambda r: r['optimizer'].update(optimizer_minimum=float('nan')),
+                           'value differs': lambda r: r['optimizer'].update(optimizer_profile_value=3.5),
+                           'reconstruction missing': lambda r: r.pop('reconstruction'),
+                           'parameters_match false': lambda r: r['reconstruction'].update(parameters_match=False)}.items():
+            with self.subTest(label):
+                r = copy.deepcopy(row)
+                bad(r)
+                self.assertFalse(health._record_checks_valid(r, r_valid))
+        # objective roundoff boundary inside the record checks (limit 8 eps at |objective| < 1)
+        r = copy.deepcopy(row)
+        r.update(optimizer_objective=0.5, recomputed_objective=0.5 + 8 * EPS, objective_difference=8 * EPS,
+                 objective_roundoff_limit=8 * EPS)
+        r['optimizer'].update(optimizer_minimum=0.5, optimizer_profile_value=0.5)
+        r['reconstruction'].update(recovered_loglik=-0.5)
+        self.assertTrue(health._record_checks_valid(r, r_valid))
+        r.update(recomputed_objective=0.5 + 12 * EPS, objective_difference=12 * EPS)
+        self.assertFalse(health._record_checks_valid(r, r_valid))
 
 
 if __name__ == '__main__':

@@ -24,11 +24,24 @@ agrees exactly with its recorded scalar. Bare ``pd_hessian`` flags, bare
 scalars and a Float64-Cholesky-false matrix never yield a failure.
 ``FIT_HEALTH_FAIL_WITH_INCOMPLETE`` is retained because existing tests use it;
 it still denotes a confirmed failure, never an incomplete-only state.
+
+What is and is not bound here. R ``parameters`` is any finite vector of the
+gradient's length, and nothing ties a case name to its parameter count except
+the consistency checks of ``_evidence_binding`` (enabled certifier only): the
+three Julia lambda maps share p and K, free-coefficient counts start at 0 and
+never decrease along CASES, and R's parameter count differs from Julia's
+optimizer-point length by one constant. Those are necessary conditions, not
+authentication: the caller must still bind each record to its case, data and
+objective. Likewise ``lambda_constraint_map`` is a record field that the
+receipt verifier must compare with the case's authenticated input
+specification. Every derivative error radius is a declaration with
+``radius_status == 'declared_unproven'``; a certified pass carries that status
+(``classify(...).radius_status``) and real-record admission stays blocked on an
+independent derivation of the radii for the Laplace objective.
 """
 import math
 import sys
 import re
-import time
 from fractions import Fraction
 
 ENGINES = ('R', 'Julia')
@@ -37,9 +50,10 @@ GRADIENT_LIMIT = 1e-5  # Signed 2026-10-21 rule: strictly below this value.
 NUMERICAL_ADMISSION_IMPLEMENTED = False  # Hold: certifier below awaits independent review.
 HESSIAN_COORDINATE = 'packed_free_index'  # Maintainer ruling 2026-11-07.
 CERT_MAX_FREE_DIMENSION = 32   # Refuse (INCOMPLETE) above this free-block size.
-CERT_MAX_SECONDS = 10.0        # Refuse (INCOMPLETE) when exact work exceeds this.
+CERT_MAX_WORK = 2000000        # Refuse (INCOMPLETE) above this many deterministic work units.
 CERT_GRADIENT_LIMIT = Fraction(1, 100000)  # Exact decimal 1e-5, strict upper bound.
 CERT_EPS = Fraction(1, 2 ** 52)  # Representation unit for the radius floors below.
+RADIUS_STATUS = 'declared_unproven'  # The only admissible status: no derivation of the radii exists.
 
 
 def finite_number(value):
@@ -156,36 +170,68 @@ def julia_prior_bound(provenance, authenticated_tree, case):
 # Hence  A - k*r*I positive definite  => H certified positive definite;
 #        A + k*r*I not positive definite => H certified not positive definite
 #        (indefinite or singular); anything between is INCOMPLETE.
+# Gradient. Two separate bounds, each strictly below 1e-5 with its own declared
+# radius and in its own coordinates: the optimizer-coordinate gradient (the
+# signed rule; it may certify a failure) and the packed gradient at the point
+# where the Hessian was evaluated (it may only block a pass). Their maxima are
+# different quantities and are not compared for equality.
+# Cost. Exact work is metered in deterministic units (see _Work), never by
+# wall-clock, so a verdict depends on the record alone.
 # Not covered: the justification of r itself, Hessian accuracy beyond r, and
-# the gradient error radius; both radii are caller declarations.
+# the gradient error radii; all radii are caller declarations
+# (``radius_status == 'declared_unproven'``).
 # ---------------------------------------------------------------------------
 CERT_PASS, CERT_FAIL, CERT_INCOMPLETE = 'CERT_PASS', 'CERT_FAIL', 'CERT_INCOMPLETE'
+LAMBDA_MAP_LAYOUT = 'beta_free,sigma_eps,lambda_b_packed'
 
 
 class _CertRefusal(Exception):
     pass
 
 
-def _exact_pd(block, shift, deadline):
+class _Work:
+    """Deterministic work meter: one unit per Fraction multiply-add plus its operand size.
+
+    Replaces a wall-clock cap so a verdict depends on the record alone. Cost of
+    one multiply-add is 1 + (bits of the operands) // 64, with the bits of a
+    Fraction counted as numerator plus denominator bit lengths.
+    """
+
+    def __init__(self, cap):
+        self.cap, self.used = cap, 0
+
+    def charge(self, *values):
+        self.used += 1 + sum(v.numerator.bit_length() + v.denominator.bit_length() for v in values) // 64
+        if self.used > self.cap:
+            raise _CertRefusal('work cap exceeded')
+
+
+def _exact_pd(block, shift, work):
     """Exact test that block - shift*I is positive definite (Fractions)."""
     k = len(block)
     a = [[block[i][j] - (shift if i == j else 0) for j in range(k)] for i in range(k)]
     lower = [[Fraction(0)] * k for _ in range(k)]
     diag = []
     for j in range(k):
-        if time.monotonic() > deadline:
-            raise _CertRefusal('time cap exceeded')
-        pivot = a[j][j] - sum(lower[j][s] ** 2 * diag[s] for s in range(j))
+        pivot = a[j][j]
+        for s in range(j):
+            work.charge(lower[j][s], diag[s])
+            pivot -= lower[j][s] ** 2 * diag[s]
         if pivot <= 0:
             return False
         diag.append(pivot)
         for i in range(j + 1, k):
-            lower[i][j] = (a[i][j] - sum(lower[i][s] * lower[j][s] * diag[s] for s in range(j))) / pivot
+            entry = a[i][j]
+            for s in range(j):
+                work.charge(lower[i][s], lower[j][s], diag[s])
+                entry -= lower[i][s] * lower[j][s] * diag[s]
+            work.charge(entry, pivot)
+            lower[i][j] = entry / pivot
     return True
 
 
 def certify_hessian(matrix, free_indices, coordinate, error_radius, asymmetry=0.0,
-                    pinned_indices=None, max_dimension=None, max_seconds=None,
+                    pinned_indices=None, max_dimension=None, max_work=None,
                     parameter_count=None):
     """Certify the recorded packed free-index Hessian; return a verdict dict.
 
@@ -202,9 +248,9 @@ def certify_hessian(matrix, free_indices, coordinate, error_radius, asymmetry=0.
     necessary sanity bound against sub-representation radii.
     """
     max_dimension = CERT_MAX_FREE_DIMENSION if max_dimension is None else max_dimension
-    max_seconds = CERT_MAX_SECONDS if max_seconds is None else max_seconds
+    max_work = CERT_MAX_WORK if max_work is None else max_work
     out = {'verdict': CERT_INCOMPLETE, 'reason': None, 'coordinate': coordinate,
-           'free_indices': None, 'excluded_indices': None, 'error_bound': None}
+           'free_indices': None, 'excluded_indices': None, 'error_bound': None, 'work_units': 0}
 
     def refuse(reason):
         out['reason'] = reason
@@ -245,16 +291,19 @@ def certify_hessian(matrix, free_indices, coordinate, error_radius, asymmetry=0.
     bound = k * (Fraction(error_radius) + Fraction(asymmetry))
     out['error_bound'] = bound
     block = [[Fraction(matrix[i - 1][j - 1]) for j in free_indices] for i in free_indices]
-    deadline = time.monotonic() + max_seconds
+    work = _Work(max_work)
     try:
-        if _exact_pd(block, bound, deadline):
+        if _exact_pd(block, bound, work):
             out['verdict'] = CERT_PASS
-        elif not _exact_pd(block, -bound, deadline):
+        elif not _exact_pd(block, -bound, work):
             out['verdict'] = CERT_FAIL
         else:
+            out['work_units'] = work.used
             return refuse('definiteness not decided: margin does not exceed the declared error bound')
     except _CertRefusal as exc:
+        out['work_units'] = work.used
         return refuse(str(exc))
+    out['work_units'] = work.used
     return out
 
 
@@ -274,44 +323,148 @@ def certify_gradient(max_abs_gradient, error_radius):
     return CERT_INCOMPLETE
 
 
-def certify_fit(fit, engine='Julia'):
-    """Certificate for one recorded Julia fit: curvature and gradient bound."""
-    result = {'verdict': CERT_INCOMPLETE, 'reason': None, 'hessian': None, 'gradient': None}
+def _finite_vector(value):
+    return isinstance(value, list) and bool(value) and all(finite_number(x) for x in value)
+
+
+def _lambda_pin_binding(fit):
+    """Recompute the pinned packed indices from the fit's own ``lambda_constraint`` map.
+
+    The record must carry ``lambda_constraint_map`` = {layout, p, K, q_free,
+    entries} (entries: p rows of K cells, null = free, number = pinned value).
+    Packed layout (src/confint_profile.jl ``_profile_all_term_names`` and
+    src/packing.jl ``_lower_index``): q_free betas, one log sigma, then the
+    packed loadings (diagonal 1..K, strict lower triangle column by column);
+    the structural zeros above the diagonal are not in theta. Returns None when
+    the declared ``pinned_indices`` equal the map-derived set, ``parameters``
+    has the layout's length and sits at every pinned value, else a reason.
+    The map itself is a record field: the receipt verifier must still compare
+    it with the case's authenticated input specification.
+    """
+    m, pinned, theta = fit.get('lambda_constraint_map'), fit.get('pinned_indices'), fit.get('parameters')
+    if not isinstance(m, dict):
+        return 'record carries no lambda_constraint_map to bind the pinned indices to'
+    if set(m) != {'layout', 'p', 'K', 'q_free', 'entries'} or m['layout'] != LAMBDA_MAP_LAYOUT:
+        return 'lambda_constraint_map has the wrong keys or layout'
+    p, K, q_free, entries = m['p'], m['K'], m['q_free'], m['entries']
+    if (any(type(v) is not int for v in (p, K, q_free)) or p < 1 or not 1 <= K <= p or q_free < 0 or
+            not isinstance(entries, list) or len(entries) != p or
+            any(not isinstance(row, list) or len(row) != K for row in entries) or
+            any(not (v is None or finite_number(v)) for row in entries for v in row)):
+        return 'lambda_constraint_map is malformed'
+    if not isinstance(theta, list) or len(theta) != q_free + 1 + p * K - K * (K - 1) // 2:
+        return 'parameters length does not match the lambda_constraint_map layout'
+    derived = {}
+    for i in range(1, p + 1):
+        for k in range(1, K + 1):
+            if i <= K and k > i or entries[i - 1][k - 1] is None:
+                continue
+            position = k if i == k else K + (k - 1) * p - k * (k - 1) // 2 + i - k
+            derived[q_free + 1 + position] = entries[i - 1][k - 1]
+    if not isinstance(pinned, list) or sorted(derived) != sorted(pinned):
+        return 'declared pinned indices differ from those derived from the lambda_constraint_map'
+    if any(theta[j - 1] != v for j, v in derived.items()):
+        return 'parameters are not at the pinned values of the lambda_constraint_map'
+    return None
+
+
+def _optimizer_binding(fit):
+    """Bind the optimizer-coordinate block to the fit; return a reason or None.
+
+    The block must be well formed (point and gradient finite vectors of equal
+    length, scalar equal to the vector maximum, profile verified), its minimum
+    must agree with the fit's own objective within the objective roundoff rule,
+    and the reconstruction must have been recovered from exactly this point.
+    """
+    opt, rec = fit.get('optimizer'), fit.get('reconstruction')
+    if not isinstance(opt, dict) or not isinstance(rec, dict):
+        return 'optimizer or reconstruction block missing'
+    point, gradient = opt.get('optimizer_parameters'), opt.get('optimizer_gradient')
+    if not _finite_vector(point) or not _finite_vector(gradient) or len(point) != len(gradient):
+        return 'optimizer point or gradient missing, non-finite or of unequal length'
+    if opt.get('optimizer_max_abs_gradient') != max(abs(x) for x in gradient):
+        return 'optimizer gradient scalar is not the maximum of the optimizer gradient vector'
+    value, minimum = opt.get('optimizer_profile_value'), opt.get('optimizer_minimum')
+    if (opt.get('optimizer_profile_verified') is not True or opt.get('optimizer_error', True) is not None or
+            not finite_number(value) or not finite_number(minimum) or value != minimum):
+        return 'optimizer profile value is not verified against the optimizer minimum'
+    objective = fit.get('optimizer_objective')
+    if not finite_number(objective) or abs(minimum - objective) > (
+            8 * sys.float_info.epsilon * max(1.0, abs(minimum), abs(objective))):
+        return 'optimizer minimum disagrees with the fitted objective'
+    if rec.get('optimizer_parameters') != point:
+        return 'reconstruction was not recovered from the recorded optimizer point'
+    if opt.get('radius_status') != RADIUS_STATUS or fit.get('radius_status') != RADIUS_STATUS:
+        return 'derivative error radii are not recorded as declared_unproven'
+    return None
+
+
+def _certify_fit(fit, engine):
+    result = {'verdict': CERT_INCOMPLETE, 'reason': None, 'hessian': None, 'gradient': None,
+              'radius_status': None}
     if engine != 'Julia' or not isinstance(fit, dict):
         result['reason'] = 'no recorded Hessian for this engine'
         return result
     if fit.get('penalty_state') != 'none':
         result['reason'] = 'penalised or prior model: the no-prior diagnostic does not certify it'
         return result
-    vector = fit.get('gradient')
-    dimension = len(vector) if isinstance(vector, list) else 0
-    parameters = fit.get('parameters')
-    h = certify_hessian(fit.get('hessian'), fit.get('free_indices'), fit.get('hessian_coordinate'),
+    vector, parameters, free = fit.get('gradient'), fit.get('parameters'), fit.get('free_indices')
+    if not _finite_vector(vector) or not _finite_vector(parameters) or len(vector) != len(parameters):
+        result['reason'] = 'packed gradient vector missing, non-finite or not the parameter dimension'
+        return result
+    dimension = len(vector)
+    if (not isinstance(free, list) or not free or any(type(i) is not int or not 1 <= i <= dimension for i in free) or
+            len(set(free)) != len(free)):
+        result['reason'] = 'free indices missing or invalid'
+        return result
+    for reason in (_lambda_pin_binding(fit), _optimizer_binding(fit)):
+        if reason:
+            result['reason'] = reason
+            return result
+    for key in ('gradient_error_radius', 'packed_gradient_error_radius'):
+        # Even a certified Hessian failure needs both gradient radii in well-formed form.
+        if not finite_number(fit.get(key)) or fit[key] <= 0:
+            result['reason'] = 'gradient error radius not recorded or not positive'
+            return result
+    h = certify_hessian(fit.get('hessian'), free, fit.get('hessian_coordinate'),
                         fit.get('hessian_error_radius'), fit.get('hessian_asymmetry'),
-                        fit.get('pinned_indices'),
-                        parameter_count=len(parameters) if isinstance(parameters, list) else None)
-    if dimension and isinstance(fit.get('hessian'), list) and len(fit['hessian']) != dimension:
-        h = dict(h, verdict=CERT_INCOMPLETE, reason='Hessian size differs from the recorded gradient')
-    opt = fit.get('optimizer')
-    certified_max = opt.get('optimizer_max_abs_gradient') if isinstance(opt, dict) else None
-    g = certify_gradient(certified_max, fit.get('gradient_error_radius'))
-    free = fit.get('free_indices')
-    if (isinstance(vector, list) and isinstance(free, list) and free and
-            all(type(i) is int and 1 <= i <= dimension for i in free) and
-            all(finite_number(x) for x in vector)):
-        if max(abs(vector[i - 1]) for i in free) != certified_max:
-            # The gradient certificate and the Hessian must rest on the same recorded gradient.
-            g = CERT_INCOMPLETE
-            h = dict(h, verdict=CERT_INCOMPLETE,
-                     reason='optimizer gradient scalar disagrees with the fit gradient on the free indices')
+                        fit.get('pinned_indices'), parameter_count=dimension)
+    packed_max = max(abs(vector[i - 1]) for i in free)
+    if fit.get('max_abs_gradient') != packed_max:
+        result['reason'] = 'recorded gradient scalar is not the maximum over the free indices'
+        return result
+    # Two separate bounds, each with its own declared radius, in its own coordinates:
+    # the optimizer-coordinate gradient (the signed rule; may also certify a failure)
+    # and the packed gradient at the point where the Hessian was evaluated (may only
+    # block a pass: the signed limit is not defined in packed coordinates).
+    g_opt = certify_gradient(fit['optimizer']['optimizer_max_abs_gradient'], fit.get('gradient_error_radius'))
+    g_packed = certify_gradient(packed_max, fit.get('packed_gradient_error_radius'))
+    g = CERT_PASS if g_opt == CERT_PASS and g_packed == CERT_PASS else (
+        CERT_FAIL if g_opt == CERT_FAIL else CERT_INCOMPLETE)
     result['hessian'], result['gradient'] = h, g
     if h['verdict'] == CERT_FAIL or g == CERT_FAIL:
         result['verdict'] = CERT_FAIL
     elif h['verdict'] == CERT_PASS and g == CERT_PASS:
         result['verdict'] = CERT_PASS
+        result['radius_status'] = RADIUS_STATUS
     else:
         result['reason'] = h['reason'] or 'gradient bound not certified'
     return result
+
+
+def certify_fit(fit, engine='Julia'):
+    """Certificate for one recorded Julia fit: curvature and two gradient bounds.
+
+    PASS needs the packed gradient vector, the lambda-constraint binding of the
+    pinned indices, the bound optimizer block, and both gradient bounds; its
+    ``radius_status`` echoes ``declared_unproven`` because the error radii are
+    declarations. Never raises: an unusable record is CERT_INCOMPLETE.
+    """
+    try:
+        return _certify_fit(fit, engine)
+    except Exception:  # hostile or malformed objects never reach a verdict
+        return {'verdict': CERT_INCOMPLETE, 'reason': 'record could not be evaluated safely',
+                'hessian': None, 'gradient': None, 'radius_status': None}
 
 
 def _r_block_valid(evidence):
@@ -392,6 +545,36 @@ def _record_checks_valid(fit, r_valid):
             opt['optimizer_error'] is None and finite_number(ov) and finite_number(mv) and ov == mv)
 
 
+def _evidence_binding(evidence):
+    """Case and dimension binding across the six records; a reason or None.
+
+    Necessary consistency only (the caller still authenticates provenance):
+    the three Julia lambda maps share p and K (one response matrix), the number
+    of free coefficients never decreases along CASES and is 0 without fixed
+    effects, and R's optimizer-parameter count differs from Julia's by one
+    constant across the cases (the same model, parameterised alike).
+    """
+    maps, offsets = [], []
+    julia = {f.get('case'): f for f in evidence['Julia']}
+    r_fits = {f.get('case'): f for f in evidence['R']}
+    for case in CASES:
+        m = julia[case].get('lambda_constraint_map')
+        point = (julia[case].get('optimizer') or {}).get('optimizer_parameters')
+        r_parameters = r_fits[case].get('parameters')
+        if not isinstance(m, dict) or not isinstance(point, list) or not isinstance(r_parameters, list):
+            return 'case binding evidence missing'
+        maps.append(m)
+        offsets.append(len(r_parameters) - len(point))
+    if len({(m.get('p'), m.get('K')) for m in maps}) != 1:
+        return 'the three cases do not share the response dimension and rank'
+    q = [m.get('q_free') for m in maps]
+    if any(type(v) is not int for v in q) or q[0] != 0 or q != sorted(q):
+        return 'free-coefficient counts are inconsistent with the case order'
+    if len(set(offsets)) != 1:
+        return 'R and Julia parameter counts are not bound to the same cases'
+    return None
+
+
 def certify_evidence(evidence):
     """Per-fit certificates; ``failure_confirmable`` needs a valid unique case set."""
     certs, confirmable = [], True
@@ -413,6 +596,14 @@ def certify_evidence(evidence):
             confirmable = False
         cert['confirmable'] = bool(bound and _record_checks_valid(fit, r_valid))
         certs.append(cert)
+    binding = _evidence_binding(evidence) if confirmable and r_valid is True else None
+    if binding:
+        # An unbound case set cannot support a pass or a confirmed failure.
+        for cert in certs:
+            cert['confirmable'] = False
+            if cert['verdict'] == CERT_PASS:
+                cert.update(verdict=CERT_INCOMPLETE, reason=binding, radius_status=None)
+        confirmable = False
     return certs, confirmable
 
 
@@ -569,16 +760,17 @@ def _classify_recorded(evidence):
     return 'FIT_HEALTH_PASS'
 
 
-def classify(evidence):
-    """Classify six recorded diagnostics.
+class FitHealthVerdict(str):
+    """A verdict string that also names the status of the error radii behind it.
 
-    While ``NUMERICAL_ADMISSION_IMPLEMENTED`` is False every would-be pass is
-    FIT_HEALTH_INCOMPLETE and the certifier is not consulted. When enabled, a
-    pass additionally needs every Julia fit certified (curvature with margin
-    over the declared error bound, plus the stated gradient bound), and a
-    certified indefinite or singular Hessian on valid evidence is a failure.
-    Anything not certified stays INCOMPLETE.
+    Equal to the plain verdict string; ``radius_status`` is ``declared_unproven``
+    on a certified pass (the radii are declarations, not derivations) and None
+    otherwise.
     """
+    radius_status = None
+
+
+def _classify(evidence):
     verdict = _classify_recorded(evidence)
     if not NUMERICAL_ADMISSION_IMPLEMENTED:
         return 'FIT_HEALTH_INCOMPLETE' if verdict == 'FIT_HEALTH_PASS' else verdict
@@ -590,7 +782,30 @@ def classify(evidence):
     if verdict == 'FIT_HEALTH_PASS':
         if certified_failure:
             return 'FIT_HEALTH_FAIL'
-        return verdict if all_certified else 'FIT_HEALTH_INCOMPLETE'
+        if not all_certified:
+            return 'FIT_HEALTH_INCOMPLETE'
+        passed = FitHealthVerdict(verdict)
+        passed.radius_status = RADIUS_STATUS
+        return passed
     if certified_failure:
         return 'FIT_HEALTH_FAIL' if verdict == 'FIT_HEALTH_FAIL' else 'FIT_HEALTH_FAIL_WITH_INCOMPLETE'
     return verdict
+
+
+def classify(evidence):
+    """Classify six recorded diagnostics; never raises.
+
+    While ``NUMERICAL_ADMISSION_IMPLEMENTED`` is False every would-be pass is
+    FIT_HEALTH_INCOMPLETE and the certifier is not consulted. When enabled, a
+    pass additionally needs every Julia fit certified (curvature with margin
+    over the declared error bound, plus the stated gradient bounds), and a
+    certified indefinite or singular Hessian on valid evidence is a failure.
+    Anything not certified stays INCOMPLETE. A certified pass carries
+    ``radius_status == 'declared_unproven'``: the radii are declarations.
+    An object that raises while being inspected yields FIT_HEALTH_INCOMPLETE,
+    never an exception and never a pass.
+    """
+    try:
+        return _classify(evidence)
+    except Exception:
+        return 'FIT_HEALTH_INCOMPLETE'
