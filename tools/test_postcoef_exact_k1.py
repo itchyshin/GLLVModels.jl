@@ -35,12 +35,23 @@ def make_case(p=4, n=12, q=0, seed=1, shift=0.0, scale=1.0):
         for t in range(p):
             Y[t][s] = scale * (lam[t] * z + 0.6 * rng.gauss(0, 1)) + shift
     beta = [rng.gauss(0, 1) for _ in range(q)]
-    ell = math.log(0.6 * scale) + 0.03
-    lam_p = [scale * v for v in lam]
-    theta = beta + [ell] + lam_p
-    sig = math.exp(ell)
-    x = beta + [v / sig for v in lam_p]
-    return Y, X, q, theta, x
+    return (Y, X, q) + bound_point(beta, [scale * v for v in lam], math.exp(math.log(0.6 * scale) + 0.03))
+
+
+def bound_point(beta, lam_target, sig):
+    """(theta, x) exactly as the writer derives them: L = target/sigma, lambda = fl(sigma*L),
+    l = fl(log sigma). sigma is stepped up by ulps until check_binding accepts (math.log is not
+    always correctly rounded)."""
+    for _ in range(64):
+        L = [v / sig for v in lam_target]
+        theta = list(beta) + [math.log(sig)] + [sig * v for v in L]
+        x = list(beta) + L
+        try:
+            ex.check_binding(theta, x, len(beta))
+            return theta, x
+        except ex.ExactInputError:
+            sig = math.nextafter(sig, math.inf)
+    raise AssertionError('no bound point found')
 
 
 def mp_packed_nll(Y, X, q):

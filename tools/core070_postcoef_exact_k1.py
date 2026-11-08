@@ -21,6 +21,17 @@ formulas equal what the Julia functions compute is a code-reading claim
 (caveat i of the derivation), checked here only numerically against an
 independent high-precision transcription of the Julia functions (tests).
 
+Hardening (wave 15, after the wave-14 red team): inputs are copied once to tuples of exact
+binary64 floats and only the copy is used (plain list/tuple only, no subclasses); |2l| <= 708;
+q must be an int; computed_radii binds the packed point to the optimizer point exactly
+(check_binding) and meters work from the shape (estimate_work / work_budget).
+
+Outside the module, by design (cannot be closed without authenticated inputs): that Y and X are
+the case's real data (byte-level digest against the authenticated input, which also fixes sign
+flips and observation order, both invisible to the likelihood at q = 0); that p, n, q, K and the
+constraint map match the authenticated spec; that sigma_eps^2 equals Q/(n p) for the real data;
+that the recorded values came from the real fit; the receipt chain and flag flip.
+
 Layout follows the Julia engine: ``Y`` is p x n (``Y[t][s]``), ``X`` is
 p x n x q (``X[t][s][j]``) or None; packed ``theta = [beta (q); l = log sigma_eps;
 lambda (p)]``; optimizer ``x = [beta (q); L (p)]``.
@@ -29,8 +40,15 @@ from fractions import Fraction
 import math
 
 PREC_BITS = 256          # Mantissa bits kept by outward rounding.
-EXP_ARG_LIMIT = 1400     # |2l| above this is refused (exp would overflow binary64 anyway).
+# |2l| above this is refused. exp(x) overflows binary64 for x > 709.78 and is subnormal below
+# -708.40, so 708 keeps s = exp(2l) a finite normal binary64 value, i.e. a point the Julia
+# engine can actually produce (l = log sigma_eps, |l| <= 354).
+EXP_ARG_LIMIT = 708
 STATUS_COMPUTED = 'derived_enclosure'
+# Deterministic, shape-only cost bound (see estimate_work). About 15-16 microseconds per unit on
+# the Mac in pure Python (measured: p=12,n=200 ~ 2.9 s, p=20,n=200 ~ 21 s). Over budget is refused
+# before any arithmetic; a caller may pass a larger work_budget explicitly.
+DEFAULT_WORK_BUDGET = 2_000_000
 
 
 class ExactInputError(ValueError):
@@ -111,7 +129,7 @@ class Iv:
         return max(abs(self.lo - v), abs(self.hi - v))
 
 
-def exp_enclosure(t):
+def exp_enclosure(t, bits=PREC_BITS):
     """Rigorous Iv containing exp(t) for an exact rational t (Taylor + Lagrange remainder).
 
     Argument reduction t = u * 2^k with |u| <= 1/2. On |u| <= 1/2 the remainder of
@@ -125,7 +143,7 @@ def exp_enclosure(t):
     while abs(t) / (1 << k) > Fraction(1, 2):
         k += 1
     u = t / (1 << k)
-    target = Fraction(1, 1 << (PREC_BITS + 16))
+    target = Fraction(1, 1 << (bits + 16))
     total, term, i = Fraction(0), Fraction(1), 0
     while True:
         total += term
@@ -134,42 +152,80 @@ def exp_enclosure(t):
         bound = 2 * abs(term)  # |u|^i / i! * e^{1/2} bound for the tail starting at index i
         if bound < target:
             break
-    enc = Iv(_floor_dyadic(total - bound), _ceil_dyadic(total + bound))
+    enc = Iv(_floor_dyadic(total - bound, bits), _ceil_dyadic(total + bound, bits))
     if enc.lo <= 0:
         raise ArithmeticError('exp enclosure lost positivity')  # cannot happen for |u| <= 1/2
     for _ in range(k):
-        enc = Iv(_floor_dyadic(enc.lo * enc.lo), _ceil_dyadic(enc.hi * enc.hi))
+        enc = Iv(_floor_dyadic(enc.lo * enc.lo, bits), _ceil_dyadic(enc.hi * enc.hi, bits))
     return enc
 
 
 # ---------------------------------------------------------------------------
-# Input validation and exact data moments
+# Input validation: copy once to tuples of floats, validate the COPY, use only the copy
 # ---------------------------------------------------------------------------
 def _is_binary64(v):
     return type(v) is float and math.isfinite(v)
 
 
-def _check_inputs(Y, X, q):
-    if not isinstance(Y, list) or not Y or any(not isinstance(r, list) for r in Y):
-        raise ExactInputError('Y must be a non-empty p x n list of lists')
-    p, n = len(Y), len(Y[0])
-    if n == 0 or any(len(r) != n for r in Y) or not all(_is_binary64(v) for r in Y for v in r):
+def _freeze_seq(v, what):
+    """Copy an exact ``list`` or ``tuple`` to a tuple once. Subclasses are refused: their
+    __iter__/__getitem__ could answer differently on later reads (time-of-check/time-of-use)."""
+    if type(v) is not list and type(v) is not tuple:
+        raise ExactInputError('%s must be a plain list or tuple, not %s' % (what, type(v).__name__))
+    return tuple(v)
+
+
+def _freeze_floats(v, length, what):
+    t = _freeze_seq(v, what)
+    if len(t) != length or not all(_is_binary64(x) for x in t):
+        raise ExactInputError('%s must be %d finite binary64 values' % (what, length))
+    return t
+
+
+def _check_q(q):
+    if type(q) is not int or q < 0:
+        raise ExactInputError('q must be a non-negative int')
+    return q
+
+
+def estimate_work(p, n, q):
+    """Deterministic cost bound in abstract units from the shape alone (not a runtime counter).
+
+    n p^2 (1+q+q^2) exact moment products + 4 (p+1) p^3 + 3 (p+1)^2 p^2 interval products."""
+    return n * p * p * (1 + q + q * q) + 4 * (p + 1) * p ** 3 + 3 * (p + 1) ** 2 * p ** 2
+
+
+def _check_work(p, n, q, work_budget):
+    if type(work_budget) is not int or work_budget < 0:
+        raise ExactInputError('work_budget must be a non-negative int')
+    if estimate_work(p, n, q) > work_budget:
+        raise ExactInputError('estimated work %d exceeds work_budget %d' %
+                              (estimate_work(p, n, q), work_budget))
+
+
+def _freeze_data(Y, X, q):
+    """Return (Yt, Xt, p, n): tuples of tuples of binary64 floats, validated on the copy."""
+    _check_q(q)
+    rows = _freeze_seq(Y, 'Y')
+    if not rows:
+        raise ExactInputError('Y must be a non-empty p x n matrix')
+    Yt = tuple(_freeze_seq(r, 'Y row') for r in rows)
+    p, n = len(Yt), len(Yt[0])
+    if n == 0 or any(len(r) != n for r in Yt) or not all(_is_binary64(v) for r in Yt for v in r):
         raise ExactInputError('Y must be rectangular and hold finite binary64 values')
     if q == 0:
         if X is not None:
             raise ExactInputError('q = 0 but X supplied')
-        return p, n
-    if (not isinstance(X, list) or len(X) != p or
-            any(not isinstance(row, list) or len(row) != n for row in X) or
-            any(not isinstance(c, list) or len(c) != q for row in X for c in row) or
-            not all(_is_binary64(v) for row in X for c in row for v in c)):
+        return Yt, None, p, n
+    if X is None:
+        raise ExactInputError('X must be p x n x q')
+    Xt = tuple(tuple(_freeze_seq(c, 'X cell') for c in _freeze_seq(row, 'X row'))
+               for row in _freeze_seq(X, 'X'))
+    if (len(Xt) != p or any(len(row) != n for row in Xt) or
+            any(len(c) != q for row in Xt for c in row) or
+            not all(_is_binary64(v) for row in Xt for c in row for v in c)):
         raise ExactInputError('X must be p x n x q with finite binary64 values')
-    return p, n
-
-
-def _check_vector(v, length, what):
-    if not isinstance(v, list) or len(v) != length or not all(_is_binary64(x) for x in v):
-        raise ExactInputError('%s must be %d finite binary64 values' % (what, length))
+    return Yt, Xt, p, n
 
 
 class _Moments:
@@ -216,7 +272,7 @@ def _transpose(A):
 # ---------------------------------------------------------------------------
 # R2: exact optimizer-coordinate gradient (profile NLL, profile_beta = false)
 # ---------------------------------------------------------------------------
-def exact_optimizer_gradient(Y, X, x, q):
+def exact_optimizer_gradient(Y, X, x, q, work_budget=DEFAULT_WORK_BUDGET):
     """Exact gradient of gaussian_profile_nll(x; profile_beta=false) for K = 1.
 
     f = 1/2 [N log 2pi + N + N log(Q/N) + n log a], a = 1 + L'L,
@@ -224,8 +280,13 @@ def exact_optimizer_gradient(Y, X, x, q):
     d/dbeta_j = -(N/Q) sum_s x_sj' A^-1 r_s ;  d/dL_i = -(N/Q) (A^-1 R2 A^-1 L)_i + n L_i / a.
     Returns a list of Fractions (exact).
     """
-    p, n = _check_inputs(Y, X, q)
-    _check_vector(x, q + p, 'optimizer point')
+    Y, X, p, n = _freeze_data(Y, X, q)
+    x = _freeze_floats(x, q + p, 'optimizer point')
+    _check_work(p, n, q, work_budget)
+    return _exact_optimizer_gradient(Y, X, x, q, p, n)
+
+
+def _exact_optimizer_gradient(Y, X, x, q, p, n):
     L = [Fraction(v) for v in x[q:]]
     mom = _Moments(Y, X, x[:q])
     a = 1 + sum(v * v for v in L)
@@ -245,7 +306,7 @@ def exact_optimizer_gradient(Y, X, x, q):
 # ---------------------------------------------------------------------------
 # R1 / R3: rigorous enclosure of the packed gradient and Hessian
 # ---------------------------------------------------------------------------
-def packed_enclosure(Y, X, theta, q):
+def packed_enclosure(Y, X, theta, q, work_budget=DEFAULT_WORK_BUDGET):
     """Rigorous Iv enclosures (g, H) of the gradient and Hessian of gaussian_nll_packed.
 
     s = exp(2 l), c = s + lambda'lambda, P = (I - lambda lambda'/c)/s, r_s = y_s - X_s beta.
@@ -260,8 +321,13 @@ def packed_enclosure(Y, X, theta, q):
                  - 1/2 tr(Sigma_psiphi G)
     Returns (g, H): a list of Iv and a list of lists of Iv, packed order.
     """
-    p, n = _check_inputs(Y, X, q)
-    _check_vector(theta, q + 1 + p, 'packed parameters')
+    Y, X, p, n = _freeze_data(Y, X, q)
+    theta = _freeze_floats(theta, q + 1 + p, 'packed parameters')
+    _check_work(p, n, q, work_budget)
+    return _packed_enclosure(Y, X, theta, q, p, n)
+
+
+def _packed_enclosure(Y, X, theta, q, p, n):
     mom = _Moments(Y, X, theta[:q])
     lam = [Fraction(v) for v in theta[q + 1:]]
     s = exp_enclosure(2 * Fraction(theta[q]))
@@ -315,10 +381,100 @@ def packed_enclosure(Y, X, theta, q):
 
 
 # ---------------------------------------------------------------------------
+# Binding of the packed point to the optimizer point (no data needed)
+# ---------------------------------------------------------------------------
+def _rn_preimage(v):
+    """Closed real interval containing every real that rounds to the binary64 ``v``."""
+    prev, nxt = math.nextafter(v, -math.inf), math.nextafter(v, math.inf)
+    fv = Fraction(v)
+    lo = (fv + Fraction(prev)) / 2 if math.isfinite(prev) else fv - (Fraction(nxt) - fv) / 2
+    hi = (fv + Fraction(nxt)) / 2 if math.isfinite(nxt) else fv + (fv - Fraction(prev)) / 2
+    return lo, hi
+
+
+MAX_DECISION_BITS = 4096
+
+
+def _in_log_cell(sigma, llo, lhi):
+    """True iff exp(llo) < sigma < exp(lhi) (equality is impossible: exp of a non-zero rational is
+    irrational). Precision is raised until the enclosures decide, which is needed when the cell is
+    tiny (l = 0 has a subnormal-width cell); undecided at the cap -> False (fail closed)."""
+    sg, bits = Fraction(sigma), PREC_BITS
+    while bits <= MAX_DECISION_BITS:
+        e_lo, e_hi = exp_enclosure(llo, bits), exp_enclosure(lhi, bits)
+        if sg < e_lo.lo or sg > e_hi.hi:
+            return False
+        if e_lo.hi <= sg <= e_hi.lo:
+            return True
+        bits *= 2
+    return False
+
+
+def check_binding(theta, x, q):
+    """Verify, without data, that packed ``theta`` is what the writer derives from optimizer ``x``.
+
+    Writer (src/profile.jl profile_recover): sigma_eps = sqrt(quad/np); lambda_j = fl(sigma_eps * L_j);
+    packed slot q+1 = fl(log sigma_eps); betas copied. The check is exact (no tolerance): betas are
+    equal; there is a binary64 sigma > 0 with fl(sigma * L_j) = lambda_j for every j (L_j = 0 needs
+    the same-signed zero; L_j != 0 needs a non-zero loading, so a genuine underflow to zero is
+    refused, matching the live certifier's rule) and RN(log sigma) = l, the latter decided by a rigorous exp enclosure that must
+    place sigma strictly inside the rounding cell of l (precision is raised until decided; still
+    undecided at 4096 bits is refused).
+    Returns that sigma. Raises ExactInputError otherwise. Candidate set capped at 64.
+
+    NOT checked here (needs authenticated Y, X): that sigma^2 = Q/(n p) for the real data.
+    """
+    _check_q(q)
+    x = _freeze_seq(x, 'optimizer point')
+    p = len(x) - q
+    if p < 1:
+        raise ExactInputError('optimizer point too short')
+    x = _freeze_floats(x, q + p, 'optimizer point')
+    theta = _freeze_floats(theta, q + 1 + p, 'packed parameters')
+    if any(theta[j] != x[j] for j in range(q)):
+        raise ExactInputError('binding: beta differs between packed and optimizer points')
+    ell, lam, L = theta[q], theta[q + 1:], x[q:]
+    if abs(Fraction(ell)) > EXP_ARG_LIMIT:
+        raise ExactInputError('binding: log sigma_eps outside the supported range')
+    llo, lhi = _rn_preimage(ell)
+    e_lo, e_hi = exp_enclosure(llo), exp_enclosure(lhi)
+    lower, upper = e_lo.lo, e_hi.hi                       # outer real interval for sigma from l
+    for lj, Lj in zip(lam, L):
+        if Lj == 0.0:
+            if lj != 0.0 or math.copysign(1.0, lj) != math.copysign(1.0, Lj):
+                raise ExactInputError('binding: zero loading does not match zero L (or sign differs)')
+            continue
+        if lj == 0.0 or (lj > 0.0) != (Lj > 0.0):
+            raise ExactInputError('binding: non-zero L needs a non-zero loading of the same sign')
+        plo, phi = _rn_preimage(lj)
+        r1, r2 = plo / Fraction(Lj), phi / Fraction(Lj)
+        lower, upper = max(lower, min(r1, r2)), min(upper, max(r1, r2))
+    if lower > upper:
+        raise ExactInputError('binding: no sigma_eps reproduces the packed point from the optimizer point')
+    cand = math.nextafter(float(lower), -math.inf)
+    for _ in range(64):
+        if Fraction(cand) > upper:
+            break
+        if (cand > 0.0 and
+                all(cand * Lj == lj and math.copysign(1.0, cand * Lj) == math.copysign(1.0, lj)
+                    for lj, Lj in zip(lam, L)) and _in_log_cell(cand, llo, lhi)):
+            return cand
+        cand = math.nextafter(cand, math.inf)
+    else:
+        raise ExactInputError('binding: candidate sigma_eps set too large')
+    raise ExactInputError('binding: no binary64 sigma_eps reproduces the packed point')
+
+
+# ---------------------------------------------------------------------------
 # Computed radii
 # ---------------------------------------------------------------------------
-def computed_radii(Y, X, q, theta, x, hessian_raw, packed_gradient, optimizer_gradient):
+def computed_radii(Y, X, q, theta, x, hessian_raw, packed_gradient, optimizer_gradient,
+                   work_budget=DEFAULT_WORK_BUDGET):
     """Radii from the record's own inputs, replacing declared ones (prototype).
+
+    Every input is copied once to tuples of binary64 floats and only the copy is used.
+    The packed point must be bound to the optimizer point (check_binding) before any arithmetic.
+    The caller must still authenticate Y and X (see the module docstring, "Outside the module").
 
     hessian_radius / packed_gradient_radius: rigorous upper bounds on
     max |recorded - true| (entrywise / infinity norm) at theta.
@@ -326,16 +482,20 @@ def computed_radii(Y, X, q, theta, x, hessian_raw, packed_gradient, optimizer_gr
     exact_optimizer_max_abs_gradient: max |true gradient| at x, exact; a certifier
     could test it directly against 1e-5 with no radius at all.
     """
-    k = q + 1 + len(Y)
-    if (not isinstance(hessian_raw, list) or len(hessian_raw) != k or
-            any(not isinstance(r, list) for r in hessian_raw)):
+    Y, X, p, n = _freeze_data(Y, X, q)
+    k = q + 1 + p
+    theta = _freeze_floats(theta, k, 'packed parameters')
+    x = _freeze_floats(x, k - 1, 'optimizer point')
+    hrows = _freeze_seq(hessian_raw, 'recorded Hessian')
+    if len(hrows) != k:
         raise ExactInputError('recorded Hessian has the wrong size')
-    for row in hessian_raw:
-        _check_vector(row, k, 'recorded Hessian row')
-    _check_vector(packed_gradient, k, 'recorded packed gradient')
-    _check_vector(optimizer_gradient, k - 1, 'recorded optimizer gradient')
-    g_enc, H_enc = packed_enclosure(Y, X, theta, q)
-    g_opt = exact_optimizer_gradient(Y, X, x, q)
+    hessian_raw = tuple(_freeze_floats(r, k, 'recorded Hessian row') for r in hrows)
+    packed_gradient = _freeze_floats(packed_gradient, k, 'recorded packed gradient')
+    optimizer_gradient = _freeze_floats(optimizer_gradient, k - 1, 'recorded optimizer gradient')
+    _check_work(p, n, q, work_budget)
+    check_binding(theta, x, q)
+    g_enc, H_enc = _packed_enclosure(Y, X, theta, q, p, n)
+    g_opt = _exact_optimizer_gradient(Y, X, x, q, p, n)
     return {
         'radius_status': STATUS_COMPUTED,
         'hessian_radius': max(H_enc[i][j].radius_about(hessian_raw[i][j]) for i in range(k) for j in range(k)),
