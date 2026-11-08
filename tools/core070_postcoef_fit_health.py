@@ -17,27 +17,43 @@ Outcomes, in precedence order:
   FIT_HEALTH_FAIL                 a confirmed failure
   FIT_HEALTH_INCOMPLETE           anything not confirmed, including every
                                   bare flag or scalar and every would-be pass
-A confirmed failure is only an optimizer-coordinate gradient vector, bound to
-a valid unique case with verified objective and no recorded error, whose
-maximum absolute free-coordinate entry is at least ``GRADIENT_LIMIT`` and
-agrees exactly with its recorded scalar. Bare ``pd_hessian`` flags, bare
-scalars and a Float64-Cholesky-false matrix never yield a failure.
+A confirmed failure, with ``NUMERICAL_ADMISSION_IMPLEMENTED`` False, is only an
+optimizer-coordinate gradient vector, bound to a valid unique case with verified
+objective and no recorded error, whose maximum absolute free-coordinate entry is at
+least ``GRADIENT_LIMIT`` and agrees exactly with its recorded scalar. With the flag
+True the exact Hessian certificate (``certify_evidence``) can also confirm a failure
+(a certified non-positive-definite free block on a record that passes its own checks);
+a malformed record in any fit refuses only the certified paths and never downgrades a
+failure or integrity rejection recorded without the certifier. Bare ``pd_hessian``
+flags, bare scalars and a Float64-Cholesky-false matrix never yield a failure.
 ``FIT_HEALTH_FAIL_WITH_INCOMPLETE`` is retained because existing tests use it;
 it still denotes a confirmed failure, never an incomplete-only state.
 
+ACCEPTED-AND-DISCLOSED LIMITATION (awaiting the user's ruling; NOT certified).
+R's half of a PASS is the bare ``pd_hessian`` flag (sdreport ``pdHess``) plus a
+radius-free gradient bound on R's own recorded vector. R records no Hessian matrix,
+no coordinate and no error radius, so nothing about R is certified: a PASS certifies
+the Julia fits only, and R rests on its own flag. This is a maintainer decision to be
+confirmed or replaced, not a property established here.
+
 What is and is not bound here. R ``parameters`` is any finite vector of the
-gradient's length, and nothing ties a case name to its parameter count except
-the consistency checks of ``_evidence_binding`` (enabled certifier only): the
-three Julia lambda maps share p and K, free-coefficient counts start at 0 and
-never decrease along CASES, and R's parameter count differs from Julia's
-optimizer-point length by one constant. Those are necessary conditions, not
-authentication: the caller must still bind each record to its case, data and
-objective. Likewise ``lambda_constraint_map`` is a record field that the
-receipt verifier must compare with the case's authenticated input
-specification. Every derivative error radius is a declaration with
-``radius_status == 'declared_unproven'``; a certified pass carries that status
-(``classify(...).radius_status``) and real-record admission stays blocked on an
-independent derivation of the radii for the Laplace objective.
+gradient's length. ``_evidence_binding`` (enabled certifier only) requires type-checked
+plain-int p, K and q_free; the three Julia lambda maps share p and K; free-coefficient
+counts start at 0 and never decrease along CASES; and R's parameter count differs from
+Julia's optimizer-point length by one constant. The optimizer point itself must have
+the length the writer produces from the fit's own map, q_free + p*K - K(K-1)/2
+(``_optimizer_length``; the packed vector minus log sigma, because the writer profiles
+sigma_eps out). R's parameter count is tied to nothing beyond that constant offset:
+the R record carries no layout, and no authenticated R layout exists. Those are
+necessary conditions, not authentication: the caller must still bind each record to its
+case, data and objective. The verifier (``check_postcoef_authenticated_inputs``, and
+``check_lambda_maps`` in the live reference) compares each map's ``q_free`` with the
+authenticated coefficient lengths [0, 5, 6]; ``p``, ``K`` and the entries have no
+authenticated spec and stay record fields. Every derivative error radius is a
+declaration with ``radius_status == 'declared_unproven'``; a certified pass carries that
+status (``classify(...).radius_status``, ``pass_radius_status``) and real-record
+admission stays blocked on an independent derivation of the radii for the Laplace
+objective.
 """
 import math
 import sys
@@ -368,6 +384,25 @@ def _lambda_pin_binding(fit):
     return None
 
 
+def _optimizer_length(fit):
+    """Length of the optimizer-coordinate point the Julia writer produces, or None.
+
+    The writer optimises ``gaussian_profile_nll`` with ``profile_beta=false`` (tools/
+    core070_postfit_policy_batch.jl ``postcoef_profile_objective``): the point is
+    [beta_free; theta_rr_B], so sigma_eps is profiled out and the point is one shorter
+    than the packed vector [beta_free; log sigma; theta_rr_B]. By src/packing.jl
+    ``rr_theta_len`` that is q_free + p*K - K(K-1)/2 (= len(parameters) - 1). Measured
+    on the retained real record (7 packed parameters, 6 optimizer coordinates).
+    """
+    m = fit.get('lambda_constraint_map')
+    if not isinstance(m, dict):
+        return None
+    p, K, q = m.get('p'), m.get('K'), m.get('q_free')
+    if any(type(v) is not int for v in (p, K, q)) or p < 1 or not 1 <= K <= p or q < 0:
+        return None
+    return q + p * K - K * (K - 1) // 2
+
+
 def _optimizer_binding(fit):
     """Bind the optimizer-coordinate block to the fit; return a reason or None.
 
@@ -382,6 +417,9 @@ def _optimizer_binding(fit):
     point, gradient = opt.get('optimizer_parameters'), opt.get('optimizer_gradient')
     if not _finite_vector(point) or not _finite_vector(gradient) or len(point) != len(gradient):
         return 'optimizer point or gradient missing, non-finite or of unequal length'
+    expected = _optimizer_length(fit)
+    if expected is None or len(point) != expected:
+        return 'optimizer point length is not the length the lambda_constraint_map layout implies'
     if opt.get('optimizer_max_abs_gradient') != max(abs(x) for x in gradient):
         return 'optimizer gradient scalar is not the maximum of the optimizer gradient vector'
     value, minimum = opt.get('optimizer_profile_value'), opt.get('optimizer_minimum')
@@ -563,6 +601,8 @@ def _evidence_binding(evidence):
         r_parameters = r_fits[case].get('parameters')
         if not isinstance(m, dict) or not isinstance(point, list) or not isinstance(r_parameters, list):
             return 'case binding evidence missing'
+        if any(type(m.get(key)) is not int for key in ('p', 'K', 'q_free')):  # before any set or hash
+            return 'case binding evidence malformed'
         maps.append(m)
         offsets.append(len(r_parameters) - len(point))
     if len({(m.get('p'), m.get('K')) for m in maps}) != 1:
@@ -776,7 +816,10 @@ def _classify(evidence):
         return 'FIT_HEALTH_INCOMPLETE' if verdict == 'FIT_HEALTH_PASS' else verdict
     if verdict == 'FIT_HEALTH_INTEGRITY_REJECTED':
         return verdict
-    certs, confirmable = certify_evidence(evidence)
+    try:
+        certs, confirmable = certify_evidence(evidence)
+    except Exception:  # a hostile record refuses only the certified paths, never the recorded verdict
+        certs, confirmable = [], False
     certified_failure = confirmable and any(c['verdict'] == CERT_FAIL and c['confirmable'] for c in certs)
     all_certified = len(certs) == len(CASES) and all(c['verdict'] == CERT_PASS for c in certs)
     if verdict == 'FIT_HEALTH_PASS':
@@ -809,3 +852,17 @@ def classify(evidence):
         return _classify(evidence)
     except Exception:
         return 'FIT_HEALTH_INCOMPLETE'
+
+
+def pass_radius_status(evidence):
+    """Radius status of a certified pass; raise ValueError for anything else.
+
+    A caller that records a PASS in a receipt or report uses this so the trace
+    ``declared_unproven`` (the error radii are declarations, not derivations) is
+    visible beside the verdict instead of living only on the verdict object.
+    """
+    verdict = classify(evidence)
+    status = getattr(verdict, 'radius_status', None)
+    if verdict != 'FIT_HEALTH_PASS' or status != RADIUS_STATUS:
+        raise ValueError('fit health is not a certified pass carrying radius_status declared_unproven')
+    return status

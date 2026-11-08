@@ -20,7 +20,7 @@ def good():
                 row.update(fixed_prior_state='none', ridge_tau='Inf', ridge_penalised=False)
             else:
                 row['reconstruction'] = dict(recovered_parameters=[0.0, 0.0], recovered_loglik=-3.0, parameters_match=True, loglik_matches=True, error=None)
-                row['optimizer'] = dict(optimizer_parameters=[0.0, 0.0], optimizer_gradient=[1e-7, 0.0], optimizer_max_abs_gradient=1e-7, optimizer_minimum=3.0, optimizer_profile_value=3.0, optimizer_profile_verified=True, optimizer_error=None)
+                row['optimizer'] = dict(optimizer_parameters=[0.0], optimizer_gradient=[1e-7], optimizer_max_abs_gradient=1e-7, optimizer_minimum=3.0, optimizer_profile_value=3.0, optimizer_profile_verified=True, optimizer_error=None)
                 row['objective_difference'] = 0.0
                 row['objective_roundoff_limit'] = 8 * sys.float_info.epsilon * 3.0
                 row['penalty_state'] = 'none'

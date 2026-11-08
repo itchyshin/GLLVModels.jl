@@ -51,6 +51,9 @@ def need(ok, message):
         raise ValueError(message)
 
 
+POSTCOEF_EXPECTED_LENGTHS = [0, 5, 6]  # contract expected_lengths, in core070_postcoef_fit_health.CASES order
+
+
 def check_postcoef_three_fit_evidence(evidence):
     need(isinstance(evidence, dict), "three-fit evidence must be an object")
     need(core070_postcoef_fit_health.classify(evidence.get("fit_health")) == "FIT_HEALTH_PASS",
@@ -82,6 +85,38 @@ def check_postcoef_three_fit_evidence(evidence):
         values = controls[key]
         need(isinstance(values, list) and all(type(n) is int for n in values) and
              values == expected_lengths, f"{key} control did not produce its expected lengths")
+
+
+def check_postcoef_authenticated_inputs(evidence):
+    """Compare each fit's recorded lambda_constraint_map with the authenticated case spec.
+
+    Authenticated source: the contract's CORE070-POSTFIT-COEF-EMPTY-NATIVE
+    ``expected_lengths`` [0, 5, 6] (coefficient lengths of the three designs, already
+    required of ``julia_lengths`` and ``r_design_columns`` by
+    check_postcoef_three_fit_evidence). ``StatsAPI.coef(fit::GllvmFit)`` returns a copy of
+    ``fit.pars.β`` and the Julia writer asserts that this is the free-coefficient block, so
+    each map's ``q_free`` must equal the case's expected length. No authenticated spec
+    exists for ``p``, ``K`` or the map entries: those remain record fields.
+    """
+    need(isinstance(evidence, dict) and isinstance(evidence.get("fit_health"), dict),
+         "three-fit evidence has no fit health")
+    fits = evidence["fit_health"].get("Julia")
+    need(isinstance(fits, list) and len(fits) == len(core070_postcoef_fit_health.CASES) and
+         all(isinstance(fit, dict) for fit in fits), "Julia fit health records are malformed")
+    by_case = {fit.get("case"): fit for fit in fits
+               if type(fit.get("case")) is str}
+    need(set(by_case) == set(core070_postcoef_fit_health.CASES), "Julia fit health case set is malformed")
+    for case, length in zip(core070_postcoef_fit_health.CASES, POSTCOEF_EXPECTED_LENGTHS):
+        recorded = by_case[case].get("lambda_constraint_map")
+        need(isinstance(recorded, dict) and type(recorded.get("q_free")) is int and
+             recorded["q_free"] == length,
+             f"lambda_constraint_map of {case} differs from the authenticated coefficient length")
+
+
+def postcoef_pass_trace(evidence):
+    """Authenticated-input comparison, then the radius status a certified pass must carry."""
+    check_postcoef_authenticated_inputs(evidence)
+    return core070_postcoef_fit_health.pass_radius_status(evidence["fit_health"])
 
 
 def check_postcoef_r_oracle_binding(evidence, oracle):
@@ -535,6 +570,7 @@ def verify_state(state=DEFAULT_STATE):
 
     report = json.loads(julia_path.read_text())
     check_report(report, contract, contract_sha256)
+    radius_status = None  # set on the P1 POST-COEF path from a certified pass
     if SELECTED_PIN == "P1":
         identity = receipt.get("postcoef_capture_identity")
         check_postcoef_capture_artifacts(state, ROOT, identity)
@@ -546,6 +582,7 @@ def verify_state(state=DEFAULT_STATE):
         check_postcoef_runtime(ROOT, state, receipt, report, controls)
         evidence = report["cases"]["CORE070-POSTFIT-COEF-EMPTY-NATIVE"].get("three_fit")
         check_postcoef_three_fit_evidence(evidence)
+        radius_status = postcoef_pass_trace(evidence)
         need(all(core070_postcoef_fit_health.julia_prior_bound(
             fit.get("penalty_provenance"), identity.get("source_tree"), fit.get("case"))
             for fit in evidence["fit_health"]["Julia"]),
@@ -575,6 +612,7 @@ def verify_state(state=DEFAULT_STATE):
         "negative_control_count": len(contract["negative_controls"]),
         "receipt_sha256": sha(receipt_path),
         "julia_results_sha256": sha(julia_path),
+        "postcoef_radius_status": radius_status,
     }
 
 

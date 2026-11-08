@@ -41,7 +41,8 @@ def writer_record(matrix, free, max_gradient=1e-7, exact_ad=True):
                hessian_error_radius=None, hessian_error_radius_basis=None)
     row['reconstruction']['recovered_parameters'] = [0.0] * n
     opt = row['optimizer']
-    opt.update(optimizer_parameters=[0.0] * n, optimizer_gradient=grad,
+    # the writer's optimizer point omits log sigma (profile_beta=false): one coordinate shorter
+    opt.update(optimizer_parameters=[0.0] * (n - 1), optimizer_gradient=grad[:n - 1],
                optimizer_max_abs_gradient=max_gradient,
                gradient_error_radius=None, gradient_error_radius_basis=None)
     row['gradient_error_radius'] = row['packed_gradient_error_radius'] = None

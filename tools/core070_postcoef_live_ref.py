@@ -16,7 +16,8 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from core070_json_semantics import json_value_equal
-from core070_postcoef_fit_health import classify as classify_fit_health, historical_r_prior_bound, julia_prior_bound
+from core070_postcoef_fit_health import (classify as classify_fit_health, historical_r_prior_bound, julia_prior_bound,
+                                         pass_radius_status, CASES as HEALTH_CASES)
 from core070_postfit_p1_receipts import postcoef_git_env, postcoef_ref_compatible
 
 PREFIX = 'docs/dev-log/core070/true-parity-latest/receipts/postfit/postcoef-empty-p1'
@@ -114,6 +115,31 @@ def check_comparison(case, report, oracle):
         type(cmp.get('max_abs_diff')) not in (int, float) or cmp.get('max_abs_diff') != 0 or
         cmp.get('discriminating') is not True):
         raise ValueError('comparison differs from the captured exact lengths')
+
+
+def check_lambda_maps(health, expected_lengths):
+    """Each Julia fit's lambda_constraint_map q_free must equal the authenticated coefficient length.
+
+    The authenticated spec is the contract's expected lengths [0, 5, 6], which check_comparison
+    already requires of the retained R lengths (coef() of the fit's free-coefficient block).
+    """
+    fits = health.get('Julia') if isinstance(health, dict) else None
+    if (not isinstance(fits, list) or len(fits) != len(HEALTH_CASES) or
+            not all(isinstance(fit, dict) and type(fit.get('case')) is str for fit in fits)):
+        raise ValueError('POST-COEF Julia fit health is malformed')
+    by_case = {fit['case']: fit for fit in fits}
+    if set(by_case) != set(HEALTH_CASES) or expected_lengths != [0, 5, 6]:
+        raise ValueError('POST-COEF Julia fit health case set is malformed')
+    for case, length in zip(HEALTH_CASES, expected_lengths):
+        recorded = by_case[case].get('lambda_constraint_map')
+        if not (isinstance(recorded, dict) and type(recorded.get('q_free')) is int and recorded['q_free'] == length):
+            raise ValueError('lambda_constraint_map of ' + case + ' differs from the authenticated coefficient length')
+
+
+def pass_trace(health, expected_lengths):
+    """Map comparison, then the radius status a certified pass must carry (reported by verify)."""
+    check_lambda_maps(health, expected_lengths)
+    return pass_radius_status(health)
 
 
 def check_historical_case_binding(case, source_bytes, selected_bytes):
@@ -371,6 +397,8 @@ def verify(repo, head, runtime_root):
         report = json.loads((state / 'julia-results.json').read_text())
         oracle = json.loads((state / 'r-oracle.json').read_text())
         check_comparison(case, report, oracle)
+        three_fit = report['cases'][CID]['three_fit']
+        radius_status = pass_trace(three_fit['fit_health'], [fit['length'] for fit in oracle['postcoef_three_fit']['fits']])
         output = run_source_selftest(runtime_root, source, state, record['postcoef_runtime'])
         if output.encode('utf8') != transcript:
             raise ValueError('live verifier transcript differs')
@@ -380,7 +408,8 @@ def verify(repo, head, runtime_root):
     if not json_value_equal(identity_before, identity_after):
         raise ValueError('selected verification identity changed during verification')
     return {'status': 'POSTCOEF_LIVE_REF_VERIFIED', **identity_after,
-            'capture_commit': source, 'scope': 'verified capture; no row admission'}
+            'capture_commit': source, 'radius_status': radius_status,
+            'scope': 'verified capture; no row admission'}
 
 
 def main():
