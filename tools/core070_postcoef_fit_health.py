@@ -403,15 +403,109 @@ def _optimizer_length(fit):
     return q + p * K - K * (K - 1) // 2
 
 
+PROFILE_SCALE_MAX_CANDIDATES = 64   # Refuse (unbound) above this many binary64 sigma candidates.
+PROFILE_LOG_MAX_TERMS = 640         # Refuse (unbound) if log sigma is still undecided at this many terms.
+
+
+def _atanh_enclosure(z, terms):
+    """Exact rational [lo, hi] containing atanh(z) for rational |z| <= 1/3."""
+    total, power, z2 = Fraction(0), z, z * z
+    for k in range(terms):
+        total += power / (2 * k + 1)
+        power *= z2
+    tail = abs(power) / ((2 * terms + 1) * (1 - z2))  # |z|^(2N+1) / ((2N+1)(1 - z^2)) bounds the rest
+    return total - tail, total + tail
+
+
+def _log_enclosure(s, terms):
+    """Exact rational [lo, hi] containing log(s) for a positive finite binary64 s."""
+    m, e = math.frexp(s)  # exact: s = m * 2**e, 1/2 <= m < 1
+    m = Fraction(m)
+    m_lo, m_hi = _atanh_enclosure((m - 1) / (m + 1), terms)
+    l2_lo, l2_hi = _atanh_enclosure(Fraction(1, 3), terms)  # log 2 = 2 atanh(1/3)
+    e_lo, e_hi = (e * l2_lo, e * l2_hi) if e >= 0 else (e * l2_hi, e * l2_lo)
+    return 2 * (e_lo + m_lo), 2 * (e_hi + m_hi)
+
+
+def _rounds_to_log(s, ell):
+    """True iff binary64 ``ell`` is the round-to-nearest value of log(s); False if not or undecided.
+
+    log(s) is irrational for a binary64 s != 1, so it is never a rounding tie; the enclosure
+    is refined until it falls strictly inside or outside ell's rounding interval.
+    """
+    if s == 1.0:
+        return ell == 0.0 and math.copysign(1.0, ell) > 0
+    below, above = math.nextafter(ell, -math.inf), math.nextafter(ell, math.inf)
+    if not (math.isfinite(below) and math.isfinite(above)):
+        return False
+    mid_lo, mid_hi = (Fraction(below) + Fraction(ell)) / 2, (Fraction(ell) + Fraction(above)) / 2
+    terms = 40
+    while terms <= PROFILE_LOG_MAX_TERMS:
+        lo, hi = _log_enclosure(s, terms)
+        if mid_lo < lo and hi < mid_hi:
+            return True
+        if hi < mid_lo or lo > mid_hi:
+            return False
+        terms *= 2
+    return False
+
+
+def _profile_scale_binds(scaled, packed, log_sigma):
+    """Exact binding of profiled loadings L to packed loadings and the packed log sigma.
+
+    The writer's point holds L (``gaussian_profile_nll``, profile_beta=false), and the
+    packed vector holds ``pack_lambda(sigma .* L)`` and ``log(sigma)`` for one binary64
+    sigma = sqrt(quad / np) (src/profile.jl ``profile_recover``; pack/unpack keep entry
+    order). The relation is therefore: some binary64 sigma > 0 has fl(sigma * L_j) =
+    lambda_j for every j (same-signed zeros where L_j is zero) and log(sigma) rounds to
+    the recorded log sigma. sigma is not recorded, so its candidates are the binary64
+    values in the exact intersection of the rounding preimages of lambda_j / L_j; every
+    product and the log rounding are decided in exact rational arithmetic. A writer whose
+    log is not correctly rounded at sigma is refused (fail closed), never admitted.
+    """
+    lo = hi = None
+    for x, lam in zip(scaled, packed):
+        if x == 0:
+            if lam != 0 or math.copysign(1.0, lam) != math.copysign(1.0, x):
+                return False
+            continue
+        if lam == 0 or (lam > 0) != (x > 0):
+            return False
+        below, above = math.nextafter(lam, -math.inf), math.nextafter(lam, math.inf)
+        if not (math.isfinite(below) and math.isfinite(above)):
+            return False
+        a, b = (Fraction(below) + Fraction(lam)) / 2, (Fraction(lam) + Fraction(above)) / 2
+        a, b = (a / Fraction(x), b / Fraction(x)) if x > 0 else (b / Fraction(x), a / Fraction(x))
+        lo = a if lo is None else max(lo, a)
+        hi = b if hi is None else min(hi, b)
+    if lo is None:  # all loadings zero: every sigma reproduces them
+        return True
+    if lo > hi or hi <= 0 or lo > Fraction(sys.float_info.max):
+        return False
+    candidate = float(lo) if lo > 0 else math.nextafter(0.0, 1.0)
+    if Fraction(candidate) < lo:
+        candidate = math.nextafter(candidate, math.inf)
+    for _ in range(PROFILE_SCALE_MAX_CANDIDATES):
+        if not math.isfinite(candidate) or Fraction(candidate) > hi:
+            return False
+        s = Fraction(candidate)
+        if (all(float(s * Fraction(x)) == lam for x, lam in zip(scaled, packed) if x != 0) and
+                _rounds_to_log(candidate, log_sigma)):
+            return True
+        candidate = math.nextafter(candidate, math.inf)
+    return False
+
+
 def _optimizer_binding(fit):
     """Bind the optimizer-coordinate block to the fit; return a reason or None.
 
     The block must be well formed (point and gradient finite vectors of equal
     length, scalar equal to the vector maximum, profile verified), its minimum
     must agree with the fit's own objective within the objective roundoff rule,
-    the point must equal, as exact values, the packed ``parameters`` with the
-    log sigma slot (index q_free + 1) removed, and the reconstruction must have
-    been recovered from exactly this point.
+    the point must be the packed ``parameters`` in the writer's profiled
+    coordinates (betas equal; loadings bound by ``_profile_scale_binds`` to the
+    packed loadings and the log sigma slot, index q_free + 1), and the
+    reconstruction must have been recovered from exactly this point.
     """
     opt, rec = fit.get('optimizer'), fit.get('reconstruction')
     if not isinstance(opt, dict) or not isinstance(rec, dict):
@@ -423,9 +517,9 @@ def _optimizer_binding(fit):
     if expected is None or len(point) != expected:
         return 'optimizer point length is not the length the lambda_constraint_map layout implies'
     theta, q_free = fit.get('parameters'), fit['lambda_constraint_map']['q_free']
-    if (not isinstance(theta, list) or len(theta) != len(point) + 1 or
-            point != theta[:q_free] + theta[q_free + 1:]):
-        return 'optimizer point is not the packed parameters with the log sigma slot removed'
+    if (not _finite_vector(theta) or len(theta) != len(point) + 1 or point[:q_free] != theta[:q_free] or
+            not _profile_scale_binds(point[q_free:], theta[q_free + 1:], theta[q_free])):
+        return 'optimizer point is not the packed parameters in profiled (sigma_eps-scaled) coordinates'
     if opt.get('optimizer_max_abs_gradient') != max(abs(x) for x in gradient):
         return 'optimizer gradient scalar is not the maximum of the optimizer gradient vector'
     value, minimum = opt.get('optimizer_profile_value'), opt.get('optimizer_minimum')

@@ -1977,5 +1977,70 @@ class FifthReviewTests(unittest.TestCase):
                     self.assertEqual(health.classify(copy.deepcopy(data)), 'FIT_HEALTH_INCOMPLETE')
 
 
+# Retained real writer record (no_fixed_effects, p = 6, K = 1, q_free = 0), copied verbatim
+# from scratchpad/real-record-20261107.json. Packed loadings are fl(sigma_eps * L): the profile
+# route (src/profile.jl profile_recover) returns Lambda_B = sigma_eps .* L_B and log(sigma_eps).
+REAL_PARAMETERS = [-0.12779036984697634, 0.1584130445198228, 0.032680615521881125, -1.1897236786294656,
+                   0.3162596224072953, 0.8486193133045965, -0.005038955714540875]
+REAL_POINT = [0.1800070825476638, 0.03713546617191357, -1.351900590491877, 0.35937048069320615,
+              0.964298661417666, -0.005725839813323449]
+REAL_GRADIENT = [2.4424906541753444e-15, -4.440892098500626e-16, 7.549516567451064e-15,
+                 -4.9960036108132044e-15, -7.771561172376096e-15, -2.688821387764051e-16]
+
+
+def profiled_row(parameters, point, gradient=None, q_free=0):
+    """certified_good() row (K = 1) carrying the given packed parameters and optimizer point."""
+    row = certified_good()['Julia'][0]
+    p = len(parameters) - q_free - 1
+    row['parameters'] = list(parameters)
+    row['lambda_constraint_map'] = {'layout': health.LAMBDA_MAP_LAYOUT, 'p': p, 'K': 1, 'q_free': q_free,
+                                    'entries': [[None] for _ in range(p)]}
+    gradient = list(gradient) if gradient is not None else [0.0] * len(point)
+    row['optimizer'].update(optimizer_parameters=list(point), optimizer_gradient=gradient,
+                            optimizer_max_abs_gradient=max(abs(g) for g in gradient))
+    row['reconstruction']['optimizer_parameters'] = list(point)
+    return row
+
+
+class ProfileScaleBindingTests(unittest.TestCase):
+    """The optimizer point holds L; the packed loadings are fl(sigma_eps * L): an exact relation."""
+
+    def test_real_record_binds(self):
+        self.assertIsNone(health._optimizer_binding(profiled_row(REAL_PARAMETERS, REAL_POINT, REAL_GRADIENT)))
+
+    def test_real_record_controls_fail_closed(self):
+        theta, x = REAL_PARAMETERS, REAL_POINT
+        cases = {
+            'old relation (point = packed without log sigma)': (theta, theta[1:]),
+            'point doubled': (theta, [2 * v for v in x]),
+            'one loading one ulp up': (theta, [math.nextafter(x[0], math.inf)] + x[1:]),
+            'log sigma one ulp up': ([math.nextafter(theta[0], math.inf)] + theta[1:], x),
+            'log sigma one ulp down': ([math.nextafter(theta[0], -math.inf)] + theta[1:], x),
+            'log sigma as point': (theta, [theta[0]] + x[1:]),
+        }
+        for name, (t, point) in cases.items():
+            with self.subTest(name):
+                self.assertIsInstance(health._optimizer_binding(profiled_row(t, point)), str)
+
+    def test_sigma_two_binds_by_scale_not_by_equality(self):
+        x = [0.75, -0.3, 1e-3]
+        theta = [math.log(2.0)] + [2.0 * v for v in x]
+        self.assertIsNone(health._optimizer_binding(profiled_row(theta, x)))
+        # the same packed loadings as the point: that relation holds only when sigma_eps = 1
+        self.assertIsInstance(health._optimizer_binding(profiled_row(theta, theta[1:])), str)
+        # betas (q_free = 1) are not scaled and still bind by exact equality
+        self.assertIsNone(health._optimizer_binding(profiled_row([0.25] + theta, [0.25] + x, q_free=1)))
+        self.assertIsInstance(health._optimizer_binding(profiled_row([0.25] + theta, [0.5] + x, q_free=1)), str)
+
+    def test_zero_and_sign_rules(self):
+        log2 = math.log(2.0)
+        self.assertIsNone(health._optimizer_binding(profiled_row([log2, 1.0, 0.0], [0.5, 0.0])))
+        # fl(sigma * +0) = +0 for sigma > 0: a sign change of a zero is not the writer's arithmetic
+        self.assertIsInstance(health._optimizer_binding(profiled_row([log2, 1.0, -0.0], [0.5, 0.0])), str)
+        self.assertIsInstance(health._optimizer_binding(profiled_row([log2, 1.0, 0.0], [0.5, 1e-300])), str)
+        # sigma_eps > 0 cannot flip the sign of a loading
+        self.assertIsInstance(health._optimizer_binding(profiled_row([log2, -1.0], [0.5])), str)
+
+
 if __name__ == '__main__':
     unittest.main()
