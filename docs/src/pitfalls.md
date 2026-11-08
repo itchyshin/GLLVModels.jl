@@ -37,7 +37,11 @@ rejects inadmissible `K` before fitting.
 `fit_gaussian_gllvm` warm-starts from PPCA and usually converges in a step or
 two; the non-Gaussian fitters use L-BFGS over a Laplace marginal. Always check
 the `converged` flag — if it is `false`, try a different start or more
-iterations. Standardising responses to a common scale helps the Gaussian path.
+iterations. `converged = true` alone is not the go-ahead to read the results:
+it means the optimizer stopped at a stationary point, not that it found the
+global maximum. For non-Gaussian fits with `K ≥ 2`, refit from several starts
+(`n_init` currently covers Poisson only) and keep the highest log-likelihood
+before reading loadings or comparing AIC. Standardising responses to a common scale helps the Gaussian path.
 
 ## Fewer sites than species (`n < p`)
 
@@ -65,6 +69,12 @@ With binary responses, a response that is all-0 or all-1 drives its intercept
 to ±∞ (complete separation). `fit_binomial_gllvm` clamps the linear predictor
 for numerical safety, but a non-convergence flag or an extreme intercept is a
 sign to inspect that response.
+
+The Binomial Laplace path bounds `μ` to `[1e-12, 1 − 1e-12]` and `η` to `±30`. Beyond
+`|η| = 30` the objective is flat, and each saturated misfit cell contributes at
+least `log(1e-12) ≈ −27.6` to the log-likelihood instead of its true, more negative
+value. A fit that sits on these bounds therefore reports an optimistic
+log-likelihood; check `fit.saturation` and `converged`.
 
 ### Quasi-separation: the two engines flag it differently
 

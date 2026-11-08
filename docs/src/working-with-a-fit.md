@@ -95,7 +95,9 @@ bic(fit, n)         # k·log(n_sites) − 2·logLik   (n_sites passed explicitly
 
 `k` is the free-parameter count (loadings counted modulo the `K(K−1)/2` rotational
 identifiability). Lower is better — compare fits with different `K` (or different
-families) to choose a model. Displaying the fit shows family, dimensions, the
+families) to choose a model. For non-Gaussian fits with `K ≥ 2`, make sure each
+candidate is the best of several starts first; a fit stuck at a local optimum
+(still `converged = true`) distorts the comparison. Displaying the fit shows family, dimensions, the
 log-likelihood, AIC, and convergence:
 
 ```julia

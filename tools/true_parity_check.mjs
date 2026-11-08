@@ -492,6 +492,9 @@ function boundaryContext(row) {
     if (j.verdict !== rule.verdict) return { problem: `boundary context case ${id}: verdict ${JSON.stringify(j.verdict)} is not ${rule.verdict} for ${j.evidence_kind} (${p})` };
     if (rule.suffix && !id.endsWith(rule.suffix)) return { problem: `boundary context case ${id}: a ${j.evidence_kind} case must be a ${rule.suffix} case` };
     if (j.comparison !== undefined) return { problem: `boundary context case ${id}: its receipt carries a comparison block, so it is compared, not context (${p})` };
+    // Hardening (issue #829): a context receipt must be pinned to P1, and a receipt that lists source_ids must name this row.
+    if (j.pin !== 'P1') return { problem: `boundary context case ${id}: its receipt pin ${JSON.stringify(j.pin)} is not P1 (${p})` };
+    if (j.source_ids !== undefined && (!Array.isArray(j.source_ids) || !j.source_ids.includes(row.source_id))) return { problem: `boundary context case ${id}: its receipt source_ids ${JSON.stringify(j.source_ids)} does not name ${row.source_id} (${p})` };
   }
   return { ids: new Set(ctx) };
 }
@@ -521,6 +524,12 @@ function convergenceParityProblem(cp, p) {
   return null;
 }
 
+// True when a receipt (top level or its comparison block) says its compared point is polished.
+function declaresPolishedPoint(j) {
+  const at = (o) => isPlainObject(o) && o.compared_point === 'newton_polished';
+  return at(j) || at(j.comparison);
+}
+
 function numericReceiptStatus(row) {
   const paths = rowReceiptPaths(row);
   if (paths.length === 0) return { ok: false, reason: 'no receipt' };
@@ -540,6 +549,9 @@ function numericReceiptStatus(row) {
     if (j.convergence_parity !== undefined) {
       const cp = convergenceParityProblem(j.convergence_parity, p);
       if (cp) return { ok: false, reason: cp };
+    } else if (declaresPolishedPoint(j)) {
+      // Hardening (issue #829): a receipt built from polished numbers cannot leave the N9 block out.
+      return { ok: false, reason: `convergence parity (maintainer ruling 2026-10-05 (D-319), N9): the receipt declares compared_point newton_polished but has no convergence_parity block in ${p}` };
     }
     if (notPassed === null) notPassed = receiptNotPassed(j, p);
     if (j.comparison === undefined) continue;

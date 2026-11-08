@@ -159,6 +159,14 @@ signed `sigma_phy[t]`, `beta` and `Lambda_*` terms are reported as they are.
 percentiles, and returns `n_used` and `n_dropped` (it warns when more than half of
 the refits are dropped).
 
+The dropped refits are not removed from the output: `replicates` keeps one row per
+refit and `converged` flags each row, so filter on `converged` before using
+`replicates` directly. On the plain Gaussian path, refits that did not converge keep
+finite rows and refits that errored get `NaN` rows. For fits with an AGHQ integration
+record (for example Gaussian fits with missing responses), non-converged refits also
+get `NaN` rows, so `NaN` there does not mean the refit errored. Only the percentile bounds, `n_used` and `n_dropped` apply
+the exclusion.
+
 and derived-quantity CIs (Σ_y entries, communality, correlation, phylogenetic
 signal H²) via [`confint_derived`-family helpers](covariance-correlation.md).
 
