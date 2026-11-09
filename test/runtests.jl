@@ -918,4 +918,8 @@ println(_SHARD === nothing ?
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
 end
-include("test_readme_quickstart.jl")
+# README examples: shard 1 only. The blocks include Poisson fits and a Gaussian
+# CI trio; they must not run on every CI shard.
+if _SHARD === nothing || _SHARD[1] == 1
+    include("test_readme_quickstart.jl")
+end
