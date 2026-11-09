@@ -178,6 +178,13 @@ ladder gives ordinal families, and is declined at 20 traits or more. Ineligible 
 the Laplace fit; convergence means the frozen-node gradient rule, not re-adapted
 stationarity. `aghq_control` is as for Poisson. `hessian` must be `:observed`. There is no
 `offset` for ordinal fits.
+
+Laplace retention follows [`fit_poisson_gllvm`](@ref) (an unmoved, unconverged run returns the Laplace
+fit), and this fitter adds a second rule: a run that moved but stopped on `:adaptation_failed` or
+`:optimizer_failed` before converging is also discarded when the Laplace fit converged, with a
+warning giving both log-likelihoods. The other AGHQ fitters keep a moved point in that case; the
+asymmetry rests on one fixture and the siblings are unexamined. `_adapt_hook` is an internal test
+seam (default `identity`), not public API.
 """
 function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer,aghq=:auto,aghq_control=(;),_adapt_hook=identity,kwargs...)
     request=_aghq_request(aghq);request===:off && throw(ArgumentError("fit_ordinal_gllvm_pertrait_aghq needs aghq != false; call fit_ordinal_gllvm_pertrait"))
