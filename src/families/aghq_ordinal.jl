@@ -179,7 +179,7 @@ the Laplace fit; convergence means the frozen-node gradient rule, not re-adapted
 stationarity. `aghq_control` is as for Poisson. `hessian` must be `:observed`. There is no
 `offset` for ordinal fits.
 """
-function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer,aghq=:auto,aghq_control=(;),kwargs...)
+function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer,aghq=:auto,aghq_control=(;),_adapt_hook=identity,kwargs...)
     request=_aghq_request(aghq);request===:off && throw(ArgumentError("fit_ordinal_gllvm_pertrait_aghq needs aghq != false; call fit_ordinal_gllvm_pertrait"))
     c=_aghq_controls(aghq_control)
     c=_aghq_controls(merge(c,(mode_maxiter=get(kwargs,:newton_maxiter,c.mode_maxiter),mode_tol=get(kwargs,:newton_tol,c.mode_tol))))
@@ -206,7 +206,9 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer
     if c.multistart
         alt=copy(theta);alt[p+1:p+rr].=.3;push!(starts,alt)
     end
-    result=aghq_multistart_optimize(starts,problem.adapt,problem.objective;_aghq_outer_controls(c)...)
+    # _adapt_hook is a test-only seam (default identity = production behaviour) that lets a test
+    # wrap the site-adaptation callback to inject a deterministic quadrature failure.
+    result=aghq_multistart_optimize(starts,_adapt_hook(problem.adapt),problem.objective;_aghq_outer_controls(c)...)
     if !result.usable
         @warn "AGHQ failed; retained Laplace" requested=request
         info=AGHQFitInfo(request,:laplace,1,k,1,:adaptation_failed,false,Inf,c,base_controls,result,
