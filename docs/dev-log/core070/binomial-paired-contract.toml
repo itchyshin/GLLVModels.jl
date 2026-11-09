@@ -20,9 +20,9 @@ likelihood = "binomial normalization included; observed-curvature Laplace in bot
 cloglog_boundary = "Julia default is Fisher; explicit observed case is same-estimator reachability only, not default-estimator equivalence"
 excluded_from_this_packet = "X, formula and public bridge reach, offsets, missing data, covariance extensions, inference and recovery"
 [source_pins]
-"tools/core070_binomial_paired.jl" = "a123e7240e2a91b663816333cdbccb7a190e1b1c4434350e5083f8c9df45c258"
+"tools/core070_binomial_paired.jl" = "fd86ce1b3fce0174a102574af6e4b0622439b1d9fcae7d8ba4f45e570111dcee"
 "test/parity/binomial_case_contract.jl" = "46fe8e155fbcb2080aa9e096d50a998eff5861e62d5363d90195d5258397f8ba"
-"test/parity/parity_helpers.jl" = "be3c6bd06986d0ada1655354314d43e51d6021e3a2d5c390824c9ca291f939b8"
+"test/parity/parity_helpers.jl" = "7d34c957ae7c8b4d96edd4be4a4879c2a78b0c9c6d8e5bbc5153b28f2c724e2f"
 "test/parity/parity_trial_inputs.jl" = "f4bb02fd150c306f635b7f86885272939f0b66faa4a8c5ee8843c64f6f7ea7cd"
 
 [[case]]
