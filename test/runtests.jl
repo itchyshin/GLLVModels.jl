@@ -251,10 +251,12 @@ end
 # the END of the include list so earlier positions are unchanged. Their lines do
 # not match the `_shard_include("` header count below, so the header counts only
 # ungated files.
-#   GLLVM_SLOW_TESTS=1 : test_sparse_phy_grad.jl (about 900-1100 s alone; opt-in).
+#   GLLVM_SPARSE_PHY_GRAD_TESTS=1 : test_sparse_phy_grad.jl (about 900-1100 s alone; opt-in,
+#                        a dedicated variable so it does not also switch on the other
+#                        slow-gated tests that read GLLVM_SLOW_TESTS).
 #   Julia 1.10.x only  : test_destination_b_a4_s4_fixed_coordinate_evaluator.jl
 #                        (asserts the Julia runner matches ^1\.10\.; fails on 1.13).
-_RUN_SLOW = get(ENV, "GLLVM_SLOW_TESTS", "") == "1"
+_RUN_SPARSE_PHY_GRAD = get(ENV, "GLLVM_SPARSE_PHY_GRAD_TESTS", "") == "1"
 _IS_JULIA_110 = VERSION.major == 1 && VERSION.minor == 10
 
 function _shard_include(path::AbstractString)
@@ -444,13 +446,13 @@ println(_SHARD === nothing ?
     # guards, and the cheap profile ArgumentError guards run in CI.
     # The NB sparse-vs-dense-leaf identity is `@test_broken` (1.3e-2
     # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv
-    # and test_sparse_phy_grad stay unwired (same flake class; not in #948).
+    # stays unwired (same flake class; not in #948).
     _shard_include("test_phylo_binomial_xlv.jl")
     _shard_include("test_phylo_nb_xlv.jl")
     _shard_include("test_xlv_nb_binomial_wired.jl")
 
     #   include("test_phylo_ordinal_xlv.jl")
-    #   test_sparse_phy_grad.jl is now opt-in: GLLVM_SLOW_TESTS=1 (end of the list).
+    #   test_sparse_phy_grad.jl is now opt-in: GLLVM_SPARSE_PHY_GRAD_TESTS=1 (end of the list).
 
 
     # chibar2_pvalue / variance_lrt / profile_ci_variance are EXPORTED and had
@@ -939,7 +941,7 @@ println(_SHARD === nothing ?
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
-    _shard_include_if(_RUN_SLOW, "test_sparse_phy_grad.jl")
+    _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
 end
 # README examples: shard 1 only. The blocks include Poisson fits and a Gaussian
