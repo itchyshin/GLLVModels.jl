@@ -81,6 +81,7 @@ for (_k, _files) in enumerate((
         "test_bootstrap_decisions.jl", "test_wtier_crosscov.jl", "test_branch_re_helpers.jl",
         "test_extractors_invariants.jl", "test_docstring_postfit_mask_offset_750.jl", "test_docstring_confint_lv_effects.jl",
         "test_mask_missing_763.jl", "test_bootstrap_sigma_r.jl",
+        "test_sparse_phy_grad.jl",
         "test_nb_n_init_mite_1022.jl",
     ),
     (
@@ -180,7 +181,7 @@ for (_k, _files) in enumerate((
         "test_off_all_count_twin_p1.jl", "test_weights_twins_p1.jl", "test_temporal_lowrank.jl",
         "test_temporal_composed.jl", "test_isdm.jl", "test_zip_observed_laplace.jl",
         "test_tweedie_speed.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
-        "test_comparator_targets.jl",
+        "test_comparator_targets.jl", "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl",
     ),
     (
         "test_likelihood.jl", "test_packing.jl", "test_docstring_animal_dep_twin.jl",
@@ -247,6 +248,21 @@ function _in_shard(path::AbstractString, pos::Integer)
     return (pos - 1) % N == k - 1
 end
 
+# Gated files (opt-in or version-limited). `_shard_include_if(cond, path)` selects
+# exactly like `_shard_include` (it ALWAYS advances the position counter, so a
+# gate never shifts the position of any later file, and uses `_in_shard` with the
+# 4-way table) and then runs the file only when `cond` is true. Keep these calls at
+# the END of the include list so earlier positions are unchanged. Their lines do
+# not match the `_shard_include("` header count below, so the header counts only
+# ungated files.
+#   GLLVM_SPARSE_PHY_GRAD_TESTS=1 : test_sparse_phy_grad.jl (about 900-1100 s alone; opt-in,
+#                        a dedicated variable so it does not also switch on the other
+#                        slow-gated tests that read GLLVM_SLOW_TESTS).
+#   Julia 1.10.x only  : test_destination_b_a4_s4_fixed_coordinate_evaluator.jl
+#                        (asserts the Julia runner matches ^1\.10\.; fails on 1.13).
+_RUN_SPARSE_PHY_GRAD = get(ENV, "GLLVM_SPARSE_PHY_GRAD_TESTS", "") == "1"
+_IS_JULIA_110 = VERSION.major == 1 && VERSION.minor == 10
+
 function _shard_include(path::AbstractString)
     _shard_pos[] += 1
     if _in_shard(path, _shard_pos[])
@@ -255,6 +271,13 @@ function _shard_include(path::AbstractString)
                 @test Threads.nthreads() >= _REQUIRE_THREADS
             end
         end
+        include(path)
+    end
+end
+
+function _shard_include_if(cond::Bool, path::AbstractString)
+    _shard_pos[] += 1
+    if cond && _in_shard(path, _shard_pos[])
         include(path)
     end
 end
@@ -427,13 +450,13 @@ println(_SHARD === nothing ?
     # guards, and the cheap profile ArgumentError guards run in CI.
     # The NB sparse-vs-dense-leaf identity is `@test_broken` (1.3e-2
     # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv
-    # and test_sparse_phy_grad stay unwired (same flake class; not in #948).
+    # stays unwired (same flake class; not in #948).
     _shard_include("test_phylo_binomial_xlv.jl")
     _shard_include("test_phylo_nb_xlv.jl")
     _shard_include("test_xlv_nb_binomial_wired.jl")
 
     #   include("test_phylo_ordinal_xlv.jl")
-    #   include("test_sparse_phy_grad.jl")
+    #   test_sparse_phy_grad.jl is now opt-in: GLLVM_SPARSE_PHY_GRAD_TESTS=1 (end of the list).
 
 
     # chibar2_pvalue / variance_lrt / profile_ci_variance are EXPORTED and had
@@ -923,10 +946,9 @@ println(_SHARD === nothing ?
     # Previously unwired, green on Julia 1.10.12 and 1.13.3 (ci-speed-report-20261109):
     # core070 covariance registries (self-contained modules), A4/S4 receipts,
     # kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
-    # Still unwired on purpose: test_destination_b_a4_s4_fixed_coordinate_evaluator
-    # (asserts a Julia 1.10.x runner, so it fails on the Julia 1 leg; needs a VERSION
-    # gate), test_sparse_phy_grad (912 s),
-    # test_phylo_ordinal_xlv and
+    # Gated at the end of this list (see _shard_include_if): test_sparse_phy_grad
+    # (912 s, opt-in) and test_destination_b_a4_s4_fixed_coordinate_evaluator (Julia 1.10.x only).
+    # Still unwired on purpose: test_phylo_ordinal_xlv and
     # test_phylo_gamma_xlv (optimiser-sensitive canaries), test_binomial_case_contract
     # (stale SHA pins).
     _shard_include("test_core070_covariance_registry.jl")
@@ -938,6 +960,9 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_n_init_mite_1022.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
+    # Gated (see `_shard_include_if`); keep last so no other position shifts.
+    _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
+    _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
 end
 # README examples: shard 1 only. The blocks include Poisson fits and a Gaussian
 # CI trio; they must not run on every CI shard.
