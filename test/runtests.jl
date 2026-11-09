@@ -232,6 +232,7 @@ for (_k, _files) in enumerate((
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
+        "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
     ),
 ))
     for _f in _files
@@ -922,14 +923,12 @@ println(_SHARD === nothing ?
 
     # Previously unwired, all green on Julia 1.10.12 and 1.13.3 (ci-speed-report-20261109):
     # A4/S4 receipts and fixed-coordinate evaluator, kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
-    # Still unwired on purpose: test_core070_covariance_registry and
-    # test_core070_covariance_formula_registry (green standalone, but each re-includes
-    # parity/core070_case_registry.jl and `using`s it, so in a shared process they
-    # error with UndefVarError / module-replacement clashes in every order tried;
-    # they need to be made self-contained first), test_sparse_phy_grad (912 s),
+    # Still unwired on purpose: test_sparse_phy_grad (912 s),
     # test_phylo_ordinal_xlv and
     # test_phylo_gamma_xlv (optimiser-sensitive canaries), test_binomial_case_contract
     # (stale SHA pins).
+    _shard_include("test_core070_covariance_registry.jl")
+    _shard_include("test_core070_covariance_formula_registry.jl")
     _shard_include("test_destination_b_a4_s4_receipts.jl")
     _shard_include("test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
     _shard_include("test_kernel_latent_unique_bridge.jl")
