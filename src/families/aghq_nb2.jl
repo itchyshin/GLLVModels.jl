@@ -189,6 +189,14 @@ function fit_nb_gllvm_grouped_aghq(Y::AbstractMatrix;K::Integer,group=nothing,ag
         return _nb_grouped_with_integration(base,info)
     end
     selected=result.selected;t=selected.parameters;rr=rr_theta_len(p,K)
+    # Unmoved and unconverged: no AGHQ estimate exists; retain Laplace and record the
+    # run's own stop reason (policy and the exact stop reasons: _aghq_unmoved_unconverged).
+    if _aghq_unmoved_unconverged(selected)
+        @warn "AGHQ did not move from its start and did not converge; retained Laplace" requested=request reason=selected.stop_reason
+        info=AGHQFitInfo(request,:laplace,1,k,1,selected.stop_reason,false,Inf,c,base_controls,result,
+            AGHQAdaptation[],nothing,"",NaN)
+        return _nb_grouped_with_integration(base,info)
+    end
     prediction_offset=copy(problem.data.offset)
     raw_offset=get(kwargs,:offset,nothing)
     if raw_offset!==nothing

@@ -214,6 +214,22 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer
         return _ordinal_with_integration(base,info)
     end
     selected=result.selected;t=selected.parameters
+    # Unmoved and unconverged: no AGHQ estimate exists; retain Laplace and record the
+    # run's own stop reason (policy and the exact stop reasons: _aghq_unmoved_unconverged).
+    if _aghq_unmoved_unconverged(selected)
+        @warn "AGHQ did not move from its start and did not converge; retained Laplace" requested=request reason=selected.stop_reason
+        info=AGHQFitInfo(request,:laplace,1,k,1,selected.stop_reason,false,Inf,c,base_controls,result,
+            AGHQAdaptation[],nothing,"",NaN)
+        return _ordinal_with_integration(base,info)
+    end
+    # Moved but stopped on a failure before converging: retain a converged Laplace fit
+    # (rule 2 in aghq_outer.jl, _aghq_failure_stop; ordinal only).
+    if _aghq_failure_stop(selected) && base.converged
+        @warn "AGHQ stopped on a failure before converging; retained Laplace" requested=request reason=selected.stop_reason aghq_loglik=-selected.objective laplace_loglik=base.loglik
+        info=AGHQFitInfo(request,:laplace,1,k,1,selected.stop_reason,false,Inf,c,base_controls,result,
+            AGHQAdaptation[],nothing,"",NaN)
+        return _ordinal_with_integration(base,info)
+    end
     data=AGHQOrdinalData(problem.data.responses,problem.data.mask,problem.data.C,problem.data.link isa ProbitLink)
     mode_gradient=maximum(d.gradient_max for d in problem.mode_diagnostics(t))
     info=AGHQFitInfo(request,:aghq,k,k,length(problem.grid.logw),selected.stop_reason,false,Inf,c,base_controls,

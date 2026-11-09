@@ -83,6 +83,14 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,n_init::Integer=1,aghq=f
         return _poisson_with_integration(base,info)
     end
     selected=result.selected;t=selected.parameters
+    # Unmoved and unconverged: no AGHQ estimate exists; retain Laplace and record the
+    # run's own stop reason (policy and the exact stop reasons: _aghq_unmoved_unconverged).
+    if _aghq_unmoved_unconverged(selected)
+        @warn "AGHQ did not move from its start and did not converge; retained Laplace" requested=request reason=selected.stop_reason
+        info=AGHQFitInfo(request,:laplace,1,k,1,selected.stop_reason,false,Inf,c,base_controls,result,
+            AGHQAdaptation[],nothing,"",NaN)
+        return _poisson_with_integration(base,info)
+    end
     prediction_offset=copy(problem.data.offset)
     raw_offset=get(kwargs,:offset,nothing)
     if raw_offset!==nothing
