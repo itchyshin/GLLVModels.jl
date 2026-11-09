@@ -82,6 +82,7 @@ for (_k, _files) in enumerate((
         "test_extractors_invariants.jl", "test_docstring_postfit_mask_offset_750.jl", "test_docstring_confint_lv_effects.jl",
         "test_mask_missing_763.jl", "test_bootstrap_sigma_r.jl",
         "test_sparse_phy_grad.jl",
+        "test_nb_n_init_mite_1022.jl",
     ),
     (
         "test_shard_selection.jl", "test_animal_latent.jl", "test_precision_multivariate.jl",
@@ -131,6 +132,7 @@ for (_k, _files) in enumerate((
         "test_derived_ci_sweep.jl", "test_nb_grouped_postfit.jl", "test_eta_clamp_rescue_874.jl",
         "test_derived_decisions.jl", "test_random_slope_internals.jl", "test_interrupt_rethrow.jl",
         "test_docstring_ref_linebreaks.jl",
+        "test_nb_mite_multistart_1022.jl",
     ),
     (
         "test_animal_dep.jl", "test_animal_latent_slope_estimand_algebra.jl", "test_docstring_animal_latent_twin.jl",
@@ -229,6 +231,8 @@ for (_k, _files) in enumerate((
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
+        "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
+        "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
     ),
 ))
     for _f in _files
@@ -938,6 +942,22 @@ println(_SHARD === nothing ?
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")
+
+    # Previously unwired, green on Julia 1.10.12 and 1.13.3 (ci-speed-report-20261109):
+    # core070 covariance registries (self-contained modules), A4/S4 receipts,
+    # kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
+    # Gated at the end of this list (see _shard_include_if): test_sparse_phy_grad
+    # (912 s, opt-in) and test_destination_b_a4_s4_fixed_coordinate_evaluator (Julia 1.10.x only).
+    # Still unwired on purpose: test_phylo_ordinal_xlv and
+    # test_phylo_gamma_xlv (optimiser-sensitive canaries), test_binomial_case_contract
+    # (stale SHA pins).
+    _shard_include("test_core070_covariance_registry.jl")
+    _shard_include("test_core070_covariance_formula_registry.jl")
+    _shard_include("test_destination_b_a4_s4_receipts.jl")
+    _shard_include("test_kernel_latent_unique_bridge.jl")
+    _shard_include("test_predictive_check_binomial.jl")
+    _shard_include("test_nb_mite_multistart_1022.jl")
+    _shard_include("test_nb_n_init_mite_1022.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
