@@ -181,7 +181,6 @@ for (_k, _files) in enumerate((
         "test_temporal_composed.jl", "test_isdm.jl", "test_zip_observed_laplace.jl",
         "test_tweedie_speed.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
         "test_comparator_targets.jl",
-        "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl",
     ),
     (
         "test_likelihood.jl", "test_packing.jl", "test_docstring_animal_dep_twin.jl",
@@ -920,9 +919,11 @@ println(_SHARD === nothing ?
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")
 
-    # Previously unwired, all green on Julia 1.10.12 and 1.13.3 (ci-speed-report-20261109):
-    # A4/S4 receipts and fixed-coordinate evaluator, kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
-    # Still unwired on purpose: test_core070_covariance_registry and
+    # Previously unwired, green on Julia 1.10.12 and 1.13.3 (ci-speed-report-20261109):
+    # A4/S4 receipts, kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
+    # Still unwired on purpose: test_destination_b_a4_s4_fixed_coordinate_evaluator
+    # (asserts a Julia 1.10.x runner, so it fails on the Julia 1 leg; needs a VERSION
+    # gate), test_core070_covariance_registry and
     # test_core070_covariance_formula_registry (green standalone, but each re-includes
     # parity/core070_case_registry.jl and `using`s it, so in a shared process they
     # error with UndefVarError / module-replacement clashes in every order tried;
@@ -931,7 +932,6 @@ println(_SHARD === nothing ?
     # test_phylo_gamma_xlv (optimiser-sensitive canaries), test_binomial_case_contract
     # (stale SHA pins).
     _shard_include("test_destination_b_a4_s4_receipts.jl")
-    _shard_include("test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
     _shard_include("test_kernel_latent_unique_bridge.jl")
     _shard_include("test_predictive_check_binomial.jl")
     _shard_include("test_nb_mite_multistart_1022.jl")
