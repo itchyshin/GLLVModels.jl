@@ -246,6 +246,10 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
                                    g_tol::Real = 1e-5,
                                    em_tol::Real = 1e-8,
                                    iterations::Integer = 1000)
+    # #1107: this fitter has no `mask`; refuse `missing` with a typed error (was a MethodError).
+    Y = _reject_missing_response("fit_gaussian_pervar_gllvm", Y,
+        "This fitter has no `mask` keyword; remove or impute the missing cells, or use " *
+        "`fit_gaussian_gllvm(Y; K, mask = observed_mask(Y))` (shared residual variance).")
     p, n = size(Y)
     @assert K ≥ 1
     _ledermann_pervar_k_admissible(p, K) || throw(ArgumentError(
