@@ -627,12 +627,20 @@
     "CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE"
    ],
    "reason": "R S3method(simulate,gllvmTMB_multi) registered and defined at P1; Julia `simulate` is an exported Function (measured). Name match only.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
+   },
+   "signed_by": "AWAITING-SIGNATURE",
+   "signed_on": "AWAITING-SIGNATURE",
+   "signed_disposition": {
+    "ruling": "D3, simulate S3 method disposition, option C (docs/dev-log/plans/2026-11-02-c2-simulate-multi-packet.md section 10)",
+    "kind": "re-scope",
+    "text": "Non-temporal Julia `simulate` methods are unconditional only, by design. They redraw the latent scores at each site, which is the mode R documents as the default and as the one suited to a parametric bootstrap (R/methods-gllvmTMB.R:1457-1464). R's `condition_on_RE = TRUE` (the \"older conditional behaviour\") has no non-temporal Julia counterpart. The call shape differs (Julia: `n` sites and a `p x n` matrix; R: `nsim`, `seed`, `newdata`, observations by `nsim`); this is a documented difference of style, not of distribution.",
+    "signature_source": "AWAITING-SIGNATURE"
    }
   },
   {
