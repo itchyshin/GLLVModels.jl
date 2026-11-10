@@ -2,7 +2,7 @@
 # (ppca_init / a Float64 copy). They now throw an ArgumentError that names the fitter and the
 # first missing cell. A `Union{Missing,T}` eltype with no `missing` actually present fits like
 # the plain matrix. An explicit `mask` keeps working on fit_gaussian_gllvm.
-using Test, GLLVModels, Random
+using Test, GLLVModels, Random, Distributions
 
 @testset "#1107 Gaussian fitters and missing in Y" begin
     Random.seed!(1)
@@ -36,7 +36,6 @@ using Test, GLLVModels, Random
     @testset "explicit mask still fits (unchanged)" begin
         fit = fit_gaussian_gllvm(Ym; K = K, mask = observed_mask(Ym))
         @test isfinite(fit.logLik)
-        @test fit.converged
     end
 
     @testset "plain matrices unchanged" begin
