@@ -81,8 +81,10 @@ using Test, GLLVModels, Random, Distributions
         @test isfinite(fit.loglik)
     end
 
-    @testset "grouped NB and NB1 with covariates" begin
+    @testset "grouped NB and NB1 (a NaN in a masked cell no longer hits Int64(NaN))" begin
         for (name, f, kw) in (("fit_nb_gllvm_grouped", fit_nb_gllvm_grouped, (; group = [1, 1, 2, 2])),
+                              ("fit_nb_gllvm_grouped_cov", fit_nb_gllvm_grouped_cov, (; X = Xcov)),
+                              ("fit_nb1_gllvm_grouped", fit_nb1_gllvm_grouped, (; group = [1, 1, 2, 2])),
                               ("fit_nb1_gllvm_grouped_cov", fit_nb1_gllvm_grouped_cov, (; X = Xcov)))
             for bad in (-1.0, 2.5, NaN)
                 @test msg_ok(thrown(() -> f(with_cell(Ycnt, bad); K = 1, kw...)), name)
