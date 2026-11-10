@@ -109,7 +109,7 @@ def _dis(S):
 
 NEG = {
  "N1 bind row to the unrelated PASS receipt": lambda S: [r.update(executable_case_ids=[NEIGHBOUR + "-NATIVE-MODEL"], evidence={"receipt": [NEIGHBOUR]}, measured_against=P1_PIN) for r in find(S["cm"], "source_id", SLUG)],
- "N2 scoreboard says EVIDENCED with no receipt": lambda S: S.update(sb=re.sub(r"(`" + SLUG + r"`[^\n]*?\| )(NOT-MEASURED|not bound; cited: none)", r"\1EVIDENCED; cited: R-1", S["sb"], count=1)),
+ "N2 scoreboard says EVIDENCED with no receipt": lambda S: S.update(sb=re.sub(r"(`" + SLUG + r"`[^\n]*?\| )(NOT-MEASURED|not bound; cited: none|Disposition: DISPOSITION-SIGNED[^|]*)", r"\1EVIDENCED; cited: R-1", S["sb"], count=1)),
  "N3 drop the 2026-10-05 signature quote": lambda S: S.update(gates=S["gates"].replace("animal_latent: leave unbound", "")),
  "N4 drop a P0 id": lambda S: [r.update(p0_case_ids=r["p0_case_ids"][:2]) for r in find(S["cm"], "source_id", SLUG)],
  "N5 wrapper gains a slope argument": lambda S: S.update(src=S["src"].replace("function fit_animal_latent_gllvm(Y::AbstractMatrix,", "function fit_animal_latent_gllvm(Y::AbstractMatrix, x::AbstractVector,", 1)),
