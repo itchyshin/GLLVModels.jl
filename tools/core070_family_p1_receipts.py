@@ -98,6 +98,8 @@ OUT_REL = "docs/dev-log/core070/true-parity-latest"
 REC_REL = f"{OUT_REL}/receipts/family"
 CASEMAP_REL = f"{OUT_REL}/case-map-family.json"
 P0_CASEMAP = ROOT / "docs/dev-log/core070/required-source-case-map.json"
+SIGNED_REL = "docs/dev-log/core070/family-p1-signed-dispositions.json"
+SIGNED_KEYS = ("disposition", "signed_by", "signed_on", "signed_disposition")
 RECONCILIATION = "docs/dev-log/core070/family-reconciliation-2026-09-01.json"
 PINS = tomllib.loads((ROOT / "tools/core070_oracle_pins.toml").read_text())
 P1_SHA = PINS["P1"]["reference_commit"]
@@ -1152,6 +1154,10 @@ def n1_context(sid, ids, kinds, verdicts, batch_ok, disc):
 
 def build_rows(in_scope, carry_status, receipts):
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
+    signed = load(ROOT / SIGNED_REL)["rows"]
+    stray = sorted(set(signed) - set(in_scope))
+    if stray:
+        raise SystemExit(f"{SIGNED_REL}: rows not in this tool's scope: {', '.join(stray)}")
     counts = {k: 0 for k in COUNT_KEYS}
     out_rows = []
     for sid in in_scope:
@@ -1161,6 +1167,10 @@ def build_rows(in_scope, carry_status, receipts):
                "carry_scan_status": carry_status[sid], "executable_case_ids": ids,
                "disposition": base.get("disposition"), "p0_batch": (base.get("evidence") or {}).get("batch"),
                "p0_evidence": p0_evidence(base)}
+        if sid in signed:
+            if set(signed[sid]) != set(SIGNED_KEYS):
+                raise SystemExit(f"{SIGNED_REL}: {sid} must carry exactly {', '.join(SIGNED_KEYS)}")
+            row = {**{k: v for k, v in row.items() if k != "disposition"}, **signed[sid]}
         have = [receipts.get(i) for i in ids]
         if not ids or any(h is None for h in have):
             raise SystemExit(f"{sid}: a case id has no receipt")

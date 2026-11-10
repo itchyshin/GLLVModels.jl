@@ -1,0 +1,4 @@
+{
+  "note": "Signed (or awaiting-signature) dispositions carried into case-map-family.json by tools/core070_family_p1_receipts.py. Values are copied verbatim; the tool never invents or edits them. Signer, date and signature_source are the maintainer's. Empty on purpose: D8 (FAMILY-00-IDENTITY) is not signable until committed leg receipts exist.",
+  "rows": {}
+}
