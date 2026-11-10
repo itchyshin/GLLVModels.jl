@@ -3,9 +3,11 @@
 
 Pins the row in its signed state (2026-10-05 D-319: "animal_latent: leave unbound"):
 unbound, NOT-MEASURED, no executable ids, no evidence, no disposition, and none of the
-neighbouring intercept-only PASS receipts cited as evidence. If the row is ever bound
-(by a later signature) the guard instead requires a P1 pin, ids, and a signer for any
-signed disposition. It does not bind, sign, or change any status.
+neighbouring intercept-only PASS receipts cited as evidence. Two later states are
+accepted. (1) Narrow disposition (D6b, 2026-11-07 packet): a signed `outside_boundary`
+disposition with signer fields and the intercept-only wording, but still no ids, no
+evidence and no P1 pin. (2) Measured: if the row is ever bound by ids, evidence or a pin,
+the guard requires a P1 pin, ids, and a signer for any signed disposition. It does not bind, sign, or change any status.
 
 Usage: core070_animal_latent_row_guard.py [REPO_ROOT] [--negative-controls]
 Exit 0 = all checks pass (and, with --negative-controls, every mutation is caught).
@@ -51,10 +53,19 @@ def checks(S):
     ok("case-map: exactly one row", len(rows) == 1, len(rows))
     row = rows[0] if rows else {}
     bound = bool(row.get("executable_case_ids") or row.get("evidence")
-                 or row.get("measured_against") or row.get("disposition"))
+                 or row.get("measured_against"))
+    narrow = row.get("disposition") == "DISPOSITION-SIGNED" and not bound
     line = next((l for l in S["sb"].splitlines() if "`" + SLUG + "`" in l), "")
     ok("scoreboard: one row for the slug", bool(line))
-    if not bound:
+    if narrow:
+        sd = row.get("signed_disposition") or {}
+        text = sd.get("text", "")
+        ok("narrow: scoreboard says not bound and cites no receipt", "not bound" in line and "cited: none" in line)
+        ok("narrow: signed disposition has signer and date", row.get("signed_by") and row.get("signed_on"))
+        ok("narrow: kind is outside_boundary", sd.get("kind") == "outside_boundary", sd.get("kind"))
+        ok("narrow: text says intercept-only and claims no pass",
+           "intercept-only" in text and "does not say that animal_latent passes" in text)
+    elif not bound:
         ok("unbound: scoreboard says NOT-MEASURED and not bound", "NOT-MEASURED" in line and "not bound" in line)
         ok("unbound: scoreboard cites no receipt", "no receipt cited" in line)
     else:
@@ -97,12 +108,17 @@ def _dis(S):
 
 NEG = {
  "N1 bind row to the unrelated PASS receipt": lambda S: [r.update(executable_case_ids=[NEIGHBOUR + "-NATIVE-MODEL"], evidence={"receipt": [NEIGHBOUR]}, measured_against=P1_PIN) for r in find(S["cm"], "source_id", SLUG)],
- "N2 scoreboard says EVIDENCED with no receipt": lambda S: S.update(sb=re.sub(r"(`" + SLUG + r"`[^\n]*?\| )NOT-MEASURED", r"\1EVIDENCED", S["sb"], count=1)),
+ "N2 scoreboard says EVIDENCED with no receipt": lambda S: S.update(sb=re.sub(r"(`" + SLUG + r"`[^\n]*?\| )(NOT-MEASURED|not bound; cited: none)", r"\1EVIDENCED; cited: R-1", S["sb"], count=1)),
  "N3 drop the 2026-10-05 signature quote": lambda S: S.update(gates=S["gates"].replace("animal_latent: leave unbound", "")),
  "N4 drop a P0 id": lambda S: [r.update(p0_case_ids=r["p0_case_ids"][:2]) for r in find(S["cm"], "source_id", SLUG)],
  "N5 wrapper gains a slope argument": lambda S: S.update(src=S["src"].replace("function fit_animal_latent_gllvm(Y::AbstractMatrix,", "function fit_animal_latent_gllvm(Y::AbstractMatrix, x::AbstractVector,", 1)),
  "N6 signed disposition without signer": _dis,
  "N7 a same-named Julia animal_latent appears": lambda S: S.update(src=S["src"] + "\nfunction animal_latent(args...) end\n"),
+ "N9 narrow row widened: ids bound, no P1 pin": lambda S: [r.update(executable_case_ids=["X"]) for r in find(S["cm"], "source_id", SLUG)],
+ "N10 narrow row widened: evidence cited": lambda S: [r.update(evidence={"r": 1}) for r in find(S["cm"], "source_id", SLUG)],
+ "N11 narrow row widened: kind becomes a pass": lambda S: [r["signed_disposition"].update(kind="pass") for r in find(S["cm"], "source_id", SLUG)],
+ "N12 narrow row loses its signer field": lambda S: [r.pop("signed_by", None) for r in find(S["cm"], "source_id", SLUG)],
+ "N13 narrow text drops the intercept-only limit": lambda S: [r["signed_disposition"].update(text="Outside the P1 surface.") for r in find(S["cm"], "source_id", SLUG)],
  "N8 contract entry silently reclassified": lambda S: [c.update(status="TIER0") for c in find(S["contract"], "source_id", SLUG)],
 }
 
