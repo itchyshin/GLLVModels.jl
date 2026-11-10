@@ -49,8 +49,8 @@ StatsAPI.residuals(fit::JointPhyloGroupedGaussianFit) =
 
 function _joint_phylo_grouped_postfit_objective(fit::JointPhyloGroupedGaussianFit)
     return _joint_phylo_grouped_nll(fit.response, fit.phy, fit.terms, fit.incidences;
-        rank = fit.rank, phylo_mode = fit.phylo_mode, species_id = fit.species_id,
-        mean_design = fit.mean_design)
+        rank = fit.rank, phylo_mode = fit.phylo_mode, residual_mode = fit.residual_mode,
+        species_id = fit.species_id, mean_design = fit.mean_design)
 end
 
 function _joint_phylo_grouped_fixed_information(fit::JointPhyloGroupedGaussianFit)
@@ -187,8 +187,10 @@ covariance components are not separately identifiable is refused, because the
 split between `a`, `u` and the residual is then not determined by the data.
 
 Returns the column table `(trait, H2, C2_non, Psi, V_eta)`. This method makes no
-claim of numerical agreement with R: the fit itself differs (per-trait residual
-variance here, one shared residual SD in R's Gaussian route).
+claim of numerical agreement with R. With the default `residual_mode = :trait`
+the fit differs from R's Gaussian route (per-trait residual variance here, one
+shared residual SD in R). With `residual_mode = :shared` the residual layout
+matches R's model, but agreement with R has not been measured.
 """
 function extract_phylo_signal(fit::JointPhyloGroupedGaussianFit;
         species_level = nothing, ci::Bool = false)

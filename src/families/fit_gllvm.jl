@@ -489,8 +489,8 @@ Use `phylo_rank` (default one), `phylo_mode` (default `:barelowrank`) and
 `PrecisionMultivariateFit`; with grouping it returns a
 `JointPhyloGroupedGaussianFit` from one joint marginal likelihood. The first
 joint ordinary-term scope is `mode=:indep, common=false`. Precision-only fitting
-accepts `residual_mode=:trait` (default) or `:shared`; joint grouping retains
-trait-specific observation residual variances. Phylogenetic scale is fixed
+accepts `residual_mode=:trait` (default) or `:shared`; joint grouping also
+accepts it (forwarded unchanged to the joint fitter, default `:trait`). Phylogenetic scale is fixed
 at one and is not separately estimated alongside free trait loadings. Precision
 options without `phylo`, non-Gaussian families and the legacy shortcuts below
 are rejected. Native scaling and public R bridge admission are unchanged.

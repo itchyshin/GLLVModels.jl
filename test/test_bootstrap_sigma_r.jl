@@ -1709,6 +1709,21 @@ end
         end
     end
 
+    @testset "J3b refit of a :shared fit forwards residual_mode; :trait adds no keyword" begin
+        f = f2
+        fs = JointPhyloGroupedGaussianFit(f.beta, f.loading, f.phylo_unique_variance, f.phylo_covariance,
+            f.residual_variance, f.ordinary_covariances, f.terms, f.phy, f.species_id, f.parameters,
+            f.parameter_labels, f.loglik, f.converged, f.gradient_norm, f.hessian_min_eigenvalue,
+            f.hessian_positive_definite, f.hessian_condition_number, f.iterations, f.stopping_reason,
+            f.response, f.mean_design, f.response_shape, f.coefficient_names, f.incidences,
+            f.phylo_mode, f.rank, :shared)
+        @test fs.residual_mode === :shared && f.residual_mode === :trait
+        cap, log = _jpg_capture(fs)
+        _quiet(() -> _bsig(fs; level = :phy, n_boot = 2, seed = 5, progress = false, _refit = cap))
+        @test length(log.calls) == 2
+        @test all(c -> get(c.kw, :residual_mode, nothing) === :shared, log.calls)
+    end
+
     @testset "J3c a real fit is reproduced: the refit keywords rebuild the original likelihood" begin
         Yr = _jpg_truth_data(MersenneTwister(20261103), phy6, sid6, (unit = repeat(1:8, inner = 3),); beta = [0.4, -0.3, 0.7],
                              loading = reshape([0.8, -0.5, 0.6], 3, 1), uniq = nothing, ordvars = [[0.25, 0.20, 0.30]],

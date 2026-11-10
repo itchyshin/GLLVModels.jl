@@ -34,11 +34,16 @@ else
     _eps_logsd(variance) = 0.5 .* log.(variance)
 
     function _eps_fit(fx; loading, species_var, residual_var = fill(0.35, 3),
-            phylo_unique = nothing, site_var = nothing)
+            phylo_unique = nothing, site_var = nothing, residual_mode = :trait)
         terms = [GroupingTerm(:cluster; mode = :indep, common = false)]
         theta = vcat(zeros(3), loading)
         phylo_unique === nothing || append!(theta, _eps_logsd(phylo_unique))
-        append!(theta, _eps_logsd(residual_var))
+        if residual_mode === :shared
+            allequal(residual_var) || error("residual_mode = :shared needs equal residual variances")
+            push!(theta, only(_eps_logsd(residual_var[1:1])))
+        else
+            append!(theta, _eps_logsd(residual_var))
+        end
         append!(theta, _eps_logsd(species_var))
         if site_var !== nothing
             push!(terms, GroupingTerm(:unit; mode = :indep, common = false))
@@ -49,7 +54,7 @@ else
         return GLLVModels.fit_joint_phylo_grouped_gaussian(fx.Y, fx.phy;
             rank = 1, phylo_mode = phylo_unique === nothing ? :barelowrank : :explicitunique,
             terms = terms, species_id = fx.species_id, start = theta,
-            iterations = 0, g_tol = 1e-5, kw...)
+            iterations = 0, g_tol = 1e-5, residual_mode = residual_mode, kw...)
     end
 
     @testset "extract_phylo_signal on a joint phylo-plus-grouped fit (draft)" begin
@@ -105,6 +110,32 @@ else
             @test out3.H2 ≈ out.H2 .- delta ./ out.V_eta rtol = 1e-10
             @test out3.Psi ≈ out.Psi .+ delta ./ out.V_eta rtol = 1e-10
             @test !(shifted.loglik ≈ fit.loglik)
+        end
+
+        @testset "residual_mode = :shared leaves the signal estimand unchanged" begin
+            for (kwargs, expected_H2) in (
+                    ((; loading = lambda, species_var = u), [49 / 61, 81 / 169, 25 / 43]),
+                    ((; loading = lambda, species_var = u, phylo_unique = [0.16, 0.09, 0.12],
+                        site_var = [0.10, 0.15, 0.20]), [65 / 77, 117 / 205, 37 / 55]))
+                trait_fit = _eps_fit(fx; kwargs...)
+                shared_fit = _eps_fit(fx; kwargs..., residual_mode = :shared)
+                @test shared_fit.residual_mode === :shared
+                @test length(shared_fit.parameters) == length(trait_fit.parameters) - 2
+                @test GLLVModels._joint_phylo_grouped_component_identification(shared_fit).reason ===
+                    :identified
+                out = extract_phylo_signal(shared_fit; species_level = :cluster)
+                ref = extract_phylo_signal(trait_fit; species_level = :cluster)
+                @test out.H2 ≈ expected_H2 rtol = 1e-12
+                @test out.V_eta ≈ ref.V_eta rtol = 1e-12
+                @test out.Psi ≈ ref.Psi rtol = 1e-12
+                @test out.C2_non == zeros(3)
+                # equal residual SDs: same likelihood as the :trait fit at the same point
+                @test shared_fit.loglik ≈ trait_fit.loglik rtol = 1e-12
+            end
+            # the residual level is excluded from V_eta whatever its size
+            moved = _eps_fit(fx; loading = lambda, species_var = u,
+                residual_var = fill(0.9, 3), residual_mode = :shared)
+            @test extract_phylo_signal(moved; species_level = :cluster).H2 ≈ [49 / 61, 81 / 169, 25 / 43] rtol = 1e-12
         end
 
         @testset "refusals" begin
