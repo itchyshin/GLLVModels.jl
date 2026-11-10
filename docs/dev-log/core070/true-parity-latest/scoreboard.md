@@ -18,10 +18,10 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `ab5ecf9bbd472e75b1acfc1087d2672c4bc9b20ab7442fedf077d8da3301be50`)
 - `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `dab8c29bdd6d6285d8fbe8a928609db6a4a405fbc8c5d07be507593fbb0c0b20`)
 - `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `611906beb2d513aa8f055a00cf7658460f35fe45b4f31f29cc676b75b73a9c9f`)
-- `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `793cec004417e630a2774b4c646b7bff06e84c59d26b31ac80faf57697a8a2b2`)
+- `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `9f888b84ee57f42fb21a67477c3b4126d0dba9315e180a00d0609ae3eae8732c`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857`)
-- `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `e6d69cb2385b5d6cd14ffd22cccab9b6f8b1ad4e22e15db2d40fa3a08288fe62`)
+- `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `acd079657eafb476ddc0d3c9048bec6c58e99c816f52fb0e3c3d75545c2de831`)
 - `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `641e8095db0ff16b479434e0780276dfc63cb341e7be36457cb7ba6749516dbb`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `f347bf35b7fc59068b3c43cad241996e73bbcefe01d95bf5c36207388af749ce`)
 
@@ -32,13 +32,13 @@ Inputs:
 | `aghq` | 14 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 21 |
 | `covariance` | 17 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 19 |
 | `data` | 27 | 0 | 5 | 0 | 0 | 0 | 4 | 0 | 36 |
-| `family` | 24 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 26 |
+| `family` | 25 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 26 |
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 63 |
-| `isdm` | 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 21 |
+| `isdm` | 12 | 5 | 4 | 0 | 0 | 0 | 0 | 0 | 21 |
 | `namespace` | 55 | 0 | 10 | 3 | 0 | 0 | 0 | 1 | 69 |
 | `postfit` | 45 | 1 | 4 | 0 | 1 | 1 | 0 | 0 | 52 |
-| `all` | 206 | 63 | 35 | 3 | 2 | 1 | 6 | 1 | 317 |
+| `all` | 208 | 63 | 35 | 3 | 2 | 1 | 4 | 1 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -240,7 +240,7 @@ decision for the PR that measures it, not something this tool does.
 | family-POISSON-LOG-RSZ `family/POISSON-LOG-RSZ` | required_core; cases: CAMPAIGN-C3-POISSON-LOG-RSZ-LOGLIK, CAMPAIGN-C3-POISSON-LOG-RSZ-BETA, CAMPAIGN-C3-POISSON-LOG-RSZ-BETA-SE, CAMPAIGN-C3-POISSON-LOG-RSZ-LLT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/family/campaign/POISSON-LOG-RSZ.json | family family; evidence_tier numeric; measured_against P1 |
 | family-NB2-LOG-RSZ `family/NB2-LOG-RSZ` | required_core; cases: CAMPAIGN-C3-NB2-LOG-RSZ-LOGLIK, CAMPAIGN-C3-NB2-LOG-RSZ-BETA, CAMPAIGN-C3-NB2-LOG-RSZ-BETA-SE, CAMPAIGN-C3-NB2-LOG-RSZ-LLT, CAMPAIGN-C3-NB2-LOG-RSZ-DISPERSION | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/family/campaign/NB2-LOG-RSZ.json | family family; evidence_tier numeric; measured_against P1 |
 | family-BINOMIAL-LOGIT-RSZ `family/BINOMIAL-LOGIT-RSZ` | required_core; cases: CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-LOGLIK, CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-BETA, CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-BETA-SE, CAMPAIGN-C3-BINOMIAL-LOGIT-RSZ-LLT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/family/campaign/BINOMIAL-LOGIT-RSZ.json | family family; evidence_tier numeric; measured_against P1 |
-| family-ORDINAL-LOGIT-RSZ `family/ORDINAL-LOGIT-RSZ` | required_core; cases: CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LOGLIK, CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT, CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/family/campaign/ORDINAL-LOGIT-RSZ.json | family family; evidence_tier numeric_fail; measured_against P1 |
+| family-ORDINAL-LOGIT-RSZ `family/ORDINAL-LOGIT-RSZ` | required_core; cases: CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LOGLIK, CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT, CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/family/campaign/ORDINAL-LOGIT-RSZ.json | family family; evidence_tier numeric; measured_against P1 |
 | fit-input-INPUT-ANIMAL-LATENT `fit-input/INPUT-ANIMAL-LATENT` | required_core; cases: CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL, CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-ANIMAL-LATENT-NATIVE-MODEL.json, docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-ANIMAL-LATENT-FORMULA-INTERFACE.json | family fit-input; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | fit-input-INPUT-BINOMIAL-DEFAULT `fit-input/INPUT-BINOMIAL-DEFAULT` | required_core; cases: CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL, CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-BINOMIAL-DEFAULT-NATIVE-MODEL.json, docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-BINOMIAL-DEFAULT-FORMULA-INTERFACE.json | family fit-input; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | fit-input-INPUT-GAUSS-DEFAULT `fit-input/INPUT-GAUSS-DEFAULT` | required_core; cases: CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL, CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-GAUSS-DEFAULT-NATIVE-MODEL.json, docs/dev-log/core070/true-parity-latest/receipts/fit-input/cases/CORE070-FIT-INPUT-GAUSS-DEFAULT-FORMULA-INTERFACE.json | family fit-input; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
@@ -334,7 +334,7 @@ decision for the PR that measures it, not something this tool does.
 | isdm-ISDM-WRONG-ID `isdm/ISDM-WRONG-ID` | required_core; cases: CORE070-ISDM-WRONG-ID-PAIRED-CONTROL | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family isdm; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | isdm-ISDM-WRONG-LINK `isdm/ISDM-WRONG-LINK` | required_core; cases: CORE070-ISDM-WRONG-LINK-PAIRED-CONTROL | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family isdm; evidence_tier needs_surface_r_side_measured; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | isdm-ISDM-ZERO-ORDINARY `isdm/ISDM-ZERO-ORDINARY` | required_core; cases: P1-JULIA-ISDM-ADM-ZEROORD-LOGLIK-AT-R-OPTIMUM, P1-JULIA-ISDM-ADM-ZEROORD-CROSS-OBJECTIVE-AT-JULIA-OPTIMUM, P1-JULIA-ISDM-ADM-ZEROORD-B-FIX, P1-JULIA-ISDM-ADM-ZEROORD-ETA | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/isdm/adm_zeroord.json | family isdm; evidence_tier numeric; measured_against P1 |
-| isdm-ISDM-HEADLINE-RSZ `isdm/ISDM-HEADLINE-RSZ` | required_core; cases: CAMPAIGN-C3-ISDM-HEADLINE-RSZ-LOGLIK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-BETA, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-LINK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-RESPONSE, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-LINK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-RESPONSE | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/isdm/campaign/ISDM-HEADLINE-RSZ.json | family isdm; evidence_tier numeric_fail; measured_against P1 |
+| isdm-ISDM-HEADLINE-RSZ `isdm/ISDM-HEADLINE-RSZ` | required_core; cases: CAMPAIGN-C3-ISDM-HEADLINE-RSZ-LOGLIK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-BETA, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-LINK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-RESPONSE, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-LINK, CAMPAIGN-C3-ISDM-HEADLINE-RSZ-PREDICT-NEWDATA-OFFSET0-RESPONSE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/isdm/campaign/ISDM-HEADLINE-RSZ.json | family isdm; evidence_tier numeric; measured_against P1 |
 | namespace-S3method-coef-gllvmTMB_julia `namespace/S3method/coef,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-COEF-JULIA-BRIDGE-COMPARE | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-coef-gllvmTMB_multi `namespace/S3method/coef,gllvmTMB_multi` | required_core; cases: CORE070-POSTFIT-COEF-MULTI-READBACK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-MULTI-READBACK.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-confint-gllvmTMB_julia `namespace/S3method/confint,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-CONFINT-JULIA-BRIDGE-COMPARE | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
