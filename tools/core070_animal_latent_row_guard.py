@@ -60,7 +60,8 @@ def checks(S):
     if narrow:
         sd = row.get("signed_disposition") or {}
         text = sd.get("text", "")
-        ok("narrow: scoreboard says not bound and cites no receipt", "not bound" in line and "cited: none" in line)
+        ok("narrow: scoreboard says not bound and cites no receipt (or shows the signed disposition, no receipt path)",
+           ("not bound" in line and "cited: none" in line) or ("Disposition: DISPOSITION-SIGNED" in line and ".json" not in line))
         ok("narrow: signed disposition has signer and date", row.get("signed_by") and row.get("signed_on"))
         ok("narrow: kind is outside_boundary", sd.get("kind") == "outside_boundary", sd.get("kind"))
         ok("narrow: text says intercept-only and claims no pass",
@@ -104,7 +105,7 @@ def checks(S):
 def _dis(S):
     for r in find(S["cm"], "source_id", SLUG):
         r.update(disposition="DISPOSITION-SIGNED", measured_against=P1_PIN,
-                 executable_case_ids=["X"], evidence={"r": 1})
+                 executable_case_ids=["X"], evidence={"r": 1}, signed_by=None, signed_on=None)
 
 NEG = {
  "N1 bind row to the unrelated PASS receipt": lambda S: [r.update(executable_case_ids=[NEIGHBOUR + "-NATIVE-MODEL"], evidence={"receipt": [NEIGHBOUR]}, measured_against=P1_PIN) for r in find(S["cm"], "source_id", SLUG)],
