@@ -9,12 +9,13 @@
 #   (2) runs a pre-registered Newton polish: at most POLISH_MAX_STEPS steps theta - H \ g, stopping at the FIRST
 #       point where the gradient max-abs is strictly below 1e-5 AND the Hessian at that same point is positive
 #       definite. Gradient and Hessian are evaluated at every point visited, so the Hessian reported for the compared
-#       point is the Hessian AT that point. A step that raises the objective is recorded and NOT taken (the loop
+#       point is the Hessian AT that point. A step is accepted when fn <= f + 1e-12 * max(1, |f|) (a rounding-level rise is allowed and
+#       flagged accepted_uphill); a step that raises the objective by more than that bound is recorded and NOT taken (the loop
 #       stops at the previous point); a Hessian that is not positive definite stops the loop with no step;
 #   (3) re-evaluates every compared quantity of the cell at the final point with the package's own extractors and
 #       records it, plus a self-consistency check that the quantities are those of the final parameter vector.
 # Nothing is fed back into a fit, a tolerance or a receipt. run_J.jl includes this file when CAMPAIGN_POLISH=1 and
-# writes the record to a SEPARATE <cell>_J_polish.toml; polish_merge.py builds the compared raw file from it.
+# writes the record to a SEPARATE <cell>_J_polish.toml; tools/true_parity/campaign/write_receipts.py builds the compared receipts from it.
 #
 # Gradients: ordinal has no analytic gradient (its fitter uses central differences), so it uses a central difference
 # of f (h = 1e-5) and a second-difference Hessian of f (h = 1e-3), as in PR #715. iSDM and fungi use the fitters'
@@ -93,13 +94,14 @@ function newton_polish_loop(f, gfun, hfun, θ0::AbstractVector; max_steps::Integ
         if k >= max_steps; stopped = "step cap $max_steps reached before the criterion held"; break; end
         if !(e.mineig > 0); stopped = "Hessian not positive definite at step $k: no Newton step taken"; break; end
         step = e.H \ e.g; θn = θ .- step; fn = f(θn)
-        if !(fn <= e.f)
+        rise_bound = 1e-12 * max(1.0, abs(e.f))   # wave 44 rule: accept a rounding-level rise
+        if !(fn <= e.f + rise_bound)
             push!(points, Dict{String,Any}("step" => k + 1, "rejected" => true, "f" => fn, "step_max_abs" => maximum(abs, step),
-                                           "reason" => "the Newton step raised the objective; not taken"))
+                                           "reason" => "the Newton step raised the objective by more than 1e-12 * max(1, |f|); not taken"))
             stopped = "Newton step $(k + 1) raised the objective"; break
         end
-        k += 1; θ = θn; e = evalpt(θ)
-        p = pt(k, e); p["step_max_abs"] = maximum(abs, step); push!(points, p)
+        up = fn > e.f; k += 1; θ = θn; e = evalpt(θ)
+        p = pt(k, e); p["step_max_abs"] = maximum(abs, step); p["accepted_uphill"] = up; push!(points, p)
     end
     met = meets(e)
     rec = Dict{String,Any}("n_par" => length(θ), "gradient_bound" => bound, "max_steps" => max_steps,
