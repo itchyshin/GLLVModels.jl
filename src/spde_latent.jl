@@ -325,6 +325,8 @@ function fit_spde_latent_gllvm(Y::AbstractMatrix, nodes::AbstractMatrix,
     Cdiag, G = spde_fem(nodes, tris)
     A = spde_projector(nodes, tris, locs)
     Ntr = N === nothing ? ones(eltype(Y), p, M) : N
+    _check_family_response_support_normal(family, Y, nothing;
+        caller = "fit_spde_latent_gllvm", N = Ntr)
 
     # Warm start: empirical link-scale intercepts + SVD loadings (PPCA-like).
     Zemp = [linkfun(link, _ws_mean(family, Y[t, s], Ntr[t, s])) for t in 1:p, s in 1:M]
