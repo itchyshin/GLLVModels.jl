@@ -165,3 +165,31 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
     return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)...)
 end
 
+
+# #1108: every VA fitter is typed on an Integer / Real matrix, so a `Matrix{Union{Missing,T}}`
+# used to raise a no-method MethodError. These fallbacks refuse a `missing` cell with a typed
+# ArgumentError and send a `Union{Missing,T}` matrix with no `missing` to the plain method.
+# VA has no observation mask: for missing responses use the Laplace route, which derives one.
+function _va_drop_missing_eltype(caller::AbstractString, Y::AbstractMatrix)
+    Yc = _reject_missing_response(caller, Y,
+        "The VA fitters take no `mask`; use the Laplace fitter (for example `fit_poisson_gllvm`), " *
+        "which derives the observation mask from `missing`, or remove or impute the missing cells.")
+    eltype(Yc) >: Missing && throw(ArgumentError(
+        "$caller needs a numeric response matrix; got element type $(eltype(Y))."))
+    return Yc
+end
+
+fit_poisson_gllvm_va(Y::AbstractMatrix{>:Missing}; kwargs...) =
+    fit_poisson_gllvm_va(_va_drop_missing_eltype("fit_poisson_gllvm_va", Y); kwargs...)
+fit_binomial_gllvm_va(Y::AbstractMatrix{>:Missing}; kwargs...) =
+    fit_binomial_gllvm_va(_va_drop_missing_eltype("fit_binomial_gllvm_va", Y); kwargs...)
+fit_nb_gllvm_va(Y::AbstractMatrix{>:Missing}; kwargs...) =
+    fit_nb_gllvm_va(_va_drop_missing_eltype("fit_nb_gllvm_va", Y); kwargs...)
+fit_gamma_gllvm_va(Y::AbstractMatrix{>:Missing}; kwargs...) =
+    fit_gamma_gllvm_va(_va_drop_missing_eltype("fit_gamma_gllvm_va", Y); kwargs...)
+fit_beta_gllvm_va(Y::AbstractMatrix{>:Missing}; kwargs...) =
+    fit_beta_gllvm_va(_va_drop_missing_eltype("fit_beta_gllvm_va", Y); kwargs...)
+fit_exponential_gllvm_va(Y::AbstractMatrix{>:Missing}; kwargs...) =
+    fit_exponential_gllvm_va(_va_drop_missing_eltype("fit_exponential_gllvm_va", Y); kwargs...)
+fit_delta_gamma_gllvm_va(Y::AbstractMatrix{>:Missing}; kwargs...) =
+    fit_delta_gamma_gllvm_va(_va_drop_missing_eltype("fit_delta_gamma_gllvm_va", Y); kwargs...)
