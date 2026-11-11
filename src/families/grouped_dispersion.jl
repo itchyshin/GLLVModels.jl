@@ -2764,7 +2764,17 @@ function _tweedie_grouped_mode(fams::AbstractVector, y::AbstractVector, n::Abstr
         μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(fams, μ, n, me, y)
-        W  = _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        # Step weight max(observed, Fisher) on the log link, as the scalar search
+        # does (`_laplace_mode_step_weight(::TweedieED)`, #623): pure Fisher
+        # under-states the curvature when y >> μ and the unchecked small-step
+        # branch below then limit-cycles (#1042). The mode (fixed point of
+        # `Λ's − z = 0`) does not involve W.
+        W  = if link isa LogLink
+            max.(_tweedie_grouped_laplace_weight.(Ref(:observed), fams, μ, me, y, Ref(link), η),
+                 _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η))
+        else
+            _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        end
         if mask !== nothing
             s = ifelse.(mask, s, 0.0)
             W = ifelse.(mask, W, 0.0)
