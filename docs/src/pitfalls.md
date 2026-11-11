@@ -23,14 +23,14 @@ identifiability. Compare a few values of `K` by log-likelihood / information
 criteria, and prefer the smallest `K` that captures the covariance you care
 about.
 
-For the **per-species residual** Gaussian model taught in the Quick start
+For the **per-species residual** Gaussian model
 (`Σ = Λ Λᵀ + diag(ψ)`, one ψ per response via `fit_gaussian_pervar_gllvm` or
 `pervar = true`), both Λ and ψ are identified only when **(p − K)² ≥ p + K**
 (Ledermann bound): e.g. `p = 4` allows `K ≤ 1`, `p = 5` allows `K ≤ 2`,
 `p = 10` allows `K ≤ 6`. The shared-residual fitter `fit_gaussian_gllvm` (one
-`σ_eps` for all traits) uses a different condition; requiring `K < p` there is
-a warm-start limit, not this identifiability bound. `fit_gaussian_pervar_gllvm`
-rejects inadmissible `K` before fitting.
+`σ_eps` for all traits, the model fitted in the Quick start) uses a different
+condition; requiring `K < p` there is a warm-start limit, not this identifiability
+bound. `fit_gaussian_pervar_gllvm` rejects inadmissible `K` before fitting.
 
 ## Check convergence
 
@@ -40,7 +40,8 @@ the `converged` flag — if it is `false`, try a different start or more
 iterations. `converged = true` alone is not the go-ahead to read the results:
 it means the optimizer stopped at a stationary point, not that it found the
 global maximum. For non-Gaussian fits with `K ≥ 2`, refit from several starts
-(`n_init` currently covers Poisson only) and keep the highest log-likelihood
+(`n_init` is available on the Poisson and NB2 Laplace routes; check the fitter
+docstring for other families) and keep the highest log-likelihood
 before reading loadings or comparing AIC. Standardising responses to a common scale helps the Gaussian path.
 
 ## Fewer sites than species (`n < p`)
