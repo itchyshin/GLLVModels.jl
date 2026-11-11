@@ -226,8 +226,11 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
   fallback provenance; bridge and interval parity remain unverified.
 - Per-species / grouped dispersion (`disp.group`) for NB2, NB1, Beta, beta-binomial,
   Gamma, and Tweedie via the `_grouped` drivers — per-species is the `fit_gllvm`
-  default for NB2, NB1, Beta, and beta-binomial (`family = NB1()`,
-  `family = BetaBinom()`), matching gllvmTMB. Delta-lognormal and Delta-Gamma
+  default for NB1, Beta, and beta-binomial (`family = NB1()`,
+  `family = BetaBinom()`), matching gllvmTMB. For NB2, per-species `r` is the
+  default through `gllvm(@formula(...))` and the R bridge, while bare
+  `fit_gllvm(Y; family = NegativeBinomial())` fits one shared `r`; pass
+  `disp_group = :species` for per-species `r`. Delta-lognormal and Delta-Gamma
   likewise default to per-species dispersion (`disp_group = :species`); shared
   dispersion remains available via `disp_group = :shared`
 - Two-part / mixture families: Delta-lognormal, Delta-Gamma, Hurdle-Poisson,
