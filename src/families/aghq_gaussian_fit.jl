@@ -35,8 +35,12 @@ No loading ridge is added. Controls follow the unpenalized frozen-surrogate
 outer optimizer used by the Poisson and binomial candidates.
 
 Masks/missing responses and offsets are admitted for the ordinary Gaussian block.
-The masked exact marginal is used for baseline fitting; omitted entries are never
-included in the target likelihood. Structured masked/offset routes remain separate.
+Omitting `mask` when `Y` contains `missing` derives that mask (`false` where `Y`
+is `missing`; the same rule as the Poisson fitter) and emits one `@info`
+(`maxlog=1`) that the mask was derived. An explicit `mask` does not emit it.
+A `missing` cell marked observed is an `ArgumentError`. The masked exact marginal
+is used for baseline fitting; omitted entries are never included in the target
+likelihood. Structured masked/offset routes remain separate.
 On a masked or offset fit, `converged` is `true` only if the final gradient meets `g_tol`
 (`Optim.g_residual(fit.optim_result) <= g_tol`); an `x_tol` or `f_tol` stop alone does not
 count, and the optimiser continues on the gradient test (up to 5 restarts) before giving up.
@@ -120,6 +124,9 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
     request === :off || _refuse_optimizer(requested_optimizer, "fit_gaussian_gllvm",
         "AGHQ/adaptive integration (fixed internal outer solver)")
     hessian===:observed || throw(ArgumentError("Gaussian integration uses observed curvature"))
+    # #1107: derive the mask before the exact-path gate (`mask === nothing` would
+    # otherwise copy `missing` into the closed-form fitter).
+    mask = _derive_obs_mask(mask, Y; caller = "fit_gaussian_gllvm")
     offset=_normalize_offset(offset,size(Y,1),size(Y,2);Y=Y,mask=mask,caller="fit_gaussian_gllvm")
     if lambda_constraint!==nothing
         aghq===false || throw(ArgumentError(
