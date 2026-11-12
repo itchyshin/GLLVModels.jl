@@ -1243,7 +1243,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             # objective to rebuild on this engine yet).
             gradient_max = NaN)
     elseif key == "truncated_poisson"
-        # No-X only. TruncatedPoissonFit has no getLV / link-residual / confint
+        # No-X only. TruncatedPoissonFit has getLV since #788 but this route does not
+        # call it yet, and it has no link-residual / confint
         # adapter on this engine, so assemble the shared block ΛΛᵀ directly
         # (same honest fallback as lognormal) and fence CI / X / X_lv / masks
         # via list membership plus a loud CI guard. Frozen twin fid 10 admits
@@ -1278,7 +1279,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                    "y ~ TruncPois(μ = exp(η)), log link on the untruncated " *
                    "mean; support y ≥ 1; no-X only; Sigma/correlation use " *
                    "the shared block Lambda*Lambda' only (communality 1); " *
-                   "scores empty (no getLV(::TruncatedPoissonFit)); CI, X, " *
+                   "scores empty (the bridge does not call getLV(::TruncatedPoissonFit) yet); CI, X, " *
                    "X_lv, and masks remain follow-ups; light no-X RCall logLik Δ PAID " *
                    "(test/parity/test_truncated_poisson_parity.jl @ GLLVM_PARITY_TESTS=1; " *
                    "receipt abs≈2.71e-9 @ rtol 1e-6, seed=53, p=5, K=2, n=60)",
