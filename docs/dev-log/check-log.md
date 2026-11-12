@@ -1,3 +1,12 @@
+2026-11-11: #1108 VA missing mask. Julia 1.10.13, 1 thread.
+`test/test_fix_1108.jl` after the change: 35 passed, 0 failed, 0 errored.
+The same file on main source (`3f6d74ecb`): 0 passed, 2 errored
+(`MethodError` on `fit_poisson_gllvm_va` and `fit_binomial_gllvm_va`
+for `Matrix{Union{Missing,Int64}}`). Existing VA files, all passed:
+variational 10, binomial 12+17, negbin 13, gamma 15, beta 7, dgamma 17,
+exponential 18, va_vs_laplace 8. Full `Pkg.test` not run.
+See after-task/2026-11-11-va-missing-mask-1108.md.
+
 2026-11-08: PR #1019 first-pass resume. Independent check: local and
 remote `cursor/readme-lambda-init-b368` were `5c8c6b673`; PR OPEN
 DRAFT, `mergeable_state` dirty vs `origin/main` `8791591a`. Normal
