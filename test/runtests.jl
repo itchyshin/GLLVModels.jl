@@ -233,7 +233,7 @@ for (_k, _files) in enumerate((
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
-        "test_phylo_gamma_xlv.jl", "test_phylo_ordinal_xlv.jl",
+        "test_phylo_gamma_xlv.jl", "test_phylo_ordinal_xlv.jl", "test_binomial_case_contract.jl",
     ),
 ))
     for _f in _files
@@ -458,6 +458,7 @@ println(_SHARD === nothing ?
     # 11 Nov 2026: phylogenetic effect drawn, profile budget 5000; Gamma seed 754). Shard 4 in the table.
     _shard_include("test_phylo_gamma_xlv.jl")
     _shard_include("test_phylo_ordinal_xlv.jl")
+    _shard_include("test_binomial_case_contract.jl")
 
     #   test_sparse_phy_grad.jl is now opt-in: GLLVM_SPARSE_PHY_GRAD_TESTS=1 (end of the list).
 
@@ -952,7 +953,6 @@ println(_SHARD === nothing ?
     # kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
     # Gated at the end of this list (see _shard_include_if): test_sparse_phy_grad
     # (912 s, opt-in) and test_destination_b_a4_s4_fixed_coordinate_evaluator (Julia 1.10.x only).
-    # Still unwired on purpose: test_binomial_case_contract (SHA pins refreshed, awaiting wiring).
     _shard_include("test_core070_covariance_registry.jl")
     _shard_include("test_core070_covariance_formula_registry.jl")
     _shard_include("test_destination_b_a4_s4_receipts.jl")
