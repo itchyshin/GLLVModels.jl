@@ -103,6 +103,25 @@ _p0(f::TruncatedNegBin2PerTraitFit, μ, t) = (f.r[t] / (f.r[t] + μ))^f.r[t]
     end
 end
 
+@testset "truncated fits through extract_latent_scores / ordination (#788)" begin
+    for name in sort(collect(keys(fits)))
+        f, _, Y, O = fits[name]
+        # plain dispatch bucket: getLV(fit, Y; rotate = false), the stored offset used by default
+        z = extract_latent_scores(f, Y)
+        @test z == getLV(f, Y; rotate = false)
+        @test size(z) == (n, K)
+        @test extract_latent_scores(f, Y; offset = O) == z
+        @test extract_latent_scores(f, Y; level = :unit_obs) === nothing
+        ord = ordination(f, Y)
+        @test size(ord.sites) == (n, K) && size(ord.species) == (p, K)
+        @test extract_ordination(f, Y; rotate = false).sites == z
+        @test rotation(f) isa AbstractMatrix
+        @test getLoadings(f; rotate = false) == f.Λ
+        @test size(getLV(f, Y; rotate = true)) == (n, K)
+        @test isfinite(aic(f)) && isfinite(loglikelihood(f))
+    end
+end
+
 @testset "positional constructors without the offset field still work (#788)" begin
     f, = fits["TruncatedPoissonFit"]
     g = TruncatedPoissonFit(f.β, f.Λ, f.link, f.loglik, f.converged, f.iterations, f.theta_packed)
