@@ -88,8 +88,14 @@ end
 # A draw no fit on the route can evaluate, so the fitter ends on its failure
 # verdict (`converged = false`, `loglik = -Inf`, finite θ, no throw), with or
 # without bounds checking, on Julia 1.10 and 1.13. Data-driven, not RNG-driven.
-#   * Row-random and covariate GLLVM (Poisson and NB): one response of -1
-#     (log-pmf -Inf at every θ, so every evaluation hits the 1e12 sentinel).
+#   * Row-random and covariate GLLVM (Poisson and NB): one response of 1e300. It is
+#     in the support (a non-negative integer-valued count), so the #730 entry check
+#     accepts it, but its log-pmf is -Inf at every θ (η is clamped), so every
+#     evaluation hits the 1e12 sentinel. A response of -1 used to serve here; it is
+#     now refused up front with an ArgumentError, so it is no longer a failing draw.
+#     Probe on Julia 1.10.12, with and without `--check-bounds=yes`: all four routes
+#     give `converged = false`, `loglik = -Inf`, finite θ. (1e15 is not used: the
+#     row-random NB route throws a DomainError on it.)
 #
 # The multinomial route has no such draw, so its rejection and end-to-end
 # testsets use a STUB failed refit, labelled as such below; the adapter-parity
@@ -99,7 +105,7 @@ end
 # returns `nothing`, which main already rejects), while draws with a category
 # never observed, or every observation in one category (complete separation),
 # fit with `converged = true`.
-_rest504_bad(Y) = (B = copy(Y); B[1, 1] = -1.0; B)
+_rest504_bad(Y) = (B = copy(Y); B[1, 1] = 1e300; B)
 
 _rest504_real_bad(route::Symbol) = route !== :multinomial
 
