@@ -3,7 +3,7 @@
 # fitters returned beta = 0 with converged = true. The Gaussian routes already refused.
 # The shared check lives in `_resolve_obs_mask` (laplace.jl).
 
-using GLLVModels, Test, Random
+using GLLVModels, Test, Random, Distributions
 
 const _AM_K = 1
 const _AM_IT = (iterations = 3, g_tol = 1e-2)
@@ -85,5 +85,26 @@ const _AM_FITTERS = [
         Y = D[:count]
         mask = trues(size(Y)); mask[:, 5] .= false
         @test isfinite(fit_poisson_gllvm(Y; K = _AM_K, _AM_IT..., mask = mask).loglik)
+    end
+
+    # cv_gllvm(split = :species) on a non-Normal family used to fit all p rows with the
+    # held-out species fully masked, which the all-missing check now refuses. It fits the
+    # training species only (test_cv.jl #768 covers the Poisson shape; this pins the route).
+    @testset "species-split CV runs with the check in force; a direct fit still raises" begin
+        rng = MersenneTwister(1134)
+        p, n = 6, 20
+        Yc = rand(rng, 0:5, p, n)
+        Yb = rand(rng, 0:1, p, n)
+        Nb = fill(3, p, n); Yt = rand(rng, 0:3, p, n)
+        for (fam, Y, kw) in ((Poisson(), Yc, (;)), (NegativeBinomial(), Yc, (;)),
+                             (Binomial(), Yb, (;)), (Binomial(), Yt, (N = Nb,)))
+            cv = cv_gllvm(Y; k_folds = 3, split = :species, family = fam, K = 1,
+                          rng = MersenneTwister(1134), kw...)
+            @test cv.split === :species
+            @test isfinite(cv.loglik) && isfinite(cv.mse)
+            @test all(f -> size(f.Λ, 1) == 4, cv.fits)   # 2 of 6 species held out per fold
+        end
+        mask = trues(p, n); mask[2, :] .= false
+        @test_throws ArgumentError fit_gllvm(Yc; family = Poisson(), K = 1, mask = mask)
     end
 end
