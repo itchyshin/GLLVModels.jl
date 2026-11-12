@@ -8,10 +8,9 @@ const GM = GLLVModels
 # the training offset and have getLV / predict / residuals (test_truncated_postfit_788.jl).
 # The check below pins that the stored offset is the training offset.
 #
-# Still without a stored offset or post-fit methods per the issue and not pinned here:
-# TweedieGroupedFit / TweediePerTraitPowerFit. (CensoredPoissonFit and LognormalFit now store their
-# offset and have the post-fit methods: test_censored_poisson_postfit_788.jl,
-# test_lognormal_postfit_788.jl.)
+# The grouped Tweedie fits (TweedieGroupedFit, TweediePerTraitPowerFit) now store their offset too
+# and have the post-fit methods: test_tweedie_grouped_postfit_788.jl. CensoredPoissonFit and
+# LognormalFit likewise: test_censored_poisson_postfit_788.jl, test_lognormal_postfit_788.jl.
 
 @testset "truncated Poisson fit stores its training offset (#788)" begin
     p, n, K = 5, 50, 1
