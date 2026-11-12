@@ -137,7 +137,8 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
 
     for _ in 1:maxiter
         grad, H = _phylo_gamma_xlv_grad_hessian(
-            Y, beta, Lambda, alpha_lv, alpha_shape, mean_eta, Q, leaf_pos, eps, u)
+            Y, beta, Lambda, alpha_lv, alpha_shape, mean_eta, Q, leaf_pos, eps, u;
+            hessian = :step)
         cholH = try
             cholesky(Symmetric(H))
         catch
