@@ -2474,10 +2474,12 @@ In-sample fitted values at the conditional latent scores (see [`getLV`](@ref)). 
 `η = β + offset + Λ ẑ`, the mean of `log y`:
 
 - `type = :link` returns `η`.
-- `type = :response` (default) returns the conditional mean `exp(η + σ²/2)`
-  ([`lognormal_response_mean`](@ref)). This is what gllvmTMB's `predict(type = "response")` returns
-  for `lognormal()` (`.apply_linkinv_per_row`, read not run), not the median.
-- `type = :median` returns `exp(η)`, the conditional median.
+- `type = :response` (default) returns the mean of `y` conditional on the latent variables,
+  `exp(η + σ²/2)` ([`lognormal_response_mean`](@ref)), where `σ` is the residual standard
+  deviation on the log scale. This is the mean, not the median, and it matches what gllvmTMB's
+  `predict(type = "response")` returns for `lognormal()` (`.apply_linkinv_per_row`, read not run).
+- `type = :median` returns `exp(η)`, the conditional median (smaller than the mean by the factor
+  `exp(σ²/2)`).
 
 Offset rules and `modes` are those of the other Laplace fits (see the `PoissonFit` method): the
 stored training offset is used when `Y` has the training size, an explicit `offset` overrides it,
