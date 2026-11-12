@@ -2285,6 +2285,151 @@ function residuals(fit::_ZTCountFit, Y::AbstractMatrix{<:Real}; type::Symbol = :
     return R
 end
 
+# --- Right-censored Poisson post-fit (CensoredPoissonFit; #788) ---
+# The fit keeps its training offset (`fit.offset`) but not the censoring pattern (data, not a
+# parameter). The methods take it the way `fit_censored_poisson_gllvm` does: `censored` (Bool p×n,
+# `Y` holds the limit C where true), or `lower` / `upper`; with neither, every cell is an exact count.
+
+# (Y, N) slot encoding of `censored_bounds_to_YN` for the post-fit methods, with unobserved cells
+# replaced by a harmless count (the mode search never reads them).
+function _censored_post_YN(Y::AbstractMatrix, mask, censored, lower, upper, caller::AbstractString)
+    p, n = size(Y)
+    msk = mask === nothing ? nothing : _resolve_obs_mask(mask, Y)
+    if lower !== nothing || upper !== nothing
+        (lower === nothing || upper === nothing) && throw(ArgumentError(
+            "$caller: pass both lower and upper, or neither"))
+        censored !== nothing && throw(ArgumentError(
+            "$caller: pass either (lower, upper) or censored, not both"))
+        size(lower) == (p, n) && size(upper) == (p, n) || throw(ArgumentError(
+            "$caller: lower and upper must be $(p)×$(n), the size of Y"))
+        L = Matrix{Int}(lower); U = Matrix{Int}(upper)
+        if msk !== nothing   # an unobserved cell may hold any bounds
+            @inbounds for s in 1:n, t in 1:p
+                msk[t, s] || (L[t, s] = 0; U[t, s] = 0)
+            end
+        end
+        return censored_bounds_to_YN(L, U)
+    end
+    Yraw = Matrix{Int}(_sanitize_unobserved(Y, msk, 0))
+    if censored === nothing
+        _check_response_support(:count, Y, msk; caller = caller)
+        return Yraw, zeros(Int, p, n)
+    end
+    size(censored) == (p, n) || throw(ArgumentError(
+        "$caller: censored must be $(p)×$(n), the size of Y"))
+    L = copy(Yraw); U = copy(Yraw)
+    @inbounds for s in 1:n, t in 1:p
+        (msk !== nothing && !msk[t, s]) && continue
+        censored[t, s] && (U[t, s] = typemax(Int))
+    end
+    return censored_bounds_to_YN(L, U)
+end
+
+# Dunn-Smyth z for a right-censored cell (Y >= C): u uniform on [F(C-1), 1].
+_ds_z_censored(d, C, v) = _ds_z(cdf(d, C - 1), 1.0, ccdf(d, C - 1), 0.0, v; lmass = Distributions.logccdf(d, C - 1))
+
+"""
+    getLV(fit::CensoredPoissonFit, Y; censored=nothing, lower=nothing, upper=nothing,
+          rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for a right-censored Poisson fit: the per-site Laplace mode `ẑₛ`
+under the censored likelihood the fit was made with. `Y` is the p×n count matrix.
+
+The fit does not store which cells were censored, so pass the pattern as in
+[`fit_censored_poisson_gllvm`](@ref): `censored` (a p×n Bool matrix; `Y` holds the limit `C ≥ 1`
+where `true`), or interval bounds `lower` / `upper` (`upper == typemax(Int)` for a right-censored
+cell). With neither, every cell is read as an exact count, which gives different scores when
+the fit was made with censored cells. `rotate=true` applies the canonical [`rotation`](@ref).
+
+Offset rules are those of the other Laplace fits: the stored training offset (`fit.offset`) is used
+when `Y` has the training size, otherwise the `offset` you pass (p×n matrix, scalar or length-p
+vector); an explicit `offset` overrides it; new units from an offset fit without an `offset` are
+refused (`ArgumentError`). `mask` is the p×n Bool matrix of observed cells.
+"""
+function getLV(fit::CensoredPoissonFit, Y::AbstractMatrix{<:Real}; censored = nothing,
+               lower = nothing, upper = nothing, rotate::Bool = true,
+               mask = nothing, offset = nothing)
+    p, n = size(Y); K = size(fit.Λ, 2)
+    size(fit.Λ, 1) == p || throw(ArgumentError(
+        "getLV: Y has $p rows but the fit has $(size(fit.Λ, 1)) traits"))
+    Yc, Nc = _censored_post_YN(Y, mask, censored, lower, upper, "getLV")
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
+    Z = Matrix{Float64}(undef, K, n)
+    @inbounds for s in 1:n
+        mi = mask === nothing ? nothing : view(mask, :, s)
+        oi = O === nothing ? nothing : view(O, :, s)
+        Z[:, s] = _laplace_mode(CensoredPoisson(), view(Yc, :, s), view(Nc, :, s), fit.Λ, fit.β,
+                                fit.link; mask = mi, offset = oi)
+    end
+    Zt = permutedims(Z)
+    return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
+end
+
+"""
+    predict(fit::CensoredPoissonFit, Y; type=:response, censored=nothing, lower=nothing,
+            upper=nothing, mask=nothing, offset=nothing, modes=:refit) -> p×n matrix
+
+In-sample fitted values at the Laplace mode, for a right-censored Poisson fit. With
+`η = β + offset + Λ ẑ`:
+
+- `type = :link` returns `η`.
+- `type = :response` (default) returns `exp(η)`, the mean of the **underlying uncensored** Poisson
+  process, not a censoring-adjusted expectation. This is what gllvmTMB documents for
+  `fitted()` / `predict(type = "response")` of `censored_poisson()`.
+
+`censored` / `lower` / `upper` give the censoring pattern used to find the modes (see [`getLV`](@ref));
+the values themselves do not depend on it except through `ẑ`. Offset rules and `modes` are those of
+the other Laplace fits (see the `PoissonFit` method): the stored training offset is used when `Y` has
+the training size, an explicit `offset` overrides it, `modes = :training` keeps the training units'
+modes.
+"""
+function predict(fit::CensoredPoissonFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 censored = nothing, lower = nothing, upper = nothing,
+                 mask = nothing, offset = nothing, modes::Symbol = :refit)
+    type in (:link, :response) ||
+        throw(ArgumentError("type must be :link or :response; got :$type"))
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "predict")
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
+    Z = getLV(fit, Y; censored = censored, lower = lower, upper = upper, rotate = false,
+              mask = mask, offset = Omode)
+    η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
+    type === :link && return η
+    return linkinv.(Ref(fit.link), _clamp_eta.(η))
+end
+
+"""
+    residuals(fit::CensoredPoissonFit, Y; type=:dunnsmyth, rng=Random.default_rng(), censored=nothing,
+              lower=nothing, upper=nothing, mask=nothing, offset=nothing) -> p×n matrix
+
+Dunn-Smyth randomized quantile residuals `Φ⁻¹(u)` at the fitted mode, with `μ = exp(η)` and
+`F` the Poisson(`μ`) CDF. An exact cell with count `y` has `u` uniform on `[F(y−1), F(y)]`; a
+right-censored cell (`Y ≥ C`) has `u` uniform on `[F(C−1), 1]`. They are approximately N(0, 1) under
+a correct model (pass a fixed `rng` to reproduce). The censoring pattern is passed as for
+[`getLV`](@ref); without it every cell is treated as exact. `mask` and `offset` follow the rules in
+[`predict`](@ref); unobserved cells come back as `NaN`. Only `type = :dunnsmyth` is available: a
+Pearson residual is not defined for a censored cell.
+"""
+function residuals(fit::CensoredPoissonFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunnsmyth,
+                   rng::AbstractRNG = Random.default_rng(), censored = nothing, lower = nothing,
+                   upper = nothing, mask = nothing, offset = nothing)
+    type === :dunnsmyth ||
+        throw(ArgumentError("type must be :dunnsmyth; got :$type (Pearson residuals are not " *
+                            "defined for censored cells)"))
+    p, n = size(Y)
+    μ = predict(fit, Y; type = :response, censored = censored, lower = lower, upper = upper,
+                mask = mask, offset = offset)
+    Yc, Nc = _censored_post_YN(Y, mask, censored, lower, upper, "residuals")
+    R = fill(NaN, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        (mask === nothing || mask[t, s]) || continue
+        d = Poisson(μ[t, s])
+        R[t, s] = Nc[t, s] == 0 ? _ds_z_discrete(d, Yc[t, s], rand(rng)) :
+                                  _ds_z_censored(d, Nc[t, s], rand(rng))
+    end
+    return R
+end
+
 function Base.show(io::IO, ::MIME"text/plain", fit::ExponentialFit)
     p, K = size(fit.Λ)
     println(io, "Exponential GLLVM fit")
