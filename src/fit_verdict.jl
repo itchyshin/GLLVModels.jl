@@ -50,6 +50,11 @@ cannot tell the difference, because the gradient of a constant is exactly zero.
 The three-argument form is for fitters that construct their result without an `Optim`
 object (an `iterations = 0` early return, or a grid search keeping a best record).
 """
+# Max-abs gradient of the optimiser's objective at the returned optimum (`Optim.g_residual`),
+# stored as `gradient_norm` on fit types. `Inf` when the gradient is not finite; the fit
+# types use `NaN` for "not recorded". Informational only: it never feeds `converged`.
+_fit_gradient_norm(res) = (g = Float64(Optim.g_residual(res)); isfinite(g) ? g : Inf)
+
 function _fit_verdict(res)
     return _fit_verdict(Optim.minimum(res), Optim.converged(res), Optim.iterations(res))
 end

@@ -340,5 +340,7 @@ function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
-    return BinomialFit(β̂, Λ̂, link, _fit_verdict(res)...)
+    return BinomialFit(β̂, Λ̂, link, _fit_verdict(res)..., nothing, Float64[],
+                       _default_hessian(Binomial(), link), nothing, nothing, Inf, nothing,
+                       _fit_gradient_norm(res))
 end
