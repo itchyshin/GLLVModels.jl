@@ -621,6 +621,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
     # Layout (single source of truth) — also validates the families.
     disp_index, n_disp = _mixed_family_layout(families)
     _check_mixed_offset_admission(offset, families)
+    _check_mixed_response_support(families, Y, N; caller = "fit_mixed_gllvm")
 
     # Family-aware PPCA warm start: per-trait link-scale pseudodata, one SVD.
     Zemp = Matrix{Float64}(undef, p, n)
