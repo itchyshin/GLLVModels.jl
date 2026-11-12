@@ -15,7 +15,7 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 - **IN (refs #1107, #1108), behaviour change:** a NaN, `missing` or Inf in a
   covariate array is an `ArgumentError` naming the fitter, the array and the first
   entry on `fit_rrr_gllvm`, `fit_constrained_gllvm`, the `*_cov` and grouped-covariate
-  fitters, `fit_gllvm_speciescov`, `fit_fourthcorner_gllvm`, the per-trait ordinal
+  fitters, `fit_gllvm_speciescov`, `fit_fourthcorner_gllvm`, `fit_multinomial_gllvm`, the per-trait ordinal
   covariate fitter and the formula routes that reach them. They used to return
   `loglik = -Inf` with `converged = false` and no message. Where `mask` is accepted,
   only entries at observed response cells are checked.
