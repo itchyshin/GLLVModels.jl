@@ -67,6 +67,7 @@ const _PlainGllvmFit = Union{
     GammaGroupedFit, NB1GroupedFit, NBGroupedFit, BetaGroupedFit,
     OrdinalPerTraitFit, RowEffectFit, RowRandomFit,
     TruncatedPoissonFit, TruncatedNegBin2Fit, TruncatedNegBin2PerTraitFit,
+    CensoredPoissonFit,
 }
 
 const _PositionalArgGllvmFit = Union{

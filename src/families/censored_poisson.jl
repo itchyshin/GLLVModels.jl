@@ -156,7 +156,10 @@ end
     CensoredPoissonFit
 
 Result of [`fit_censored_poisson_gllvm`](@ref). Packing is Poisson-identical:
-`θ = [β; pack(Λ)]` — no dispersion; censor limits are data, not parameters.
+`θ = [β; pack(Λ)]` — no dispersion; censor limits are data, not parameters, so the fit does not
+store the censoring pattern: `getLV`, `predict` and `residuals` take it as `censored` or
+`lower`/`upper`, as the fitter does. `offset` is the p×n training offset the fit was made with
+(`nothing` when none was given); the post-fit methods use it by default.
 """
 struct CensoredPoissonFit
     β::Vector{Float64}
@@ -166,7 +169,12 @@ struct CensoredPoissonFit
     converged::Bool
     iterations::Int
     theta_packed::Vector{Float64}
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (7 positional args): no stored training offset.
+CensoredPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed) =
+    CensoredPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed, nothing)
 
 function Base.show(io::IO, f::CensoredPoissonFit)
     p, K = size(f.Λ)
@@ -300,5 +308,6 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     ll, conv, iters = _fit_verdict(res)
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk,
                             caller = "fit_censored_poisson_gllvm")   # #869
-    return CensoredPoissonFit(β̂, Λ̂, link, ll, conv, iters, collect(Float64, θ̂))
+    return CensoredPoissonFit(β̂, Λ̂, link, ll, conv, iters, collect(Float64, θ̂),
+                              _stored_offset(offset))
 end
