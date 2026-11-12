@@ -34,3 +34,35 @@ using Distributions: Beta
     @test isfinite(GLLVModels._phylo_beta_xlv_marginal_loglik(
         Y, beta, Lambda, alpha_lv, phi, 0.45, phy, X_lv; maxiter = 120))
 end
+
+# #1048: a line search that stalls at the rounding floor while the Newton decrement
+# g'delta is below 1e-12 is convergence. `tol = 0` asks for a sub-rounding step, so
+# the search can only end by that stall (or by maxiter, which reports a failure):
+# before the rule it returned (nothing, nothing, nothing) at this recorded seed.
+@testset "Phylo x Beta xLV mode search: rounding-floor stall is convergence (#1048)" begin
+    Random.seed!(10)
+    phy = GLLVModels.augmented_phy("(((A:0.3,B:0.3):0.2,(C:0.3,D:0.3):0.2):0.2,(E:0.4,F:0.4):0.2);")
+    p = phy.n_leaves
+    n = 28
+    K = 1
+    beta = 0.12 .* randn(p)
+    Lambda = reshape(range(0.08, 0.34; length = p), p, K)
+    alpha_lv = reshape([0.32], 1, K)
+    X_lv = reshape(collect(range(-1.1, 1.1; length = n)), n, 1)
+    phi = 8.0
+    mean_eta = GLLVModels._lv_mean_eta(Lambda, X_lv, alpha_lv)
+    mu = clamp.(1.0 ./ (1.0 .+ exp.(-(beta .+ mean_eta))), 1e-6, 1 - 1e-6)
+    Y = [rand(Beta(mu[t, s] * phi, (1 - mu[t, s]) * phi)) for t in 1:p, s in 1:n]
+    Q_cond, leaf_pos = GLLVModels._phylo_qcond(phy)
+    Q = Matrix(Q_cond ./ 0.5)
+
+    eps0, u0, chol0 = GLLVModels._phylo_beta_xlv_mode(Y, beta, Lambda, alpha_lv,
+        phi, mean_eta, Q, leaf_pos; maxiter = 200, tol = 1e-10)
+    @test eps0 !== nothing
+    eps, u, cholH = GLLVModels._phylo_beta_xlv_mode(Y, beta, Lambda, alpha_lv,
+        phi, mean_eta, Q, leaf_pos; maxiter = 200, tol = 0.0)
+    @test eps !== nothing
+    @test cholH !== nothing
+    @test isapprox(eps, eps0; atol = 1e-6)
+    @test isapprox(u, u0; atol = 1e-6)
+end
