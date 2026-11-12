@@ -17,7 +17,8 @@
 
 # Per-site Gamma ELBO at variational params ψ = [m (K); logv (K)].
 function _va_site_gamma_elbo(ψ::AbstractVector, y::AbstractVector,
-        Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector, α::Real)
+        Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector, α::Real;
+        obs = nothing)
     p, K = size(Λ)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -26,6 +27,7 @@ function _va_site_gamma_elbo(ψ::AbstractVector, y::AbstractVector,
     μη = β .+ Λ * m
     ℓ = zero(eltype(ψ))
     @inbounds for t in 1:p
+        (obs !== nothing && !obs[t]) && continue
         w = exp(_clamp_eta(-μη[t] + 0.5 * σ2[t]))          # E_q[e^{−η_t}]
         ℓ += (α - 1) * log(y[t]) - y[t] * α * w - α * μη[t] + α * log(α) - loggamma(α)
     end
@@ -41,7 +43,8 @@ end
 # and the objective is −ELBO, so G holds the negation of both. (_clamp_eta's
 # derivative is treated as 1; the clamp is inactive for benign data.)
 function _va_site_gamma_grad!(G::AbstractVector, ψ::AbstractVector, y::AbstractVector,
-        Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector, α::Real)
+        Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector, α::Real;
+        obs = nothing)
     p, K = size(Λ)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -51,6 +54,7 @@ function _va_site_gamma_grad!(G::AbstractVector, ψ::AbstractVector, y::Abstract
     @inbounds for k in 1:K
         gm = zero(eltype(ψ)); gv = zero(eltype(ψ))
         for t in 1:p
+            (obs !== nothing && !obs[t]) && continue
             w = exp(_clamp_eta(-μη[t] + 0.5 * σ2[t]))      # E_q[e^{−η_t}]
             gm += Λ[t, k] * (y[t] * w - 1)
             gv += Λ2[t, k] * y[t] * w
@@ -65,17 +69,18 @@ end
 
 # Profile (m_s, v_s) for one site by minimising the negative ELBO over [m; logv].
 function _va_site_gamma(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
-        β::AbstractVector, α::Real; maxiter::Integer = 100, tol::Real = 1e-9)
+        β::AbstractVector, α::Real; maxiter::Integer = 100, tol::Real = 1e-9,
+        obs = nothing)
     K = size(Λ, 2)
-    negelbo(ψ) = -_va_site_gamma_elbo(ψ, y, Λ, Λ2, β, α)
-    g!(G, ψ) = _va_site_gamma_grad!(G, ψ, y, Λ, Λ2, β, α)
+    negelbo(ψ) = -_va_site_gamma_elbo(ψ, y, Λ, Λ2, β, α; obs = obs)
+    g!(G, ψ) = _va_site_gamma_grad!(G, ψ, y, Λ, Λ2, β, α; obs = obs)
     res = Optim.optimize(negelbo, g!, zeros(2K), Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
     return -Optim.minimum(res)
 end
 
 """
-    gamma_marginal_loglik_va(Y, Λ, β, α; maxiter=100, tol=1e-9) -> Float64
+    gamma_marginal_loglik_va(Y, Λ, β, α; maxiter=100, tol=1e-9, mask=nothing) -> Float64
 
 Gaussian-variational (VA) log-marginal lower bound (ELBO) over the `n` sites
 (columns) of a Gamma GLLVM with log link and shape `α > 0` — `Y` the p×n positive
@@ -83,16 +88,21 @@ matrix, `Λ` p×K, `β` length-p. The per-site posterior `q(z_s)=N(m_s, diag(v_s
 profiled out; the Gamma ELBO is closed-form (no quadrature). The value is a **lower
 bound** on the true log-marginal; as `Λ→0` it equals the independent-Gamma loglik
 exactly. Companion to [`gamma_marginal_loglik_laplace`](@ref).
+`mask` drops cells (`nothing` keeps every cell); unobserved entries of `Y` are ignored.
 """
 function gamma_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
-        β::AbstractVector, α::Real; maxiter::Integer = 100, tol::Real = 1e-9)
+        β::AbstractVector, α::Real; maxiter::Integer = 100, tol::Real = 1e-9,
+        mask = nothing)
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
+    _va_check_mask(mask, Y)
     α > 0 || throw(ArgumentError("shape α must be > 0"))
     Λ2 = Λ .^ 2
     acc = 0.0
     @inbounds for s in axes(Y, 2)
-        acc += _va_site_gamma(view(Y, :, s), Λ, Λ2, β, float(α); maxiter = maxiter, tol = tol)
+        obs = mask === nothing ? nothing : view(mask, :, s)
+        acc += _va_site_gamma(view(Y, :, s), Λ, Λ2, β, float(α); maxiter = maxiter,
+                              tol = tol, obs = obs)
     end
     return acc
 end
@@ -107,17 +117,23 @@ maximises the Laplace marginal). Same warm start (log row-mean intercepts + SVD
 loadings + `α₀=2`) and finite-difference gradient. The returned `GammaFit`'s
 `loglik` field holds the maximised ELBO (a lower bound on the true log-marginal).
 The ELBO is derived for the log link only: any other `link` throws `ArgumentError`.
+
+A `Y` that contains `missing` is fitted, not rejected: the observation mask is
+derived from those cells (a one-time `@info`) and unobserved cells are dropped
+from the ELBO. Pass `mask` to drop additional cells.
 """
 function fit_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_gamma_gllvm_va", link, LogLink())
-    _check_response_support(:positive, Y, nothing; caller = "fit_gamma_gllvm_va")
+    _va_check_mask(mask, Y)
+    _check_response_support(:positive, Y, mask; caller = "fit_gamma_gllvm_va")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
     Zemp = log.(max.(Y, 1e-6))
+    mask === nothing || _mask_warmstart!(Zemp, mask)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
     Zc = Zemp .- β0
     F = svd(Zc)
@@ -138,7 +154,8 @@ function fit_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         α = exp(clamp(θ[p + rr + 1], logαlo, logαhi))
         v = try
-            -gamma_marginal_loglik_va(Y, Λ, β, α; maxiter = maxiter, tol = tol)
+            -gamma_marginal_loglik_va(Y, Λ, β, α; maxiter = maxiter, tol = tol,
+                                      mask = mask)
         catch
             return 1e12
         end
@@ -152,4 +169,14 @@ function fit_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     α̂ = exp(clamp(θ̂[p + rr + 1], logαlo, logαhi))
     return GammaFit(β̂, Λ̂, α̂, link, _fit_verdict(res)...)
+end
+
+function fit_gamma_gllvm_va(Y::AbstractMatrix{<:Union{Missing,Real}};
+        mask = nothing, kwargs...)
+    if mask === nothing
+        Yc, msk = _va_materialize_derived(Y, 1.0, "fit_gamma_gllvm_va")
+    else
+        Yc, msk = _va_materialize_explicit(Y, 1.0, mask)
+    end
+    return fit_gamma_gllvm_va(Yc; mask = msk, kwargs...)
 end
