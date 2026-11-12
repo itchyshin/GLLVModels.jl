@@ -775,6 +775,7 @@ println(_SHARD === nothing ?
     _shard_include("test_variational_exponential.jl")
     _shard_include("test_fix_1108.jl")
     _shard_include("test_all_missing_trait.jl")   # a trait with no observed cell is an ArgumentError
+    _shard_include("test_all_missing_trait_extend.jl")   # the same refusal on the ordinal and mixed-family fitters
     _shard_include("test_va_vs_laplace.jl")
     _shard_include("test_random_slopes.jl")
     _shard_include("test_twolevel.jl")
