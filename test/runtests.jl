@@ -161,7 +161,7 @@ for (_k, _files) in enumerate((
         "test_precision_objective_failures.jl", "test_grouped_nongaussian_postfit.jl", "test_formula_sources.jl",
         "test_formula_structured_terms.jl", "test_gaussian_source_bindings.jl", "test_phylo_precision_animal.jl",
         "test_coevolution_kronecker.jl", "test_spde_delaunay.jl", "test_spde_fit.jl",
-        "test_spde_latent_postfit.jl", "test_phylo_binomial_xlv_mode.jl", "test_phylo_gamma_xlv_mode_floor.jl", "test_delta_fit.jl",
+        "test_spde_latent_postfit.jl", "test_phylo_binomial_xlv_mode.jl", "test_phylo_gamma_xlv_mode_floor.jl", "test_phylo_nb_xlv_mode_floor.jl", "test_delta_fit.jl",
         "test_delta_postfit.jl", "test_hurdle_poisson.jl", "test_hurdle_nb.jl",
         "test_delta_gamma.jl", "test_missing_data.jl", "test_missing_response_extra.jl",
         "test_missing_predictor_poisson.jl", "test_missing_predictor_multi.jl", "test_nb_grouped_wald_speed_552.jl",
@@ -456,6 +456,7 @@ println(_SHARD === nothing ?
     _shard_include("test_xlv_nb_binomial_wired.jl")
     # #1048: Gamma xlv mode-search rounding-floor regression (the full test_phylo_gamma_xlv.jl stays unwired).
     _shard_include("test_phylo_gamma_xlv_mode_floor.jl")
+    _shard_include("test_phylo_nb_xlv_mode_floor.jl")
 
     #   include("test_phylo_ordinal_xlv.jl")
     #   test_sparse_phy_grad.jl is now opt-in: GLLVM_SPARSE_PHY_GRAD_TESTS=1 (end of the list).
