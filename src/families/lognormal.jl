@@ -61,6 +61,8 @@ Result of [`fit_lognormal_gllvm`](@ref): intercepts `β` (length `p`; mean of
 (`Var(log y) = σ²`), `link` (always `LogLink()`), maximised y-scale `loglik`
 (includes Jacobian), `converged`, `iterations`, and free-σ reference packing
 `theta_packed = [β; pack(Λ); log σ]` (Identity layout; fit path may profile σ).
+`offset` is the p×n training offset the fit was made with (`nothing` when none was given);
+`getLV`, `predict` and `residuals` use it by default.
 """
 struct LognormalFit
     β::Vector{Float64}
@@ -71,7 +73,12 @@ struct LognormalFit
     converged::Bool
     iterations::Int
     theta_packed::Vector{Float64}
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (8 positional args): no stored training offset.
+LognormalFit(β, Λ, σ, link, loglik, converged, iterations, theta_packed) =
+    LognormalFit(β, Λ, σ, link, loglik, converged, iterations, theta_packed, nothing)
 
 function Base.show(io::IO, f::LognormalFit)
     p, K = size(f.Λ)
@@ -158,5 +165,5 @@ function fit_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
     ll = Float64(gfit.logLik - sum(Z))
     θ = vcat(collect(float.(β̂)), pack_lambda(Λ̂), log(σ̂))
     return LognormalFit(collect(float.(β̂)), Λ̂, σ̂, LogLink(), ll,
-                        gfit.converged, gfit.n_iter, θ)
+                        gfit.converged, gfit.n_iter, θ, _stored_offset(offset))
 end
