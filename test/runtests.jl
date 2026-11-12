@@ -230,6 +230,7 @@ for (_k, _files) in enumerate((
         "test_zip_zinb_stall.jl", "test_robustness_sweep.jl", "test_convergence_553_554.jl",
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
+        "test_covariate_nonfinite.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
@@ -930,6 +931,8 @@ println(_SHARD === nothing ?
     # Unit tests for the branch-RE statistics / tree helpers (welch_t, rank_sum_z, clade_edges, ...).
     _shard_include("test_branch_re_helpers.jl")
     _shard_include("test_response_support_730_siblings.jl")
+    # Non-finite covariates in the covariate-taking fitters are an ArgumentError, not loglik = -Inf.
+    _shard_include("test_covariate_nonfinite.jl")
     _shard_include("test_interrupt_rethrow.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
