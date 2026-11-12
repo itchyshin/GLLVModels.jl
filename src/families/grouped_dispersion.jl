@@ -3039,6 +3039,12 @@ end of `(1, 2)` reports `converged = false` rather than advertising that point
 as a maximum. With one group and `hessian=:observed` (the default) this
 matches [`fit_tweedie_gllvm`](@ref)'s own default; `hessian=:fisher` selects
 the previous expected-information objective on both.
+
+With `power_group = :species`, a fit that stops at the `iterations` cap while at
+least one fitted power is within `1e-3` of 1 or 2 emits a warning saying so and
+suggesting a larger `iterations` (for example `2000`). The `1e-3` only decides
+whether the message appears; `converged`, the fitted values and every default
+are unchanged.
 """
 function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
         group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
@@ -3129,6 +3135,17 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
     elseif reason === :power_at_boundary
         @warn "fit_tweedie_gllvm_grouped: the power ran to the boundary of (1, 2) \
                (p̂ = $(p̂), φ̂ = $(φ̂g)); the fit is flagged as not converged."
+    end
+    # #1117: a per-species-power fit that stops at the iteration cap used to say nothing.
+    # Message only; `1e-3` is a trigger for this text, not a fit tolerance, and nothing
+    # below depends on it. Same `@warn` style as the boundary warning above (no `maxlog`).
+    if spec.mode === :species && !spec.fixed && reason === :gradient_not_small &&
+       Optim.iteration_limit_reached(res)
+        nedge = count(q -> min(q - 1.0, 2.0 - q) < 1e-3, p̂)
+        nedge > 0 && @warn "fit_tweedie_gllvm_grouped: stopped at the iteration cap \
+               (iterations = $(iterations)) and $(nedge) of $(p) fitted powers are within 1e-3 of \
+               the edge of (1, 2), where the surface flattens slowly; the fit is flagged as not \
+               converged. Try raising `iterations` (for example `iterations = 2000`)."
     end
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_tweedie_gllvm_grouped")
     if spec.mode === :species && !spec.fixed
