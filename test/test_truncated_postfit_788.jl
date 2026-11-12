@@ -76,7 +76,8 @@ _p0(f::TruncatedNegBin2PerTraitFit, μ, t) = (f.r[t] / (f.r[t] + μ))^f.r[t]
             @test predict(f, Y) == predict(f, Y; type = :response)
             M = predict(f, Y; type = :mean)
             Mhand = [exp(η[t, s]) / (1 - _p0(f, exp(η[t, s]), t)) for t in 1:p, s in 1:n]
-            @test M ≈ Mhand rtol = 1e-10
+            # the textbook (r/(r+mu))^r loses digits when a trait's r runs to the Poisson limit
+            @test M ≈ Mhand rtol = 1e-6
             @test all(M .> exp.(η))                     # truncation raises the mean
             @test all(M .> 1)                           # and a zero-truncated mean exceeds 1
             @test_throws ArgumentError predict(f, Y; type = :nonsense)
