@@ -1235,7 +1235,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                    "shared scalar σ; y-scale loglik includes −Σ log y; " *
                    "no-X only; Sigma/correlation use the shared block " *
                    "Lambda*Lambda' only (communality 1); scores empty " *
-                   "(the bridge does not call getLV(::LognormalFit) yet); CI, X, X_lv, and masks " *
+                   "(no getLV(::LognormalFit)); CI, X, X_lv, and masks " *
                    "remain follow-ups; light no-X RCall logLik Δ PAID " *
                    "(test/parity/test_lognormal_parity.jl @ GLLVM_PARITY_TESTS=1; " *
                    "receipt abs≈2.24e-8 @ rtol 1e-6, seed=52, p=5, K=2, n=60)",
