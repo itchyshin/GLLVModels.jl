@@ -2896,7 +2896,9 @@ end
 Result of [`fit_tweedie_gllvm_grouped`](@ref): intercepts `β` (length p), loadings `Λ`
 (p×K), the per-group dispersion vector `φ` (length G), the SHARED `power` ∈ (1,2), the
 species→group map `group` (length p), the `link`, the maximised Laplace `loglik`,
-`converged`, and `iterations`. The per-species dispersion is `φ[group[t]]`
+`converged`, and `iterations`. `offset` is the p×n training offset the fit was made with
+(`nothing` when none was given); `getLV`, `predict` and `residuals` use it by default.
+The per-species dispersion is `φ[group[t]]`
 (`Var_t = φ[group[t]]·μ_t^power`). `converged` uses the same `_tweedie_verdict`
 contract as [`fit_tweedie_gllvm`](@ref): a successfully evaluated objective, a
 strictly interior power, and a gradient residual small relative to the
@@ -2914,6 +2916,7 @@ struct TweedieGroupedFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     power_fixed::Bool # true only when `power = p0` removed all power coordinates
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructor (2026-08-28): see NBGroupedFit above.
@@ -2923,6 +2926,10 @@ TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations)
     TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, :observed, false)
 TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian) =
     TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian, false)
+# Pre-offset compat tier (11 positional args, #788): no stored training offset.
+TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian, power_fixed) =
+    TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian,
+                      power_fixed, nothing)
 
 function Base.show(io::IO, f::TweedieGroupedFit)
     p, K = size(f.Λ)
@@ -2950,7 +2957,8 @@ end
 
 Result of `fit_tweedie_gllvm_grouped(...; power_group=:species)`.  The grouped
 dispersion vector `φ` is indexed by `group`; `power[t]` is the separately
-estimated Tweedie power for species `t`.
+estimated Tweedie power for species `t`. `offset` is the p×n training offset the fit was
+made with (`nothing` when none was given); `getLV`, `predict` and `residuals` use it by default.
 """
 struct TweediePerTraitPowerFit
     β::Vector{Float64}
@@ -2963,7 +2971,13 @@ struct TweediePerTraitPowerFit
     converged::Bool
     iterations::Int
     hessian::Symbol
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
+
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+TweediePerTraitPowerFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian) =
+    TweediePerTraitPowerFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian,
+                            nothing)
 
 _loadings(fit::TweediePerTraitPowerFit) = fit.Λ
 _loglik(fit::TweediePerTraitPowerFit) = fit.loglik
@@ -2972,6 +2986,51 @@ function _nparams(fit::TweediePerTraitPowerFit)
     return p + rr_theta_len(p, K) + length(fit.φ) + length(fit.power)
 end
 StatsAPI.dof(fit::TweediePerTraitPowerFit) = _nparams(fit)
+
+# Per-species Tweedie markers, φ[group[t]] and the shared / per-trait power, for post-fit use.
+_tweedie_grouped_fams(fit::TweedieGroupedFit) =
+    [TweedieED(float(fit.φ[fit.group[t]]), float(fit.power)) for t in eachindex(fit.group)]
+_tweedie_grouped_fams(fit::TweediePerTraitPowerFit) =
+    [TweedieED(float(fit.φ[fit.group[t]]), float(fit.power[t])) for t in eachindex(fit.group)]
+
+"""
+    getLV(fit::TweedieGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+    getLV(fit::TweediePerTraitPowerFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for a grouped-dispersion Tweedie fit: the per-site Laplace mode
+`ẑₛ`, found with the fit's own mode search at the per-species dispersion `φ[group[t]]` and the
+shared (`TweedieGroupedFit`) or per-trait (`TweediePerTraitPowerFit`) power. `Y` is the p×n matrix of
+non-negative reals; `rotate=true` applies the canonical [`rotation`](@ref). Pass the `mask` given to
+[`fit_tweedie_gllvm_grouped`](@ref): masked cells do not enter the mode.
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the stored training
+offset (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass (a p×n matrix,
+a scalar or a length-p vector). New units from an offset fit without an `offset` are refused, as
+gllvmTMB refuses `newdata` that lacks the offset variable.
+"""
+function getLV(fit::Union{TweedieGroupedFit,TweediePerTraitPowerFit}, Y::AbstractMatrix{<:Real};
+               rotate::Bool = true, mask = nothing, offset = nothing)
+    p, n = size(Y)
+    size(fit.Λ, 1) == p || throw(ArgumentError(
+        "getLV: Y has $p rows but the fit has $(size(fit.Λ, 1)) traits"))
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
+    fams = _tweedie_grouped_fams(fit)
+    K = size(fit.Λ, 2)
+    ones_p = ones(Int, p)
+    Z = Matrix{Float64}(undef, K, n)
+    @inbounds for s in 1:n
+        mi = mask === nothing ? nothing : view(mask, :, s)
+        oi = offset === nothing ? nothing : view(offset, :, s)
+        ys = view(Y, :, s)
+        z, ok = _tweedie_grouped_mode(fams, ys, ones_p, fit.Λ, fit.β, fit.link; mask = mi, offset = oi)
+        ok || ((z, ok) = _tweedie_grouped_mode(fams, ys, ones_p, fit.Λ, fit.β, fit.link;
+                                               mask = mi, offset = oi, maxiter = 2000))
+        ok || (z = _grouped_getLV_mode(fams, ys, ones_p, fit.Λ, fit.β, fit.link; mask = mi, offset = oi))
+        Z[:, s] = z
+    end
+    Zt = permutedims(Z)
+    return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
+end
 
 struct _TweediePowerSpec
     values::Vector{Float64}
@@ -3133,8 +3192,8 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_tweedie_gllvm_grouped")
     if spec.mode === :species && !spec.fixed
         return TweediePerTraitPowerFit(β̂, Λ̂, φ̂g, collect(p̂), gidx, link, loglik, conv,
-                                       Optim.iterations(res), hessian)
+                                       Optim.iterations(res), hessian, _stored_offset(offset))
     end
     return TweedieGroupedFit(β̂, Λ̂, φ̂g, p̂[1], gidx, link, loglik, conv,
-                             Optim.iterations(res), hessian, spec.fixed)
+                             Optim.iterations(res), hessian, spec.fixed, _stored_offset(offset))
 end
