@@ -149,6 +149,7 @@ function _phylo_nb_xlv_mode(Y, beta, Lambda, alpha_lv, r, mean_eta, Q, leaf_pos;
         q0 = _phylo_nb_xlv_logpost(Y, beta, Lambda, alpha_lv, r, mean_eta, Q,
                                    leaf_pos, eps, u)
         accepted = false
+        tied = false
         step = 1.0
         n_z = n * K
         max_delta = maximum(abs, delta)
@@ -164,6 +165,7 @@ function _phylo_nb_xlv_mode(Y, beta, Lambda, alpha_lv, r, mean_eta, Q, leaf_pos;
             q1 = _phylo_nb_xlv_logpost(Y, beta, Lambda, alpha_lv, r, mean_eta,
                                        Q, leaf_pos, eps_trial, u_trial)
             if isfinite(q1) && q1 >= q0
+                tied = q1 == q0
                 eps = eps_trial
                 u = u_trial
                 accepted = true
@@ -178,6 +180,14 @@ function _phylo_nb_xlv_mode(Y, beta, Lambda, alpha_lv, r, mean_eta, Q, leaf_pos;
         if !accepted
             abs(dot(grad, delta)) < 1e-12 && (mode_found = true; break)
             return nothing, nothing, nothing
+        end
+        # The max(observed, Fisher) step is not near-exact Newton, so at `tol = 0` the line
+        # search keeps accepting exact ties (q1 == q0) instead of stalling, and the stall
+        # rule above is never reached. An accepted step that changes q by nothing, with
+        # the Newton decrement under the same 1e-12, is the same convergence (refs #1125).
+        if tied && abs(dot(grad, delta)) < 1e-12
+            mode_found = true
+            break
         end
         if step * max_delta < tol
             mode_found = true
