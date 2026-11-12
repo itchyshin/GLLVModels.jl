@@ -2121,6 +2121,170 @@ function residuals(fit::ExponentialFit, Y::AbstractMatrix{<:Real}; type::Symbol 
     return R
 end
 
+# --- Zero-truncated count post-fit (TruncatedPoissonFit, TruncatedNegBin2Fit,
+#     TruncatedNegBin2PerTraitFit; #788) ---
+# These fits had no getLV / predict / residuals and dropped the training offset. They now keep it
+# (`fit.offset`) and follow the PoissonFit / NBFit offset rules. The latent mode is found under the
+# zero-truncated likelihood the fit was made with (Fisher-scoring mode search, as in the objective).
+
+const _ZTCountFit = Union{TruncatedPoissonFit, TruncatedNegBin2Fit, TruncatedNegBin2PerTraitFit}
+
+# Per-trait NB2 dispersions (length p); the shared-r fit repeats its scalar.
+_zt_rvec(fit::TruncatedNegBin2Fit, p::Integer) = fill(fit.r, p)
+_zt_rvec(fit::TruncatedNegBin2PerTraitFit, p::Integer) = fit.r
+
+# Observed cells must be integer counts >= 1: the zero-truncated support (y = 0 has probability 0).
+function _check_zerotrunc_Y(Y::AbstractMatrix, mask, caller::AbstractString)
+    msk = mask === nothing ? nothing : _resolve_obs_mask(mask, Y)
+    _check_response_support(:count, Y, msk; caller = caller)
+    @inbounds for s in axes(Y, 2), t in axes(Y, 1)
+        (msk !== nothing && !msk[t, s]) && continue
+        Y[t, s] < 1 && throw(ArgumentError(
+            "$caller: a zero-truncated count fit needs y >= 1 at every observed cell; " *
+            "found y = $(Y[t, s]) at ($t, $s)"))
+    end
+    return nothing
+end
+
+# Zero-truncated mean E[y | y >= 1] for the untruncated mean μ (log-link μ = exp(η)).
+_zt_mean(::TruncatedPoissonFit, μ, t) = first(_truncpois_mean_var(μ))
+_zt_mean(fit::TruncatedNegBin2Fit, μ, t) = first(_truncnb2_mean_var(μ, fit.r))
+_zt_mean(fit::TruncatedNegBin2PerTraitFit, μ, t) = first(_truncnb2_mean_var(μ, fit.r[t]))
+_zt_meanvar(::TruncatedPoissonFit, μ, t) = _truncpois_mean_var(μ)
+_zt_meanvar(fit::TruncatedNegBin2Fit, μ, t) = _truncnb2_mean_var(μ, fit.r)
+_zt_meanvar(fit::TruncatedNegBin2PerTraitFit, μ, t) = _truncnb2_mean_var(μ, fit.r[t])
+
+# Untruncated count law at mean μ for trait t (used for the truncated CDF).
+_zt_dist(::TruncatedPoissonFit, μ, t) = Poisson(μ)
+_zt_dist(fit::TruncatedNegBin2Fit, μ, t) = NegativeBinomial(fit.r, fit.r / (fit.r + μ))
+_zt_dist(fit::TruncatedNegBin2PerTraitFit, μ, t) = NegativeBinomial(fit.r[t], fit.r[t] / (fit.r[t] + μ))
+
+# Dunn-Smyth z for y >= 1 under the zero-truncated version of the count law `d`:
+# F(k) = (P(Y <= k) - P(0)) / (1 - P(0)). Each end is formed from the smaller tail to avoid
+# cancellation, then handed to the shared tail-safe `_ds_z`.
+function _ds_z_zerotrunc(d, y, v)
+    s0 = ccdf(d, 0)                                   # P(Y >= 1)
+    function ends(k)                                  # (F(k), 1 - F(k)) of the truncated law
+        k < 1 && return 0.0, 1.0
+        c = cdf(d, k)
+        if c <= 0.5
+            F = (c - cdf(d, 0)) / s0
+            return F, 1 - F
+        end
+        C = ccdf(d, k) / s0
+        return 1 - C, C
+    end
+    Fy, Cy = ends(y)
+    Fm, Cm = ends(y - 1)
+    return _ds_z(Fm, Fy, Cm, Cy, v; lmass = logpdf(d, y) - log(s0))
+end
+
+"""
+    getLV(fit::TruncatedPoissonFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+    getLV(fit::TruncatedNegBin2Fit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+    getLV(fit::TruncatedNegBin2PerTraitFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for a zero-truncated count fit: the per-site Laplace mode `ẑₛ`
+under the zero-truncated likelihood, at the fitted dispersion(s). `Y` is the p×n matrix of counts
+with every observed cell `≥ 1`; `rotate=true` applies the canonical [`rotation`](@ref).
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the stored training
+offset (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass (a p×n matrix,
+a scalar or a length-p vector). New units from an offset fit without an `offset` are refused
+(`ArgumentError`), as gllvmTMB refuses `newdata` that lacks the offset variable. An explicit
+`offset` overrides the stored one. `mask` is the p×n Bool matrix of observed cells.
+"""
+function getLV(fit::_ZTCountFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true,
+               mask = nothing, offset = nothing)
+    _check_zerotrunc_Y(Y, mask, "getLV")
+    p, n = size(Y); K = size(fit.Λ, 2)
+    size(fit.Λ, 1) == p || throw(ArgumentError(
+        "getLV: Y has $p rows but the fit has $(size(fit.Λ, 1)) traits"))
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
+    n1 = ones(Int, p)
+    fams = fit isa TruncatedPoissonFit ? nothing : TruncatedNegBin2.(float.(_zt_rvec(fit, p)))
+    Z = Matrix{Float64}(undef, K, n)
+    @inbounds for s in 1:n
+        mi = mask === nothing ? nothing : view(mask, :, s)
+        oi = O === nothing ? nothing : view(O, :, s)
+        Z[:, s] = fams === nothing ?
+            _laplace_mode(TruncatedPoisson(), view(Y, :, s), n1, fit.Λ, fit.β, fit.link;
+                          mask = mi, offset = oi) :
+            _grouped_laplace_mode(fams, view(Y, :, s), n1, fit.Λ, fit.β, fit.link;
+                                  mask = mi, offset = oi)
+    end
+    Zt = permutedims(Z)
+    return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
+end
+
+"""
+    predict(fit::TruncatedPoissonFit, Y; type=:response, mask=nothing, offset=nothing, modes=:refit) -> p×n matrix
+    predict(fit::TruncatedNegBin2Fit, Y; ...) -> p×n matrix
+    predict(fit::TruncatedNegBin2PerTraitFit, Y; ...) -> p×n matrix
+
+In-sample fitted values at the Laplace mode, for a zero-truncated count fit. With `η = β + offset + Λ ẑ`:
+
+- `type = :link` returns `η`, the linear predictor of the **untruncated** count law.
+- `type = :response` (default) returns `exp(η)`, the **untruncated** mean `μ`. This is what
+  gllvmTMB's `predict(type = "response")` returns for `truncated_poisson()` and
+  `truncated_nbinom2()` (its inverse-link rule is `exp(η)` for every log-link family), so the two
+  agree. It is not the mean of the observed (zero-truncated) counts.
+- `type = :mean` returns the **zero-truncated mean** `E[y | y ≥ 1] = μ / (1 − P(0))`, with
+  `P(0) = exp(−μ)` for Poisson and `(r / (r + μ))^r` for NB2 (trait-specific `r` for the per-trait
+  fit). This is the mean of the data the fit models, and always exceeds both `μ` and 1.
+
+The offset rules are those of the other Laplace fits: the stored training offset (`fit.offset`) is
+used when `Y` has the training size, otherwise the `offset` you pass; an explicit `offset`
+overrides it; new units from an offset fit without an `offset` are refused. `modes = :training`
+keeps the training units' latent modes and swaps in the new `offset` (see the `PoissonFit` method);
+the default `modes = :refit` re-solves the modes.
+"""
+function predict(fit::_ZTCountFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 mask = nothing, offset = nothing, modes::Symbol = :refit)
+    type in (:link, :response, :mean) ||
+        throw(ArgumentError("type must be :link, :response or :mean; got :$type"))
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "predict")
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
+    Z = getLV(fit, Y; rotate = false, mask = mask, offset = Omode)
+    η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
+    type === :link && return η
+    μ = linkinv.(Ref(fit.link), _clamp_eta.(η))
+    type === :response && return μ
+    return [_zt_mean(fit, μ[t, s], t) for t in axes(μ, 1), s in axes(μ, 2)]
+end
+
+"""
+    residuals(fit::TruncatedPoissonFit, Y; type=:dunnsmyth, rng=Random.default_rng(), mask=nothing, offset=nothing) -> p×n matrix
+    residuals(fit::TruncatedNegBin2Fit, Y; ...) -> p×n matrix
+    residuals(fit::TruncatedNegBin2PerTraitFit, Y; ...) -> p×n matrix
+
+Conditional residuals for a zero-truncated count fit, at the fitted mode. `:dunnsmyth` returns
+Dunn-Smyth randomized quantile residuals `Φ⁻¹(u)`, `u` uniform on `[F(y−1), F(y)]` under the
+**zero-truncated** law, `F(k) = (P(Y ≤ k) − P(0)) / (1 − P(0))` with `Y` Poisson(`μ`) or
+NB2(`μ`, `r`); they are approximately N(0, 1) under a correct model (pass a fixed `rng` to
+reproduce). `:pearson` returns `(y − m) / √v` with `m` and `v` the zero-truncated mean and variance.
+`mask` and `offset` follow the rules in [`predict`](@ref); unobserved cells come back as `NaN`.
+"""
+function residuals(fit::_ZTCountFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunnsmyth,
+                   rng::AbstractRNG = Random.default_rng(), mask = nothing, offset = nothing)
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    p, n = size(Y)
+    μ = predict(fit, Y; type = :response, mask = mask, offset = offset)
+    R = fill(NaN, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        (mask === nothing || mask[t, s]) || continue
+        if type === :pearson
+            m, v = _zt_meanvar(fit, μ[t, s], t)
+            R[t, s] = (Y[t, s] - m) / sqrt(v)
+        else
+            R[t, s] = _ds_z_zerotrunc(_zt_dist(fit, μ[t, s], t), Int(Y[t, s]), rand(rng))
+        end
+    end
+    return R
+end
+
 function Base.show(io::IO, ::MIME"text/plain", fit::ExponentialFit)
     p, K = size(fit.Λ)
     println(io, "Exponential GLLVM fit")
