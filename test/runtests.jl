@@ -110,7 +110,7 @@ for (_k, _files) in enumerate((
         "test_precision_shared_residual.jl", "test_phylo_latent_rounding_floor.jl", "test_destination_b_dense_uncertainty.jl",
         "test_bridge_precision_shared_residual.jl", "test_bridge_precision_multivariate.jl", "test_bridge_gradient_payload.jl",
         "test_bridge_phylo_precision.jl", "test_coevolution_glm.jl", "test_coevolution_glm_765.jl",
-        "test_phylo_glm_families.jl", "test_phylo_beta_xlv_mode.jl", "test_phylo_ordinal_xlv_mode.jl",
+        "test_phylo_glm_families.jl", "test_phylo_beta_xlv_mode.jl", "test_phylo_beta_xlv_mode_step_1125.jl", "test_phylo_ordinal_xlv_mode.jl",
         "test_xlv_refit_converged.jl", "test_twopart_mode_search.jl", "test_delta_disp_group.jl",
         "test_twopart_hessian_kwarg.jl", "test_zero_inflated.jl", "test_weights.jl",
         "test_weights_byte_identity.jl", "test_confint_bootstrap_verdict_tweedie.jl", "test_confint_bootstrap_verdict_ordinal.jl",
@@ -666,6 +666,7 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_poisson_xlv.jl")
     _shard_include("test_phylo_binomial_xlv_mode.jl")
     _shard_include("test_phylo_beta_xlv_mode.jl")
+    _shard_include("test_phylo_beta_xlv_mode_step_1125.jl")
     _shard_include("test_phylo_ordinal_xlv_mode.jl")
     _shard_include("test_xlv_refit_converged.jl")
     _shard_include("test_phylo_xlv_verdict.jl")
