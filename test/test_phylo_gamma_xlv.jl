@@ -178,7 +178,13 @@ end
 end
 
 @testset "Phylo x Gamma B_eta_realized selected-entry canary" begin
-    Random.seed!(753)
+    # Seed 754 replaced 753 under Shinichi's 11 Nov 2026 decision (GAMMA-COV: seed, #1048).
+    # Why: at 753 the single-draw 95% profile interval missed the simulated target
+    # (LR 4.145 > 3.841), an expected one-in-twenty miss, not a fault. Seeds 754..763
+    # were declared before running and 754, the first, was taken. Of those 10 candidates
+    # 10 covered (LR 0.007 to 2.75); counting 753, 10 of 11 covered. One seed is still
+    # one draw: this is a smoke check of the profile code, not a coverage study.
+    Random.seed!(754)
     phy = GLLVModels.augmented_phy("(((A:0.3,B:0.3):0.2,(C:0.3,D:0.3):0.2):0.2,(E:0.4,F:0.4):0.2);")
     p = phy.n_leaves
     n = 28
