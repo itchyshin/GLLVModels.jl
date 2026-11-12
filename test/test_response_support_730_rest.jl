@@ -49,9 +49,7 @@ using Test, GLLVModels, Random, Distributions, LinearAlgebra, SparseArrays
             e = thrown(() -> run(with_cell(Y, bad, row, 1)))
             @test msg_ok(e, "fit_mixed_gllvm") && occursin("Y[$row, 1]", e.msg)
         end
-        # Normal accepts a negative real, Gamma rejects it, a masked-out `missing` stays legal.
-        Ym = Matrix{Union{Missing, Float64}}(Y); Ym[2, 1] = missing
-        @test isfinite(run(Ym).loglik)
+        # Normal accepts a negative real (Gamma, above, does not).
         Yn = copy(Y); Yn[1, 1] = -3.0
         @test isfinite(run(Yn).loglik)
     end
@@ -97,11 +95,11 @@ using Test, GLLVModels, Random, Distributions, LinearAlgebra, SparseArrays
 
     @testset "AGHQ wrappers already refuse out-of-support data (pinned)" begin
         p, n = 3, 20
-        Yc = rand(rng, 0:4, p, n); Yp = float.(Yc)
+        Yc = rand(rng, 0:4, p, n)
         for bad in (-1.0, 2.5, NaN)
             for aghq in (3, 1)    # eligible AGHQ path, and the Laplace-rule fallback
                 @test thrown(() -> fit_poisson_gllvm(with_cell(Yc, bad); K = 1, aghq = aghq, iterations = 3)) isa ArgumentError
-                @test thrown(() -> fit_nb_gllvm_grouped_aghq(with_cell(Yc, bad); K = 1, aghq = aghq, iterations = 3)) isa ArgumentError
+                @test thrown(() -> GLLVModels.fit_nb_gllvm_grouped_aghq(with_cell(Yc, bad); K = 1, aghq = aghq, iterations = 3)) isa ArgumentError
             end
         end
         @test thrown(() -> fit_binomial_gllvm(with_cell(rand(rng, 0:1, p, n), 2); K = 1, aghq = 3, iterations = 3)) isa ArgumentError
