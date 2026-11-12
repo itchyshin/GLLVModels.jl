@@ -692,6 +692,7 @@ println(_SHARD === nothing ?
     _shard_include("test_masked_gaussian_converged_735.jl")   # #735
     _shard_include("test_fix_1107.jl")   # #1107 derive Gaussian mask from missing
     _shard_include("test_na_input_maskless_gaussian.jl")   # typed error for missing / NaN on the maskless Gaussian fitters
+    _shard_include("test_confint_na_y.jl")   # confint / profile_ci / bootstrap_ci refuse missing / NaN in y
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")
     _shard_include("test_missing_predictor_z.jl")
