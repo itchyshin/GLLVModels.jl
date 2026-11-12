@@ -476,6 +476,7 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
 
     # NA handling: derive the observation mask and a sanitized response matrix.
     msk = _resolve_obs_mask(mask, Y)
+    _check_family_response_support(family, Y, msk; caller = "fit_gllvm_cov", N = N)
     Yc = _sanitize_missing(Y, _cov_placeholder(family))
 
     Zemp = _cov_zemp(family, Yc, Nm, lk)

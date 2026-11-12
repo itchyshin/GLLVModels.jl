@@ -203,6 +203,7 @@ function fit_rrr_gllvm(Y::AbstractMatrix{<:Real}; family = Poisson(),
     lk = link === nothing ? _cov_default_link(family) : link
     Nm = N === nothing ? fill(1, p, n) : N
     has_disp = _cov_has_disp(family)
+    _check_family_response_support(family, Y, nothing; caller = "fit_rrr_gllvm", N = N)
 
     # Warm start: link-scale row means for β, SVD loadings, zero RRR coefficients
     # (B = 0 gives the intercept-only GLM) — the same machinery as the concurrent

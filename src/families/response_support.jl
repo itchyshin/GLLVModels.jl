@@ -58,6 +58,25 @@ function _check_response_support(kind::Symbol, Y::AbstractMatrix, mask;
         "NaN and Inf are not valid responses."))
 end
 
+# Support kind for the families the model-structure fitters share (`_cov_default_link`
+# lists them); `nothing` for a family this table does not know, which is left unchecked.
+function _family_support_kind(family)
+    (family isa Poisson || family isa NegativeBinomial || family isa NB1) && return :count
+    family isa Binomial && return :binomial
+    family isa Beta && return :beta
+    (family isa Gamma || family isa Exponential) && return :positive
+    return nothing
+end
+
+# `_check_response_support` for a fitter that takes `family`; `N` is the trials matrix
+# (or `nothing`, meaning one trial) and is used for `Binomial` only.
+function _check_family_response_support(family, Y::AbstractMatrix, mask;
+        caller::AbstractString, N = nothing)
+    kind = _family_support_kind(family)
+    kind === nothing && return nothing
+    return _check_response_support(kind, Y, mask; caller = caller, N = N)
+end
+
 # Like `_sanitize_missing`, but also replaces the cells that `mask` marks unobserved, so a
 # `NaN` (or any out-of-support) value in a masked-out cell never reaches an
 # `Integer.(...)` conversion, the warm start or the objective. The result always has a
