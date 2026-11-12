@@ -601,6 +601,29 @@ end
 # the likelihood, so it would be fitted as data. Such a mask throws an `ArgumentError` naming the
 # first offending cell (row, column) and the count. A mask that marks extra cells unobserved is fine.
 function _resolve_obs_mask(mask, Y)
+    msk = _resolve_obs_mask_cells(mask, Y)
+    _check_every_trait_observed(msk, Y)
+    return msk
+end
+
+# Every trait (row of the p x n response) needs at least one observed cell: its
+# intercept is not identified otherwise, and the fit used to keep the start value
+# and report convergence. One shared check and message for the Laplace and VA fitters
+# (the Gaussian routes refuse the same case with their own messages). Sites (columns)
+# with no observed cell are not checked. `mask === nothing` means fully observed.
+function _check_every_trait_observed(msk, Y)
+    msk === nothing && return nothing
+    (ndims(msk) == 2 && size(msk) == size(Y) && size(msk, 2) > 0) || return nothing
+    for t in axes(msk, 1)
+        any(view(msk, t, :)) && continue
+        throw(ArgumentError("trait $t (row $t of `Y`) has no observed cell: every cell is " *
+                            "`missing` or masked out, so its parameters are not identified. " *
+                            "Drop that trait from `Y` or supply observations for it."))
+    end
+    return nothing
+end
+
+function _resolve_obs_mask_cells(mask, Y)
     mask === nothing && return any(ismissing, Y) ? observed_mask(Y) : nothing
     (size(mask) == size(Y) && any(ismissing, Y)) || return mask
     bad = [I for I in CartesianIndices(Y) if ismissing(Y[I]) && mask[I]]

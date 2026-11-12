@@ -50,6 +50,14 @@ function _va_check_mask(mask, Y)
     return mask
 end
 
+# Fitter entry only (not the marginal-likelihood functions): the same shape check, plus the
+# shared "every trait has an observed cell" refusal (`_check_every_trait_observed`, laplace.jl).
+function _va_check_fit_mask(mask, Y)
+    _va_check_mask(mask, Y)
+    _check_every_trait_observed(mask, Y)
+    return mask
+end
+
 function _va_concrete_response(Y::AbstractMatrix, mask, placeholder)
     Yc = _sanitize_unobserved(Y, mask, placeholder)
     if Missing <: eltype(Yc)
@@ -199,7 +207,7 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     p, n = size(Y)
-    _va_check_mask(mask, Y)
+    _va_check_fit_mask(mask, Y)
     _check_response_support(:count, Y, mask; caller = "fit_poisson_gllvm_va")
     rr = rr_theta_len(p, K)
     link = LogLink()
