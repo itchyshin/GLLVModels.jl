@@ -61,6 +61,15 @@ using Test, GLLVModels, Random, Distributions, StatsModels
                       "fit_fourthcorner_gllvm", "TR[2, 1]")
     end
 
+    @testset "multinomial X" begin
+        ycat = [1 + (j % 3) for j in 1:n]; Xm = randn(rng, n, 2)
+        for v in (NaN, Inf)
+            @test refused(() -> fit_multinomial_gllvm(ycat; X = with(Xm, (5, 2), v), iterations = 20),
+                          "fit_multinomial_gllvm", "X[5, 2]")
+        end
+        @test isfinite(fit_multinomial_gllvm(ycat; X = Xm, iterations = 60).loglik)
+    end
+
     @testset "formula front end reaches the same refusal" begin
         x = randn(rng, n); x[4] = NaN
         e = thrown(() -> gllvm(@formula(y ~ 1 + x), Yc, (x = x,); family = Poisson(), K = 1, it...))
