@@ -75,16 +75,21 @@ end
     ]
     for (name, f) in fitters
         @testset "$name" begin
-            @test_throws ArgumentError f(Y; mask = M)
-            err = try
-                f(Y; mask = M)
-                nothing
-            catch e
-                e
-            end
-            @test err isa ArgumentError
-            @test occursin("trait 2", err.msg)
-            @test occursin("no observed", err.msg)
+            r = @test_throws ArgumentError f(Y; mask = M)
+            @test occursin("trait 2", r.value.msg)
+            @test occursin("no observed", r.value.msg)
         end
     end
+end
+
+@testset "Ordinal AGHQ route rejects all-masked trait rows" begin
+    Y = [
+        1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1
+        1 2 3 3 1 2 3 2 1 2 3 1 1 2 3 2
+        1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+    ]
+    p, n = size(Y)
+    M = trues(p, n)
+    M[2, :] .= false
+    @test_throws ArgumentError fit_gllvm(Y; family = Ordinal(), K = 1, mask = M, aghq = :auto)
 end
