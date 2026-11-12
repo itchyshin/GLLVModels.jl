@@ -1724,6 +1724,15 @@ function _nparams(fit::OrdinalPerTraitCovFit)
     return p + count(!, fit.γ_fixed) + (p * K - div(K * (K - 1), 2)) + sum(fit.C .- 2)
 end
 
+# A Y whose row count differs from the fit's trait count used to reach the `@inbounds`
+# per-site mode search and read past the end of the column (garbage indices, then a
+# BoundsError with a meaningless index). Refuse it up front, as a DimensionMismatch.
+function _check_ordinal_trait_rows(fit, Y::AbstractMatrix, who::AbstractString)
+    size(Y, 1) == size(fit.Λ, 1) || throw(DimensionMismatch(
+        "$who: Y has $(size(Y, 1)) rows but the fit has $(size(fit.Λ, 1)) traits"))
+    return nothing
+end
+
 """
     getLV(fit::OrdinalFit, Y; rotate=true) -> n×K matrix
 
@@ -1737,6 +1746,7 @@ function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
                rotate::Bool = true, mask = nothing)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
+    _check_ordinal_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Zmean = _lv_score_mean_for_fit(fit, Y, X_lv)
@@ -1757,6 +1767,7 @@ function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
 end
 function getLV(fit::OrdinalPerTraitFit, Y::AbstractMatrix{<:Integer};
                rotate::Bool = true, mask = nothing)
+    _check_ordinal_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Z = Matrix{Float64}(undef, K, n)
@@ -1777,6 +1788,7 @@ Conditional latent scores at `η = β + Xγ + Λz` with per-trait ordinal cutpoi
 function getLV(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix{<:Integer},
                X::AbstractArray{<:Real, 3};
                rotate::Bool = true, mask = nothing)
+    _check_ordinal_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     O = _build_offset(X, fit.γ)
