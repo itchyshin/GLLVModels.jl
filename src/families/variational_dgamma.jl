@@ -23,7 +23,7 @@
 # Per-site Delta-Gamma ELBO at variational params ψ = [m (K); logv (K)].
 function _va_site_dgamma_elbo(ψ::AbstractVector, y::AbstractVector,
         Λc::AbstractMatrix, Λc2::AbstractMatrix, βz::AbstractVector,
-        βc::AbstractVector, α::Real)
+        βc::AbstractVector, α::Real; obs = nothing)
     p, K = size(Λc)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -32,6 +32,7 @@ function _va_site_dgamma_elbo(ψ::AbstractVector, y::AbstractVector,
     μη = βc .+ Λc * m
     ℓ = zero(eltype(ψ))
     @inbounds for t in 1:p
+        (obs !== nothing && !obs[t]) && continue
         π = inv(one(βz[t]) + exp(-βz[t]))                  # occurrence prob (constant in z)
         π = clamp(π, 1e-12, 1 - 1e-12)
         if y[t] > 0
@@ -56,7 +57,7 @@ end
 # derivative is treated as 1; the clamp is inactive for benign data.)
 function _va_site_dgamma_grad!(G::AbstractVector, ψ::AbstractVector, y::AbstractVector,
         Λc::AbstractMatrix, Λc2::AbstractMatrix, βz::AbstractVector,
-        βc::AbstractVector, α::Real)
+        βc::AbstractVector, α::Real; obs = nothing)
     p, K = size(Λc)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -66,6 +67,7 @@ function _va_site_dgamma_grad!(G::AbstractVector, ψ::AbstractVector, y::Abstrac
     @inbounds for k in 1:K
         gm = zero(eltype(ψ)); gv = zero(eltype(ψ))
         for t in 1:p
+            (obs !== nothing && !obs[t]) && continue
             y[t] > 0 || continue
             w = exp(_clamp_eta(-μη[t] + 0.5 * σ2[t]))      # E_q[e^{−η^c_t}]
             gm += Λc[t, k] * (y[t] * w - 1)
@@ -82,17 +84,17 @@ end
 # Profile (m_s, v_s) for one site by minimising the negative ELBO over [m; logv].
 function _va_site_dgamma(y::AbstractVector, Λc::AbstractMatrix, Λc2::AbstractMatrix,
         βz::AbstractVector, βc::AbstractVector, α::Real;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     K = size(Λc, 2)
-    negelbo(ψ) = -_va_site_dgamma_elbo(ψ, y, Λc, Λc2, βz, βc, α)
-    g!(G, ψ) = _va_site_dgamma_grad!(G, ψ, y, Λc, Λc2, βz, βc, α)
+    negelbo(ψ) = -_va_site_dgamma_elbo(ψ, y, Λc, Λc2, βz, βc, α; obs = obs)
+    g!(G, ψ) = _va_site_dgamma_grad!(G, ψ, y, Λc, Λc2, βz, βc, α; obs = obs)
     res = Optim.optimize(negelbo, g!, zeros(2K), Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
     return -Optim.minimum(res)
 end
 
 """
-    delta_gamma_marginal_loglik_va(Y, Λc, βz, βc, α; maxiter=100, tol=1e-9) -> Float64
+    delta_gamma_marginal_loglik_va(Y, Λc, βz, βc, α; maxiter=100, tol=1e-9, mask=nothing) -> Float64
 
 Gaussian-variational (VA) log-marginal lower bound (ELBO) over the `n` sites
 (columns) of a Delta-Gamma two-part GLLVM: occurrence probability
@@ -103,18 +105,22 @@ length-p. The per-site posterior `q(z_s)=N(m_s, diag(v_s))` is profiled out; the
 Delta-Gamma ELBO is closed form (no quadrature). The value is a **lower bound** on
 the true log-marginal; as `Λ_c → 0` it equals the independent two-part Delta-Gamma
 loglik exactly. Companion to [`delta_gamma_marginal_loglik_laplace`](@ref).
+`mask` drops cells (`nothing` keeps every cell). A dropped cell is neither an
+absence nor a positive, even when its placeholder is `0` or positive.
 """
 function delta_gamma_marginal_loglik_va(Y::AbstractMatrix, Λc::AbstractMatrix,
         βz::AbstractVector, βc::AbstractVector, α::Real;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     size(Λc, 1) == size(Y, 1) == length(βz) == length(βc) ||
         throw(DimensionMismatch("Λc, Y, βz, βc must share p = $(size(Y,1)) rows"))
+    _va_check_mask(mask, Y)
     α > 0 || throw(ArgumentError("shape α must be > 0"))
     Λc2 = Λc .^ 2
     acc = 0.0
     @inbounds for s in axes(Y, 2)
+        obs = mask === nothing ? nothing : view(mask, :, s)
         acc += _va_site_dgamma(view(Y, :, s), Λc, Λc2, βz, βc, float(α);
-                               maxiter = maxiter, tol = tol)
+                               maxiter = maxiter, tol = tol, obs = obs)
     end
     return acc
 end
@@ -133,23 +139,41 @@ to `[log(1e-3), log(1e3)]` used by [`fit_gamma_gllvm_va`](@ref) to avoid the
 catastrophic-cancellation runaway in `α log α − logΓ(α)`. The returned `DeltaGammaFit`'s
 `loglik` field holds the maximised ELBO (a lower bound on the true log-marginal).
 The ELBO is derived for the log link only: any other `link` throws `ArgumentError`.
+
+A `Y` that contains `missing` is fitted, not rejected: the observation mask is
+derived from those cells (a one-time `@info`) and unobserved cells are dropped
+from the ELBO. A dropped cell is not scored as a zero. Pass `mask` to drop
+additional cells.
 """
 function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_delta_gamma_gllvm_va", link, LogLink())
     p, n = size(Y)
+    _va_check_mask(mask, Y)
     _check_twopart_support("fit_delta_gamma_gllvm_va", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)
 
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
-        npres = count(>(0), view(Y, t, :))
-        pr = clamp((npres + 0.5) / (n + 1), 1e-3, 1 - 1e-3)
+        if mask === nothing
+            npres = count(>(0), view(Y, t, :))
+            nobs = n
+        else
+            npres = 0
+            nobs = 0
+            for j in 1:n
+                mask[t, j] || continue
+                nobs += 1
+                Y[t, j] > 0 && (npres += 1)
+            end
+        end
+        pr = clamp((npres + 0.5) / (nobs + 1), 1e-3, 1 - 1e-3)
         βz0[t] = log(pr / (1 - pr))
         s = 0.0; c = 0
         for j in 1:n
+            (mask === nothing || mask[t, j]) || continue
             if Y[t, j] > 0
                 s += Y[t, j]; c += 1
             end
@@ -161,13 +185,15 @@ function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
     @inbounds for t in 1:p
         μt = exp(βc0[t])
         for j in 1:n
+            (mask === nothing || mask[t, j]) || continue
             if Y[t, j] > 0
                 r = Y[t, j] / μt - 1.0; sumsq += r^2; nres += 1
             end
         end
     end
     α0 = nres > 1 ? clamp((nres - 1) / sumsq, 0.1, 100.0) : 1.0
-    Zc = [Y[t, j] > 0 ? log(max(Y[t, j], 1e-6)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
+    Zc = [(mask === nothing || mask[t, j]) && Y[t, j] > 0 ?
+          log(max(Y[t, j], 1e-6)) - βc0[t] : 0.0 for t in 1:p, j in 1:n]
     F = svd(Zc); kk = min(K, length(F.S))
     Λc0 = zeros(p, K)
     @inbounds for j in 1:kk
@@ -184,7 +210,8 @@ function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
         α = exp(clamp(θ[2p + rr + 1], logαlo, logαhi))
         v = try
-            -delta_gamma_marginal_loglik_va(Y, Λc, βz, βc, α; maxiter = maxiter, tol = tol)
+            -delta_gamma_marginal_loglik_va(Y, Λc, βz, βc, α; maxiter = maxiter,
+                                            tol = tol, mask = mask)
         catch
             return 1e12
         end
@@ -198,4 +225,14 @@ function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
     α = exp(clamp(θ̂[2p + rr + 1], logαlo, logαhi))
     return DeltaGammaFit(βz, βc, Λc, α, _fit_verdict(res)...)
+end
+
+function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Union{Missing,Real}};
+        mask = nothing, kwargs...)
+    if mask === nothing
+        Yc, msk = _va_materialize_derived(Y, 1.0, "fit_delta_gamma_gllvm_va")
+    else
+        Yc, msk = _va_materialize_explicit(Y, 1.0, mask)
+    end
+    return fit_delta_gamma_gllvm_va(Yc; mask = msk, kwargs...)
 end
