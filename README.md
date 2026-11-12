@@ -247,7 +247,9 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
   GLM fit (`fit_phylo_glm`) for non-Gaussian families via an augmented-state
   joint Laplace
 - SPDE / Matérn spatial latent field, with kriging prediction
-- Offsets, response-missing masks for GLM Laplace rows, Dunn–Smyth residuals, AIC / BIC,
+- Offsets, response-missing masks for GLM Laplace rows and for the ordinary
+  and per-species Gaussian fitters (a `missing` entry in `Y` derives the mask),
+  Dunn–Smyth residuals, AIC / BIC,
   `predict` / `getLV` / `ordination`, and an `@formula` front-end
   (wide formula tables require one row per site, including intercept-only fits;
   an empty table is allowed when there are no covariates)
