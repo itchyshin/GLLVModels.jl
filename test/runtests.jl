@@ -120,7 +120,7 @@ for (_k, _files) in enumerate((
         "test_formula_no_intercept_default.jl", "test_constrained_ordination.jl", "test_quadratic.jl",
         "test_variational_binomial.jl", "test_variational_beta.jl", "test_variational_exponential.jl",
         "test_random_slopes.jl", "test_twolevel.jl", "test_random_slopes_poisson.jl",
-        "test_mixed_mode_search.jl", "test_mixed_contract.jl", "test_bridge_zib.jl",
+        "test_mixed_mode_search.jl", "test_mixed_contract.jl", "test_mixed_missing_1124.jl", "test_bridge_zib.jl",
         "test_bridge_zip_nox.jl", "test_bridge_truncated_poisson.jl", "test_bridge_lv_predictor.jl",
         "test_confint_hessian_twopart_truncnb2.jl", "test_grouped_hessian_consistency.jl", "test_saturation_health.jl",
         "test_phylo_branch_re.jl", "test_branch_re_marginal_fallback.jl", "test_core070_interface_registry.jl",
@@ -781,6 +781,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_capabilities.jl")
     _shard_include("test_mixed_mode_search.jl")
     _shard_include("test_mixed_contract.jl")
+    _shard_include("test_mixed_missing_1124.jl")
     _shard_include("test_bridge_mixed.jl")
     _shard_include("test_bridge_x.jl")
     _shard_include("test_bridge_zib.jl")
