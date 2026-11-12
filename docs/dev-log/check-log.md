@@ -1,3 +1,9 @@
+2026-11-12: #1140 ordinal all-masked trait row. Julia 1.13.3, 1 thread.
+`test/test_ordinal_level_check.jl` (new testset only): fails on main
+`fit_ordinal_gllvm` shared-cutpoint path; passes with trait-observed guard.
+Full `Pkg.test` on main in flight at sweep handoff; see after-task
+`2026-11-12-ordinal-masked-trait-1140.md`.
+
 2026-11-11: #1107 derive the Gaussian observation mask from `missing`.
 Julia 1.10.13, `JULIA_NUM_THREADS=1`, `julia --project=. -e 'include(...)'`.
 `test/test_fix_1107.jl`: 27 passed, 0 failed, 0 errored, 35.4s.
