@@ -149,7 +149,10 @@ raw latent-axis coefficients for the predictor-informed score mean; use
 [`extract_lv_effects`](@ref) for the rotation-stable trait-scale product
 `Λ * alpha_lv'`. `loading_ridge` records the `loading_ridge` fit kwarg (`Inf`
 when the loading ridge was off); `loglik` is always the UNPENALISED Laplace
-marginal, evaluated at the (possibly ridge-penalised) optimum. `offset` is the p×n
+marginal, evaluated at the (possibly ridge-penalised) optimum. `gradient_norm` is the
+max-abs gradient of the optimiser objective at the returned optimum (`Optim.g_residual`;
+`Inf` if not finite, `NaN` when not recorded, as for AGHQ fits); it is informational and
+does not enter `converged`. `offset` is the p×n
 training offset a Laplace fit was made with (`nothing` when the fit had none);
 [`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ fit leaves
 `offset === nothing`: its offset is kept in `integration.data.offset`, which the AGHQ
@@ -169,7 +172,11 @@ struct BinomialFit
     integration::Union{Nothing,AGHQFitInfo}
     loading_ridge::Float64   # the fit's `loading_ridge` kwarg; `Inf` = ridge off
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    gradient_norm::Float64   # max |gradient| of the optimiser objective at the optimum; `NaN` = not recorded
 end
+# Pre-gradient_norm compat tier (13 positional args): `gradient_norm` defaults to `NaN`.
+BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,offset)=
+    BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,offset,NaN)
 # Pre-offset compat tier (12 positional args): no stored training offset.
 BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge)=
     BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,nothing)
@@ -586,7 +593,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         _warn_runaway_loadings(Λ̂)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters,
                            alpha_hat, collect(Float64, θ̂), hessian, sat, nothing, loading_ridge,
-                           _stored_offset(offset))
+                           _stored_offset(offset), _fit_gradient_norm(res))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
@@ -606,6 +613,6 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                                                         mask = msk), link, Λ̂) : nothing
         _warn_runaway_loadings(Λ̂)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters, nothing, Float64[], hessian, sat, nothing, loading_ridge,
-                           _stored_offset(offset))
+                           _stored_offset(offset), _fit_gradient_norm(res))
     end
 end

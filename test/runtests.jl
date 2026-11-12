@@ -500,6 +500,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_cov_two_starts.jl")
     _shard_include("test_beta_grouped_convergence.jl")
     _shard_include("test_fit_verdict_gradient.jl")
+    _shard_include("test_fit_gradient_norm_1050.jl")
     _shard_include("test_grouped_dispersion_tweedie_nb1.jl")
     _shard_include("test_nb1_poisson_ridge.jl")
     _shard_include("test_nb1_scalar_gradient_gate.jl")

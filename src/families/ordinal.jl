@@ -373,7 +373,7 @@ cutpoints `τ`, the number of categories `C`, the `link`, the maximised Laplace
 `loglik`, the optimiser `converged` flag, and `iterations`. Fits using `X_lv`
 also retain `alpha_lv`, the raw latent-axis coefficients for the
 predictor-informed score mean. There is no species intercept; the common
-cutpoints carry the category levels.
+cutpoints carry the category levels. `gradient_norm` is the max-abs optimiser gradient at the returned optimum (`Optim.g_residual`; `NaN` when not recorded); it is informational and does not enter `converged`.
 """
 struct OrdinalFit
     Λ::Matrix{Float64}
@@ -385,8 +385,14 @@ struct OrdinalFit
     iterations::Int
     alpha_lv::Union{Nothing, Matrix{Float64}}
     theta_packed::Vector{Float64}
+    gradient_norm::Float64   # max |gradient| of the optimiser objective at the optimum; `NaN` = not recorded
 end
 
+# Pre-gradient_norm compat tier (9 positional args): `gradient_norm` defaults to `NaN`.
+OrdinalFit(Λ::Matrix{Float64}, τ::Vector{Float64}, C::Int, link::Link,
+           loglik::Float64, converged::Bool, iterations::Int,
+           alpha_lv::Union{Nothing, Matrix{Float64}}, theta_packed::Vector{Float64}) =
+    OrdinalFit(Λ, τ, C, link, loglik, converged, iterations, alpha_lv, theta_packed, NaN)
 OrdinalFit(Λ::Matrix{Float64}, τ::Vector{Float64}, C::Int, link::Link,
            loglik::Float64, converged::Bool, iterations::Int) =
     OrdinalFit(Λ, τ, C, link, loglik, converged, iterations, nothing, Float64[])
@@ -397,7 +403,7 @@ OrdinalFit(Λ::Matrix{Float64}, τ::Vector{Float64}, C::Int, link::Link,
 Ordinal GLLVM fit with trait-specific ordered cutpoints. `τ` is a
 `p × max(C_t - 1)` matrix padded with `NaN` after each trait's last cutpoint, and
 `C` is the per-trait category count. This is the native `gllvmTMB` parity shape
-used by the R bridge; [`OrdinalFit`](@ref) remains the shared-cutpoint shape.
+used by the R bridge; [`OrdinalFit`](@ref) remains the shared-cutpoint shape. `gradient_norm` is the max-abs optimiser gradient at the returned optimum (`Optim.g_residual`; `NaN` when not recorded); it is informational and does not enter `converged`.
 """
 struct OrdinalPerTraitFit
     Λ::Matrix{Float64}
@@ -408,6 +414,7 @@ struct OrdinalPerTraitFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    gradient_norm::Float64   # max |gradient| of the optimiser objective at the optimum; `NaN` = not recorded
 end
 
 function Base.show(io::IO, f::OrdinalFit)
@@ -665,12 +672,13 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
         τ̂ = _unpack_cutpoints(@view(θ̂[(cursor + 1):(cursor + C - 1)]))
         _warn_runaway_loadings(Λ̂, "Ordinal")
         return OrdinalFit(Λ̂, τ̂, C, link, _fit_verdict(res)...,
-                          alpha_hat, collect(Float64, θ̂))
+                          alpha_hat, collect(Float64, θ̂), _fit_gradient_norm(res))
     else
         Λ̂ = unpack_lambda(θ̂[1:rr], p, K)
         τ̂ = _unpack_cutpoints(θ̂[(rr + 1):(rr + C - 1)])
         _warn_runaway_loadings(Λ̂, "Ordinal")
-        return OrdinalFit(Λ̂, τ̂, C, link, _fit_verdict(res)...)
+        return OrdinalFit(Λ̂, τ̂, C, link, _fit_verdict(res)..., nothing, Float64[],
+                          _fit_gradient_norm(res))
     end
 end
 
@@ -738,7 +746,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     Λ̂ = unpack_lambda(@view(θ̂[(p + 1):(p + rr)]), p, K)
     τ̂ = _unpack_cutpoints_pertrait(@view(θ̂[(p + rr + 1):(p + rr + ncut)]), C)
     _warn_runaway_loadings(Λ̂, "Ordinal")
-    return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, _fit_verdict(res)...)
+    return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, _fit_verdict(res)..., _fit_gradient_norm(res))
 end
 
 """
@@ -750,7 +758,7 @@ per-trait ordered cutpoints `τ` (`p × max(C_t−1)`, τ₁=0 fixed), per-trait
 category counts `C`, `link`, maximised Laplace `loglik`, `converged`, and
 `iterations`. Linear predictor `η = β + Xγ + Λz` with twin cutpoint packing
 (τ₁=0 / K−2 free log-spacings). Shared-cutpoint [`OrdinalFit`](@ref) remains
-the Julia-side comparator and is **not** the public X default.
+the Julia-side comparator and is **not** the public X default. `gradient_norm` is the max-abs optimiser gradient at the returned optimum (`Optim.g_residual`; `NaN` when not recorded); it is informational and does not enter `converged`.
 """
 struct OrdinalPerTraitCovFit
     β::Vector{Float64}
@@ -763,6 +771,7 @@ struct OrdinalPerTraitCovFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    gradient_norm::Float64   # max |gradient| of the optimiser objective at the optimum; `NaN` = not recorded
 end
 
 function Base.show(io::IO, f::OrdinalPerTraitCovFit)
@@ -856,5 +865,5 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     τ̂ = _unpack_cutpoints_pertrait(@view(θ̂[(p + q + rr + 1):(p + q + rr + ncut)]), C)
     _warn_runaway_loadings(Λ̂, "Ordinal")
     return OrdinalPerTraitCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, τ̂, C, link,
-                                 _fit_verdict(res)...)
+                                 _fit_verdict(res)..., _fit_gradient_norm(res))
 end

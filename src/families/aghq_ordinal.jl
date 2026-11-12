@@ -139,7 +139,9 @@ plus `theta_packed` (`β`, packed `Λ`, cutpoint log-increments) and `integratio
 (`AGHQFitInfo`) recording the actual route (`:aghq`, or `:laplace` with a reason when the
 request was declined). `loglik` is the AGHQ log likelihood when
 `integration.actual === :aghq`. Point estimates only: `predict`/`confint`/`simulate` have
-no AGHQ route for this type.
+no AGHQ route for this type. `gradient_norm` is `NaN` for a genuine AGHQ fit (the AGHQ outer
+gradient is not recorded; see `integration.mode_gradient` for the inner-mode gradient) and is
+carried over from the Laplace fit when the request was declined.
 """
 struct OrdinalPerTraitAGHQFit
     Λ::Matrix{Float64}
@@ -153,6 +155,7 @@ struct OrdinalPerTraitAGHQFit
     theta_packed::Vector{Float64}
     hessian::Symbol
     integration::AGHQFitInfo
+    gradient_norm::Float64   # max |gradient| of the optimiser objective at the optimum; `NaN` = not recorded
 end
 function Base.show(io::IO, f::OrdinalPerTraitAGHQFit)
     p, K = size(f.Λ)
@@ -222,7 +225,7 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer
     Λaghq=unpack_lambda(t[p+1:p+rr],p,K);_warn_runaway_loadings(Λaghq,"Ordinal")
     return OrdinalPerTraitAGHQFit(Λaghq,copy(t[1:p]),
         _unpack_cutpoints_pertrait(t[p+rr+1:end],problem.C),copy(problem.C),link,-selected.objective,
-        selected.converged,selected.passes,copy(t),:observed,info)
+        selected.converged,selected.passes,copy(t),:observed,info,NaN)
 end
 _ordinal_with_integration(f::OrdinalPerTraitFit,i)=OrdinalPerTraitAGHQFit(f.Λ,f.β,f.τ,f.C,f.link,
-    f.loglik,f.converged,f.iterations,vcat(f.β,pack_lambda(f.Λ),_ord_psi_from_tau(f.τ,f.C)),:observed,i)
+    f.loglik,f.converged,f.iterations,vcat(f.β,pack_lambda(f.Λ),_ord_psi_from_tau(f.τ,f.C)),:observed,i,f.gradient_norm)
