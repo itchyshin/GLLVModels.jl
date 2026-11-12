@@ -71,3 +71,40 @@ function _sanitize_unobserved(Y::AbstractMatrix, mask, placeholder)
     isconcretetype(eltype(out)) && return out
     return convert(Matrix{mapreduce(typeof, promote_type, out; init = typeof(placeholder))}, out)
 end
+
+# _check_finite_covariates(X, caller; obs = nothing, unit = :cell, name = "X")
+#
+# Covariates must be finite where they are used. A NaN (or `missing`, or Inf) in `X` used
+# to give an objective of NaN or -Inf, so the fitter returned `loglik = -Inf` and
+# `converged = false` with no message. This throws an `ArgumentError` naming `caller`, the
+# array, the first offending entry and the number of offending entries.
+#
+# `obs` is the observation mask (`nothing` = every cell observed). With `unit = :cell` the
+# array is `p x n x q` and only the entries at observed cells are checked, so a covariate
+# value hidden by `mask = false` / `missing` stays allowed. With `unit = :site` the array
+# is `n x q` and a row is checked when its site has an observed cell; with `unit = :trait`
+# it is `p x r` and a row is checked when its trait has one.
+function _check_finite_covariates(X::AbstractArray, caller::AbstractString;
+        obs = nothing, unit::Symbol = :cell, name::AbstractString = "X")
+    bad = 0
+    first_bad = nothing
+    @inbounds for I in CartesianIndices(X)
+        x = X[I]
+        (x isa Real && isfinite(x)) && continue
+        if obs !== nothing
+            seen = unit === :cell ? obs[I[1], I[2]] :
+                   unit === :site ? any(view(obs, :, I[1])) : any(view(obs, I[1], :))
+            seen || continue
+        end
+        bad += 1
+        first_bad === nothing && (first_bad = I)
+    end
+    bad == 0 && return nothing
+    idx = join(Tuple(first_bad), ", ")
+    loc = obs === nothing ? "" : " at observed cells"
+    hint = obs === nothing ? "Fix or impute the covariate." :
+        "Fix or impute the covariate, or mark the response cell unobserved (`missing` / `mask = false`)."
+    throw(ArgumentError("$caller: $name[$idx] = $(X[first_bad]) is not a finite number " *
+        "($bad non-finite entr$(bad == 1 ? "y" : "ies")$loc). " *
+        "Covariates must be finite; NaN, `missing` and Inf are not accepted. " * hint))
+end

@@ -1705,6 +1705,7 @@ function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
     q_full = size(X, 3)
+    _check_finite_covariates(X, "fit_zip_gllvm_cov")
     γ_fixed_mask = _fixed_zero_mask(γ_fixed, q_full, "γ_fixed")
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
@@ -1996,6 +1997,7 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
     q_full = size(X, 3)
+    _check_finite_covariates(X, "fit_zinb_gllvm_cov")
     γ_fixed_mask = _fixed_zero_mask(γ_fixed, q_full, "γ_fixed")
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
@@ -2310,6 +2312,7 @@ function fit_zib_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
     q_full = size(X, 3)
+    _check_finite_covariates(X, "fit_zib_gllvm_cov")
     γ_fixed_mask = _fixed_zero_mask(γ_fixed, q_full, "γ_fixed")
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)

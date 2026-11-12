@@ -892,6 +892,7 @@ function fit_beta_binomial_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_beta_binomial_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:binomial, Y, msk; caller = "fit_beta_binomial_gllvm_grouped_cov", N = Nm)
     Yc = Integer.(_sanitize_missing(Y, 0))
     Zemp = [linkfun(link, clamp((float(Yc[t, i]) + 0.5) / (float(Nm[t, i]) + 1),
