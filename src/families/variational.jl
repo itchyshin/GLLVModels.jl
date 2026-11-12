@@ -40,9 +40,45 @@ function _gauss_hermite(G::Integer)
     return (E.values, sqrt(π) .* (E.vectors[1, :] .^ 2))
 end
 
+# Missing responses on the VA fitters (#1108). The mask rule is the Laplace one:
+# `_resolve_obs_mask` / `_sanitize_unobserved` in laplace.jl and response_support.jl,
+# which the Gaussian missing-data path (#1107) also uses. This file only calls them.
+function _va_check_mask(mask, Y)
+    mask === nothing && return nothing
+    size(mask) == size(Y) || throw(DimensionMismatch(
+        "mask is $(size(mask)); Y is $(size(Y))"))
+    return mask
+end
+
+function _va_concrete_response(Y::AbstractMatrix, mask, placeholder)
+    Yc = _sanitize_unobserved(Y, mask, placeholder)
+    if Missing <: eltype(Yc)
+        Yc = convert(Matrix{nonmissingtype(eltype(Yc))}, Yc)
+    end
+    return Yc
+end
+
+# Derive the mask from `missing` and say so once per session. A fully observed
+# `Union{Missing,T}` matrix yields `mask === nothing` and no message.
+function _va_materialize_derived(Y::AbstractMatrix, placeholder, caller::AbstractString)
+    msk = _resolve_obs_mask(nothing, Y)
+    if msk !== nothing
+        @info "$caller derived an observation mask from `missing` cells in `Y`; unobserved cells are dropped from the ELBO" maxlog=1
+    end
+    return _va_concrete_response(Y, msk, placeholder), msk
+end
+
+function _va_materialize_explicit(Y::AbstractMatrix, placeholder, mask)
+    msk = _resolve_obs_mask(mask, Y)
+    _va_check_mask(msk, Y)
+    return _va_concrete_response(Y, msk, placeholder), msk
+end
+
 # Per-site Poisson ELBO at the profiled variational optimum (m_s, v_s).
+# `obs === nothing` keeps every cell. Otherwise `obs` is a length-p observation
+# indicator for this site; unobserved cells drop out of the Newton step and the ELBO.
 function _va_site_poisson(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
-        β::AbstractVector; maxiter::Integer = 100, tol::Real = 1e-9)
+        β::AbstractVector; maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     p, K = size(Λ)
     m = zeros(K)
     v = ones(K)
@@ -51,8 +87,21 @@ function _va_site_poisson(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMa
         μ  = β .+ Λ * m
         λ  = exp.(_clamp_eta.(μ .+ 0.5 .* σ2))
         # Newton step on m: gradient Λ'(y−λ)−m, negative Hessian Λ'diag(λ)Λ + I.
-        g  = Λ' * (y .- λ) .- m
-        A  = Symmetric(Λ' * (λ .* Λ) + I)
+        # Unobserved cells contribute neither residual nor curvature (λ = 0 there).
+        if obs === nothing
+            g  = Λ' * (y .- λ) .- m
+            A  = Symmetric(Λ' * (λ .* Λ) + I)
+        else
+            @inbounds for t in 1:p
+                obs[t] || (λ[t] = 0)
+            end
+            resid = zeros(Float64, p)
+            @inbounds for t in 1:p
+                obs[t] && (resid[t] = y[t] - λ[t])
+            end
+            g = Λ' * resid .- m
+            A = Symmetric(Λ' * (λ .* Λ) + I)
+        end
         Δ  = _safe_solve(A, g)
         (Δ === nothing || !all(isfinite, Δ)) && break
         m  = m .+ Δ
@@ -60,6 +109,11 @@ function _va_site_poisson(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMa
         σ2 = Λ2 * v
         μ  = β .+ Λ * m
         λ  = exp.(_clamp_eta.(μ .+ 0.5 .* σ2))
+        if obs !== nothing
+            @inbounds for t in 1:p
+                obs[t] || (λ[t] = 0)
+            end
+        end
         vnew = 1.0 ./ (1.0 .+ (Λ2' * λ))
         dv = maximum(abs, vnew .- v)
         v  = vnew
@@ -68,8 +122,14 @@ function _va_site_poisson(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMa
     σ2 = Λ2 * v
     μ  = β .+ Λ * m
     λ  = exp.(_clamp_eta.(μ .+ 0.5 .* σ2))
+    if obs !== nothing
+        @inbounds for t in 1:p
+            obs[t] || (λ[t] = 0)
+        end
+    end
     ℓ = 0.0
     @inbounds for t in 1:p
+        (obs === nothing || obs[t]) || continue
         ℓ += y[t] * μ[t] - λ[t] - loggamma(y[t] + 1)
     end
     kl = 0.5 * sum(v .+ m .^ 2 .- 1.0 .- log.(v))
@@ -77,7 +137,7 @@ function _va_site_poisson(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMa
 end
 
 """
-    poisson_marginal_loglik_va(Y, Λ, β; maxiter=100, tol=1e-9) -> Float64
+    poisson_marginal_loglik_va(Y, Λ, β; maxiter=100, tol=1e-9, mask=nothing) -> Float64
 
 Gaussian-variational (VA) log-marginal lower bound (ELBO) over the `n` sites
 (columns) of a Poisson GLLVM with log link — `Y` the p×n integer count matrix, `Λ`
@@ -85,15 +145,22 @@ p×K, `β` length-p. The per-site variational posterior `q(z_s)=N(m_s, diag(v_s)
 profiled out by coordinate ascent. The returned value is a **lower bound** on the
 true log-marginal (≤ it for any `q`); as `Λ→0` it equals the independent-Poisson
 loglik exactly. Companion to [`poisson_marginal_loglik_laplace`](@ref).
+
+`mask` is a `p×n` observation indicator (`true` = kept). `nothing` keeps every
+cell. Unobserved cells are omitted from the ELBO; put a finite placeholder in
+`Y` there (the fitter does this for `missing`).
 """
 function poisson_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
-        β::AbstractVector; maxiter::Integer = 100, tol::Real = 1e-9)
+        β::AbstractVector; maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
+    _va_check_mask(mask, Y)
     Λ2 = Λ .^ 2
     acc = 0.0
     @inbounds for s in axes(Y, 2)
-        acc += _va_site_poisson(view(Y, :, s), Λ, Λ2, β; maxiter = maxiter, tol = tol)
+        obs = mask === nothing ? nothing : view(mask, :, s)
+        acc += _va_site_poisson(view(Y, :, s), Λ, Λ2, β; maxiter = maxiter, tol = tol,
+                                obs = obs)
     end
     return acc
 end
@@ -121,17 +188,24 @@ Same warm start (empirical log-mean intercepts + SVD loadings) and finite-differ
 gradient. The returned `PoissonFit`'s `loglik` field holds the maximised ELBO (a
 lower bound on the true log-marginal), so it is directly comparable across VA fits
 but sits slightly below the Laplace `loglik` for the same data.
+
+A `Y` that contains `missing` is fitted, not rejected: the observation mask is
+derived from those cells (a one-time `@info`) and unobserved cells are dropped
+from the ELBO, the same NA rule as [`fit_poisson_gllvm`](@ref). Pass `mask` to
+drop additional cells. A `missing` cell cannot be marked observed.
 """
 function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     p, n = size(Y)
-    _check_response_support(:count, Y, nothing; caller = "fit_poisson_gllvm_va")
+    _va_check_mask(mask, Y)
+    _check_response_support(:count, Y, mask; caller = "fit_poisson_gllvm_va")
     rr = rr_theta_len(p, K)
     link = LogLink()
 
     Zemp = [linkfun(link, max(Y[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
+    mask === nothing || _mask_warmstart!(Zemp, mask)
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
@@ -150,7 +224,7 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         v = try
-            -poisson_marginal_loglik_va(Y, Λ, β; maxiter = maxiter, tol = tol)
+            -poisson_marginal_loglik_va(Y, Λ, β; maxiter = maxiter, tol = tol, mask = mask)
         catch
             return 1e12
         end
@@ -163,5 +237,15 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     return PoissonFit(β̂, Λ̂, link, _fit_verdict(res)...)
+end
+
+function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Union{Missing,Integer}};
+        mask = nothing, kwargs...)
+    if mask === nothing
+        Yc, msk = _va_materialize_derived(Y, 0, "fit_poisson_gllvm_va")
+    else
+        Yc, msk = _va_materialize_explicit(Y, 0, mask)
+    end
+    return fit_poisson_gllvm_va(Yc; mask = msk, kwargs...)
 end
 

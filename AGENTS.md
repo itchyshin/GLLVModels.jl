@@ -93,6 +93,7 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **VA missing mask (#1108), 2026-11-11.** The seven VA fitters derive an observation mask from `missing` in `Y`, drop those cells from the ELBO, and emit one `@info` (`maxlog = 1`). Complete matrices are unchanged. `Project.toml` stays **`0.3.0`**.
 - **bootstrap_Sigma_r lane handed to Codex (2026-11-03).** `bootstrap_Sigma_r` merged for GllvmFit, TwoLevelFit and the two phy tiers (#1054 to #1093); N1b paired R-vs-Julia run: Inconclusive (3 of 4 Agree, no Disagree). #1046 blocked by a Julia-less `negative-controls` job. No row status moved. Other lanes: see the coordination board's Active-Lane-Split. **START HERE:** `docs/dev-log/handover/2026-11-03-codex-handover.md`.
 - **P1 first-seven local checkpoint (2026-10-19, not landed).** Candidate
   `7670e106b` passes the exact frozen-baseline checkpoint: X2 304/317,
