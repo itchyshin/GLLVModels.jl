@@ -67,7 +67,8 @@ truncated_poisson_marginal_loglik_laplace(Y::AbstractMatrix,
 """
     TruncatedPoissonFit
 
-Result of [`fit_truncated_poisson_gllvm`](@ref).
+Result of [`fit_truncated_poisson_gllvm`](@ref). `offset` is the p×n training offset the fit was
+made with (`nothing` when none was given); `getLV`, `predict` and `residuals` use it by default.
 """
 struct TruncatedPoissonFit
     β::Vector{Float64}
@@ -77,7 +78,12 @@ struct TruncatedPoissonFit
     converged::Bool
     iterations::Int
     theta_packed::Vector{Float64}
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (7 positional args): no stored training offset.
+TruncatedPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed) =
+    TruncatedPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed, nothing)
 
 function Base.show(io::IO, f::TruncatedPoissonFit)
     p, K = size(f.Λ)
@@ -170,5 +176,5 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk,
                             caller = "fit_truncated_poisson_gllvm")
     return TruncatedPoissonFit(β̂, Λ̂, link, loglik, conv, iters,
-                               collect(Float64, θ̂))
+                               collect(Float64, θ̂), _stored_offset(offset))
 end

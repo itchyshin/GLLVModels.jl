@@ -235,6 +235,8 @@ shared dispersion `r` (`Var = μ + μ²/r` ≡ twin `φ`), link, loglik, converg
 (`GLLVModels.TRUNCNB2_LAPLACE_EIGMIN_FLOOR` = 0.1) is reported with `converged = false`.
 `hessian` is the Laplace curvature the fit was made with (`:observed` or `:fisher`);
 `confint` rebuilds the same objective from it.
+`offset` is the p×n training offset the fit was made with (`nothing` when none was given);
+`getLV`, `predict` and `residuals` use it by default.
 """
 struct TruncatedNegBin2Fit
     β::Vector{Float64}
@@ -247,7 +249,12 @@ struct TruncatedNegBin2Fit
     theta_packed::Vector{Float64}
     min_site_eigen::Float64
     hessian::Symbol   # the Laplace curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (10 positional args): no stored training offset.
+TruncatedNegBin2Fit(β, Λ, r, link, loglik, converged, iterations, theta_packed, min_site_eigen, hessian) =
+    TruncatedNegBin2Fit(β, Λ, r, link, loglik, converged, iterations, theta_packed, min_site_eigen, hessian, nothing)
 
 # Positional-compat constructor: a fit built without the curvature is a default-curvature fit.
 TruncatedNegBin2Fit(β, Λ, r, link, loglik, converged, iterations, theta_packed, min_site_eigen) =
@@ -430,7 +437,7 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
     converged = _eta_cap_verdict(converged, link, f.β, offset; mask = msk,
                                  caller = "fit_truncated_nbinom2_gllvm")
     return TruncatedNegBin2Fit(f.β, f.Λ, f.r, link, f.loglik, converged, f.iters,
-                               f.θ, f.mineig, hessian)
+                               f.θ, f.mineig, hessian, _stored_offset(offset))
 end
 
 # log of a shared-r start for the breakdown retry: the geometric mean over traits of a
@@ -548,6 +555,8 @@ Result of [`fit_truncated_nbinom2_gllvm_pertrait`](@ref): intercepts `β`,
 loadings `Λ`, per-trait dispersion `r` (length p; `Var_t = μ_t + μ_t²/r_t`
 ≡ twin `φ_t`), link, loglik, convergence. `hessian` is the Laplace curvature the fit was
 made with (`:observed` or `:fisher`); `confint` rebuilds the same objective from it.
+`offset` is the p×n training offset the fit was made with (`nothing` when none was given);
+`getLV`, `predict` and `residuals` use it by default.
 """
 struct TruncatedNegBin2PerTraitFit
     β::Vector{Float64}
@@ -559,7 +568,12 @@ struct TruncatedNegBin2PerTraitFit
     iterations::Int
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace curvature this fit's objective used
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
 end
+
+# Pre-offset compat tier (9 positional args): no stored training offset.
+TruncatedNegBin2PerTraitFit(β, Λ, r, link, loglik, converged, iterations, theta_packed, hessian) =
+    TruncatedNegBin2PerTraitFit(β, Λ, r, link, loglik, converged, iterations, theta_packed, hessian, nothing)
 
 # Positional-compat constructor: a fit built without the curvature is a default-curvature fit.
 TruncatedNegBin2PerTraitFit(β, Λ, r, link, loglik, converged, iterations, theta_packed) =
@@ -702,5 +716,6 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
     converged = _eta_cap_verdict(converged, link, β̂, offset; mask = msk,
                                  caller = "fit_truncated_nbinom2_gllvm_pertrait")
     return TruncatedNegBin2PerTraitFit(β̂, Λ̂, r̂, link, loglik, converged, iters,
-                                       collect(Float64, θ̂), hessian)
+                                       collect(Float64, θ̂), hessian,
+                                       _stored_offset(offset))
 end

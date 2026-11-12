@@ -47,7 +47,7 @@
 # nobody sorts into one of these three `Union`s turns that test red instead
 # of silently falling through to a wrong bucket). `AnyGllvmFit` members with
 # no `getLV` method at all (e.g. `MultinomialFit`, `StudentTFit`,
-# `TruncatedPoissonFit`, the phylo/spatial/temporal-only fits) are outside
+# the phylo/spatial/temporal-only fits) are outside
 # this accounting on purpose: they already fail with Julia's plain
 # `MethodError` on `_extract_latent_scores_unit` (same failure mode as
 # calling `getLV` on them directly today), which is the correct behaviour —
@@ -66,6 +66,7 @@ const _PlainGllvmFit = Union{
     COMPoissonFit, BetaBinomialFit, BetaBinomialGroupedFit, BetaHurdleFit,
     GammaGroupedFit, NB1GroupedFit, NBGroupedFit, BetaGroupedFit,
     OrdinalPerTraitFit, RowEffectFit, RowRandomFit,
+    TruncatedPoissonFit, TruncatedNegBin2Fit, TruncatedNegBin2PerTraitFit,
 }
 
 const _PositionalArgGllvmFit = Union{
