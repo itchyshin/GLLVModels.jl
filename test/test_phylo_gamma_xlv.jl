@@ -199,8 +199,12 @@ end
     epsilon = 0.05 .* randn(n, K)
     Z_truth = X_lv * alpha_lv + epsilon
     # Draw the phylogenetic intercept (one value per leaf, shared across sites) from
-    # N(0, sigma2 * C_leaf), the same covariance the model uses, so sigma2_phy is
-    # not driven to the zero boundary by data that carry no phylogenetic signal (#1048).
+    # N(0, sigma2 * C_leaf), the same covariance the model uses (#1048). This does not
+    # make sigma2_phy recoverable: each species also has a free intercept beta[t], and
+    # the two add, so sigma2_phy is not identified in this layout and its estimate sits
+    # at the zero boundary (seeds 754..763 and larger designs, 12 Nov 2026; gllvmTMB
+    # 0.7.1 does the same with a free intercept per species). This canary checks the
+    # profile-LR code, not recovery of sigma2_phy.
     keep = filter(i -> i != phy.root_index, 1:phy.n_total)
     Qc = Matrix(phy.Q_topology[keep, keep])
     leaf_pos = [(lp = phy.leaf_indices[t]; phy.root_index < lp ? lp - 1 : lp) for t in 1:p]
@@ -217,7 +221,7 @@ end
         newton_maxiter = 120, newton_tol = 1e-10)
     @test fit.converged
     @test isfinite(fit.loglik)
-    @test fit.sigma2_phy > 0
+    @test fit.sigma2_phy > 0   # holds at the boundary too (log scale); not a recovery check
     @test 0.5 < fit.alpha_shape < 20.0
 
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
