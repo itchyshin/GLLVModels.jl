@@ -109,7 +109,10 @@ family raises a clear error listing what is currently available.
 **Phylogenetic GLM.** For a per-species phylogenetic random intercept under a
 non-Gaussian family, `fit_phylo_glm(Y, phy; family = …)` fits the augmented-state
 joint Laplace marginal (Poisson / NB / Binomial, with a dispersion parameter for
-the dispersion families) over the sparse phylogenetic precision.
+the dispersion families) over the sparse phylogenetic precision. Each species also
+has a free intercept, so `σ²_phy` is not identified in this layout and is usually
+estimated at or near zero (gllvmTMB does the same with a free intercept per
+species); see the tutorial's phylogenetic section.
 
 ## Family details
 
