@@ -121,6 +121,15 @@ _link_residual_one(::Ordinal, ::LogitLink, μ̂::Real, dispersion) = π^2 / 3
 # matches gllvmTMB's ordinal-probit `fid`, whose latent residual is exactly 1.
 _link_residual_one(::Ordinal, ::ProbitLink, μ̂::Real, dispersion) = 1.0
 
+# Any (family, link) pair without a method above has no defined link-implicit residual
+# variance (for example Beta with probit or cloglog, Poisson with identity). Say so, as
+# `_binomial_link_residual` does for Binomial, instead of a MethodError naming this
+# internal function.
+_link_residual_one(family, link::Link, μ̂::Real, dispersion) = throw(ArgumentError(
+    "link_residual: no link-implicit residual variance is defined for family " *
+    "$(nameof(typeof(family))) with link $(nameof(typeof(link))); see ?link_residual for the " *
+    "supported family and link pairs."))
+
 # ---------------------------------------------------------------------------
 # Per-trait mean fitted mean μ̂ (response scale), one entry per trait.
 #
