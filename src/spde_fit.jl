@@ -101,6 +101,18 @@ end
 # Fit driver.
 # ---------------------------------------------------------------------------
 
+# Narrow "the optimiser ended at its start" test shared by the SPDE fitters. True only when
+# Optim accepted no iteration, or returned a parameter vector exactly equal to the start
+# vector. It changes nothing but the `converged` flag (see `_spde_fit_verdict`).
+_spde_ended_at_start(res, θ0) = Optim.iterations(res) == 0 || Optim.minimizer(res) == θ0
+
+# `_fit_verdict` with `converged = false` when the fit ended at its start: a run that never
+# left its start has not shown that the start is a stationary point of the likelihood.
+function _spde_fit_verdict(res, θ0)
+    ll, conv, it = _fit_verdict(res)
+    return (ll, conv && !_spde_ended_at_start(res, θ0), it)
+end
+
 """
     SPDEGaussianFit
 
@@ -194,6 +206,6 @@ function fit_spde_gaussian(y::AbstractVector, nodes::AbstractMatrix,
     σ2̂ = exp(θ̂[3])
     μ̂ = θ̂[4]
 
-    return SPDEGaussianFit(κ̂, τ̂, σ2̂, μ̂, _fit_verdict(res)...,
+    return SPDEGaussianFit(κ̂, τ̂, σ2̂, μ̂, _spde_fit_verdict(res, θ0)...,
                            nodes, tris)
 end

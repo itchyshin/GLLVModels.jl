@@ -161,7 +161,7 @@ for (_k, _files) in enumerate((
         "test_precision_objective_failures.jl", "test_grouped_nongaussian_postfit.jl", "test_formula_sources.jl",
         "test_formula_structured_terms.jl", "test_gaussian_source_bindings.jl", "test_phylo_precision_animal.jl",
         "test_coevolution_kronecker.jl", "test_spde_delaunay.jl", "test_spde_fit.jl",
-        "test_spde_latent_postfit.jl", "test_phylo_binomial_xlv_mode.jl", "test_delta_fit.jl",
+        "test_spde_latent_postfit.jl", "test_spde_converged_at_start_1220.jl", "test_phylo_binomial_xlv_mode.jl", "test_delta_fit.jl",
         "test_delta_postfit.jl", "test_hurdle_poisson.jl", "test_hurdle_nb.jl",
         "test_delta_gamma.jl", "test_missing_data.jl", "test_missing_response_extra.jl",
         "test_missing_predictor_poisson.jl", "test_missing_predictor_multi.jl", "test_nb_grouped_wald_speed_552.jl",
@@ -658,6 +658,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_latent_postfit.jl")
     _shard_include("test_spde_latent_binomial_trials.jl")
     _shard_include("test_spde_latent_mode_flag_747.jl")
+    _shard_include("test_spde_converged_at_start_1220.jl")
     _shard_include("test_phylo_glm.jl")
     _shard_include("test_phylo_glm_families.jl")
     _shard_include("test_phylo_poisson_xlv.jl")

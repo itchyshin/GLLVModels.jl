@@ -372,7 +372,7 @@ function fit_spde_latent_gllvm(Y::AbstractMatrix, nodes::AbstractMatrix,
     τ̂ = exp(θ̂[p + rr + 2])
     disp = _spde_disp_value(family, θ̂[(dbase + 1):(dbase + nd)])
 
-    return SPDELatentFit(β̂, Λ̂, κ̂, τ̂, disp, link, family, _fit_verdict(res)...,
+    return SPDELatentFit(β̂, Λ̂, κ̂, τ̂, disp, link, family, _spde_fit_verdict(res, θ0)...,
                          nodes, tris, Matrix{Float64}(Ntr), Int(α))
 end
 
