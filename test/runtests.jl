@@ -262,6 +262,7 @@ end
 #   (no gate now)      : test_destination_b_a4_s4_fixed_coordinate_evaluator.jl runs on every Julia;
 #                        its one version assertion compares the recorded runner version with
 #                        string(VERSION) instead of requiring ^1\.10\. (it failed on 1.13).
+# Opt-in census: test_sparse_phy_grad.jl is skipped unless GLLVM_SPARSE_PHY_GRAD_TESTS=1; the a4_s4 evaluator is not skipped.
 _RUN_SPARSE_PHY_GRAD = get(ENV, "GLLVM_SPARSE_PHY_GRAD_TESTS", "") == "1"
 
 function _shard_include(path::AbstractString)
