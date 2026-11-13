@@ -48,8 +48,8 @@ Not executed at P1 (receipt with evidence_kind not_executed): only the
 sub-contract, and only while no P1 model-change probe record is tracked. The
 11-LOG-PUBLIC-R-BRIDGE case has a retained P1 R-refusal receipt and is handled as
 boundary context, not as a numeric comparison. The 00-IDENTITY case is not a refusal:
-R accepts the Gaussian family and fits a reduced model (reference_model_change, df 5
-against 8). When tools/core070_family_bridge_p1.R --family00-model-change has written
+R accepts the Gaussian family and fits a reduced model (reference_model_change: common
+residual, no per-trait unique part; df 5 on the formula route, 9 on the matrix route, against 8). When tools/core070_family_bridge_p1.R --family00-model-change has written
 r-public-bridge-model-change.json under receipts/family/first-seven-boundary/, the
 tool validates it and derives a boundary-context receipt with its own tier wording.
 
@@ -1048,8 +1048,9 @@ def validate_family00_model_change(raw):
         need(r.get("call"), f"{name} call string is absent")
         f = r.get("fit") or {}
         need(f.get("family") == "gaussian" and f.get("converged") is True, f"{name} fit is not a converged Gaussian fit")
-        need(f.get("df") == p * K + 1 == 5 and f["df"] != raw["required_unique_model_df"],
-             f"{name} df is not the reduced-model df 5 (against the required 8)")
+        expected_df = p * K + p + 1 if name == "matrix" else p * K + 1
+        need(f.get("df") == expected_df and f["df"] != raw["required_unique_model_df"],
+             f"{name} df is not the reduced-model df {expected_df} (the native same-model fit needs 8)")
         need((f.get("d"), f.get("n_traits"), f.get("n_units")) == (K, p, n), f"{name} fit shape is wrong")
         need(isinstance(f.get("sigma_eps"), (int, float)) and f["sigma_eps"] > 0, f"{name} has no positive common residual")
         dev = f.get("max_abs_residual_deviation_from_common")
@@ -1079,15 +1080,16 @@ def family00_model_change_case():
                  "unique = FALSE request, on the original Gaussian data)",
         "measures": ("What the pinned P1 public R bridge does with the Gaussian family on the original data. R "
                      "accepts the family on both public routes and fits a different, reduced model (registered "
-                     "disposition reference_model_change): loadings plus one common residual scale, df 5 where the "
-                     "native same-model fit needs df 8. The formula route warns that the per-trait unique part is "
-                     "not fitted. This is not a refusal and not a numeric match; there is no R-vs-Julia comparison "
+                     "disposition reference_model_change): loadings plus one common residual scale and no per-trait "
+                     "unique part. The formula route (zero mean) has df 5; the matrix route also fits trait "
+                     "intercepts (df 9); the native same-model fit needs df 8. The formula route warns that the "
+                     "per-trait unique part is not fitted. This is not a refusal and not a numeric match; there is no R-vs-Julia comparison "
                      "for this case."),
         "disposition": "reference_model_change",
         "boundary_note": ("evidence_kind r_public_bridge_boundary and verdict R_BOUNDARY_UNCHANGED are the "
                           "checker's non-binding context kind (maintainer ruling 2026-11-13, P126b). For this "
                           "case they record a changed reference model, not an R refusal."),
-        "reduced_model_df": f["df"],
+        "reduced_model_df": {x: routes[x]["fit"]["df"] for x in FAMILY00_ROUTES},
         "required_unique_model_df": raw["required_unique_model_df"],
         "common_residual_sigma_eps": f["sigma_eps"],
         "warnings_verbatim": routes["formula"]["warnings"],
@@ -1281,15 +1283,17 @@ FAMILY00_TIER = ("numeric (native and formula-interface cases): those case recei
                  "blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed. The "
                  "PUBLIC-R-BRIDGE case is non-binding boundary context, not a numeric match and not an R refusal: R "
                  "accepts the Gaussian family at the public bridge and fits a different, reduced model "
-                 "(reference_model_change: df 5 with one common residual scale against the required df 8, with a "
-                 "warning on the formula route), recorded by a P1 probe on both public routes. Context under "
+                 "(reference_model_change: one common residual scale and no per-trait unique part, df 5 on the formula "
+                 "route and df 9 on the matrix route, which also fits trait intercepts, against the required df 8; "
+                 "a warning on the formula route), recorded by a P1 probe on both public routes. Context under "
                  "maintainer ruling 2026-11-13 (P126b), which applies the N1 context kind (D-319) to this case")
 FAMILY00_HELD_NOTE = ("Held: the PUBLIC-R-BRIDGE case was not executed and no P1 model-change probe record is "
                       "tracked. R does not refuse the Gaussian family; it fits a reduced model (reference_model_change, "
-                      "df 5 against 8). Under maintainer ruling 2026-11-13 (P126b) the row binds once a P1 probe "
+                      "no per-trait unique part; df 5 on the formula route against the required 8). Under maintainer ruling 2026-11-13 (P126b) the row binds once a P1 probe "
                       "records that behaviour on both public routes.")
 FAMILY00_BOUND_NOTE = ("The PUBLIC-R-BRIDGE case is context only (maintainer ruling 2026-11-13, P126b): R accepts the "
-                       "Gaussian family and fits a reduced model (df 5, one common residual scale) instead of the "
+                       "Gaussian family and fits a reduced model (one common residual scale, no per-trait unique part; df 5 "
+                       "on the formula route, df 9 on the matrix route, which adds trait intercepts) instead of the "
                        "per-trait-unique model (df 8). It is not a numeric match and not an R refusal. The row binds "
                        "through its native and formula-interface comparisons.")
 

@@ -831,8 +831,9 @@ Otherwise the row reads `NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT` with a reason th
 are not read by the receipt-status check, because their verdicts are not pass values by design. The row still counts
 in `bound=` and `bound_numeric=`: what binds it is the compared cases, and the context case is recorded, not
 compared. Note on FAMILY-00: R does not refuse the Gaussian family at its public bridge. It accepts it and fits a
-different, reduced model (registered disposition `reference_model_change`: df 5 with one common residual scale against
-the required df 8, with a warning on the formula route). The rule sets the case aside but does not make it a twin, and
+different, reduced model (registered disposition `reference_model_change`: one common residual scale and no per-trait
+unique part; df 5 on the formula route, and df 9 on the matrix route, which also fits trait intercepts, against the
+required df 8; the formula route warns). The rule sets the case aside but does not make it a twin, and
 the row also needs its native and formula-interface cases to pass.
 
 Row edits, made by the owning tools (never by hand): `tools/core070_covariance_p1_receipts.py` (`COV_N1_CONTEXT`,
@@ -843,7 +844,8 @@ from an accepted batch and each bridge case has an `R_BOUNDARY_UNCHANGED` receip
 `R_BOUNDARY_UNCHANGED` receipt. `family/FAMILY-00-IDENTITY` is a different situation and is not an N1 refusal: R
 accepts the family and fits a reduced model. Under the maintainer ruling of 13 Nov 2026 (P126b) a P1 probe record that
 captures both public routes (`gllvm_julia_fit` and `gllvmTMB(..., engine = "julia")`) on the original Gaussian data, with
-the `reference_model_change` behaviour (warning, df 5 with a common residual against df 8) validated by
+the `reference_model_change` behaviour (warning on the formula route, common residual, df 5 on the formula route and 9
+on the matrix route against df 8) validated by
 `tools/core070_family_p1_receipts.py`, stands as the same non-binding context kind for that one case. The row carries
 its own tier and note wording ("not a numeric match and not an R refusal"); the checker, the assembler and every
 tolerance are unchanged, and `FAMILY-00` is not in the numeric bridge contract. Without the record the case stays

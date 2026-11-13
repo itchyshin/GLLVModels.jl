@@ -38,9 +38,12 @@ def good_record():
                 "sigma_eps": 0.697282597486069, "converged": True, "d": K, "n_traits": p, "n_units": n,
                 "max_abs_residual_deviation_from_common": 1e-15, "Sigma": [list(row) for row in Sigma]}
 
-    def route(call, warnings=()):
+    def route(call, warnings=(), df=None):
+        f = fit()
+        if df is not None:
+            f["df"] = df  # the matrix route also fits trait intercepts: p*K + p + 1
         return {"call": call, "refused": False, "error_class": [], "message": "", "warnings": list(warnings),
-                "fit": fit()}
+                "fit": f}
     return {
         "schema": "core070-family00-r-model-change/v1", "case_id": BRIDGE, "pin": "P1",
         "reference_commit": t.P1_SHA, "gllvmtmb_version": pin["version"],
@@ -54,7 +57,7 @@ def good_record():
                     "data_sha256": hashlib.sha256(b"".join(struct.pack("<d", float(v))
                                                            for v in case["responses"])).hexdigest()},
         "required_unique_model_df": 2 * p,
-        "routes": {"matrix": route("gllvm_julia_fit(Y, family = 'gaussian', num.lv = 1)"),
+        "routes": {"matrix": route("gllvm_julia_fit(Y, family = 'gaussian', num.lv = 1)", df=p * K + p + 1),
                    "formula": route("gllvmTMB(value ~ 0 + latent(0 + trait | site, d = 1), engine = 'julia')",
                                     [WARNING]),
                    "formula_explicit": route("gllvmTMB(... unique = FALSE ..., engine = 'julia')")},
@@ -93,6 +96,8 @@ class Validator(unittest.TestCase):
     def test_df_other_than_five(self):
         self.rejects(lambda r: r["routes"]["formula"]["fit"].update(df=8))
         self.rejects(lambda r: r["routes"]["matrix"]["fit"].update(df=6))
+        self.rejects(lambda r: r["routes"]["matrix"]["fit"].update(df=8))
+        self.rejects(lambda r: r["routes"]["matrix"]["fit"].update(df=5))
         self.rejects(lambda r: r["routes"]["formula_explicit"]["fit"].update(df=4))
 
     def test_no_warning(self):
@@ -134,7 +139,8 @@ class Derivation(unittest.TestCase):
         self.assertEqual((kind, verdict), t.N1_CONTEXT_KIND)
         self.assertIsNone(comparison)
         self.assertEqual(body["disposition"], "reference_model_change")
-        self.assertEqual((body["reduced_model_df"], body["required_unique_model_df"]), (5, 8))
+        self.assertEqual(body["reduced_model_df"], {"matrix": 9, "formula": 5, "formula_explicit": 5})
+        self.assertEqual(body["required_unique_model_df"], 8)
         self.assertEqual(body["warnings_verbatim"], [WARNING])
         self.assertIn("not an R refusal", body["boundary_note"])
         self.assertNotIn("GJL-GATE-FAMILY", json.dumps(body))
