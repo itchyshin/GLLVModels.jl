@@ -4,7 +4,7 @@ function _dg_draw(rng,ηz,ηc,α)
     rand(rng)<inv(1+exp(-ηz)) ? rand(rng,Gamma(α,exp(ηc)/α)) : 0.0
 end
 @testset "Delta-Gamma AGHQ" begin
-    rng=MersenneTwister(20261101)
+    rng=MersenneTwister(20261108)
     # n = 15 put one Laplace dispersion on its boundary (alpha ~ 1e6), so the AGHQ fit was
     # ill-conditioned and fell back to Laplace on some BLAS paths; n = 40 is interior.
     p,n=3,40
