@@ -363,6 +363,10 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     elseif family isa Gamma
         return fit_gamma_gllvm_grouped_cov(Y; X = X, K = K, kwargs...)
     elseif family isa NB1
+        # This route calls the NB1 covariate fitter directly (not `fit_gllvm`), which has no
+        # `row_eff` keyword: refuse here with the same message as the other NB1 row routes.
+        row_eff = get(kwargs, :row_eff, :none)
+        row_eff === :none || _refuse_nb1_row_effect(family, "gllvm", row_eff)
         return fit_nb1_gllvm_grouped_cov(Y; X = X, K = K, kwargs...)
     elseif family isa BetaBinom
         return fit_beta_binomial_gllvm_grouped_cov(Y; X = X, K = K, kwargs...)

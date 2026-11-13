@@ -50,6 +50,18 @@ using GLLVModels, Test, Random, Distributions
         end
     end
 
+    @testset "formula front end with a covariate (direct covariate fitter route)" begin
+        xdat = (x = randn(MersenneTwister(7), n),)
+        for re in (:fixed, :random)
+            check_message(refusal(() -> gllvm(@formula(y ~ 1 + x), Y, xdat;
+                                              family = nb1, K = 1, row_eff = re, iterations = 0)),
+                          "gllvm")
+        end
+        # The same formula without a row effect still reaches the fitter (no refusal).
+        @test refusal(() -> gllvm(@formula(y ~ 1 + x), Y, xdat; family = nb1, K = 1,
+                                  iterations = 2)) === nothing
+    end
+
     @testset "NB1 without a row effect, and NB2 with one, are unchanged" begin
         @test refusal(() -> fit_roweffect_gllvm(Y; family = NegativeBinomial(), K = 1,
                                                 iterations = 2)) === nothing
