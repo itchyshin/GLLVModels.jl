@@ -421,10 +421,12 @@ function _bsig_setup(fit::JointPhyloGroupedGaussianFit, n_boot::Int, _refit)
     refit_fn = _refit === nothing ? fit_joint_phylo_grouped_gaussian : _refit
     labels = _bsig_jpg_group_labels(fit)
     simulate = rng -> _bsig_jpg_simulate_batch(rng, fit, n_boot)
+    # The default per-trait layout adds no keyword; a :shared fit refits with its own residual layout.
+    mode_kw = fit.residual_mode === :trait ? (;) : (; residual_mode = fit.residual_mode)
     refit = Y -> Base.CoreLogging.with_logger(Base.CoreLogging.NullLogger()) do
         refit_fn(Y, fit.phy; rank = fit.rank, phylo_mode = fit.phylo_mode, terms = fit.terms,
                  species_id = fit.species_id, X = fit.mean_design,
-                 coefficient_names = fit.coefficient_names, labels...)
+                 coefficient_names = fit.coefficient_names, labels..., mode_kw...)
     end
     return simulate, refit
 end

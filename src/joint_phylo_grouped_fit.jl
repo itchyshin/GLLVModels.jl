@@ -8,9 +8,11 @@ using SparseArrays
 _jpgf_valid(value) = !_fd_failed(value)
 
 function _joint_phylo_grouped_fit_layout(p::Integer, rank::Integer,
-        phylo_mode::Symbol, q::Integer, terms::Vector{GroupingTerm})
+        phylo_mode::Symbol, q::Integer, terms::Vector{GroupingTerm};
+        residual_mode::Symbol = :trait)
     1 <= rank <= p || throw(ArgumentError("rank must lie in 1:p"))
     _pmv_mode(phylo_mode)
+    _pmv_residual_mode(residual_mode)
     q >= 0 || throw(ArgumentError("mean-design column count must be nonnegative"))
     all(term -> term.mode === :indep && !term.common, terms) || throw(ArgumentError(
         "joint ordinary terms must use mode=:indep and common=false"))
@@ -21,7 +23,8 @@ function _joint_phylo_grouped_fit_layout(p::Integer, rank::Integer,
     loading = (q + 1):(q + rr)
     unique = phylo_mode === :explicitunique ? ((q + rr + 1):(q + rr + p)) : (1:0)
     residual_start = phylo_mode === :explicitunique ? q + rr + p + 1 : q + rr + 1
-    residual = residual_start:(residual_start + p - 1)
+    residual_count = residual_mode === :shared ? 1 : p
+    residual = residual_start:(residual_start + residual_count - 1)
     ordinary_start = last(residual) + 1
     ordinary = UnitRange{Int}[]
     for _ in terms
@@ -33,15 +36,18 @@ function _joint_phylo_grouped_fit_layout(p::Integer, rank::Integer,
 end
 
 function _joint_phylo_grouped_fit_unpack(theta::AbstractVector, p::Integer,
-        rank::Integer, phylo_mode::Symbol, q::Integer, terms::Vector{GroupingTerm})
-    layout = _joint_phylo_grouped_fit_layout(p, rank, phylo_mode, q, terms)
+        rank::Integer, phylo_mode::Symbol, q::Integer, terms::Vector{GroupingTerm};
+        residual_mode::Symbol = :trait)
+    layout = _joint_phylo_grouped_fit_layout(p, rank, phylo_mode, q, terms;
+        residual_mode = residual_mode)
     length(theta) == layout.total || throw(DimensionMismatch(
         "packed parameter length $(length(theta)) differs from expected $(layout.total)"))
     all(isfinite, theta) || throw(ArgumentError("packed parameters must be finite"))
     beta = collect(view(theta, 1:q))
     loading = unpack_lambda(view(theta, layout.loading), p, rank)
     unique = phylo_mode === :explicitunique ? exp.(2 .* view(theta, layout.unique)) : nothing
-    residual = exp.(2 .* view(theta, layout.residual))
+    residual_raw = exp.(2 .* view(theta, layout.residual))
+    residual = residual_mode === :shared ? fill(only(residual_raw), p) : residual_raw
     ordinary = [exp.(2 .* view(theta, range)) for range in layout.ordinary]
     all(isfinite, residual) && all(>(0), residual) || throw(ArgumentError(
         "residual variances are not finite positive values"))
@@ -56,7 +62,7 @@ end
 
 function _joint_phylo_grouped_nll(Y::AbstractMatrix, phy::PrecisionPhy,
         terms::Vector{GroupingTerm}, incidences::AbstractVector;
-        rank::Integer, phylo_mode::Symbol,
+        rank::Integer, phylo_mode::Symbol, residual_mode::Symbol = :trait,
         species_id::AbstractVector{<:Integer} = collect(1:phy.n_leaves),
         mean_design = nothing)
     p, n = size(Y)
@@ -84,10 +90,12 @@ function _joint_phylo_grouped_nll(Y::AbstractMatrix, phy::PrecisionPhy,
     species_snapshot = collect(Int, species_id)
     terms_snapshot = copy(terms)
     incidence_snapshot = copy.(incidences)
-    _joint_phylo_grouped_fit_layout(p, rank, phylo_mode, q, terms_snapshot)
+    _joint_phylo_grouped_fit_layout(p, rank, phylo_mode, q, terms_snapshot;
+        residual_mode = residual_mode)
     return function (theta)
         unpacked = try
-            _joint_phylo_grouped_fit_unpack(theta, p, rank, phylo_mode, q, terms_snapshot)
+            _joint_phylo_grouped_fit_unpack(theta, p, rank, phylo_mode, q, terms_snapshot;
+                residual_mode = residual_mode)
         catch error
             error isa InterruptException && rethrow()
             error isa ArgumentError || error isa DimensionMismatch || rethrow()
@@ -109,12 +117,13 @@ function _joint_phylo_grouped_nll(Y::AbstractMatrix, phy::PrecisionPhy,
 end
 
 function _joint_phylo_grouped_fit_labels(coefficient_names, p::Integer, rank::Integer,
-        phylo_mode::Symbol, terms::Vector{GroupingTerm})
+        phylo_mode::Symbol, terms::Vector{GroupingTerm}; residual_mode::Symbol = :trait)
     labels = String.(coefficient_names)
     append!(labels, ["phylo.loading[$j]" for j in 1:rr_theta_len(p, rank)])
     phylo_mode === :explicitunique && append!(labels,
         ["phylo.log_sd_unique[$j]" for j in 1:p])
-    append!(labels, ["log_sd_psi[$j]" for j in 1:p])
+    append!(labels, residual_mode === :shared ? ["log_sd_psi_shared"] :
+        ["log_sd_psi[$j]" for j in 1:p])
     for term in terms
         append!(labels, ["$(term.name).log_sd[$j]" for j in 1:p])
     end
@@ -149,25 +158,38 @@ struct JointPhyloGroupedGaussianFit <: StatsAPI.StatisticalModel
     incidences::Vector{SparseMatrixCSC{Float64,Int}}
     phylo_mode::Symbol
     rank::Int
+    residual_mode::Symbol
 end
+
+# Positional constructions that pre-date `residual_mode` (26 arguments) keep working
+# and mean the per-trait residual layout.
+JointPhyloGroupedGaussianFit(args::Vararg{Any,26}) =
+    JointPhyloGroupedGaussianFit(args..., :trait)
 
 """
     fit_joint_phylo_grouped_gaussian(Y, phy; rank=1, phylo_mode=:barelowrank,
         terms, unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
-        species_id=collect(1:phy.n_leaves), X=nothing, ...)
+        species_id=collect(1:phy.n_leaves), X=nothing, residual_mode=:trait, ...)
 
 Internal optimizer for a complete-data Gaussian model with one joint marginal likelihood
 for a fixed-scale phylogenetic low-rank covariance plus ordinary independent
 grouping sources. All ordinary terms must be `mode=:indep, common=false`.
 Use `fit_gllvm(...; phylo=precision, grouping=terms)` for the public route.
-This optimizer does not establish qualification or R parity.
+`residual_mode=:trait` (default) estimates one observation residual variance per
+trait. `residual_mode=:shared` estimates one common residual variance (a single
+log-SD coordinate, `p - 1` fewer parameters), which is the residual layout of
+R's Gaussian route; `start` must then have the shorter length. The fit records
+its mode and every post-fit path rebuilds the objective with it. Agreement with
+R under `:shared` has not been measured. This optimizer does not establish
+qualification or R parity.
 """
 function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::PrecisionPhy;
         rank::Integer = 1, phylo_mode::Symbol = :barelowrank, terms,
         unit = nothing, unit_obs = nothing, cluster = nothing, cluster2 = nothing,
         species_id::AbstractVector{<:Integer} = collect(1:phy.n_leaves),
         X = nothing, coefficient_names = nothing, start = nothing,
-        g_tol::Real = 1e-5, iterations::Integer = 200)
+        g_tol::Real = 1e-5, iterations::Integer = 200, residual_mode::Symbol = :trait)
+    _pmv_residual_mode(residual_mode)
     phy = _validate_precision_fit_input(phy)
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("fitting needs at least one trait and two observations"))
@@ -202,7 +224,8 @@ function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::Precis
     LinearAlgebra.rank(D64) == size(D64, 2) || throw(ArgumentError("mean design must have full column rank"))
     q = size(D64, 2)
     names = _source_coefficient_names(coefficient_names, q; default_trait_names = X === nothing)
-    layout = _joint_phylo_grouped_fit_layout(p, rank, phylo_mode, q, termvec)
+    layout = _joint_phylo_grouped_fit_layout(p, rank, phylo_mode, q, termvec;
+        residual_mode = residual_mode)
     beta0 = collect(Float64, D64 \ vec(data))
     residual0 = reshape(vec(data) - D64 * beta0, p, n)
     trait_variance = vec(sum(abs2, residual0; dims = 2)) ./ max(n - 1, 1)
@@ -210,7 +233,11 @@ function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::Precis
     theta0 = if start === nothing
         theta = vcat(beta0, init_theta_rr(p, rank))
         phylo_mode === :explicitunique && append!(theta, log.(sqrt.(0.15 .* trait_variance)))
-        append!(theta, log.(sqrt.(0.70 .* trait_variance)))
+        if residual_mode === :shared
+            push!(theta, log(sqrt(0.70 * sum(trait_variance) / p)))
+        else
+            append!(theta, log.(sqrt.(0.70 .* trait_variance)))
+        end
         for _ in termvec
             append!(theta, log.(sqrt.(0.15 .* trait_variance)))
         end
@@ -232,7 +259,8 @@ function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::Precis
     terms_snapshot = copy(termvec)
     incidences_snapshot = copy.(incidences)
     objective = _joint_phylo_grouped_nll(data, phy_snapshot, terms_snapshot, incidences_snapshot;
-        rank = rank, phylo_mode = phylo_mode, species_id = species_snapshot, mean_design = D64)
+        rank = rank, phylo_mode = phylo_mode, residual_mode = residual_mode,
+        species_id = species_snapshot, mean_design = D64)
     _jpgf_valid(objective(theta0)) || throw(ArgumentError(
         "start produces an invalid joint marginal objective"))
     gradient! = (storage, theta) -> _pmv_fd_gradient!(storage, objective, theta)
@@ -250,7 +278,8 @@ function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::Precis
     converged = Optim.converged(result) && _jpgf_valid(objective_value) && gradient_norm <= g_tol
     reason = converged ? :converged : !_jpgf_valid(objective_value) ? :invalid_final :
         Optim.iterations(result) >= iterations ? :iteration_limit : :gradient_not_converged
-    unpacked = _joint_phylo_grouped_fit_unpack(estimate, p, rank, phylo_mode, q, terms_snapshot)
+    unpacked = _joint_phylo_grouped_fit_unpack(estimate, p, rank, phylo_mode, q, terms_snapshot;
+        residual_mode = residual_mode)
     phylo_covariance = unpacked.loading * unpacked.loading' +
         (unpacked.phylo_unique_variance === nothing ? zeros(Float64, p, p) :
             Matrix(Diagonal(unpacked.phylo_unique_variance)))
@@ -267,10 +296,11 @@ function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::Precis
         Matrix{Float64}(phylo_covariance), collect(Float64, unpacked.residual_variance),
         ordinary_covariances, terms_snapshot, phy_snapshot,
         species_snapshot, estimate, _joint_phylo_grouped_fit_labels(names, p, rank,
-            phylo_mode, terms_snapshot), _jpgf_valid(objective_value) ? -objective_value : NaN,
+            phylo_mode, terms_snapshot; residual_mode = residual_mode),
+        _jpgf_valid(objective_value) ? -objective_value : NaN,
         converged, gradient_norm, hessian.minimum, hessian.positive_definite,
         hessian.condition, Optim.iterations(result), reason, copy(data), copy(D64), (p, n), names,
-        incidences_snapshot, phylo_mode, Int(rank))
+        incidences_snapshot, phylo_mode, Int(rank), residual_mode)
 end
 
 function _joint_phylo_grouped_component_identification(fit::JointPhyloGroupedGaussianFit)
@@ -282,7 +312,7 @@ function _joint_phylo_grouped_targets(fit::JointPhyloGroupedGaussianFit)
     p, _ = fit.response_shape
     q = length(fit.beta)
     unpack = theta -> _joint_phylo_grouped_fit_unpack(theta, p, fit.rank,
-        fit.phylo_mode, q, fit.terms)
+        fit.phylo_mode, q, fit.terms; residual_mode = fit.residual_mode)
     targets = NamedTuple[]
     for j in 1:q
         push!(targets, (name = "beta[$j]", value = theta -> theta[j], transform = :identity))
@@ -298,7 +328,8 @@ function _joint_phylo_grouped_targets(fit::JointPhyloGroupedGaussianFit)
                 u = unpack(theta); dot(view(u.loading, i, :), view(u.loading, j, :))
             end, transform = :identity))
         end
-        push!(targets, (name = "residual_var[$j]", value = theta ->
+        push!(targets, (name = fit.residual_mode === :shared ?
+            "residual_var_shared[$j]" : "residual_var[$j]", value = theta ->
             unpack(theta).residual_variance[j], transform = :log))
         for source in eachindex(fit.terms)
             push!(targets, (name = "$(fit.terms[source].name)_var[$j]", value = theta ->
@@ -328,8 +359,8 @@ function joint_phylo_grouped_intervals(fit::JointPhyloGroupedGaussianFit;
     isfinite(gradient_tolerance) && gradient_tolerance > 0 ||
         throw(ArgumentError("gradient_tolerance must be positive and finite"))
     objective = _joint_phylo_grouped_nll(fit.response, fit.phy, fit.terms, fit.incidences;
-        rank = fit.rank, phylo_mode = fit.phylo_mode, species_id = fit.species_id,
-        mean_design = fit.mean_design)
+        rank = fit.rank, phylo_mode = fit.phylo_mode, residual_mode = fit.residual_mode,
+        species_id = fit.species_id, mean_design = fit.mean_design)
     targets = _joint_phylo_grouped_targets(fit)
     component = _joint_phylo_grouped_component_identification(fit)
     component.reason === :invalid && return _joint_phylo_grouped_unavailable_intervals(
