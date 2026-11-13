@@ -344,6 +344,17 @@ CI/profile/bootstrap refits remain rejected with explicit CI-status messages.
 Combining `X` with a mask, ordinal covariate fits, structured covariance terms,
 and user-selectable Julia optimizer controls remain unsupported through the bridge.
 
+`NaN` in the response is treated differently by the two packages. gllvmTMB
+(0.7.1) reads `NaN` and `NA` alike as a missing response and drops those rows from
+the fit with a message (a 4-trait, 40-site long table with 3 cells set to `NaN`:
+`nobs` 157 of 160, and the same log-likelihood as with `NA`). GLLVModels.jl does not
+treat `NaN` as missing: a `NaN` at an observed cell of `Y` is an `ArgumentError` that names
+the fitter and the first offending cell. This holds for the Gaussian, Poisson,
+NB2, Binomial, Gamma and Beta routes of `fit_gllvm`; the note does not claim it for every
+fitter. Mark unobserved cells `missing` or pass `mask` with `false` there; both fit, and a
+cell hidden by `mask` may hold `NaN`. So a response table moved from gllvmTMB that
+carries `NaN` needs `NaN` replaced by `missing` before the Julia fit.
+
 ### Different response families in one model
 
 The mixed-family R bridge supports point estimates for complete, balanced,
