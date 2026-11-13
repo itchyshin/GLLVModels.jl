@@ -62,6 +62,10 @@ Returns:
 - `Cdiag` — length-N vector, the lumped (diagonal) mass; `sum(Cdiag)` equals the
   total mesh area.
 - `G` — N × N sparse symmetric stiffness matrix (each row sums to ≈ 0).
+
+Throws an `ArgumentError` for a zero-area triangle, and for a node that belongs to no
+triangle (zero lumped mass, so the SPDE precision is singular); the message names the
+nodes. A duplicated input point to [`spde_mesh_delaunay`](@ref) produces such a node.
 """
 function spde_fem(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer})
     N = size(nodes, 1)
