@@ -736,6 +736,15 @@ steadier; see [Response families](response-families.md). A `missing` cell is
 handled as on the Laplace fitters: the observation mask is derived, the cell is
 dropped from the ELBO, and the fitter reports that once.
 
+The variational drivers use a Gaussian posterior with a **diagonal** covariance for
+each site, `q(z_s) = N(m_s, diag(v_s))`. R `gllvm`'s default is a full covariance per
+site (`control.va = list(Lambda.struc = "unstructured")`). With `K = 1` the two are the
+same model. With `K ≥ 2` a Julia VA fit matches `gllvm(...; method = "VA")` only when
+`gllvm` is given `control.va = list(Lambda.struc = "diagonal")`. In one Poisson example
+(8 species, 150 sites, `K = 2`) the Julia VA objective is -2364.223 and so is `gllvm`'s with
+`"diagonal"`, while `gllvm`'s default gives -2345.541 and loadings close to the Laplace fit
+(`ΛΛᵀ` within 1 percent), where the Julia VA loadings are 33 percent away.
+
 See also: [Get started](quickstart.md) · [Working with a fit](working-with-a-fit.md) ·
 [Response families](response-families.md) · [Structured dependence](structured-dependence.md) ·
 [Confidence intervals](confidence-intervals.md) · [Reference](api.md).

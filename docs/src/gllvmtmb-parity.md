@@ -272,7 +272,7 @@ not bugs on either side.
 | Tweedie | power `ν`, `Var = φ·μ^ν`, default start `ν = 1.1` | power `p`, `Var = φ·μ^p`, default start `p_init = 1.5` | identity; set `p_init = 1.1` to reproduce gllvm's optimiser path |
 | Gaussian dispersion | per-species SD `φ_j` | single shared `σ` (profiled) | needs a per-species-variance Gaussian fit for exact parity |
 | Dispersion **structure** | per-species by default (`disp.formula = NULL`) | shared scalar by default; per-species via the grouped fitters | route Julia through `fit_*_gllvm_grouped(Y; K, group = 1:p)`, **or** set gllvm `disp.formula = ~1` |
-| Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples |
+| Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples. The Julia VA posterior covariance is diagonal and gllvm's default is `Lambda.struc = "unstructured"`, so for `K ≥ 2` match it with `control.va = list(Lambda.struc = "diagonal")` |
 | `select_lv` default criterion | `criterion = "bic"`: penalty `log` of the number of observed cells (`p·n` with no missing values) | `criterion = :bic_sites`: penalty `log(n)`, `n` the number of sites | keep the default; pass `criterion = :bic` to reproduce R's choice. The two rules can pick different `K` on the same data |
 
 ### Families, dispersion, and measured covariates
