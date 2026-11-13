@@ -567,8 +567,12 @@ On a Poisson example (6 species, 40 sites, `K = 1`) this gives a log-likelihood 
 average of the species slopes is not separate from the row effects: the Julia and
 `gllvm` slopes differ by one constant (0.3563 for all six species) with the same
 log-likelihood, so compare log-likelihoods and differences between slopes, not the
-slopes themselves. The fit has `p + n - 1` shared coefficients and uses finite-difference
-gradients, so it gets slow when `n` is large.
+slopes themselves. The fit has `p + n - 1` shared coefficients, so the number of
+parameters grows with `n` and the fit takes longer as `n` grows (timed here only on the
+6 species by 40 sites cell). For Poisson, Binomial, NB2, Beta, Gamma and Exponential
+responses `fit_gllvm_cov` uses an exact gradient (ForwardDiff through the implicit
+Newton step), falling back to a central finite difference at any point where that is
+unavailable; for NB1 it uses finite differences throughout.
 
 Row effects can instead be treated as **random** (gllvm's `row.eff = "random"`),
 `ρ_s ~ N(0, σ_row²)`, which shrinks the per-site intercepts and estimates a single
