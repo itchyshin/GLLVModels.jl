@@ -807,6 +807,10 @@ If `Y` is provided, returns `count(mask)` when `mask` is given, otherwise
 does not retain the mask it was fitted with, so pass it explicitly here for a
 masked fit.
 
+For a fit made from a response vector (`PhyloGaussianFit`, `BranchREFit`, `MultinomialFit`),
+`y` may be that vector: it is counted as one column, by the same rule. There is no
+`bic(fit, y)` vector form; use `bic(fit, nobs(fit, y))`.
+
 For fit structs that store observation/level counts instead of a response
 matrix (e.g. two-level, random-slope, SPDE), `nobs(fit)` returns the
 cell-count analogue (`p` times the stored unit count) so the convention holds
