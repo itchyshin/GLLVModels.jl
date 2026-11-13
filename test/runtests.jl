@@ -234,6 +234,7 @@ for (_k, _files) in enumerate((
         "test_gaussian_nonfinite_y.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
+        "test_na_input_maskless_gaussian.jl",
     ),
 ))
     for _f in _files
@@ -694,6 +695,7 @@ println(_SHARD === nothing ?
     _shard_include("test_masked_gaussian_posdef.jl")   # #716
     _shard_include("test_masked_gaussian_converged_735.jl")   # #735
     _shard_include("test_fix_1107.jl")   # #1107 derive Gaussian mask from missing
+    _shard_include("test_na_input_maskless_gaussian.jl")   # #1147 typed error for missing / NaN on maskless Gaussian fitters
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")
     _shard_include("test_missing_predictor_z.jl")

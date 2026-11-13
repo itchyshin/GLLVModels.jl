@@ -195,6 +195,7 @@ function fit_twolevel_gaussian(y::AbstractMatrix, individual::AbstractVector;
         K_B::Integer, K_W::Integer, center::Bool = true,
         σ²_B_init::Real = 0.5, σ²_W_init::Real = 0.5,
         g_tol::Real = 1e-8, iterations::Integer = 1000)
+    _refuse_na_response("fit_twolevel_gaussian", y)
     p, ntot = size(y)
     length(individual) == ntot ||
         throw(DimensionMismatch("individual length must equal n_obs = $ntot"))

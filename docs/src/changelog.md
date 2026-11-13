@@ -6,6 +6,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **IN (refs #1147), behaviour change:** `em_fa`, `fit_gaussian_reml`, `fit_twolevel_gaussian`,
+  `fit_gaussian_random_slope`, `em_fit_phylo`, `em_fit_phylo_squarem` and `fit_coevolution_gaussian`
+  (no `mask`) throw an `ArgumentError` for `missing` in `Y` instead of a `MethodError`; `em_fa` also
+  for NaN or Inf (it returned an all-NaN result). No signature change. The fitters typed
+  `AbstractMatrix{<:Real}` are not covered; see the repository CHANGELOG.
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
   and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`
