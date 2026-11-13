@@ -907,6 +907,8 @@ println(_SHARD === nothing ?
     _shard_include("test_zip_betaz_wald_926.jl")
     _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
+    # w2-structured: NaN/Inf response refused by fit_phylo_gaussian, fit_spde_gaussian, fit_relaxed_clock.
+    _shard_include("test_nonfinite_y_phylo_spde_relaxed.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")

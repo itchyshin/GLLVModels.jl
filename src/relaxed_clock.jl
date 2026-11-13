@@ -479,6 +479,11 @@ function fit_relaxed_clock(phy::EdgePhy, y::AbstractMatrix;
     p, n_rep = size(y)
     p == phy.n_leaves ||
         throw(ArgumentError("y first dim $p must equal n_leaves $(phy.n_leaves)"))
+    # NaN or Inf in y gave an all-NaN fit with converged = false and no error.
+    if !all(isfinite, y)
+        throw(ArgumentError("fit_relaxed_clock: y contains non-finite values at " *
+                            "$(count(!isfinite, y)) cell(s); this fitter takes complete finite responses"))
+    end
     cm = _cond_map(phy)
     df = float(n_rep)
     ℓ = phy.branch_lengths
