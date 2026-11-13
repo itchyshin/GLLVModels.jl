@@ -146,7 +146,7 @@ for (_k, _files) in enumerate((
         "test_censored_poisson.jl", "test_truncnb2_laplace_breakdown.jl", "test_gamma_laplace.jl",
         "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl", "test_phylo_binomial_xlv.jl",
         "test_boundary_inference.jl", "test_grouped_laplace_identity.jl", "test_grouped_identification_diagnostics.jl",
-        "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl",
+        "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl", "test_nb1_fisher_large_counts.jl",
         "test_nb2_grouped_mode_search.jl", "test_grouped_getlv_mode.jl", "test_gamma_grouped_mode_search.jl",
         "test_betabinomial_x_identity.jl", "test_zinb_x_identity.jl", "test_beta_fit.jl",
         "test_link_honoured.jl", "test_issue_725_extractor_docs.jl", "test_studentt_disp_group.jl",
@@ -231,6 +231,7 @@ for (_k, _files) in enumerate((
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
+        "test_gaussian_nonfinite_y.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
     ),
@@ -504,6 +505,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb1_poisson_ridge.jl")
     _shard_include("test_nb1_scalar_gradient_gate.jl")
     _shard_include("test_nb1_grouped_mode_search.jl")
+    _shard_include("test_nb1_fisher_large_counts.jl")
     _shard_include("test_nb2_grouped_mode_search.jl")
     _shard_include("test_grouped_init_kwargs.jl")
     _shard_include("test_grouped_getlv_mode.jl")
@@ -934,6 +936,8 @@ println(_SHARD === nothing ?
     _shard_include("test_branch_re_helpers.jl")
     _shard_include("test_response_support_730_siblings.jl")
     _shard_include("test_interrupt_rethrow.jl")
+    # NaN or Inf at an observed Gaussian response cell is an ArgumentError (K == p gave loglik = NaN).
+    _shard_include("test_gaussian_nonfinite_y.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
     _shard_include("test_phylo_sparse_solvers.jl")
