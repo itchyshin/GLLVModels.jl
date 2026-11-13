@@ -476,6 +476,7 @@ function _beta_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::Abstract
     φ = exp(logφ)
     Λv = ForwardDiff.value.(Λ); βv = ForwardDiff.value.(β); φv = ForwardDiff.value(φ)
     ẑ = _laplace_mode(Beta(φv, 1.0), y, ones(Int, p), Λv, βv, LogitLink(); mask = mask)
+    y = _clamp_y.(Ref(Beta(φv, 1.0)), y)          # the objective's own y clamp (beta.jl), so this gradient follows it
 
     # Concrete observed-Hessian weights via AD-derivative of the scalar score.
     ηc = _clamp_eta.(βv .+ Λv * ẑ)

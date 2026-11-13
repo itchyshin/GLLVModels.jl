@@ -95,7 +95,7 @@ for (_k, _files) in enumerate((
         "test_poisson_n_init.jl", "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl",
         "test_laplace_dual_safety.jl", "test_phylo_nb_xlv.jl", "test_destination_b_joint_identification.jl",
         "test_destination_b_joint_poisson.jl", "test_gp1_laplace.jl", "test_gp1_verdict.jl",
-        "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_nb_grouped_upper_warn.jl",
+        "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_beta_clamp_weight_sites.jl", "test_nb_grouped_upper_warn.jl",
         "test_gamma_shape_upper_warn.jl", "test_nb_cov_two_starts.jl", "test_fit_verdict_gradient.jl",
         "test_nb_beta_x_identity.jl", "test_beta_grouped_mode_search.jl", "test_nb1_x_identity.jl",
         "test_zip_x_identity.jl", "test_issue_719_docs_deploy_guard.jl", "test_tweedie.jl",
@@ -492,6 +492,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_boundary_restart.jl")
     _shard_include("test_nb_shared_r_boundary.jl")
     _shard_include("test_grouped_dispersion_beta_gamma.jl")
+    _shard_include("test_beta_clamp_weight_sites.jl")
     _shard_include("test_gamma_beta_upper_boundary.jl")
     _shard_include("test_nb_grouped_upper_warn.jl")
     _shard_include("test_gamma_shape_upper_warn.jl")
