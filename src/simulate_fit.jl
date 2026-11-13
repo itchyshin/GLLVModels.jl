@@ -66,6 +66,7 @@ function simulate(fit::BinomialFit, n::Integer;
     offset===nothing || throw(ArgumentError("explicit offset currently requires AGHQ metadata"))
     p, K = size(fit.Λ)
     Nm = N === nothing ? fill(1, p, n) : N
+    size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
     Zmean = if fit.alpha_lv === nothing
         zeros(Float64, n, K)
     else
@@ -352,6 +353,7 @@ function simulate(fit::GllvmCovFit, X::AbstractArray{<:Real, 3};
     p, K = size(fit.Λ); n = size(X, 2)
     fam = _cov_family(fit.family, fit.dispersion)
     Nm = N === nothing ? fill(1, p, n) : N
+    size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
     O = _build_offset(X, fit.γ)
     Y = Matrix{_sim_eltype(fit.family)}(undef, p, n)
     @inbounds for s in 1:n
