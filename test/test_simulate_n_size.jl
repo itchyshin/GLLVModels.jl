@@ -10,6 +10,7 @@ using GLLVModels, Test, Random, Distributions
     fb = fit_binomial_gllvm(Y; K = 1, N = fill(5, p, n))
     @test_throws DimensionMismatch simulate(fb, 10; N = fill(5, 2, 10))
     @test_throws DimensionMismatch simulate(fb, 10; N = fill(5, p, 3))
+    @test_throws DimensionMismatch simulate(fb, 10; N = fill(5, p, 100))   # larger than p × n: refused too
     Ys = simulate(fb, 10; N = fill(5, p, 10), rng = MersenneTwister(1))
     @test size(Ys) == (p, 10) && all(0 .<= Ys .<= 5)
 
@@ -17,6 +18,7 @@ using GLLVModels, Test, Random, Distributions
     fc = fit_gllvm_cov(Y; family = Binomial(), X = X, K = 1, N = fill(5, p, n))
     @test_throws DimensionMismatch simulate(fc, zeros(p, 10, 1); N = fill(5, p, 3))
     @test_throws DimensionMismatch simulate(fc, zeros(p, 10, 1); N = fill(5, 2, 10))
+    @test_throws DimensionMismatch simulate(fc, zeros(p, 10, 1); N = fill(5, p, 100))
     Yc = simulate(fc, zeros(p, 10, 1); N = fill(5, p, 10), rng = MersenneTwister(1))
     @test size(Yc) == (p, 10) && all(0 .<= Yc .<= 5)
 end
