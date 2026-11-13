@@ -606,7 +606,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; mask = nothing, families::AbstractVe
         β_init = nothing, Λ_init = nothing, dispersion_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, offset = nothing)
-    _refuse_mask_route("fit_mixed_gllvm", mask, Y)
+    _refuse_mask_route("fit_mixed_gllvm", mask)   # `missing` in Y is handled below (NA-aware FIML), never refused
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, caller = "fit_mixed_gllvm")
     length(families) == p || throw(DimensionMismatch(

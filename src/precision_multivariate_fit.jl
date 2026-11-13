@@ -198,13 +198,12 @@ model, but does not by itself establish paired likelihood agreement.
 The optimizer and post-fit diagnostics use finite differences because CHOLMOD
 does not accept automatic-differentiation numbers.
 """
-function fit_precision_multivariate(Y::AbstractMatrix{<:Real}, phy::PrecisionPhy; mask = nothing,
+function fit_precision_multivariate(Y::AbstractMatrix{<:Real}, phy::PrecisionPhy;
         rank::Integer = 1, mode::Symbol = :barelowrank,
         residual_mode::Symbol = :trait,
         species_id::AbstractVector{<:Integer} = collect(1:phy.n_leaves),
         X = nothing, coefficient_names = nothing, start = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 400)
-    _refuse_mask_route("fit_precision_multivariate", mask)
     phy = _validate_precision_fit_input(phy)
     d, m = size(Y)
     d > 0 && m >= 2 || throw(ArgumentError("fitting needs at least one trait and two observations"))

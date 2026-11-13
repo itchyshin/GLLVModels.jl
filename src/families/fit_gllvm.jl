@@ -152,6 +152,18 @@ function _refuse_mask_route(caller::AbstractString, mask, Y = nothing)
     return nothing
 end
 
+# `fit_gaussian_reml` refuses `missing` in `Y` with the text used by draft PR 1252 (`_refuse_na_response`
+# in `src/na_input.jl`), word for word, so that the two drafts give one message whichever lands
+# first; this copy is dropped once that file is on main.
+function _refuse_missing_gaussian_reml(caller::AbstractString, Y::AbstractMatrix)
+    Missing <: eltype(Y) && any(ismissing, Y) || return nothing
+    bad = findall(ismissing, Y)
+    throw(ArgumentError("$caller does not accept `missing` in `Y`: $(length(bad)) missing " *
+        "cell(s), first at (row, column) = ($(bad[1][1]), $(bad[1][2])). This fitter has no " *
+        "`mask`; remove or impute the missing cells, or use `fit_gaussian_gllvm`, which " *
+        "derives a mask from `missing`."))
+end
+
 # The same refusal for a `Y` typed `Union{Missing, Real}` (these fitters are typed
 # `AbstractMatrix{<:Real}`, so such a `Y` found no method at all). A matrix of that type with
 # no missing cell is passed on as a plain real matrix.
@@ -171,6 +183,16 @@ for _f in (:fit_precision_multivariate, :fit_joint_phylo_grouped_gaussian)
         _refuse_mask_route($(string(_f)), nothing, Y)
         return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y), phy; kwargs...)
     end
+end
+
+# `fit_precision_multivariate` takes no `mask` keyword. Its source file is byte-pinned by frozen
+# receipts (`test_destination_b_phylo_uncertainty.jl`), so the refusal for a mask is a method
+# here and the fitter's own file is untouched. It covers a dense real `Y`; any other matrix type
+# with a `mask` still ends in the fitter's own `MethodError`.
+function fit_precision_multivariate(Y::Matrix{<:Real}, phy::PrecisionPhy; mask = nothing, kwargs...)
+    _refuse_mask_route("fit_precision_multivariate", mask)
+    return invoke(fit_precision_multivariate, Tuple{AbstractMatrix{<:Real}, PrecisionPhy},
+                  Y, phy; kwargs...)
 end
 
 # Drop `offset = nothing` (no offset; some routes would otherwise reject the keyword), and

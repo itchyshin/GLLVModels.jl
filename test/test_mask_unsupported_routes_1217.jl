@@ -99,9 +99,6 @@ using GLLVModels, Test, Random, Distributions, LinearAlgebra, SparseArrays, Stat
             ("fit_phylo_glm", () -> fit_phylo_glm(Yp, phy; mask = Mp), () -> fit_phylo_glm(Ypm, phy)),
             ("fit_spde_latent_gllvm", () -> fit_spde_latent_gllvm(Ys, nodes, tris, locs; mask = Ms),
                                       () -> fit_spde_latent_gllvm(Ysm, nodes, tris, locs)),
-            ("fit_mixed_gllvm", () -> fit_mixed_gllvm(cnt; families = Distribution[Poisson(), Poisson(), Normal(), Normal()], K = 1, mask = M),
-                                () -> fit_mixed_gllvm(unionY(cnt); families = Distribution[Poisson(), Poisson(), Normal(), Normal()], K = 1)),
-            ("fit_gaussian_reml", () -> fit_gaussian_reml(gau, X3; K = 1, mask = M), () -> fit_gaussian_reml(unionY(gau), X3; K = 1)),
         ]
         for (name, withmask, withmissing) in cases
             e1 = try withmask(); nothing catch e; e end
@@ -109,6 +106,28 @@ using GLLVModels, Test, Random, Distributions, LinearAlgebra, SparseArrays, Stat
             e2 = try withmissing(); nothing catch e; e end
             @test e2 isa ArgumentError && occursin(name, e2.msg) && occursin("missing responses are not supported", e2.msg)
         end
+
+        # fit_mixed_gllvm refuses a mask only. `missing` in the Normal rows of Y is fitted on main
+        # (NA-aware likelihood); this change must not refuse it. (Missing in a non-Normal row is a
+        # raw `convert` MethodError on main and is not changed here.)
+        fams = Distribution[Poisson(), Poisson(), Normal(), Normal()]
+        e1 = try fit_mixed_gllvm(cnt; families = fams, K = 1, mask = M); nothing catch e; e end
+        @test e1 isa ArgumentError && occursin("fit_mixed_gllvm", e1.msg) && occursin("mask is not supported", e1.msg)
+        uN = Matrix{Union{Missing, Float64}}(cnt); uN[3, 5] = missing; uN[4, 9] = missing
+        fmix = try fit_mixed_gllvm(uN; families = fams, K = 1, iterations = 40) catch e; e end
+        @test !(fmix isa Exception)
+        fmix isa Exception || @test isfinite(fmix.loglik)
+        fcom = fit_mixed_gllvm(Matrix{Union{Missing, Float64}}(cnt); families = fams, K = 1, iterations = 40)
+        @test isfinite(fcom.loglik)
+
+        # fit_gaussian_reml: mask refused here; `missing` gets the same text as draft PR 1252.
+        e1 = try fit_gaussian_reml(gau, X3; K = 1, mask = M); nothing catch e; e end
+        @test e1 isa ArgumentError && occursin("fit_gaussian_reml", e1.msg) && occursin("mask is not supported", e1.msg)
+        e2 = try fit_gaussian_reml(unionY(gau), X3; K = 1); nothing catch e; e end
+        @test e2 isa ArgumentError
+        e2 isa ArgumentError && @test e2.msg == "fit_gaussian_reml does not accept `missing` in `Y`: 2 missing " *
+            "cell(s), first at (row, column) = (2, 3). This fitter has no `mask`; remove or impute the " *
+            "missing cells, or use `fit_gaussian_gllvm`, which derives a mask from `missing`."
     end
 
     @testset "unchanged: no mask, no missing, and routes that take a mask" begin
