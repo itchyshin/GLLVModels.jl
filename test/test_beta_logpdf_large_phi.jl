@@ -68,3 +68,15 @@ end
     η = log(μ / (1 - μ))
     @test isapprox(GM._beta_logpdf_eta(η, y, φ), ref; atol = 1e-6)
 end
+
+# Through the public fitter: the #1143 reproducer (3 species x 8 sites, one latent variable). On the
+# cancelling density this fit ran to phi ~ 1e154 and reported a log-likelihood of ~5e140 with
+# converged = false; with the stable density it ends near phi 1e11 at 12.8174508 (gllvmTMB: 12.817).
+@testset "Beta fit on the #1143 reproducer reports an honest log-likelihood" begin
+    Yb = [0.571331379859268 0.744755880395627 0.682314552251466 0.660536244100211 0.415202834511263 0.719573832324389 0.822579429039263 0.462027859928568;
+          0.321409339262023 0.623485815704506 0.325871014829878 0.595350879884525 0.508422290025419 0.439766684969984 0.325323221129993 0.634288313010143;
+          0.0917066732817654 0.501343958215348 0.319153002097073 0.335549643433248 0.636781236642335 0.864004794607531 0.277371918185606 0.528216395177476]
+    fit = GM.fit_gllvm(Yb; family = GM.Beta(), K = 1)
+    @test isfinite(fit.loglik)
+    @test isapprox(fit.loglik, 12.8174508; atol = 1e-3)
+end
