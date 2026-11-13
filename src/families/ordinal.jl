@@ -42,6 +42,9 @@ end
 # are not checked; categories with no observations are left as they are.
 function _check_ordinal_levels(Y::AbstractMatrix, obs; caller::AbstractString = "ordinal",
         C = nothing)
+    obs === nothing || size(obs) == size(Y) || throw(DimensionMismatch(
+        "$caller: mask is $(size(obs)); Y is $(size(Y)). `mask` must have the shape of Y " *
+        "(traits × units, true = observed)."))
     for i in eachindex(Y)
         (obs === nothing || obs[i]) || continue
         y = Y[i]

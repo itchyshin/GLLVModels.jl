@@ -960,6 +960,8 @@ println(_SHARD === nothing ?
     _shard_include("test_predictive_check_binomial.jl")
     _shard_include("test_nb_mite_multistart_1022.jl")
     _shard_include("test_nb_n_init_mite_1022.jl")
+    # An explicit mask of another size than Y is a DimensionMismatch (Laplace and ordinal fitters).
+    _shard_include("test_mask_size_check.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
