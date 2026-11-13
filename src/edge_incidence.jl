@@ -217,7 +217,8 @@ function edge_phy(newick::AbstractString)
     n_total = length(node_parent_raw)
     p       = length(leaf_indices_raw)
     n_total == 2 * p - 1 ||
-        error("tree is not binary (got $n_total nodes for $p leaves; expected $(2p - 1))")
+        error("tree is not binary (got $n_total nodes for $p leaves; expected $(2p - 1)); " *
+              "fit_phylo_latent_gllvm(...; tree = ...) accepts a tree with polytomies")
 
     # Reindex: leaves to rows 1..p (in encounter order), then internal nodes
     # in their original (post-order) order, root last.
@@ -262,7 +263,7 @@ function edge_phy(newick::AbstractString)
         e_idx += 1
         b = node_length[c_new]
         b > 0 ||
-            error("branch length must be > 0; node $c_new has length $b")
+            error(_newick_branch_length_message(c_new, b, node_length, node_parent))
         branch_lengths[e_idx] = b
         p_new = node_parent[c_new]
         node_edge[c_new] = e_idx

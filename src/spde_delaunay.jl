@@ -110,6 +110,9 @@ function spde_mesh_delaunay(points::AbstractMatrix)
         throw(ArgumentError("points must be N × 2; got $(size(points))"))
     N = size(points, 1)
     N ≥ 3 || throw(ArgumentError("need at least 3 points; got $N"))
+    all(isfinite, points) || throw(ArgumentError(
+        "points must be finite; row $(findfirst(!isfinite, vec(sum(points; dims = 2))))" *
+        " has a NaN or Inf coordinate"))
 
     # ── Step 1: super-triangle ────────────────────────────────────────────────
     # Pick a super-triangle big enough to contain every input point.
