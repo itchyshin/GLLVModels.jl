@@ -86,3 +86,20 @@ end
         @test_throws ArgumentError GLLVModels.aghq_delta_gamma_problem(Y,1;k=0)
     end
 end
+
+# Pinning case (refs #1143, #1175): the data this file used before the seed change (seed 20261101,
+# n = 40). The Laplace stage of the shared-predictor fit runs the dispersion of trait 2 along a flat
+# direction (alpha 6.7e5 with the old expanded Gamma density, 3.9e10 with the stable one), the AGHQ
+# adaptation then fails, and `fit_gllvm(...; aghq = :auto)` must fall back to the Laplace fit and say so.
+@testset "Delta-Gamma AGHQ: flat-dispersion data falls back to Laplace (adaptation_failed)" begin
+    rng=MersenneTwister(20261101)
+    p,n=3,40
+    β0=[0.3,0.0,0.5];λ0=[0.8,-0.6,0.5];α0=[2.0,3.0,1.5]
+    z0=randn(rng,n)
+    Yf=[_dg_draw(rng,β0[t]+λ0[t]*z0[s],β0[t]+λ0[t]*z0[s],α0[t]) for t in 1:p,s in 1:n]
+    a=@test_logs (:warn,r"AGHQ.*Laplace") match_mode=:any fit_gllvm(Yf;family=GLLVModels.DeltaGamma(),K=1,aghq=:auto,
+        aghq_control=(multistart=false,),predictor=:shared)
+    @test a.integration.actual===:laplace
+    @test a.integration.reason===:adaptation_failed
+    @test isfinite(a.loglik)
+end

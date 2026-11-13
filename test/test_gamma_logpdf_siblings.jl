@@ -31,6 +31,8 @@ _ok(got, ref) = isapprox(got, ref; atol = 1e-9 + 1e-12 * abs(ref))
         lπ = -log1p(exp(-ηz))                      # log pi, accurate to a few ulps
         refd = _gls_ref(a, μc, y) + lπ
         @test _ok(GM._delta_gamma_logf(y, ηz, ηc, a), refd)
+        # delta-Gamma two-part piece (Laplace path): log-likelihood is element 5
+        @test _ok(GM._tp_pieces(GM.DeltaGamma(a), y, ηz, ηc)[5], refd)
     end
 end
 
@@ -39,6 +41,8 @@ end
         old_expr(μ, a, y) = (a - 1) * log(y) - y * a / μ - a * log(μ) + a * log(a) - loggamma(a)
         @test GM._gamma_logker(μ, a, y) === old_expr(μ, a, y)
         @test GM._gamma_logpdf_full(μ, a, y) === old_expr(μ, a, y)
+        π = inv(1 + exp(-0.3))
+        @test GM._tp_pieces(GM.DeltaGamma(a), y, 0.3, log(μ))[5] === log(π) + logpdf(Gamma(a, exp(log(μ)) / a), y)
         ηz = 0.3; ηc = log(μ)
         @test GM._delta_gamma_logf(y, ηz, ηc, a) === -log1p(exp(-ηz)) + a * log(a) - loggamma(a) - a * ηc + (a - 1) * log(y) - a * y * exp(-ηc)
     end
