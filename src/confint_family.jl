@@ -106,6 +106,25 @@ function _ci_mask(mask, Y::AbstractMatrix)
     return M
 end
 
+# Response for an adapter whose fitter ignores masked cells: the cells `M` marks unobserved
+# are replaced by `placeholder` BEFORE any integer conversion or objective call, so the value
+# held there (a `NaN`, say) never decides whether `confint` runs (the fitters drop those cells
+# the same way, `_sanitize_unobserved`). `placeholder` must be valid for the family (1 for the
+# zero-truncated counts, 0 for the other counts); the objective skips masked cells and never
+# reads it. A `NaN` or `missing` in an OBSERVED cell is left in place and still fails, as
+# before (#730). With no mask the response is returned unchanged.
+function _ci_fill_masked(Y::AbstractMatrix, M, placeholder::Real)
+    M === nothing && return Y
+    Yc = copy(Y)
+    @inbounds for I in eachindex(Yc)
+        M[I] || (Yc[I] = placeholder)
+    end
+    return Yc
+end
+
+_ci_count_matrix(Y::AbstractMatrix, M, placeholder::Integer = 1) =
+    round.(Int, _ci_fill_masked(Y, M, placeholder))
+
 # Fit types whose `_family_ci` adapter builds its objective, simulator and refit from the
 # full `Y` and has no mask route. Silently ignoring a mask would return intervals for an
 # objective other than the one that produced the masked fit (#775), so refuse it. An
@@ -438,11 +457,12 @@ function _family_ci(fit::NB1Fit, Y::AbstractMatrix;
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
     M = _ci_mask(mask, Y)
+    Yn = _ci_fill_masked(Y, M, 0)
     θ = vcat(fit.β, pack_lambda(fit.Λ), log(fit.φ))
     nll = function (θv)
         β = θv[1:p]; Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K); φ = exp(θv[p + rr + 1])
         v = try
-            -nb1_marginal_loglik_laplace(Y, Λ, β, φ; link = link, mask = M, offset = offset, hessian = fit.hessian,
+            -nb1_marginal_loglik_laplace(Yn, Λ, β, φ; link = link, mask = M, offset = offset, hessian = fit.hessian,
                                          maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
@@ -720,7 +740,7 @@ function _family_ci(fit::TruncatedPoissonFit, Y::AbstractMatrix;
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
     M = _ci_mask(mask, Y)
-    Yi = round.(Int, Y)
+    Yi = _ci_count_matrix(Y, M)
     θ = vcat(fit.β, pack_lambda(fit.Λ))
     nll = function (θv)
         β = θv[1:p]; Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K)
@@ -763,7 +783,7 @@ function _family_ci(fit::TruncatedNegBin2Fit, Y::AbstractMatrix;
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
     M = _ci_mask(mask, Y)
-    Yi = round.(Int, Y)
+    Yi = _ci_count_matrix(Y, M)
     θ = vcat(fit.β, pack_lambda(fit.Λ), log(fit.r))
     nll = function (θv)
         β = θv[1:p]

@@ -228,7 +228,7 @@ for (_k, _files) in enumerate((
         "test_cov_ord_latent_p1.jl", "test_cov_phylo_twins_p1.jl", "test_totoro_323_track_a_harness.jl",
         "test_temporal_oracles.jl", "test_temporal_fit_receipts.jl", "test_temporal_composed_receipts.jl",
         "test_zip_zinb_stall.jl", "test_robustness_sweep.jl", "test_convergence_553_554.jl",
-        "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl",
+        "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl", "test_truncated_confint_masked_nan_730.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
         "test_gaussian_nonfinite_y.jl",
@@ -923,6 +923,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bootstrap_decisions.jl")
     _shard_include("test_clamp_and_replicate_retention_docs.jl")
     _shard_include("test_truncpois_boot_782.jl")
+    _shard_include("test_truncated_confint_masked_nan_730.jl")
     _shard_include("test_derived_decisions.jl")
     _shard_include("test_n_lt_p.jl")
     _shard_include("test_wtier_crosscov.jl")
