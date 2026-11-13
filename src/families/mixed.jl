@@ -600,12 +600,13 @@ marginal (correctness-first v1; analytic per-trait kernels are future performanc
 work). FD-verified ≤ 1e-6. Warm start: family-aware link-scale pseudodata rows +
 one shared SVD (PPCA-style) + per-family default dispersions.
 """
-function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer,
+function fit_mixed_gllvm(Y::AbstractMatrix; mask = nothing, families::AbstractVector, K::Integer,
         links::Union{Nothing, AbstractVector} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing,
         β_init = nothing, Λ_init = nothing, dispersion_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, offset = nothing)
+    _refuse_mask_route("fit_mixed_gllvm", mask, Y)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, caller = "fit_mixed_gllvm")
     length(families) == p || throw(DimensionMismatch(

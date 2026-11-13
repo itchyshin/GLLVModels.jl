@@ -132,6 +132,47 @@ _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentErr
     "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
     "zero-inflated (ZIPoisson, ZINegBin, ZIB) routes listed in ?fit_gllvm."))
 
+# Fitters that take neither `mask` nor `missing` responses: every cell enters the likelihood.
+# A mask, or a `missing` cell in `Y`, is refused here, before any work, with the same
+# `ArgumentError` on every such route; without this the call ended in a raw `MethodError`
+# that named an internal signature (#1217). Mask SUPPORT on these routes is a separate
+# question and is not added here.
+function _refuse_mask_route(caller::AbstractString, mask, Y = nothing)
+    mask === nothing || throw(ArgumentError(
+        "$caller: mask is not supported on this route (the fitter takes no mask and no missing " *
+        "responses, so every cell enters the likelihood); drop the mask, or use a route that " *
+        "accepts one (see ?fit_gllvm)"))
+    Y === nothing && return nothing
+    k = findfirst(ismissing, Y)
+    k === nothing || throw(ArgumentError(
+        "$caller: missing responses are not supported on this route (the fitter takes no mask " *
+        "and no missing responses, so every cell enters the likelihood); Y is missing at " *
+        "trait $(k[1]), unit $(k[2]). Remove the unobserved cells, or use a route that " *
+        "accepts a mask (see ?fit_gllvm)"))
+    return nothing
+end
+
+# The same refusal for a `Y` typed `Union{Missing, Real}` (these fitters are typed
+# `AbstractMatrix{<:Real}`, so such a `Y` found no method at all). A matrix of that type with
+# no missing cell is passed on as a plain real matrix.
+for _f in (:fit_row_random_gllvm, :fit_rrr_gllvm, :fit_constrained_gllvm, :fit_quadratic_gllvm,
+           :fit_studentt_gllvm, :fit_beta_hurdle_gllvm, :fit_delta_lognormal_gllvm,
+           :fit_hurdle_poisson_gllvm, :fit_hurdle_nb_gllvm, :fit_delta_gamma_gllvm,
+           :fit_zip_gllvm, :fit_zip_gllvm_cov, :fit_zinb_gllvm, :fit_zinb_gllvm_cov,
+           :fit_zib_gllvm, :fit_zib_gllvm_cov, :fit_grouped_gaussian, :fit_grouped_nongaussian,
+           :fit_lognormal_gllvm)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}; kwargs...)
+        _refuse_mask_route($(string(_f)), nothing, Y)
+        return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y); kwargs...)
+    end
+end
+for _f in (:fit_precision_multivariate, :fit_joint_phylo_grouped_gaussian)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}, phy; kwargs...)
+        _refuse_mask_route($(string(_f)), nothing, Y)
+        return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y), phy; kwargs...)
+    end
+end
+
 # Drop `offset = nothing` (no offset; some routes would otherwise reject the keyword), and
 # normalise any other offset once. Shared by `fit_gllvm` and the `gllvm` formula front end,
 # which calls some fitters directly.

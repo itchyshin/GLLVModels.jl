@@ -356,10 +356,11 @@ forward-mode dual numbers. Use `fit_gllvm` or the grouping formula route for
 public fitting and `grouped_gaussian_intervals` for marginal interval diagnostics.
 This development implementation does not establish R parity or recovery.
 """
-function fit_grouped_gaussian(Y::AbstractMatrix{<:Real}; terms,
+function fit_grouped_gaussian(Y::AbstractMatrix{<:Real}; mask = nothing, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
         X=nothing, coefficient_names=nothing, start=nothing,
         g_tol::Real=1e-5, iterations::Integer=100)
+    _refuse_mask_route("fit_grouped_gaussian", mask)
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
     all(isfinite, Y) || throw(ArgumentError("grouped fitting requires finite complete responses"))
