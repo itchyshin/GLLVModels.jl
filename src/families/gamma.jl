@@ -10,7 +10,21 @@
 _clamp_mu(::Gamma, μ) = max(μ, 1e-12)
 _glm_score(f::Gamma, μ, n, me, y) = f.α * (y - μ) / μ^2 * me
 _glm_weight(f::Gamma, μ, n, me)   = f.α * me^2 / μ^2
-_glm_logpdf(f::Gamma, μ, n, y)    = logpdf(Gamma(f.α, μ / f.α), y)
+_glm_logpdf(f::Gamma, μ, n, y)    = _gamma_logpdf(f.α, μ, y)
+
+# Gamma(shape a, mean μ) log-density. `logpdf(Gamma(a, μ/a), y)` forms `-loggamma(a) - a log(μ/a)`
+# from two terms of size a·log a each; at a ≈ 1e18 they are ~1e20 and Float64 rounding leaves an error
+# of ~1e4 per observation (measured against BigFloat), so a flat-shape fit chases rounding noise and can
+# report a positive log-likelihood. Above `_GAMMA_STIRLING_FROM` the rewrite below cancels the large
+# terms analytically (Stirling series, error < 1e-18 there; `u - log1p(u)` for a(1 + log r - r), r = y/μ).
+# Below it the original expression is used unchanged, so ordinary fits are bit-identical.
+const _GAMMA_STIRLING_FROM = 1.0e3
+function _gamma_logpdf(a, μ, y)
+    a < _GAMMA_STIRLING_FROM && return logpdf(Gamma(a, μ / a), y)
+    u = (y - μ) / μ
+    stirling = inv(12a) - inv(360 * a^3) + inv(1260 * a^5)
+    return 0.5 * log(a / (2π)) - stirling - log(y) - a * (u - log1p(u))
+end
 
 # ---------------------------------------------------------------------------
 # Log-det curvature default for Gamma/log (2026-08-25). PER-FAMILY, deliberately
