@@ -544,6 +544,32 @@ fit_gllvm_speciescov(Y; family = Poisson(), X = X, K = 2).B
 fit_roweffect_gllvm(Y; family = Poisson(), K = 2).ρ
 ```
 
+Row effects and species-specific slopes cannot be requested in one call
+(`fit_roweffect_gllvm` takes no `X`, and `fit_gllvm_speciescov` has no row effects). The
+same model, which R `gllvm` fits with `row.eff = "fixed"` plus `X` and `formula = ~ x1`,
+can be fitted by block-expanding the covariate array for `fit_gllvm_cov`: one slope
+column per species, then one dummy column per site after the first (site 1 is the
+reference, as in `fit_roweffect_gllvm`).
+
+```julia
+# Y is p x n, x is a length-n covariate
+p, n = size(Y); q = p + n - 1
+XX = zeros(p, n, q)
+for t in 1:p, s in 1:n; XX[t, s, t] = x[s]; end              # slope of x for species t
+for s in 2:n, t in 1:p; XX[t, s, p + s - 1] = 1.0; end       # row effect of site s
+fit = fit_gllvm_cov(Y; family = Poisson(), X = XX, K = 1)
+fit.γ[1:p]            # species-specific slopes
+fit.γ[(p + 1):end]    # row effects of sites 2, ..., n
+```
+
+On a Poisson example (6 species, 40 sites, `K = 1`) this gives a log-likelihood of
+-416.6651113227 and `gllvm` -416.6651113273, with the same parameter count (57). The
+average of the species slopes is not separate from the row effects: the Julia and
+`gllvm` slopes differ by one constant (0.3563 for all six species) with the same
+log-likelihood, so compare log-likelihoods and differences between slopes, not the
+slopes themselves. The fit has `p + n - 1` shared coefficients and uses finite-difference
+gradients, so it gets slow when `n` is large.
+
 Row effects can instead be treated as **random** (gllvm's `row.eff = "random"`),
 `ρ_s ~ N(0, σ_row²)`, which shrinks the per-site intercepts and estimates a single
 row-effect SD rather than `n − 1` free intercepts:
