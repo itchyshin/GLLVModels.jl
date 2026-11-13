@@ -1,0 +1,16 @@
+{
+ "kind": "KNOWN_FAIL_SIGNED_EXCEPTION",
+ "state": "SIGNED",
+ "pin": "P1",
+ "is_a_pass": false,
+ "bars_changed": false,
+ "public_wording": "315 of 317 matched, two real-data cases excluded by signed exception",
+ "revisit": "P2",
+ "scoreboard_id": "data-RD-SPIDER-NB2",
+ "source_id": "data/RD-SPIDER-NB2",
+ "receipt": "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json",
+ "receipt_sha256": "343e9f683a565f699c2814ada7112de88c99c9e31c105ef10e775aaf7e4fb877",
+ "reason": "Julia pdHess false; three species at the Poisson limit on both engines; the Julia-objective Hessian is singular in exactly those directions; R's own pdHess cause not measured.",
+ "signed_by": "itchyshin",
+ "signed_on": "2026-11-13"
+}
