@@ -713,6 +713,7 @@ println(_SHARD === nothing ?
     _shard_include("test_truncated_postfit_788.jl")
     _shard_include("test_censored_poisson_postfit_788.jl")
     _shard_include("test_lognormal_postfit_788.jl")
+    _shard_include("test_tweedie_grouped_postfit_788.jl")
     _shard_include("test_predict_offset_shared.jl")
     _shard_include("test_predict_modes_training.jl")
     _shard_include("test_family_profile_open_lower.jl")
