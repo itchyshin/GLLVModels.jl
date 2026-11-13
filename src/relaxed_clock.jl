@@ -481,8 +481,10 @@ function fit_relaxed_clock(phy::EdgePhy, y::AbstractMatrix;
         throw(ArgumentError("y first dim $p must equal n_leaves $(phy.n_leaves)"))
     # NaN or Inf in y gave an all-NaN fit with converged = false and no error.
     if !all(isfinite, y)
+        first_bad = Tuple(findfirst(!isfinite, y))
         throw(ArgumentError("fit_relaxed_clock: y contains non-finite values at " *
-                            "$(count(!isfinite, y)) cell(s); this fitter takes complete finite responses"))
+                            "$(count(!isfinite, y)) cell(s), first at (row, column) = $first_bad; " *
+                            "this fitter takes complete finite responses"))
     end
     cm = _cond_map(phy)
     df = float(n_rep)

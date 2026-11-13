@@ -41,6 +41,7 @@ using GLLVModels, Test, Random, LinearAlgebra
             err = try fit_relaxed_clock(ephy, Z); nothing catch e; e end
             @test err isa ArgumentError
             @test occursin("non-finite values", sprint(showerror, err))
+            @test occursin("first at (row, column) = (2, 3)", sprint(showerror, err))
         end
     end
 end
