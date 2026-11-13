@@ -2,9 +2,11 @@
 
 Date: 2026-11-10
 
-Status: AWAITING-SIGNATURE
+Status: SIGNED
 
-Signed by: (empty; only the maintainer fills this, in a later separate act)
+Signed by: itchyshin
+
+Signed on: 2026-11-13
 
 ## What changes
 
@@ -54,5 +56,16 @@ signature on the rule. Fungi is not rerun.
 
 ## Signature
 
-Pending. Until signed, receipts produced under this rule are measurements, not
-accepted evidence.
+Signed by itchyshin on 2026-11-13, from the owner's decision-card answer of 13 Nov 2026,
+2:06 PM MT (ruling SHINICHI-1406 in the lane decision file, which signs D1). The lane
+transcribed this signature; the owner did not type it here.
+
+What the signature covers: the step-acceptance rule above, as a new threshold, for the
+ordinal and iSDM realistic-size cells whose receipts are in this change. It does not
+validate the 1e-12 bound on any other cell, and fungi was not rerun.
+
+Two limits that stay true after signing. The iSDM row passes only under this rule (the
+Julia gradient starts at 1.034e-5 and one accepted step that raises the objective by
+about 5e-11 brings it to 5.33e-13). The ordinal row did not need the rule; its pass
+depends on the finite-difference step of 1e-5 (a step of 1e-6 read 1.73e-5 against the
+bar of 1e-5), with a margin of about 15 percent.
