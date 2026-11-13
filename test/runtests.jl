@@ -151,7 +151,7 @@ for (_k, _files) in enumerate((
         "test_betabinomial_x_identity.jl", "test_zinb_x_identity.jl", "test_beta_fit.jl",
         "test_link_honoured.jl", "test_issue_725_extractor_docs.jl", "test_studentt_disp_group.jl",
         "test_studentt_normalizer_precision.jl", "test_studentt_retained_precision.jl", "test_studentt_grouped_mode_search.jl",
-        "test_ordinal_pertrait.jl", "test_ordinal_level_check.jl", "test_ordinal_rowcheck.jl", "test_getlv_rowcheck.jl", "test_fit_gllvm.jl",
+        "test_ordinal_pertrait.jl", "test_ordinal_level_check.jl", "test_ordinal_float_y.jl", "test_ordinal_rowcheck.jl", "test_getlv_rowcheck.jl", "test_fit_gllvm.jl",
         "test_truncated_formula.jl", "test_gaussian_pervar.jl", "test_ledermann_pervar_k.jl",
         "test_postfit.jl", "test_issue_737_omega_doc.jl", "test_model_selection.jl",
         "test_select_lv_print.jl", "test_binomial_ridge.jl", "test_c1_behaviour_p1.jl",
@@ -551,6 +551,7 @@ println(_SHARD === nothing ?
     _shard_include("test_ordinal_probit.jl")
     _shard_include("test_ordinal_logit_twin.jl")
     _shard_include("test_ordinal_level_check.jl")
+    _shard_include("test_ordinal_float_y.jl")
     _shard_include("test_ordinal_rowcheck.jl")
     _shard_include("test_getlv_rowcheck.jl")
     _shard_include("test_fit_gllvm.jl")
