@@ -576,7 +576,11 @@ log-likelihood. Each of the `p` rows of `Y` (traits) carries its own response
 Arguments:
 - `Y::AbstractMatrix` — `p×n` response matrix (traits × sites). Mixed element
   types are allowed (counts, proportions, positive reals); each row is read by
-  its trait's family.
+  its trait's family. Missing values: only `Normal()` traits accept `missing`
+  (the cell is dropped from the likelihood). A `missing` on a `Poisson()`,
+  `NegativeBinomial()`, `Binomial()`, `Gamma()` or `Beta()` trait currently fails in
+  the warm start (`_mixed_pseudo_link_row`) with a raw `MethodError`, not a clear
+  message. A trait with every cell missing is refused with a clear error.
 - `families::Vector` — length-`p` `Distributions` markers; supported in v1:
   `Normal()`, `Poisson()`, `Binomial()`, `NegativeBinomial()`, `Gamma()`,
   `Beta()` (Ordinal is not yet available for mixed-family fits).
@@ -607,6 +611,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, offset = nothing)
     p, n = size(Y)
+    any(ismissing, Y) && _check_every_trait_observed(observed_mask(Y), Y)
     offset = _normalize_offset(offset, p, n; Y = Y, caller = "fit_mixed_gllvm")
     length(families) == p || throw(DimensionMismatch(
         "families has length $(length(families)); expected p = $p (one per trait/row)"))
