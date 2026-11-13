@@ -83,6 +83,16 @@ binomial, negative binomial and the others) have no such condition and fit with
 `converged`, expect binomial fits to reach the Laplace saturation region sooner
 (the fit then warns and reports it through `saturation`), and prefer a small `K`.
 
+The Gaussian refusal is an **implementation limit** of the closed-form fitter, not a
+finding that the Gaussian model cannot be identified with fewer sites than species.
+gllvmTMB fits such data. When the sample covariance of the responses has rank above
+`K`, the Gaussian maximum exists in closed form (probabilistic PCA, Tipping and Bishop
+1999), and gllvmTMB 0.7.1 reaches it: with 10 sites, 40 species and `d = 2` its
+log-likelihood is -480.108097962 against a closed-form -480.108097961; with 3 sites
+(sample covariance rank 2), 40 species and `d = 1` it is -83.293326066 against a
+closed-form -83.293326066. Until the fitter handles this case, use gllvmTMB for a Gaussian
+model with `n_sites < p`, or a Laplace family.
+
 ## Use the O(p) path for large phylogenies
 
 The dense Gaussian fit with a phylogenetic covariance is `O(p³)` and assumes
