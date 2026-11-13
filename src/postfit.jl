@@ -2430,6 +2430,96 @@ function residuals(fit::CensoredPoissonFit, Y::AbstractMatrix{<:Real}; type::Sym
     return R
 end
 
+# --- One-part lognormal post-fit (LognormalFit; #788) ---
+# log y = β + offset + Λz + σε is exactly Gaussian on the log scale, so the conditional score of a
+# site is the closed-form posterior mean z = (I + ΛᵀΛ/σ²)⁻¹ Λᵀ r / σ², r = log y − β − offset (which
+# is also the Laplace mode). The fitter takes no `mask`, so these methods take none either.
+
+function _lognormal_post_check(fit::LognormalFit, Y::AbstractMatrix, caller::AbstractString)
+    size(fit.Λ, 1) == size(Y, 1) || throw(ArgumentError(
+        "$caller: Y has $(size(Y, 1)) rows but the fit has $(size(fit.Λ, 1)) traits"))
+    all(>(0), Y) || throw(ArgumentError(
+        "$caller: lognormal requires y > 0; found non-positive response"))
+    return nothing
+end
+
+"""
+    getLV(fit::LognormalFit, Y; rotate=true, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for a one-part lognormal fit: the per-site posterior mean
+`ẑₛ = (I + ΛᵀΛ/σ²)⁻¹ Λᵀ (log yₛ − β − offsetₛ)/σ²`, which on the log scale (a Gaussian model) is also
+the Laplace mode. `Y` is the p×n matrix of strictly positive responses (`ArgumentError` otherwise).
+`rotate=true` applies the canonical [`rotation`](@ref).
+
+Offset rules are those of the other Laplace fits: the stored training offset (`fit.offset`) is used
+when `Y` has the training size, otherwise the `offset` you pass (p×n matrix, scalar or length-p
+vector); an explicit `offset` overrides it; new units from an offset fit without an `offset` are
+refused (`ArgumentError`). The fitter has no `mask`, so there is none here.
+"""
+function getLV(fit::LognormalFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true, offset = nothing)
+    _lognormal_post_check(fit, Y, "getLV")
+    p, n = size(Y); K = size(fit.Λ, 2)
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV"; maskable = false)
+    R = log.(Matrix{Float64}(Y)) .- fit.β
+    O === nothing || (R .-= O)
+    M = Symmetric(Matrix{Float64}(I, K, K) .+ (fit.Λ' * fit.Λ) ./ fit.σ^2)
+    Zt = permutedims(M \ (fit.Λ' * R ./ fit.σ^2))
+    return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
+end
+
+"""
+    predict(fit::LognormalFit, Y; type=:response, offset=nothing, modes=:refit) -> p×n matrix
+
+In-sample fitted values at the conditional latent scores (see [`getLV`](@ref)). With
+`η = β + offset + Λ ẑ`, the mean of `log y`:
+
+- `type = :link` returns `η`.
+- `type = :response` (default) returns the mean of `y` conditional on the latent variables,
+  `exp(η + σ²/2)` ([`lognormal_response_mean`](@ref)), where `σ` is the residual standard
+  deviation on the log scale. This is the mean, not the median, and it matches what gllvmTMB's
+  `predict(type = "response")` returns for `lognormal()` (`.apply_linkinv_per_row`, read not run).
+- `type = :median` returns `exp(η)`, the conditional median (smaller than the mean by the factor
+  `exp(σ²/2)`).
+
+Offset rules and `modes` are those of the other Laplace fits (see the `PoissonFit` method): the
+stored training offset is used when `Y` has the training size, an explicit `offset` overrides it,
+and `modes = :training` keeps the training units' latent scores and swaps in the new `offset`.
+"""
+function predict(fit::LognormalFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+                 offset = nothing, modes::Symbol = :refit)
+    type in (:link, :response, :median) ||
+        throw(ArgumentError("type must be :link, :response or :median; got :$type"))
+    _lognormal_post_check(fit, Y, "predict")
+    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
+    Omode = _prediction_mode_offset(fit, Y, O, modes)
+    Z = getLV(fit, Y; rotate = false, offset = Omode)
+    η = fit.β .+ fit.Λ * Z'
+    O === nothing || (η .+= O)
+    type === :link && return η
+    type === :median && return exp.(_clamp_eta.(η))
+    return lognormal_response_mean.(_clamp_eta.(η), fit.σ)
+end
+
+"""
+    residuals(fit::LognormalFit, Y; type=:dunnsmyth, offset=nothing) -> p×n matrix
+
+Residuals at the conditional latent scores. `:dunnsmyth` (default) is the randomized quantile
+residual `Φ⁻¹(F(y))`; for a continuous law it is deterministic and equals `(log y − η) / σ`
+(computed on the log scale, so a far tail stays finite). `:pearson` is `(y − μ) / sd` with the
+lognormal mean `μ = exp(η + σ²/2)` and variance `(exp(σ²) − 1) exp(2η + σ²)`. `offset` follows the
+rules in [`predict`](@ref).
+"""
+function residuals(fit::LognormalFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunnsmyth,
+                   offset = nothing)
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    η = predict(fit, Y; type = :link, offset = offset)
+    type === :dunnsmyth && return (log.(Matrix{Float64}(Y)) .- η) ./ fit.σ
+    μ = lognormal_response_mean.(η, fit.σ)
+    sd = sqrt.((exp(fit.σ^2) - 1) .* exp.(2 .* η .+ fit.σ^2))
+    return (Y .- μ) ./ sd
+end
+
 function Base.show(io::IO, ::MIME"text/plain", fit::ExponentialFit)
     p, K = size(fit.Λ)
     println(io, "Exponential GLLVM fit")
