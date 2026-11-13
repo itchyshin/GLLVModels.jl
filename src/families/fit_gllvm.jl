@@ -178,8 +178,10 @@ for _f in (:fit_row_random_gllvm, :fit_rrr_gllvm, :fit_constrained_gllvm, :fit_q
         return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y); kwargs...)
     end
 end
+# The second argument is typed `PrecisionPhy`: untyped, a plain real matrix with any other second
+# argument would find only this method and recurse into itself until the stack overflows.
 for _f in (:fit_precision_multivariate, :fit_joint_phylo_grouped_gaussian)
-    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}, phy; kwargs...)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}, phy::PrecisionPhy; kwargs...)
         _refuse_mask_route($(string(_f)), nothing, Y)
         return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y), phy; kwargs...)
     end
