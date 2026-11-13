@@ -817,6 +817,12 @@ function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     Missing <: eltype(Y) && return count(!ismissing, Y)
     return length(Y)
 end
+# Fits made from a response VECTOR (`fit_phylo_gaussian`, `fit_branch_re`, `fit_branch_re_dense`,
+# a length-n `fit_multinomial_gllvm`): the fallback error below tells the user to call
+# `nobs(fit, Y)`, and a vector `y` has no such method (#1164). Count it as the single column
+# it is; same rule as the matrix method (mask, then `missing`, then `length`).
+StatsAPI.nobs(fit::Union{PhyloGaussianFit, BranchREFit, MultinomialFit}, y::AbstractVector;
+              mask = nothing) = StatsAPI.nobs(fit, reshape(y, :, 1); mask = mask)
 StatsAPI.nobs(fit::TwoLevelFit) = size(fit.Λ_B, 1) * fit.nindiv
 StatsAPI.nobs(fit::GaussianRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::PoissonRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
@@ -833,7 +839,8 @@ function StatsAPI.nobs(fit::AnyGllvmFit)
     elseif hasfield(typeof(fit), :ρ)
         return length(fit.ρ)
     else
-        throw(ArgumentError("nobs for $(typeof(fit)) requires the response matrix Y: nobs(fit, Y)"))
+        throw(ArgumentError("nobs for $(typeof(fit)) requires the response: nobs(fit, Y), " *
+                                "or nobs(fit, y) when the fit was made from a vector y"))
     end
 end
 
