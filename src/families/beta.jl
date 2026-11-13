@@ -69,7 +69,8 @@ end
 _beta_stirling_applies(a, b) = a >= _BETA_STIRLING_FROM && b >= _BETA_STIRLING_FROM
 
 function _beta_logpdf(a, b, y)
-    _beta_stirling_applies(a, b) || return logpdf(Beta(a, b), y)
+    # y outside (0, 1) (or NaN) keeps the original call: the stable form would give -Inf + Inf = NaN at y = 0 or 1
+    (_beta_stirling_applies(a, b) && 0 < y < 1) || return logpdf(Beta(a, b), y)
     s = a + b
     bb = s - a
     e = (a - (s - bb)) + (b - bb)            # exact rounding error of s = a + b

@@ -80,3 +80,11 @@ end
     @test isfinite(fit.loglik)
     @test isapprox(fit.loglik, 12.8174508; atol = 1e-3)
 end
+
+# y exactly 0 or 1 (or NaN) must give what the original call gives (-Inf, -Inf, NaN), not NaN from -Inf + Inf.
+@testset "Beta log-density at y = 0 and y = 1 above the switch is not NaN" begin
+    for (a, b) in ((2000.0, 3000.0), (1e8, 1e8), (1e15, 3e15)), y in (0.0, 1.0)
+        @test GM._beta_logpdf(a, b, y) == logpdf(Beta(a, b), y) == -Inf
+    end
+    @test isnan(GM._beta_logpdf(2000.0, 3000.0, NaN))
+end
