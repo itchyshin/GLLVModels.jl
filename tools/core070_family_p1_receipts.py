@@ -1239,7 +1239,7 @@ def build_rows(in_scope, carry_status, receipts):
                        measured_result={**result, "row_verdict": "PASS"})
             counts["numeric_pass"] += 1
         if sid in ROW_NOTES:
-            row["note"] = ROW_NOTES[sid]
+            row["note"] = f"{row['note']} {ROW_NOTES[sid]}" if row.get("note") else ROW_NOTES[sid]
         out_rows.append(row)
     return out_rows, counts
 
