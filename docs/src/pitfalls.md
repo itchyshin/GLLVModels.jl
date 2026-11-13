@@ -90,7 +90,7 @@ gllvmTMB fits such data. When the sample covariance of the responses has rank ab
 1999), and gllvmTMB 0.7.1 reaches it: with 10 sites, 40 species and `d = 2` its
 log-likelihood is -480.108097962 against a closed-form -480.108097961; with 3 sites
 (sample covariance rank 2), 40 species and `d = 1` it is -83.293326066 against a
-closed-form -83.293326066. Until the fitter handles this case, use gllvmTMB for a Gaussian
+closed-form -83.293326066. Currently, use gllvmTMB for a Gaussian
 model with `n_sites < p`, or a Laplace family.
 
 ## Use the O(p) path for large phylogenies
