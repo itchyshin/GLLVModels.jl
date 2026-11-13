@@ -81,7 +81,11 @@ function getLV(fit::FourthCornerFit, Y::AbstractMatrix{<:Real},
                Xenv::AbstractMatrix{<:Real}, TR::AbstractMatrix{<:Real};
                rotate::Bool = true, N::Union{Nothing, AbstractMatrix} = nothing)
     p, n = size(Y); K = size(fit.Λ, 2)
-    Nm = N === nothing ? fill(1, p, n) : N
+    size(Xenv, 1) == n ||
+        throw(DimensionMismatch("Xenv must have n = $n rows (sites); got $(size(Xenv, 1))"))
+    size(TR, 1) == p ||
+        throw(DimensionMismatch("TR must have p = $p rows (species); got $(size(TR, 1))"))
+    Nm = _postfit_trials(N, p, n)
     fam = _cov_family(fit.family, fit.dispersion)
     O = _build_offset_fourthcorner(Xenv, TR, fit.C)
     Z = Matrix{Float64}(undef, K, n)

@@ -472,7 +472,7 @@ function getLV(fit::BetaBinomialFit, Y::AbstractMatrix{<:Real};
         N::Union{Nothing, AbstractMatrix{<:Real}} = nothing, rotate::Bool = true)
     p, n = size(Y)
     K = size(fit.Λ, 2)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
         Z[:, s] = _beta_binomial_mode(view(Y, :, s), view(Nm, :, s),
@@ -651,8 +651,9 @@ equations as `betabinomial_grouped_marginal_loglik_laplace`.
 function getLV(fit::BetaBinomialGroupedFit, Y::AbstractMatrix{<:Real};
         N::Union{Nothing, AbstractMatrix{<:Real}} = nothing, rotate::Bool = true, mask = nothing)
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     K = size(fit.Λ, 2)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
@@ -820,8 +821,9 @@ function getLV(fit::BetaBinomialGroupedCovFit, Y::AbstractMatrix{<:Real},
         X::AbstractArray{<:Real, 3};
         N::Union{Nothing, AbstractMatrix{<:Real}} = nothing, rotate::Bool = true, mask = nothing)
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     K = size(fit.Λ, 2)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     O = _build_offset(X, fit.γ)
     Z = Matrix{Float64}(undef, K, n)

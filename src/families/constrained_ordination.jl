@@ -101,6 +101,8 @@ function _constrained_residual_modes(fit::ConstrainedOrdinationFit,
         Y::AbstractMatrix{<:Real}, X::AbstractMatrix{<:Real},
         Nm::AbstractMatrix)
     p, n = size(Y); K = size(fit.Λ, 2)
+    size(X, 1) == n ||
+        throw(DimensionMismatch("X must be (n, q) = ($n, q) with one row per site; got $(size(X))"))
     fam = _cov_family(fit.family, fit.dispersion)
     O = _build_offset_constrained(fit.Λ, fit.B, X)
     U = Matrix{Float64}(undef, K, n)
@@ -123,7 +125,7 @@ applies the canonical [`rotation`](@ref) of `Λ`.
 function getLV(fit::ConstrainedOrdinationFit, Y::AbstractMatrix{<:Real}, X::AbstractMatrix{<:Real};
                rotate::Bool = true, N::Union{Nothing, AbstractMatrix} = nothing)
     p, n = size(Y)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     U, _ = _constrained_residual_modes(fit, Y, X, Nm)
     Zt = (fit.B' * X')' .+ permutedims(U)        # n×K full latent score z_s = B'x_s + u_s
     return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
@@ -141,7 +143,7 @@ function predict(fit::ConstrainedOrdinationFit, Y::AbstractMatrix{<:Real}, X::Ab
     type in (:response, :mean, :link) ||
         throw(ArgumentError("type must be :response, :mean, or :link; got :$type"))
     p, n = size(Y)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     U, O = _constrained_residual_modes(fit, Y, X, Nm)
     η = fit.β .+ O .+ fit.Λ * U
     type === :link && return η

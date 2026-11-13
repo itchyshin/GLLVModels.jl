@@ -76,7 +76,7 @@ canonical [`rotation`](@ref).
 function getLV(fit::RowEffectFit, Y::AbstractMatrix{<:Real};
                rotate::Bool = true, N::Union{Nothing, AbstractMatrix} = nothing)
     p, n = size(Y); K = size(fit.Λ, 2)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     fam = _cov_family(fit.family, fit.dispersion)
     O = _build_offset_row(fit.ρ, p)
     Z = Matrix{Float64}(undef, K, n)
