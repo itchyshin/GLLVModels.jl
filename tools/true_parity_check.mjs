@@ -135,6 +135,17 @@ const WORKFLOWS_DIR = '.github/workflows';
 const SMOKE_WORKFLOW_FILE = 'true-parity-check.yml';
 
 const DONE = new Set(['EVIDENCED', 'EVIDENCED-BEHAVIOURAL', 'DISPOSITION-SIGNED']);
+
+// Signed known-fail exception (maintainer reply "A, mechanics C", 2026-11-09). A measured FAIL on one of two named real-data
+// rows may be ruled out of P1 scope by a signature. It is NOT a pass and NOT in DONE: the scoreboard Status word is
+// KNOWN-FAIL-SIGNED, it is honoured only on the rows in KNOWN_FAIL_ROWS (a frozen list, so the mechanism cannot become a
+// general waiver), only when the signed file at KNOWN_FAIL_DIR/<scoreboard id>.json passes knownFailExceptionProblem, and C4 and X2
+// print it as signed=N. A run that ends with signed rows and nothing else open prints <mode>_MET_WITH_SIGNED_EXCEPTIONS, never
+// plain <mode>_MET. Without the files (or with an unsigned draft) the rows stay FAIL and the verdict stays NOT_MET.
+const KNOWN_FAIL_STATUS = 'KNOWN-FAIL-SIGNED';
+const KNOWN_FAIL_ROWS = new Set(['data-RD-SPIDER-NB2', 'data-RD-BEETLE-NB2']);
+const KNOWN_FAIL_DIR = 'docs/dev-log/core070/true-parity-latest/signed-exceptions';
+const KNOWN_FAIL_KIND = 'KNOWN_FAIL_SIGNED_EXCEPTION';
 // C6's decision vocabulary is enumerated, not free text: a reverse-gap item's "decision" must
 // be exactly one of these, or it does not count as decided (a placeholder like "TBD" must not
 // pass just because the field is non-empty).
@@ -939,11 +950,45 @@ function scoreboardRows() {
   return rows;
 }
 
+// Returns null when the signed exception for scoreboard row `r` is acceptable, else why not. Keep in step with
+// known_fail_exception_problem in tools/true_parity_assemble.py. The signature rule is the one every other signed
+// disposition uses; the file must also be explicitly marked SIGNED (a draft carries state "DRAFT, NOT SIGNED"), say that it is not a pass
+// and changes no bar, and be pinned to the measured receipt by sha256 so a re-measure makes it stale.
+function knownFailExceptionProblem(r) {
+  if (!KNOWN_FAIL_ROWS.has(r.id)) return `KNOWN_FAIL_ROW_NOT_LISTED(${r.id})`;
+  const path = `${KNOWN_FAIL_DIR}/${r.id}.json`;
+  const t = show(path);
+  if (t === null) return `SIGNED_EXCEPTION_FILE_MISSING(${path})`;
+  let e;
+  try { e = JSON.parse(t); } catch { return 'SIGNED_EXCEPTION_NOT_JSON'; }
+  if (!isPlainObject(e)) return 'SIGNED_EXCEPTION_NOT_AN_OBJECT';
+  if (e.kind !== KNOWN_FAIL_KIND) return 'SIGNED_EXCEPTION_BAD_KIND';
+  if (e.state !== 'SIGNED') return `SIGNED_EXCEPTION_STATE_NOT_SIGNED(${JSON.stringify(e.state)})`;
+  if (e.scoreboard_id !== r.id) return 'SIGNED_EXCEPTION_ROW_MISMATCH';
+  if (e.pin !== 'P1' && e.pin !== P1_SHA) return 'SIGNED_EXCEPTION_NOT_PINNED_TO_P1';
+  if (e.is_a_pass !== false) return 'SIGNED_EXCEPTION_MUST_STATE_NOT_A_PASS';
+  if (e.bars_changed !== false) return 'SIGNED_EXCEPTION_MUST_STATE_NO_BAR_CHANGE';
+  if (!isVisible(e.reason)) return 'SIGNED_EXCEPTION_WITHOUT_REASON';
+  const sig = signatureProblem(e.signed_by, e.signed_on);
+  if (sig !== null) return `SIGNED_EXCEPTION_${sig}`;
+  if (typeof e.receipt !== 'string' || !extractPaths(r.receiptText).includes(e.receipt)) return 'SIGNED_EXCEPTION_RECEIPT_NOT_CITED_BY_ROW';
+  if (!existsAsBlob(e.receipt)) return `SIGNED_EXCEPTION_RECEIPT_DANGLING(${e.receipt})`;
+  if (!isValidSha256(e.receipt_sha256) || e.receipt_sha256 !== createHash('sha256').update(show(e.receipt)).digest('hex')) return 'SIGNED_EXCEPTION_RECEIPT_HASH_MISMATCH';
+  return null;
+}
+
 // Evaluates one scoreboard row. Returns { ok } for a settled result, or { fatal, reason } when
 // the row's own text cannot be trusted enough to call it either done or not-done (a path-like
 // receipt reference that extractPaths could not capture): that is a MEASUREMENT_FAILED, not a
 // silent "not done".
 function evaluateScoreboardRow(r) {
+  if (r.status === KNOWN_FAIL_STATUS) {
+    // Counts as resolved but never as a pass: reported as signed, and only for a C4 (real-data) row with a valid signed file.
+    if (!isRD(r)) return { ok: false, reason: 'KNOWN_FAIL_ONLY_FOR_C4_ROWS' };
+    if (!/^known fail, signed exception\b/i.test(r.receiptText)) return { ok: false, reason: 'KNOWN_FAIL_RECEIPT_CELL_NOT_AN_EXCEPTION' };
+    const why = knownFailExceptionProblem(r);
+    return why === null ? { ok: true, signedException: true } : { ok: false, reason: why };
+  }
   if (!DONE.has(r.status)) return { ok: false, reason: 'NOT_DONE' };
   // EVIDENCED-BEHAVIOURAL is only for the rows ruling 2 covers (inference-*, or a named C1 row); it never
   // closes a C3 (realistic size), C4 (real data) or C5 (grouping) row, which are numeric campaign clauses.
@@ -982,18 +1027,31 @@ function directEngineReceipt(p) {
   return isPlainObject(j) && isPlainObject(j.engines) && nonEmpty(j.engines.R) && nonEmpty(j.engines.julia);
 }
 
-function report(tag, rows, pick) {
+// Set by report(): how many rows the last report resolved only by a signed known-fail exception. The verdict line reads it.
+let signedExceptionCount = 0;
+
+function report(tag, rows, pick, showSigned = false) {
   const sel = pick ? rows.filter(pick) : rows;
   if (sel.length === 0) { console.log(`${tag} rows=0 EMPTY_SELECTION (vacuous; not a pass)`); return false; }
   const notDone = [];
+  const signedIds = [];
   let doneBehavioural = 0;
   for (const r of sel) {
     const ev = evaluateScoreboardRow(r);
     if (ev.fatal) die(`row ${r.id}: ${ev.reason}`);
     if (!ev.ok) notDone.push(`${r.id}:${ev.reason}`);
+    else if (ev.signedException) signedIds.push(r.id);
     else if (r.status === 'EVIDENCED-BEHAVIOURAL') doneBehavioural++;
   }
   console.log(`${tag} rows=${sel.length} done=${sel.length - notDone.length} not_done=${notDone.join(',') || 'none'} done_behavioural=${doneBehavioural}`);
+  if (showSigned) {
+    // A signed file that no KNOWN-FAIL-SIGNED row uses is shown, so "file present, row still FAIL" is visible and counts nothing.
+    const used = new Set(rows.filter((r) => r.status === KNOWN_FAIL_STATUS).map((r) => `${r.id}.json`));
+    const unmatched = listDir(KNOWN_FAIL_DIR).filter((f) => /\.json$/.test(f) && !used.has(f));
+    // A separate line, so the existing one-line format (and every reader of it) is untouched.
+    console.log(`${tag.split(' ')[0]} signed=${signedIds.length} signed_ids=${signedIds.join(',') || 'none'} signed_files_unmatched=${unmatched.join(',') || 'none'} done_excluding_signed=${sel.length - notDone.length - signedIds.length} of ${sel.length}`);
+    signedExceptionCount = signedIds.length;
+  }
   return notDone.length === 0;
 }
 
@@ -1125,7 +1183,7 @@ function checkC2() {
 }
 
 function checkC3() { return report('C3 realistic-size', scoreboardRows(), isRSZ); }
-function checkC4() { return report('C4 real-data workflows', scoreboardRows(), isRD); }
+function checkC4() { return report('C4 real-data workflows', scoreboardRows(), isRD, true); }
 function checkC5() { return report('C5 grouping levels', scoreboardRows(), isGRP); }
 
 // --- C6: reverse-gap list, one written decision per item, from a fixed vocabulary ----
@@ -1338,11 +1396,12 @@ function checkC8() {
 
 // --- X2: every scoreboard row done ----------------------------------------
 
-function checkX2() { return report('X2 all scoreboard rows', scoreboardRows(), null); }
+function checkX2() { return report('X2 all scoreboard rows', scoreboardRows(), null, true); }
 
 const MODES = { C0: checkC0, C1: checkC1, C2: checkC2, C3: checkC3, C4: checkC4, C5: checkC5, C6: checkC6, C7: checkC7, C8: checkC8, X2: checkX2 };
 
 const mode = process.argv[2];
 if (!MODES[mode]) die(`unknown mode ${mode} (expected one of ${Object.keys(MODES).join(', ')})`);
 const met = MODES[mode]();
-console.log(met ? `${mode}_MET` : `${mode}_NOT_MET`);
+// Never a plain _MET when any row was resolved by a signed known-fail exception (C4 and X2 only; the count is 0 elsewhere).
+console.log(met ? (signedExceptionCount > 0 ? `${mode}_MET_WITH_SIGNED_EXCEPTIONS` : `${mode}_MET`) : `${mode}_NOT_MET`);
