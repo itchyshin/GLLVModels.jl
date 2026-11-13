@@ -528,6 +528,7 @@ println(_SHARD === nothing ?
     _shard_include("test_tweedie_engine_health.jl")
     _shard_include("test_tweedie_grouped_engine_health.jl")
     _shard_include("test_tweedie_grouped_mode_search_503.jl")
+    _shard_include("test_tweedie_grouped_k1_mode_1042.jl")
     _shard_include("test_tweedie_power_contract.jl")
     _shard_include("test_tweedie_cdf.jl")
     _shard_include("test_exponential.jl")
