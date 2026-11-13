@@ -59,9 +59,14 @@ estimates with `converged = true`, and prints no message. The loading it reports
 is wherever the optimiser stopped, so do not read it. In one Normal example
 (40 sites, `Random.seed!(1)`) loadings of 0, 0.18, 0.35, 0.53 and 0.70, each with
 the residual variance adjusted to keep `loading² + σ²` fixed, all give the
-log-likelihood -47.1072025987138 to 1.5e-14. For one species fit `K = 0`. Other
-families (for example Poisson) have a curved optimum at `p = 1` and are not
-covered by this statement.
+log-likelihood -47.1072025987138 to 1.5e-14. For one species with a `Binomial()`
+response, fit `K = 0`, which gives the same log-likelihood. The Normal fitter
+refuses `K = 0` (`K must lie in 1:p`), so for a `Normal()` response use the sample
+mean and variance directly: at `p = 1` the `K = 1` log-likelihood equals that of
+an ordinary Normal sample. Other families (for example Poisson) have a curved
+optimum at `p = 1` and are not covered by this statement. They accept `K = 0`,
+but for Poisson, NB2, Gamma and Beta that fits a model without the latent
+variable, which is a different model, not the same fit.
 
 The R packages do not give a clean answer either. gllvmTMB 0.7.1 stops at `p = 1`
 for the `0 + trait` form with a raw error (`contrasts can be applied only to
