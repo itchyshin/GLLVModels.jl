@@ -255,8 +255,9 @@ function fit_quadratic_gllvm(Y::AbstractMatrix{<:Real}; family = Poisson(),
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         D = reshape(θ[(p + rr + 1):(p + rr + pK)], p, K)
         disp = has_disp ? exp(θ[p + rr + pK + 1]) : NaN
-        fam = _cov_family(family, disp)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(family, disp)
             -quadratic_marginal_loglik_laplace(fam, Y, Nm, Λ, D, β, lk;
                                                maxiter = newton_maxiter, tol = newton_tol)
         catch
