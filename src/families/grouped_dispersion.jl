@@ -1059,7 +1059,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     boundary = _dispersion_group_boundary(r̂g)   # flags BOTH ends; feeds `dispersion_boundary` and the interval code
     lowb = _dispersion_group_lower_boundary(r̂g)   # only the lower end blocks `converged` (upper end: warn only)
     any(lowb) && @warn "NB2 grouped-cov fit reached the per-group lower boundary (r_group below 1e-6) for group(s) $(findall(lowb)); those groups' overdispersion is extreme and not identified from this data; converged is false for this fit." maxlog=1
-    any(>(1e6), r̂g) && @warn "NB2 grouped-cov fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). The fit's other estimates are unaffected, and converged is not affected by this." maxlog=1
+    any(>(1e6), r̂g) && @warn "NB2 grouped-cov fit has r_group above 1e6 for group(s) $(findall(>(1e6), r̂g)); the group's dispersion is at the Poisson limit (no overdispersion left to estimate). converged is not affected by this, but the other estimates are not guaranteed to be unaffected: the latent loadings can take up overdispersion that the boundary groups' r no longer carries, which can inflate Λ Λ' (see issue 1023; gllvmTMB shows the same). Inspect fit.r_group before interpreting the shared covariance." maxlog=1
     loglik, conv, iters = _fit_verdict(nll, conv0, iters0)
     return NBGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, r̂g, gidx, link,
                            loglik, conv && !any(lowb), iters, hessian, boundary)
