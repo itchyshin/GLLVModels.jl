@@ -369,7 +369,9 @@ end
 # Float-valued counts: integer-valued floats (3.0) are accepted, anything else throws an
 # `ArgumentError` naming the first offending cell (#730).
 function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Union{Missing,AbstractFloat}};
-        mask = nothing, kwargs...)
-    return fit_binomial_gllvm_va(_float_counts_to_int(Y, mask; caller = "fit_binomial_gllvm_va");
-                mask = mask, kwargs...)
+        N = nothing, mask = nothing, kwargs...)
+    (N === nothing || size(N) == size(Y)) || throw(DimensionMismatch("N must be $(size(Y, 1))×$(size(Y, 2))"))
+    return fit_binomial_gllvm_va(_float_counts_to_int(Y, mask; caller = "fit_binomial_gllvm_va",
+                                 kind = :binomial, N = N);
+                N = N, mask = mask, kwargs...)
 end

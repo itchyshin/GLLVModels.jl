@@ -121,10 +121,11 @@ end
 # shared support error (first offending cell named) for a non-integer, negative or non-finite
 # observed cell, then returns the same counts as `Int`, keeping `missing` cells and writing a
 # placeholder 0 into cells that `mask` marks unobserved. Integer-valued floats (3.0) are accepted.
-function _float_counts_to_int(Y::AbstractMatrix, mask; caller::AbstractString)
+function _float_counts_to_int(Y::AbstractMatrix, mask; caller::AbstractString,
+        kind::Symbol = :count, N = nothing)
     mask === nothing || size(mask) == size(Y) || throw(DimensionMismatch(
         "mask is $(size(mask)); Y is $(size(Y))"))
-    _check_response_support(:count, Y, mask; caller = caller)
+    _check_response_support(kind, Y, mask; caller = caller, N = N)
     T = any(ismissing, Y) ? Union{Missing, Int} : Int
     return T[(ismissing(Y[t, i]) || (mask !== nothing && !mask[t, i])) ?
              (ismissing(Y[t, i]) ? missing : 0) : Int(Y[t, i])

@@ -61,4 +61,23 @@ using Test, GLLVModels, Random, Distributions
         @test names_cell(thrown(() -> fit_poisson_gllvm_va(bad_cell(Ycnt, 2.5); K = 1, mask = trues(p, n))),
                          "fit_poisson_gllvm_va", 2.5)
     end
+
+    @testset "binomial VA on Float64 names the Binomial support, with the trials bound" begin
+        e = thrown(() -> fit_binomial_gllvm_va(bad_cell(Ybin, 2.5); K = 1, N = Nbin, iterations = it))
+        @test names_cell(e, "fit_binomial_gllvm_va", 2.5)
+        @test e isa ArgumentError && occursin("Binomial support", e.msg) && !occursin("Poisson support", e.msg)
+        e2 = thrown(() -> fit_binomial_gllvm_va(bad_cell(Ybin, 9.0); K = 1, N = Nbin, iterations = it))
+        @test e2 isa ArgumentError && occursin("N[2, 3] = 5", e2.msg)   # integer-valued but above N
+        @test thrown(() -> fit_binomial_gllvm_va(float.(Ybin); K = 1, N = Nbin[1:2, :], iterations = it)) isa DimensionMismatch
+    end
+
+    @testset "truncated NB2 per-trait: a masked 2.5, NaN or Inf is ignored, not an InexactError" begin
+        mask = trues(p, n); mask[2, 3] = false
+        fi = fit_truncated_nbinom2_gllvm_pertrait(Ypos; K = 1, iterations = it, mask = mask)
+        for v in (2.5, NaN, Inf)
+            f = fit_truncated_nbinom2_gllvm_pertrait(bad_cell(Ypos, v); K = 1, iterations = it, mask = mask)
+            @test isfinite(f.loglik)
+            @test f.loglik == fi.loglik       # the masked cell never reaches the fit
+        end
+    end
 end
