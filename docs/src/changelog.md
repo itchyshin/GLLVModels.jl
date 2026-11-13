@@ -12,7 +12,7 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   `fit_precision_multivariate`, `fit_grouped_gaussian`, `fit_phylo_latent_gllvm`,
   `fit_lognormal_gllvm`, `fit_delta_lognormal_gllvm` and the others listed in the
   repository CHANGELOG) throw an `ArgumentError` for `missing` in `Y`; `em_fa` also
-  for NaN. `confint`, `profile_ci` and `bootstrap_ci` throw for `missing` or NaN in `y`
+  for NaN or Inf. `confint`, `profile_ci` and `bootstrap_ci` throw for `missing`, NaN or Inf in `y`
   on a fit made without a mask (they returned all-NaN intervals).
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
