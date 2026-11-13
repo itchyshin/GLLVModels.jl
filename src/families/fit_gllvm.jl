@@ -279,6 +279,22 @@ function _fit_gllvm_per_column(Y, family::AbstractVector; K, num_lv, row_eff, di
     return fit_mixed_gllvm(Y; families = family, K = K, kw...)
 end
 
+# `K` (or `num_lv`) must be an integer. Below zero it used to surface as "invalid Array
+# dimensions" from inside a fitter, and a non-integer as a `TypeError` on the fitter's
+# keyword. `K = 0` is a valid GLM fit and is not touched here; `K > p` keeps the
+# range message of the fitter (`_check_lambda_rank`). A negative Gaussian `K` is left to
+# the Gaussian fitter, whose message already states its own range (`1:p`). Multinomial
+# refuses any `K` other than 0 with its own message, which says why, so it is skipped too.
+function _check_K_argument(K, caller::AbstractString; family = nothing)
+    K === nothing && return nothing
+    family isa Multinomial && return nothing
+    K isa Integer || throw(ArgumentError(
+        "$caller: K must be a non-negative integer (got K = $K of type $(typeof(K)))"))
+    (K >= 0 || family isa Normal) || throw(ArgumentError(
+        "$caller: K must be a non-negative integer (got K = $K)"))
+    return nothing
+end
+
 """
     fit_gllvm(Y; family = Normal(), K = nothing, num_lv = nothing, Kmax = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
@@ -632,6 +648,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         end
         K = num_lv
     end
+    _check_K_argument(K, "fit_gllvm"; family = family)
 
     # --- K omitted: estimate it (lane auto-d-20260926; docs/design/74). -------
     # Sweep K = 1:Kmax through `select_lv` (guarded: failed, unconverged,

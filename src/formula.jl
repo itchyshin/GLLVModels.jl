@@ -287,6 +287,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             coefficient_names=coefficient_names, kwargs...)
     end
     K === _FORMULA_K_UNSET && throw(UndefKeywordError(:K))
+    _check_K_argument(K, "gllvm"; family = family)
     # The formula builds the design below and splats `kwargs...` after it, so a caller `X`
     # would silently win over the formula covariates (#742).
     haskey(kwargs, :X) && throw(ArgumentError(
