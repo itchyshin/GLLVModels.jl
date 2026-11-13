@@ -120,7 +120,7 @@ for (_k, _files) in enumerate((
         "test_formula_no_intercept_default.jl", "test_constrained_ordination.jl", "test_quadratic.jl",
         "test_variational_binomial.jl", "test_variational_beta.jl", "test_variational_exponential.jl",
         "test_random_slopes.jl", "test_twolevel.jl", "test_random_slopes_poisson.jl",
-        "test_mixed_mode_search.jl", "test_mixed_contract.jl", "test_bridge_zib.jl",
+        "test_mixed_mode_search.jl", "test_mixed_contract.jl", "test_mixed_unsupported_family.jl", "test_bridge_zib.jl",
         "test_bridge_zip_nox.jl", "test_bridge_truncated_poisson.jl", "test_bridge_lv_predictor.jl",
         "test_confint_hessian_twopart_truncnb2.jl", "test_grouped_hessian_consistency.jl", "test_saturation_health.jl",
         "test_phylo_branch_re.jl", "test_branch_re_marginal_fallback.jl", "test_core070_interface_registry.jl",
@@ -962,6 +962,8 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_n_init_mite_1022.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
+    # fit_mixed_gllvm: an unsupported family marker gives the documented ArgumentError, not a default_link MethodError.
+    _shard_include("test_mixed_unsupported_family.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")

@@ -610,6 +610,10 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
     offset = _normalize_offset(offset, p, n; Y = Y, caller = "fit_mixed_gllvm")
     length(families) == p || throw(DimensionMismatch(
         "families has length $(length(families)); expected p = $p (one per trait/row)"))
+    # Layout (single source of truth) — also validates the families. It runs before
+    # `default_link`, which has no method for an unsupported marker, so the documented
+    # ArgumentError (not a MethodError naming `default_link`) reaches the caller.
+    disp_index, n_disp = _mixed_family_layout(families)
     links_v = links === nothing ? Link[default_link(fam) for fam in families] :
               collect(Link, links)
     length(links_v) == p || throw(DimensionMismatch(
@@ -618,8 +622,6 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
     rr = rr_theta_len(p, K)
 
-    # Layout (single source of truth) — also validates the families.
-    disp_index, n_disp = _mixed_family_layout(families)
     _check_mixed_offset_admission(offset, families)
 
     # Family-aware PPCA warm start: per-trait link-scale pseudodata, one SVD.
