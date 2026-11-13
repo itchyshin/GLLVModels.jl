@@ -16,7 +16,8 @@
 // listed a workflow directory's contents in git mode. Each control below reproduces one of
 // those bugs on a fixture and asserts both the verdict and the specific printed reason -- a
 // control that merely fails is not enough; it must fail for the stated reason.
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 import { mkdtempSync, rmSync, cpSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -1555,6 +1556,151 @@ test('C4 direct engine: a properly signed RD disposition row is done without a r
 });
 test('C4 direct engine: the rule does not touch rows outside C4 (a C3 row with a plain receipt stays done)', () => {
   assert.match(runTree(() => {}, 'C3').stdout, /C3_MET$/m);
+});
+
+// --- Signed known-fail exception (maintainer reply "A, mechanics C", 2026-11-09). Two named real-data rows may be ruled out of P1
+// scope by a signed file. The row is NOT done in the pass sense: C4 and X2 print signed=N, and the verdict is
+// MET_WITH_SIGNED_EXCEPTIONS, never plain MET. Everything here is a synthetic fixture tree in a temp dir; no real signature is involved. ---
+const KF_SPIDER = 'data-RD-SPIDER-NB2';
+const KF_BEETLE = 'data-RD-BEETLE-NB2';
+const KF_DIR = `${L}/signed-exceptions`;
+const kfReceipt = (id) => `${L}/receipts/${id}.json`;
+const kfCell = (id) => `Known fail, signed exception: ${KF_DIR}/${id}.json; receipt: ${kfReceipt(id)}; NOT A PASS; signed_by: Shinichi Nakagawa; signed_on: 2026-11-01`;
+const kfException = (dir, id, over = {}) => ({
+  kind: 'KNOWN_FAIL_SIGNED_EXCEPTION', state: 'SIGNED', scoreboard_id: id, pin: 'P1', is_a_pass: false, bars_changed: false,
+  receipt: kfReceipt(id), receipt_sha256: createHash('sha256').update(readFileSync(join(dir, over.receipt ?? kfReceipt(id)))).digest('hex'),
+  reason: 'measured FAIL, not a pass (fixture reason)', signed_by: 'Shinichi Nakagawa', signed_on: '2026-11-01', ...over,
+});
+// opts: signed = ids that get a KNOWN-FAIL-SIGNED row and a file; extra(ctx) = further mutation after both exist.
+function kfTree({ signed = [], rows = [KF_SPIDER, KF_BEETLE], extra = () => {} } = {}) {
+  return (ctx) => {
+    const { dir } = ctx;
+    const sb = join(dir, L, 'scoreboard.md');
+    let add = '';
+    for (const id of rows) {
+      writeFileSync(join(dir, kfReceipt(id)), JSON.stringify({ case_id: id, result: 'FAIL' }));
+      add += signed.includes(id)
+        ? `| ${id} | real-data NB2 | KNOWN-FAIL-SIGNED | ${kfCell(id)} | fixture |\n`
+        : `| ${id} | real-data NB2 | FAIL | not bound; cited: non-binding ${kfReceipt(id)} | fixture |\n`;
+    }
+    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/\n*$/, '\n') + add);
+    for (const id of signed) ctx.writeJ(`signed-exceptions/${id}.json`, kfException(dir, id));
+    extra(ctx);
+  };
+}
+const kfSum = (mode, m) => runTree(m, mode);
+
+test('signed exception, no files: spider and beetle stay FAIL, C4 and X2 are NOT_MET with signed=0', () => {
+  for (const [mode, rows] of [['C4', 3], ['X2', 7]]) {
+    const r = kfSum(mode, kfTree());
+    assert.match(r.stdout, new RegExp(`rows=${rows} done=${rows - 2}\\s[\\s\\S]*signed=0 signed_ids=none signed_files_unmatched=none`), r.stdout);
+    assert.match(r.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'), r.stdout);
+  }
+});
+test('signed exception, spider only: signed=1, spider resolved, beetle still open, C4 and X2 NOT_MET', () => {
+  const m = kfTree({ signed: [KF_SPIDER] });
+  for (const [mode, rows] of [['C4', 3], ['X2', 7]]) {
+    const r = kfSum(mode, m);
+    assert.match(r.stdout, new RegExp(`rows=${rows} done=${rows - 1} not_done=${KF_BEETLE}:NOT_DONE\\s[\\s\\S]*signed=1 signed_ids=${KF_SPIDER}`), r.stdout);
+    assert.match(r.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'), r.stdout);
+  }
+});
+test('signed exception, both: signed=2 and the verdict is MET_WITH_SIGNED_EXCEPTIONS, never plain MET (C4 and X2)', () => {
+  const m = kfTree({ signed: [KF_SPIDER, KF_BEETLE] });
+  for (const [mode, rows] of [['C4', 3], ['X2', 7]]) {
+    const r = kfSum(mode, m);
+    assert.match(r.stdout, new RegExp(`rows=${rows} done=${rows} not_done=none\\s[\\s\\S]*signed=2 signed_ids=${KF_SPIDER},${KF_BEETLE}`), r.stdout);
+    assert.match(r.stdout, new RegExp(`done_excluding_signed=${rows - 2} of ${rows}$`, 'm'), r.stdout);
+    assert.match(r.stdout, new RegExp(`${mode}_MET_WITH_SIGNED_EXCEPTIONS$`, 'm'), r.stdout);
+    assert.doesNotMatch(r.stdout, new RegExp(`${mode}_MET$`, 'm'), r.stdout);
+    assert.equal(r.code, 0);
+  }
+  for (const mode of ['C2', 'C3', 'C5']) assert.match(kfSum(mode, m).stdout, new RegExp(`${mode}_MET$`, 'm'), `${mode} must be unaffected`);
+});
+test('signed exception, a clean run on the base fixture still prints plain MET and signed=0', () => {
+  for (const mode of ['C4', 'X2']) {
+    const r = runTree(() => {}, mode);
+    assert.match(r.stdout, /signed=0 signed_ids=none/);
+    assert.match(r.stdout, new RegExp(`${mode}_MET$`, 'm'));
+  }
+});
+
+// Each control breaks one thing in an otherwise valid spider exception (beetle left FAIL) and must name the reason.
+const kfBad = (over) => kfTree({ signed: [KF_SPIDER], extra: ({ dir, readJ, writeJ }) => writeJ(`signed-exceptions/${KF_SPIDER}.json`, { ...readJ(`signed-exceptions/${KF_SPIDER}.json`), ...over }) });
+for (const [name, over, why] of [
+  ['an unsigned draft (state "DRAFT, NOT SIGNED")', { state: 'DRAFT, NOT SIGNED', signed_by: null, signed_on: null }, /SIGNED_EXCEPTION_STATE_NOT_SIGNED/],
+  ['state SIGNED but no signer', { signed_by: null }, /SIGNED_EXCEPTION_DISPOSITION-SIGNED-UNVERIFIED/],
+  ['an agent as signer', { signed_by: 'Claude (agent)' }, /SIGNED_EXCEPTION_DISPOSITION-SIGNER-NOT-ALLOWED/],
+  ['a future signature date', { signed_on: '9999-01-01' }, /SIGNED_EXCEPTION_DISPOSITION-SIGNED-BAD-DATE/],
+  ['another row\'s id', { scoreboard_id: KF_BEETLE }, /SIGNED_EXCEPTION_ROW_MISMATCH/],
+  ['a wrong kind', { kind: 'DISPOSITION-SIGNED' }, /SIGNED_EXCEPTION_BAD_KIND/],
+  ['pin P0', { pin: 'P0' }, /SIGNED_EXCEPTION_NOT_PINNED_TO_P1/],
+  ['is_a_pass true', { is_a_pass: true }, /SIGNED_EXCEPTION_MUST_STATE_NOT_A_PASS/],
+  ['is_a_pass missing', { is_a_pass: undefined }, /SIGNED_EXCEPTION_MUST_STATE_NOT_A_PASS/],
+  ['bars_changed true', { bars_changed: true }, /SIGNED_EXCEPTION_MUST_STATE_NO_BAR_CHANGE/],
+  ['a blank reason', { reason: '  ' }, /SIGNED_EXCEPTION_WITHOUT_REASON/],
+  ['a receipt the row does not cite', { receipt: kfReceipt(KF_BEETLE) }, /SIGNED_EXCEPTION_RECEIPT_NOT_CITED_BY_ROW/],
+  ['a wrong receipt hash', { receipt_sha256: 'a'.repeat(64) }, /SIGNED_EXCEPTION_RECEIPT_HASH_MISMATCH/],
+]) {
+  test(`signed exception: ${name} is refused (spider stays open, C4 and X2 NOT_MET, signed=0)`, () => {
+    for (const mode of ['C4', 'X2']) {
+      const r = kfSum(mode, kfBad(over));
+      assert.match(r.stdout, new RegExp(`${KF_SPIDER}:${why.source}`), r.stdout);
+      assert.match(r.stdout, /signed=0 /, r.stdout);
+      assert.match(r.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'), r.stdout);
+    }
+  });
+}
+test('signed exception: the receipt changing after signing (re-measure) makes the exception stale', () => {
+  const m = kfTree({ signed: [KF_SPIDER], extra: ({ dir }) => writeFileSync(join(dir, kfReceipt(KF_SPIDER)), JSON.stringify({ case_id: KF_SPIDER, result: 'FAIL', remeasured: true })) });
+  assert.match(kfSum('C4', m).stdout, /SIGNED_EXCEPTION_RECEIPT_HASH_MISMATCH/);
+});
+test('signed exception: a KNOWN-FAIL-SIGNED row with no file is refused', () => {
+  const m = kfTree({ signed: [KF_SPIDER], extra: ({ dir }) => rmSync(join(dir, KF_DIR, `${KF_SPIDER}.json`)) });
+  const r = kfSum('C4', m);
+  assert.match(r.stdout, /SIGNED_EXCEPTION_FILE_MISSING/);
+  assert.match(r.stdout, /C4_NOT_MET$/m);
+});
+test('signed exception: a signed file whose row is still FAIL counts nothing and is listed as unmatched', () => {
+  const m = kfTree({ extra: ({ dir, writeJ }) => writeJ(`signed-exceptions/${KF_SPIDER}.json`, kfException(dir, KF_SPIDER)) });
+  for (const mode of ['C4', 'X2']) {
+    const r = kfSum(mode, m);
+    assert.match(r.stdout, new RegExp(`signed=0 signed_ids=none signed_files_unmatched=${KF_SPIDER}.json`), r.stdout);
+    assert.match(r.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'), r.stdout);
+  }
+});
+test('signed exception: a KNOWN-FAIL-SIGNED row whose receipt cell is "not bound" is refused', () => {
+  const m = kfTree({ signed: [KF_SPIDER], extra: ({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/Known fail, signed exception:/, 'not bound; Known fail, signed exception:'));
+  } });
+  assert.match(kfSum('C4', m).stdout, new RegExp(`${KF_SPIDER}:KNOWN_FAIL_RECEIPT_CELL_NOT_AN_EXCEPTION`));
+});
+test('signed exception: only the two named rows qualify (RD-1 with a valid-looking file is refused)', () => {
+  const m = ({ dir, writeJ }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/\| RD-1 \|([^|]*)\| EVIDENCED \|[^|]*\|/, `| RD-1 |$1| KNOWN-FAIL-SIGNED | Known fail, signed exception: ${KF_DIR}/RD-1.json; receipt: ${L}/receipts/rd1.json; NOT A PASS |`));
+    writeJ('signed-exceptions/RD-1.json', kfException(dir, 'RD-1', { receipt: `${L}/receipts/rd1.json` }));
+  };
+  const r = kfSum('C4', m);
+  assert.match(r.stdout, /RD-1:KNOWN_FAIL_ROW_NOT_LISTED/);
+  assert.match(r.stdout, /C4_NOT_MET$/m);
+});
+test('signed exception: a family-prefixed look-alike id (extra-RD-SPIDER-NB2) is not on the list', () => {
+  const m = kfTree({ rows: ['extra-RD-SPIDER-NB2'], signed: ['extra-RD-SPIDER-NB2'] });
+  assert.match(kfSum('C4', m).stdout, /extra-RD-SPIDER-NB2:KNOWN_FAIL_ROW_NOT_LISTED/);
+});
+test('signed exception: KNOWN-FAIL-SIGNED never closes a non-C4 row (C3 and X2)', () => {
+  const m = ({ dir }) => {
+    const sb = join(dir, L, 'scoreboard.md');
+    writeFileSync(sb, readFileSync(sb, 'utf8').replace(/\| CAP-X-RSZ \|([^|]*)\| EVIDENCED \|[^|]*\|/, '| CAP-X-RSZ |$1| KNOWN-FAIL-SIGNED | Known fail, signed exception: x |'));
+  };
+  assert.match(runTree(m, 'C3').stdout, /CAP-X-RSZ:KNOWN_FAIL_ONLY_FOR_C4_ROWS[\s\S]*C3_NOT_MET$/m);
+  assert.match(runTree(m, 'X2').stdout, /CAP-X-RSZ:KNOWN_FAIL_ONLY_FOR_C4_ROWS/);
+});
+test('signed exception: a case-map disposition spelled KNOWN-FAIL-SIGNED cannot spoof the status word in the assembler', () => {
+  const spoof = spawnSync('python3', ['-c', `import sys; sys.path.insert(0, ${JSON.stringify(join(REPO_ROOT, 'tools'))}); import true_parity_assemble as a; print(a.disposition_status('known-fail-signed')[0])`], { encoding: 'utf8' });
+  assert.equal(spoof.stdout.trim(), 'DISPOSITION-UNVERIFIED', spoof.stderr);
 });
 
 // --- Fix round on PR #687 (three adversarial reviews). Each control below fails on the head before the

@@ -1,0 +1,16 @@
+{
+ "kind": "KNOWN_FAIL_SIGNED_EXCEPTION",
+ "state": "SIGNED",
+ "pin": "P1",
+ "is_a_pass": false,
+ "bars_changed": false,
+ "public_wording": "Quote the checker figure done_excluding_signed as the matched count (read it from the checker output at the time; it was 304 of 317 when this exception was signed). Two real-data cases (spider and beetle) are excluded by signed exception and are not passes.",
+ "revisit": "P2",
+ "scoreboard_id": "data-RD-BEETLE-NB2",
+ "source_id": "data/RD-BEETLE-NB2",
+ "receipt": "docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json",
+ "receipt_sha256": "89c1f28d53cc3c004fd24525639ba867801470b79c6c8dfc9dd6ebe4de1c1286",
+ "reason": "R reports a non-positive-definite Hessian, cause not diagnosed.",
+ "signed_by": "itchyshin",
+ "signed_on": "2026-11-13"
+}

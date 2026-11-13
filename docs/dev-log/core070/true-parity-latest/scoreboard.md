@@ -27,18 +27,18 @@ Inputs:
 
 ## Totals by family
 
-| `family` | EVIDENCED | EVIDENCED-BEHAVIOURAL | DISPOSITION-SIGNED | REGISTRATION-ONLY | PARTIAL | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
-|---|---|---|---|---|---|---|---|---|---|
-| `aghq` | 14 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 21 |
-| `covariance` | 17 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 19 |
-| `data` | 27 | 0 | 5 | 0 | 0 | 0 | 4 | 0 | 36 |
-| `family` | 24 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 26 |
-| `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
-| `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 63 |
-| `isdm` | 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 21 |
-| `namespace` | 55 | 0 | 10 | 3 | 0 | 0 | 0 | 1 | 69 |
-| `postfit` | 45 | 1 | 4 | 0 | 1 | 1 | 0 | 0 | 52 |
-| `all` | 206 | 63 | 35 | 3 | 2 | 1 | 6 | 1 | 317 |
+| `family` | EVIDENCED | EVIDENCED-BEHAVIOURAL | DISPOSITION-SIGNED | KNOWN-FAIL-SIGNED | REGISTRATION-ONLY | PARTIAL | NON-DISCRIMINATING | FAIL | NOT-MEASURED | total |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `aghq` | 14 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 |
+| `covariance` | 17 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 19 |
+| `data` | 27 | 0 | 5 | 2 | 0 | 0 | 0 | 2 | 0 | 36 |
+| `family` | 24 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 26 |
+| `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
+| `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 63 |
+| `isdm` | 11 | 5 | 4 | 0 | 0 | 0 | 0 | 1 | 0 | 21 |
+| `namespace` | 55 | 0 | 10 | 0 | 3 | 0 | 0 | 0 | 1 | 69 |
+| `postfit` | 45 | 1 | 4 | 0 | 0 | 1 | 1 | 0 | 0 | 52 |
+| `all` | 206 | 63 | 35 | 2 | 3 | 2 | 1 | 4 | 1 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -209,8 +209,8 @@ decision for the PR that measures it, not something this tool does.
 | data-DATA-W-ZERO `data/DATA-W-ZERO` | required_core; cases: P1-JULIA-DATA-W-ZERO-OBJECTIVE, P1-JULIA-DATA-W-ZERO-INTERCEPTS, P1-JULIA-DATA-W-ZERO-LAMBDA-LAMBDAT | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/data-twins/W-ZERO.json | family data; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | data-RD-URBANISATION-BINOMIAL `data/RD-URBANISATION-BINOMIAL` | required_core; cases: CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LOGLIK, CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-BETA, CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-LLT, CAMPAIGN-C4-RD-URBANISATION-BINOMIAL-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-URBANISATION-BINOMIAL.json | family data; evidence_tier numeric_fail; measured_against P1 |
 | data-RD-CRABS-GAUSSIAN `data/RD-CRABS-GAUSSIAN` | required_core; cases: CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LOGLIK, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-BETA, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-LLT, CAMPAIGN-C4-RD-CRABS-GAUSSIAN-ETA | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-CRABS-GAUSSIAN.json | family data; evidence_tier numeric; measured_against P1 |
-| data-RD-SPIDER-NB2 `data/RD-SPIDER-NB2` | required_core; cases: CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK, CAMPAIGN-C4-RD-SPIDER-NB2-BETA, CAMPAIGN-C4-RD-SPIDER-NB2-LLT, CAMPAIGN-C4-RD-SPIDER-NB2-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json | family data; evidence_tier numeric_fail; measured_against P1 |
-| data-RD-BEETLE-NB2 `data/RD-BEETLE-NB2` | required_core; cases: CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK, CAMPAIGN-C4-RD-BEETLE-NB2-BETA, CAMPAIGN-C4-RD-BEETLE-NB2-LLT, CAMPAIGN-C4-RD-BEETLE-NB2-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json | family data; evidence_tier numeric_fail; measured_against P1 |
+| data-RD-SPIDER-NB2 `data/RD-SPIDER-NB2` | required_core; cases: CAMPAIGN-C4-RD-SPIDER-NB2-LOGLIK, CAMPAIGN-C4-RD-SPIDER-NB2-BETA, CAMPAIGN-C4-RD-SPIDER-NB2-LLT, CAMPAIGN-C4-RD-SPIDER-NB2-ETA | KNOWN-FAIL-SIGNED | Known fail, signed exception: docs/dev-log/core070/true-parity-latest/signed-exceptions/data-RD-SPIDER-NB2.json; receipt: docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-SPIDER-NB2.json; NOT A PASS; signed_by: itchyshin; signed_on: 2026-11-13 | family data; evidence_tier numeric_fail; measured_against P1; signed known-fail exception: NOT A PASS |
+| data-RD-BEETLE-NB2 `data/RD-BEETLE-NB2` | required_core; cases: CAMPAIGN-C4-RD-BEETLE-NB2-LOGLIK, CAMPAIGN-C4-RD-BEETLE-NB2-BETA, CAMPAIGN-C4-RD-BEETLE-NB2-LLT, CAMPAIGN-C4-RD-BEETLE-NB2-ETA | KNOWN-FAIL-SIGNED | Known fail, signed exception: docs/dev-log/core070/true-parity-latest/signed-exceptions/data-RD-BEETLE-NB2.json; receipt: docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-BEETLE-NB2.json; NOT A PASS; signed_by: itchyshin; signed_on: 2026-11-13 | family data; evidence_tier numeric_fail; measured_against P1; signed known-fail exception: NOT A PASS |
 | data-RD-FUNGI-BINOMIAL `data/RD-FUNGI-BINOMIAL` | required_core; cases: CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LOGLIK, CAMPAIGN-C4-RD-FUNGI-BINOMIAL-BETA, CAMPAIGN-C4-RD-FUNGI-BINOMIAL-LLT, CAMPAIGN-C4-RD-FUNGI-BINOMIAL-ETA | FAIL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/data/campaign/RD-FUNGI-BINOMIAL.json | family data; evidence_tier numeric_fail; measured_against P1 |
 | data-RD-PHYLO-DISPOSITION `data/RD-PHYLO-DISPOSITION` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family data; evidence_tier not_measured; measured_against P1 |
 | data-RD-TEMPORAL-DISPOSITION `data/RD-TEMPORAL-DISPOSITION` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family data; evidence_tier not_measured; measured_against P1 |

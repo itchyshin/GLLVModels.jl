@@ -1259,3 +1259,22 @@ confirmation; every receipt says so in `tolerance_status`.
   `--check --local-raw DIR` rebuilds it in full. `gen_data.R urban` requires the `URBMAP_ROOT` environment variable and
   stops with a message when it is unset: it has no default path. The row's raw outputs were first pushed in an earlier
   commit of this branch; they are removed from the branch tip but remain in the branch history on GitHub.
+
+## Signed known-fail exception (mechanism; the spider and beetle rows are signed, 2026-11-13)
+
+Shinichi's chat reply "A, mechanics C" (2026-11-09) rules spider and beetle out of P1 scope as signed known fails. This section records the
+checker mechanism; the two signed files are in `signed-exceptions/`. A known fail is not a pass, no bar changes, and no row is refit.
+
+- Scoreboard Status word `KNOWN-FAIL-SIGNED`, accepted only on the two rows in `KNOWN_FAIL_ROWS` (`data-RD-SPIDER-NB2`, `data-RD-BEETLE-NB2`) and
+  only for C4 and X2. It is not in `DONE`. C2, C3 and C5 never accept it.
+- The row's receipt cell reads `Known fail, signed exception: <file>; receipt: <receipt>; NOT A PASS; signed_by: ...; signed_on: ...`.
+- The file is `docs/dev-log/core070/true-parity-latest/signed-exceptions/<scoreboard id>.json`, one file per row, so either row can be signed alone.
+  Required fields: `kind` = `KNOWN_FAIL_SIGNED_EXCEPTION`, `state` = `SIGNED` (a draft says `DRAFT, NOT SIGNED`), `scoreboard_id`, `pin` = `P1`,
+  `is_a_pass` = false, `bars_changed` = false, a visible `reason`, `receipt` (cited by the row) and its `receipt_sha256`, and `signed_by` / `signed_on`
+  under the same allow-list and date rule as every other signed disposition.
+- C4 and X2 print a second line `C4 signed=N signed_ids=... signed_files_unmatched=...`. A signed file whose row is still FAIL counts nothing and
+  is listed as unmatched. When nothing else is open and `signed` is above 0 the verdict is `<mode>_MET_WITH_SIGNED_EXCEPTIONS`, never plain `<mode>_MET`.
+  With no file, an unsigned draft, or a changed receipt, the rows stay FAIL and the verdict stays `<mode>_NOT_MET`.
+- Public wording: quote `done_excluding_signed` from the checker line as the matched count (304 of 317 when the two files were signed), and say that two real-data cases (spider and beetle) are excluded by signed exception and are not passes. 315 of 317 is not a reachable figure under the rulings that leave D4, D7, D9 and fungi open. Do not say "true parity" without that clause.
+- Assembler: `tools/true_parity_assemble.py` writes `KNOWN-FAIL-SIGNED` only when the same checks pass (`known_fail_exception_problem`); otherwise the row
+  stays `FAIL` and the note names the rejection.

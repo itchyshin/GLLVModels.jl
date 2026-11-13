@@ -237,7 +237,7 @@ TIER_BUCKET = {
     None: "NO-TIER",
 }
 STATUS_ORDER = [
-    "EVIDENCED", "EVIDENCED-BEHAVIOURAL", "DISPOSITION-SIGNED", "NUMERIC-UNVERIFIED",
+    "EVIDENCED", "EVIDENCED-BEHAVIOURAL", "DISPOSITION-SIGNED", "KNOWN-FAIL-SIGNED", "NUMERIC-UNVERIFIED",
     "BEHAVIOURAL-UNVERIFIED", "REGISTRATION-ONLY", "HELD",
     "PARTIAL", "NEEDS-SURFACE", "NON-NUMERIC", "NON-DISCRIMINATING", "FAIL", "NOT-MEASURED",
     "NO-TIER", "DISPOSITION-UNVERIFIED",
@@ -317,6 +317,60 @@ def status_exception_problem(row):
     if not isinstance(e, dict) or not isinstance(e.get("reason"), str) or not js_trim(e["reason"]):
         return "receipt_status_exception without a reason"
     return signature_problem(e.get("signed_by"), e.get("signed_on"))
+
+
+# Signed known-fail exception (maintainer reply "A, mechanics C", 2026-11-09). Keep in step with KNOWN_FAIL_* and
+# knownFailExceptionProblem in tools/true_parity_check.mjs. A measured FAIL on one of two named real-data rows reads
+# KNOWN-FAIL-SIGNED only when the signed file at KNOWN_FAIL_DIR/<scoreboard id>.json passes; the checker counts that row as
+# signed=N in C4 and X2 and never as a pass. No file, or a file that fails, leaves the row FAIL.
+KNOWN_FAIL_ROWS = frozenset({"data-RD-SPIDER-NB2", "data-RD-BEETLE-NB2"})
+KNOWN_FAIL_DIR = LEDGER / "signed-exceptions"
+KNOWN_FAIL_KIND = "KNOWN_FAIL_SIGNED_EXCEPTION"
+
+
+def known_fail_exception_path(bid):
+    return KNOWN_FAIL_DIR / f"{bid}.json"
+
+
+def known_fail_exception_problem(row, root, bid):
+    """None when the signed exception for this row is acceptable, "absent" when there is no file, else why not."""
+    if bid not in KNOWN_FAIL_ROWS:
+        return "absent"
+    f = root / known_fail_exception_path(bid)
+    if not f.is_file():
+        return "absent"
+    try:
+        e = json.loads(f.read_text())
+    except (OSError, ValueError):
+        return "SIGNED_EXCEPTION_NOT_JSON"
+    if not isinstance(e, dict):
+        return "SIGNED_EXCEPTION_NOT_AN_OBJECT"
+    if e.get("kind") != KNOWN_FAIL_KIND:
+        return "SIGNED_EXCEPTION_BAD_KIND"
+    if e.get("state") != "SIGNED":
+        return f"SIGNED_EXCEPTION_STATE_NOT_SIGNED({json.dumps(e.get('state'))})"
+    if e.get("scoreboard_id") != bid:
+        return "SIGNED_EXCEPTION_ROW_MISMATCH"
+    if e.get("pin") not in ("P1", P1_SHA):
+        return "SIGNED_EXCEPTION_NOT_PINNED_TO_P1"
+    if e.get("is_a_pass") is not False:
+        return "SIGNED_EXCEPTION_MUST_STATE_NOT_A_PASS"
+    if e.get("bars_changed") is not False:
+        return "SIGNED_EXCEPTION_MUST_STATE_NO_BAR_CHANGE"
+    if not isinstance(e.get("reason"), str) or not js_trim(e["reason"]):
+        return "SIGNED_EXCEPTION_WITHOUT_REASON"
+    sig = signature_problem(e.get("signed_by"), e.get("signed_on"))
+    if sig is not None:
+        return f"SIGNED_EXCEPTION_{sig}"
+    rec = e.get("receipt")
+    if not isinstance(rec, str) or rec not in nonbinding_paths(row) + receipt_paths(row):
+        return "SIGNED_EXCEPTION_RECEIPT_NOT_CITED_BY_ROW"
+    if not (root / rec).is_file():
+        return f"SIGNED_EXCEPTION_RECEIPT_DANGLING({rec})"
+    sha = e.get("receipt_sha256")
+    if not isinstance(sha, str) or not SHA256_RE.match(sha) or sha != hashlib.sha256((root / rec).read_bytes()).hexdigest():
+        return "SIGNED_EXCEPTION_RECEIPT_HASH_MISMATCH"
+    return None
 
 
 def as_list(x):
@@ -1331,6 +1385,13 @@ def derive_status(row, root, equiv=None, cites=None):
         return ("EVIDENCED-BEHAVIOURAL", "") if prob is None else ("BEHAVIOURAL-UNVERIFIED", prob)
     if disp is not None:
         return disposition_status(disp)
+    if tier == "numeric_fail" and isinstance(row.get("source_id"), str):
+        bid = scoreboard_id(row["source_id"], row.get("clause"))
+        why = known_fail_exception_problem(row, root, bid)
+        if why is None:
+            return "KNOWN-FAIL-SIGNED", "signed known-fail exception: NOT A PASS"
+        if why != "absent":
+            return "FAIL", f"signed exception rejected: {why}"
     if not paths and not nonbinding_paths(row):
         return "NOT-MEASURED", "no receipt cited"
     if tier not in TIER_BUCKET:
@@ -1371,6 +1432,10 @@ def build(root: Path, ledger: Path, extra: list[Path]):
             receipt = f"{', '.join(receipt_paths(r))}; receipt_status_exception signed_by: {e.get('signed_by')}; signed_on: {e.get('signed_on')}"
         elif status == "DISPOSITION-SIGNED":
             receipt = f"Disposition: {r.get('disposition')}; signed_by: {r.get('signed_by')}; signed_on: {r.get('signed_on')}"
+        elif status == "KNOWN-FAIL-SIGNED":
+            e = json.loads((root / known_fail_exception_path(bid)).read_text())
+            receipt = (f"Known fail, signed exception: {known_fail_exception_path(bid)}; receipt: {e['receipt']}; NOT A PASS; "
+                       f"signed_by: {e['signed_by']}; signed_on: {e['signed_on']}")
         else:
             cited = receipt_paths(r) + [f"non-binding {p}" for p in nonbinding_paths(r)]
             receipt = "not bound; cited: " + (", ".join(cited) if cited else "none")

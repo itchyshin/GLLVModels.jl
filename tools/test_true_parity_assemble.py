@@ -6,6 +6,7 @@ reads, then runs it. Run: python3 tools/test_true_parity_assemble.py
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
@@ -1497,6 +1498,60 @@ def main():
     check("convergence_parity_missing_julia_unverified",
           cp_case({"gradient_bound": 1e-5, "compared_point": "returned", "engines": {"R": {"max_abs_gradient": 1e-7}}}, "NUMERIC-UNVERIFIED", "julia max_abs_gradient"))
     check("convergence_parity_unknown_point_unverified", cp_case(cpb(1e-7, 1e-7, compared_point="best"), "NUMERIC-UNVERIFIED", "is not returned or newton_polished"))
+
+    # Signed known-fail exception (maintainer reply "A, mechanics C", 2026-11-09): a numeric_fail row on one of the two named
+    # real-data rows reads KNOWN-FAIL-SIGNED only with a valid signed file; otherwise it stays FAIL. Synthetic roots only.
+    KF_SID, KF_BID = "data/RD-SPIDER-NB2", "data-RD-SPIDER-NB2"
+    KF_RC = str(A.LEDGER / "receipts/kf.json")
+
+    def kf_root(sid=KF_SID, exc=None, exc_name=None):
+        r = row(sid, tier="numeric_fail", clause="C4", executable_case_ids=["C"], evidence={"non_binding_receipts": [KF_RC]})
+        root, tmp = with_root({"case-map-data.json": [r]})
+        (root / KF_RC).write_text(json.dumps({"case_id": "C", "result": "FAIL"}))
+        if exc is not None:
+            sha = hashlib.sha256((root / KF_RC).read_bytes()).hexdigest()
+            base = {"kind": "KNOWN_FAIL_SIGNED_EXCEPTION", "state": "SIGNED", "scoreboard_id": exc_name or KF_BID, "pin": "P1",
+                    "is_a_pass": False, "bars_changed": False, "receipt": KF_RC, "receipt_sha256": sha,
+                    "reason": "fixture reason", "signed_by": "Shinichi Nakagawa", "signed_on": "2026-11-01"}
+            base.update(exc)
+            f = root / A.known_fail_exception_path(exc_name or KF_BID)
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(json.dumps(base))
+        return root, tmp
+
+    def kf_status(root, rid=KF_BID):
+        code, out = run(root)
+        return code, status_of(root, rid), (root / A.LEDGER / A.OUT_SCOREBOARD).read_text()
+
+    root, tmp = kf_root()
+    expect("known_fail_no_file_stays_fail", kf_status(root)[:2] == (0, "FAIL"), kf_status(root)[:2])
+    shutil.rmtree(tmp)
+    root, tmp = kf_root(exc={})
+    code, st, board = kf_status(root)
+    expect("known_fail_valid_file_reads_known_fail_signed", (code, st) == (0, "KNOWN-FAIL-SIGNED") and "NOT A PASS" in board and "Known fail, signed exception:" in board, (code, st))
+    if shutil.which("node"):
+        env = dict(os.environ, PARITY_REF="FS", PARITY_FS_ROOT=str(root), PARITY_CASEMAP=str(A.LEDGER / A.OUT_CASEMAP))
+        c4 = subprocess.run(["node", str(HERE / "true_parity_check.mjs"), "C4"], env=env, capture_output=True, text=True).stdout
+        expect("known_fail_assembled_row_is_accepted_by_checker_as_signed_not_plain_met",
+               "signed=1 signed_ids=" + KF_BID in c4 and re.search(r"^C4_MET_WITH_SIGNED_EXCEPTIONS$", c4, re.M) and not re.search(r"^C4_MET$", c4, re.M), c4)
+    shutil.rmtree(tmp)
+    for label, exc, want in [
+        ("draft_state", {"state": "DRAFT, NOT SIGNED"}, "SIGNED_EXCEPTION_STATE_NOT_SIGNED"),
+        ("no_signer", {"signed_by": None}, "SIGNED_EXCEPTION_DISPOSITION-SIGNED-UNVERIFIED"),
+        ("agent_signer", {"signed_by": "Claude (agent)"}, "SIGNED_EXCEPTION_DISPOSITION-SIGNER-NOT-ALLOWED"),
+        ("bad_hash", {"receipt_sha256": "b" * 64}, "SIGNED_EXCEPTION_RECEIPT_HASH_MISMATCH"),
+        ("claims_pass", {"is_a_pass": True}, "SIGNED_EXCEPTION_MUST_STATE_NOT_A_PASS"),
+        ("changes_bars", {"bars_changed": True}, "SIGNED_EXCEPTION_MUST_STATE_NO_BAR_CHANGE"),
+        ("uncited_receipt", {"receipt": "docs/dev-log/core070/true-parity-latest/receipts/other.json"}, "SIGNED_EXCEPTION_RECEIPT_NOT_CITED_BY_ROW"),
+    ]:
+        root, tmp = kf_root(exc=exc)
+        code, st, board = kf_status(root)
+        expect(f"known_fail_{label}_stays_fail_with_reason", (code, st) == (0, "FAIL") and f"signed exception rejected: {want}" in board, (code, st, want))
+        shutil.rmtree(tmp)
+    root, tmp = kf_root(sid="data/RD-OTHER-NB2", exc={}, exc_name="data-RD-OTHER-NB2")
+    expect("known_fail_unlisted_row_stays_fail", kf_status(root, "data-RD-OTHER-NB2")[:2] == (0, "FAIL"), kf_status(root, "data-RD-OTHER-NB2")[:2])
+    shutil.rmtree(tmp)
+    expect("known_fail_word_is_reserved_against_disposition_spoof", A.disposition_status("known-fail-signed")[0] == "DISPOSITION-UNVERIFIED", A.disposition_status("known-fail-signed"))
 
     # Real tree: outputs current, and EVIDENCED count equals the checker's own C1 bound=.
     c, o = run(A.ROOT, "--check")
