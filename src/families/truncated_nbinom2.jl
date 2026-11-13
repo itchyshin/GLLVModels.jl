@@ -619,7 +619,8 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
                                caller = "fit_truncated_nbinom2_gllvm_pertrait")
     rr = rr_theta_len(p, K)
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 1))
+    _check_response_support(:count, Y, msk; caller = "fit_truncated_nbinom2_gllvm_pertrait")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 1))
     @inbounds for t in 1:p, s in 1:n
         (msk !== nothing && !msk[t, s]) && continue
         Yc[t, s] < 1 && throw(ArgumentError(

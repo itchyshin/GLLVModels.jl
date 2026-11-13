@@ -519,10 +519,11 @@ end
 # `y > 0`, so an observed NaN or negative value would take the zero branch and be
 # scored as an observed zero (and Beta-hurdle clamps values >= 1 into (0,1)). NaN is
 # not a missing-value marker in this package, so such a value is refused here.
-# `ok` is deliberately loose for counts: a non-integer or huge value (0.5, 1e300,
-# ZIB's N + 1) already ends on the fitter's failure verdict, and the #504 bootstrap
-# verdict tests rely on that soft failure, so only NaN and negatives are refused.
-_tp_count_ok(y) = y >= 0                        # false for NaN
+# An infinite count is refused with the cell named (it used to reach LAPACK and fail with an
+# unrelated message). A non-integer or huge finite count is still accepted here: it ends on the
+# fitter's failure verdict (`loglik = -Inf`), and the #504 bootstrap verdict tests rely on that, so
+# refusing non-integers is the separate ZIP-NONINT decision, not made here. ZIB's N + 1 is not checked.
+_tp_count_ok(y) = isfinite(y) && y >= 0         # false for NaN, Inf and negatives
 _tp_positive_ok(y) = y == 0 || (y > 0 && isfinite(y))
 _tp_unit_ok(y) = y == 0 || 0 < y < 1
 

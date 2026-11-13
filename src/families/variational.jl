@@ -249,3 +249,11 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Union{Missing,Integer}};
     return fit_poisson_gllvm_va(Yc; mask = msk, kwargs...)
 end
 
+# Float-valued counts: integer-valued floats (3.0) are accepted, anything else throws an
+# `ArgumentError` naming the first offending cell (#730).
+function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Union{Missing,AbstractFloat}};
+        mask = nothing, kwargs...)
+    return fit_poisson_gllvm_va(_float_counts_to_int(Y, mask; caller = "fit_poisson_gllvm_va");
+                mask = mask, kwargs...)
+end
+
