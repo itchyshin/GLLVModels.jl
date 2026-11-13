@@ -15,10 +15,12 @@ function _refuse_na_response(caller::AbstractString, Y::AbstractMatrix; nan::Boo
             "`mask`; remove or impute the missing cells, or use `fit_gaussian_gllvm`, which " *
             "derives a mask from `missing`."))
     end
-    if nan && eltype(Y) <: AbstractFloat && any(isnan, Y)
-        bad = findall(isnan, Y)
-        throw(ArgumentError("$caller does not accept NaN in `Y`: $(length(bad)) NaN cell(s), " *
-            "first at (row, column) = ($(bad[1][1]), $(bad[1][2]))."))
+    if nan && eltype(Y) <: AbstractFloat && !all(isfinite, Y)
+        for (kind, test) in (("NaN", isnan), ("Inf", isinf))
+            bad = findall(test, Y)
+            isempty(bad) || throw(ArgumentError("$caller does not accept $kind in `Y`: $(length(bad)) $kind cell(s), " *
+                "first at (row, column) = ($(bad[1][1]), $(bad[1][2]))."))
+        end
     end
     T = nonmissingtype(eltype(Y))
     # `Any` must be refused before the early return: its non-missing type is `Any` itself, so the

@@ -190,12 +190,13 @@ end
 #   [β; log_σ_eps; (log_σ_B; log_σ_W if has_diag);
 #    θ_rr_B; θ_rr_W; (σ_phy if has_phy_unique, identity link); θ_rr_phy]
 # which is exactly what gaussian_nll_packed expects.
-# A Gaussian fit made without a `mask` was fitted on complete data. A `y` that holds `missing`
-# or NaN and is handed back to a post-fit helper cannot be that data; the helpers used to return
+# A Gaussian fit made without a `mask` was fitted on complete data. A `y` that holds `missing`,
+# NaN or Inf and is handed back to a post-fit helper cannot be that data; the helpers used to return
 # all-NaN Wald intervals, or to ignore the cells in a bootstrap, without saying so.
 function _require_complete_y(caller::AbstractString, y)
     y === nothing && return nothing
-    for (kind, test) in (("missing", ismissing), ("NaN", v -> v isa AbstractFloat && isnan(v)))
+    for (kind, test) in (("missing", ismissing), ("NaN", v -> v isa AbstractFloat && isnan(v)),
+                         ("Inf", v -> v isa AbstractFloat && isinf(v)))
         bad = findall(test, y)
         isempty(bad) || throw(ArgumentError("$caller: `y` holds $(length(bad)) $kind cell(s), first at " *
             "(row, column) = ($(bad[1][1]), $(bad[1][2])). This fit was made without a `mask`, on " *
