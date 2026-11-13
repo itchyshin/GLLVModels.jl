@@ -27,11 +27,11 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run.toml": "765d61005fb4ea21bdc11a3018a927359c0ac0a090d491d4b196428df13100b0",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-09-BETABINOMIAL.toml": "2166199828082d5fed2d3c3f6943038d76df2acd7afb3606a765eb8aecfda14d",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt": "7526101ac0b5001f6d6610a2796d3f7f88b3561689baf2a75decf48eb5332bc4",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-09-BETABINOMIAL.toml": "33a24000a1df8b708c9b932bb64c44936a6f4b322dbbe7ebe0e83e06e7739daa"
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run.toml": "89ce7203550b24cfa7d1de33f99fa55b3877b79ee6ad48bd9ab89cb157566bdd",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-09-BETABINOMIAL.toml": "e2b71e2c2dcb179af65d315a0c3819aed45d6e0312a387891e635237e5dda432",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run-commit.json": "7e9fd345ee2b712dca50d188f47f0137edb2fd757f9e23e880f7ec04885d6752",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt": "cbd07bf278a7f52f2e203437b45e0bf5a31687cf5b878be5a5d6f8990354ea3a",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-09-BETABINOMIAL.toml": "1558459564d347a1fabda84574cf1900b31029765352cd44a0c8459137921d6f"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-09-BETABINOMIAL.toml",
@@ -41,11 +41,11 @@
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
     "pin": "P1",
@@ -53,12 +53,12 @@
       {
         "case_id": "CORE070-FAMILY-08-LOGIT-NATIVE-MODEL",
         "quantity": "logLik",
-        "max_abs_diff": 6.151594789116643e-09,
+        "max_abs_diff": 6.154323273221962e-09,
         "tolerance": 0.0012227727130883694,
         "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
         "n_values": 1,
         "r_value": -1222.7727130883695,
-        "julia_value": -1222.772713082218,
+        "julia_value": -1222.7727130822152,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       }

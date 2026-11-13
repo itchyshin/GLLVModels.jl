@@ -7,7 +7,7 @@ success_marker = "CORE070_PARITY_SUCCESS"
 exit_code = 0
 actual_assertions = 38
 status = "success"
-run_id = "bd92e196ded48a05d0c1c6ca5ed8739236db8be40ef16e294bbe3aabe22f018a"
+run_id = "90c576d2afb2f85e91110c10aefe6e0d830a286ab2facc5867bc83b85cde4584"
 completed_case_ids = ["CORE070-FAMILY-02-LOG-FORMULA-INTERFACE", "NATIVE-03-POISSON"]
 selected_family_count = 1
 
@@ -15,10 +15,10 @@ selected_family_count = 1
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_poisson_formula_parity.jl"
 status = "success"
-run_id = "bd92e196ded48a05d0c1c6ca5ed8739236db8be40ef16e294bbe3aabe22f018a"
+run_id = "90c576d2afb2f85e91110c10aefe6e0d830a286ab2facc5867bc83b85cde4584"
 fixture_sha256 = "3970427322a2ed7eaf97a6bf5ad31eb4c8804811e6d149b7b97ad05b7970d9bb"
 id = "CORE070-FAMILY-02-LOG-FORMULA-INTERFACE"
-execution_manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12557"
+execution_manifest_sha256 = "4eb1604b8ca7007245e595deb82e1c2f5fcbba6356960d2958a8fcd34d5df0f4"
 execution_case_ids = ["CORE070-FAMILY-02-LOG-FORMULA-INTERFACE"]
 
     [cells.CORE070-FAMILY-02-LOG-FORMULA-INTERFACE.assertions]
@@ -31,10 +31,10 @@ execution_case_ids = ["CORE070-FAMILY-02-LOG-FORMULA-INTERFACE"]
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_poisson_required.jl"
 status = "success"
-run_id = "bd92e196ded48a05d0c1c6ca5ed8739236db8be40ef16e294bbe3aabe22f018a"
+run_id = "90c576d2afb2f85e91110c10aefe6e0d830a286ab2facc5867bc83b85cde4584"
 fixture_sha256 = "04ffc8f9e3d5c972993072408f4e038d4f1652e34c1f9c912bfc51e0e2047049"
 id = "NATIVE-03-POISSON"
-execution_manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12557"
+execution_manifest_sha256 = "4eb1604b8ca7007245e595deb82e1c2f5fcbba6356960d2958a8fcd34d5df0f4"
 execution_case_ids = ["NATIVE-03-POISSON"]
 
     [cells.NATIVE-03-POISSON.assertions]
@@ -44,13 +44,14 @@ execution_case_ids = ["NATIVE-03-POISSON"]
     errored = 0
 
 [source]
-source_marker_sha256 = "aa1fc44f481294678c2d1eb5505eaf182f976236f3b3f50373465c68330b2941"
-julia_package_root = "/home/snakagaw/hsq_work/gllvm-w2-3/repo"
+source_marker_sha256 = "7ea067df756087a1f863c0f8355c89b7f702fd152030c220d344e6d7ea15c355"
+julia_package_root = "/home/snakagaw/hsq_work/parity-gllvm-1110-w15-d8/repo"
 tmb_version = "1.9.21"
-oracle_build_receipt_sha256 = "6aaf50b2b2f89c257494300cd3c25c3345f0c50d45092d5899f1e8c9bd65ad4f"
+gllvmTMB_version = "0.7.1"
+oracle_build_receipt_sha256 = "33af3b5b91c03db4cb8a1251d844a0f77fbae2a41d0f18f47390e34d06fa84de"
 matrix_version = "1.7.5"
 julia_machine = "x86_64-linux-gnu"
-julia_source_tree_sha256 = "d4cf2a42c50a00cd26c329b8dcf6ad3324bb2ec85636c19bfc3d294af594d703"
+julia_source_tree_sha256 = "0ee7b285cd32680f3fe4eabdab06cf1d93033bf33482f50fbc8f605ec780d7aa"
 source_tree_sha256 = "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db"
 julia_version = "1.10.12"
 oracle_source_receipt_sha256 = "3ec6631ba855624d5b0e9e66772d2e3b3049270c17047835333e7663d6eb2ad8"
@@ -58,22 +59,22 @@ julia_project_sha256 = "fc4c59d9d880a8a7843d73c22645eeb45048a0a1d1175d27b9951002
 blas_threads = 1
 archive_sha256 = "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423"
 namespace_sha256 = "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c"
-installed_tree_sha256 = "71ef0fb3d6c0a31e908c09ea599b97966dc8335038e1d9d23ccda901344d9997"
-julia_project_path = "/home/snakagaw/hsq_work/gllvm-w2-3/repo/test/parity/Project.toml"
+installed_tree_sha256 = "c7a21d29b958e3ebc5778e07fec988366d8f17918a77059701cd50e2db23bb48"
+julia_project_path = "/home/snakagaw/hsq_work/parity-gllvm-1110-w15-d8/repo/test/parity/Project.toml"
 reference_commit = "9539352f66f2db2cc26b1c393e67212a359b60c9"
 rcall_version = "0.14.14"
-r_library_path = "/home/snakagaw/hsq_work/gllvm-w2-3/oracle-build/library/gllvmTMB"
+r_library_path = "/home/snakagaw/hsq_work/codex-p1-postcoef-current-20261104/totoro-build/library/gllvmTMB"
 julia_threads = 4
-julia_package_path = "/home/snakagaw/hsq_work/gllvm-w2-3/repo/src/GLLVModels.jl"
+julia_package_path = "/home/snakagaw/hsq_work/parity-gllvm-1110-w15-d8/repo/src/GLLVModels.jl"
 r_version = "R version 4.6.1 (2026-06-24)"
 r_home = "/usr/lib/R"
-julia_manifest_sha256 = "e9d621df9c0a0667dd8ff285f3f70ed8d3ad8159aa4b1cacc8d2d365028ca72d"
+julia_manifest_sha256 = "bd19bac08747a51ab17b13d3585af1dd0fdcb8be8fdb7b9c4ed5777a9cdeea36"
 
 [execution]
-manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12557"
+manifest_sha256 = "4eb1604b8ca7007245e595deb82e1c2f5fcbba6356960d2958a8fcd34d5df0f4"
 
     [[execution.entries]]
-    sha256 = "3f182096a242d643539dbb8ad88f27c938960888c6a9c378e3a84115eb811b55"
+    sha256 = "f0c68683f04408059e6c8f22c4441a77fc3c264df8af3e8f2cad26735eefd425"
     path = "Manifest.toml"
     [[execution.entries]]
     sha256 = "f184cd03258c6e5367f6df73cda39cce514fbc53096805f2937090bf5e12deb7"
@@ -94,19 +95,22 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
     path = "docs/dev-log/core070/true-parity-latest/frozen-r070-contract-p1.toml"
     [[execution.entries]]
-    sha256 = "976aad3b990c557a1e133e0a2c4e22eb5f3deada669dc9d363a419632d1245db"
+    sha256 = "25c40fdb10bf5723e7a722d3b382cab254af9482d932d5066015145bd92f0ee7"
     path = "src/GLLVModels.jl"
     [[execution.entries]]
-    sha256 = "48c6514ed4e5627ce05afe9f17e2dc03f2c9600b125c18e2c271dc92b0990123"
+    sha256 = "62f6d5063c67b7f0c9dc9306db4ed10f93d587dd93e6b664be35920a811995f5"
     path = "src/animal_dep.jl"
     [[execution.entries]]
-    sha256 = "98066a44e0035deaebfe3370267fd283b6d7ce35ef55011d21d65cbec3eed51b"
+    sha256 = "132a761355671900f1ad4dff2d0f2ac6c438d5362207004dfeb95ad7b2d1a11d"
     path = "src/animal_latent.jl"
+    [[execution.entries]]
+    sha256 = "12833f3e3dce874798d53ea497b55fbf0fc6fb542017c7a5b74feae21ecea2f8"
+    path = "src/bootstrap_sigma_r.jl"
     [[execution.entries]]
     sha256 = "d619fe6667d9f7a83db73608fb1a71d758de3f91a544a4ce040b8ffb8700737d"
     path = "src/boundary_inference.jl"
     [[execution.entries]]
-    sha256 = "b9b55f15cef9020e6b192cfcad469639273188f0eda6b542d0807887c83c410b"
+    sha256 = "e3cf34f388c64ac8e3bcebb6765324df5d18463e6dee25e21af11290984ff0fd"
     path = "src/bridge.jl"
     [[execution.entries]]
     sha256 = "889e240011e0b4bf6205a61b46e5519d655997f55a0bb07ea520c7edd004c5e0"
@@ -115,28 +119,28 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "12ba6b6f893921538643e6c22b09299b00235f0a234b4b42e08ef932d876df50"
     path = "src/coevolution_blockna.jl"
     [[execution.entries]]
-    sha256 = "32edf11332c16d1f8f4ec281dd69c42968b3c049eff3a8c7ee3cdfb512eea09c"
+    sha256 = "c8aafd19559797dcbee9e911e4b061bdf49f022cf0347b6386885a835a45ecc1"
     path = "src/coevolution_glm.jl"
     [[execution.entries]]
     sha256 = "0806ae44bb3890bc8a631ea8d5cf4bfac402443c7ef1f5b28ac9d988dd9e27bb"
     path = "src/coevolution_kronecker.jl"
     [[execution.entries]]
-    sha256 = "e3e9504c4ee72ecdc8655feffb5aaa44a841a964ed9f1dee5ad80fb734e7bd01"
+    sha256 = "d7d7b1a1e1192db2b9181cc6bb6818d15aa93b52a5bc7df2137bc5f707c64c3b"
     path = "src/confint.jl"
     [[execution.entries]]
     sha256 = "b4c784033ce8a563c4db8078275e41062fd50b6138c40ca1b1e02a5862e8c40e"
     path = "src/confint_bootstrap.jl"
     [[execution.entries]]
-    sha256 = "488754eb4f2772f48b1fc0c4ba4d06717fdbacef933f430504f46d90aabe5997"
+    sha256 = "d0df70a1eb95ba3b7421ec4c07662a3b6194976ed6730e2f155bc68f14c43e11"
     path = "src/confint_derived.jl"
     [[execution.entries]]
-    sha256 = "4c54fc94ad8dc26b48dda178a85961b0549028975f1df9593d658128189d5410"
+    sha256 = "0efde8feace293311b14ccccdea2d0b6ea8bd4d19e8d52d8eab2c1d4a23a861c"
     path = "src/confint_derived_wald.jl"
     [[execution.entries]]
-    sha256 = "c91c6d48ed1cb27f23e98734b4f6a49432da81f0fc92776b8fbf074d83a1ce2d"
+    sha256 = "070373861ff1ab4d53d83e630ccdbaf069c7599aedec571c1d915f5bd69bd45d"
     path = "src/confint_family.jl"
     [[execution.entries]]
-    sha256 = "a3e64b0974485b9263e7f0b978d644cfefe3a800bdc0cd31e6f98604270f07be"
+    sha256 = "2c32f4ce9289ffb3058db0a2b8e3fab7c0e1c1d6eaad81ff9464c86fd2a020c7"
     path = "src/confint_profile.jl"
     [[execution.entries]]
     sha256 = "457c235ac0324d122b8e586edd9d08aa16be4b5f051da983988cb3f3c46323d4"
@@ -145,7 +149,7 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "ab1022001281b6b1286f545245969a70a64f174599cfcd2e3b5bcf8e6e9b2f15"
     path = "src/cross_lineage_extract.jl"
     [[execution.entries]]
-    sha256 = "ca66703d8a1ae95a39bfbaf7da53c20abb33a61e6bb2b16b9a30a2fffbe5e271"
+    sha256 = "619d7e0db967375325ce98ecf1801c23c6f0657288be84d52303d6f2b61f94c9"
     path = "src/cv.jl"
     [[execution.entries]]
     sha256 = "ee5d0bdca27c75c1eceeea01dcbef0101fe8c7901a76696a1558e60a60cb47fa"
@@ -154,7 +158,7 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "f003f647eb88077c01a1fa0093b8808e23553c8c9b1fbdfcd539544bd0d9fee3"
     path = "src/destination_b_postfit.jl"
     [[execution.entries]]
-    sha256 = "c1178da65c14b4696a7ad7b64948051b6c2d2b9a91d0ae5544dec40bc13b18a3"
+    sha256 = "bb33c75289785b3c90132f3e180c0c984faad859d6070fc0e3683f66cff3a374"
     path = "src/diagnostics.jl"
     [[execution.entries]]
     sha256 = "35ddf6c4659498a37c223fe86b928282305a3752fb890e6db10dee376be332a4"
@@ -163,10 +167,10 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "34df874433d2c1c65986db1572e5312e18b3dfd1ba0bd6d2b0e897d1ee8b66f6"
     path = "src/em_fa.jl"
     [[execution.entries]]
-    sha256 = "1c9fd1270830bdf0c760b5c9862e5c4437c7522061e0de8be0aad6ead7871c16"
+    sha256 = "78de84b924ea8b748ec96f32f902f3e51b84d8e1caa9b5ff3e9cf2c166a673c6"
     path = "src/em_phylo.jl"
     [[execution.entries]]
-    sha256 = "3c2216672c63875f78a5c8d73948fb64baa7fbc9d804e96331fbf27cd404b2b3"
+    sha256 = "e8d6ba41bd5e5da9ab19a5b8baab74c6284846368ec9a722c1b6a515cd2ccae9"
     path = "src/em_squarem.jl"
     [[execution.entries]]
     sha256 = "6d2ee156f124665c59c3d9339eeceb133b67d2cfad39c4392b0e60b6c21f2719"
@@ -175,16 +179,16 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "76d450d031e88b985cd0520a39013c108c740f0e42dc4516c4865a17fb557978"
     path = "src/extract_latent_scores.jl"
     [[execution.entries]]
-    sha256 = "2ecf51dc137efce46582a564e74ac0a5d96f7c79fc7e1f13fa97d8aef2d9e309"
+    sha256 = "8391f0bab4366e1052d509422b8901ba444fc9cb811c22706d0935e1756d6c8c"
     path = "src/extractors.jl"
     [[execution.entries]]
     sha256 = "17e5dad83d38ade19b3f584ea004ea41ac3e4494598d3b660c8b4cab624964bc"
     path = "src/families/aghq_binomial.jl"
     [[execution.entries]]
-    sha256 = "d6ea87cb20b186d5e5c9fd09a739479854f559e073a34601271055345509ae33"
+    sha256 = "a847a48c1b47a03cf074fb5bf2aaca4cadd59b94343c4b1f884f0a293363f222"
     path = "src/families/aghq_binomial_fit.jl"
     [[execution.entries]]
-    sha256 = "d7a15372c176039721694c7218b1df1217eba0c35e86bff7e7b10e07a595b46e"
+    sha256 = "cac8edac981e4dda88c404c5397f8a11ef383887f413bd4bbb17ec0c8e240d42"
     path = "src/families/aghq_delta_gamma.jl"
     [[execution.entries]]
     sha256 = "fdf15f76f32ffa4e646cb3880ad28f7fed241ec682fde823e126f1e30b36aead"
@@ -193,73 +197,73 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "97b775f7dedb250825f1d2917a240f4f7140c921c06d17eef25e5547d53532ea"
     path = "src/families/aghq_gaussian.jl"
     [[execution.entries]]
-    sha256 = "86718c4c24857b49b55c95bd7ddb3624b5168fce44022c91a785ff4a6675796b"
+    sha256 = "48dc9dfca43c1b17d29efa116e4c76506799ff9e579056b98dc3b6cca418e2a9"
     path = "src/families/aghq_gaussian_fit.jl"
     [[execution.entries]]
     sha256 = "8a22d85da4d279bc636af02cdabd8497d82aee21e68b75a6202483303f36331e"
     path = "src/families/aghq_grid.jl"
     [[execution.entries]]
-    sha256 = "16611093f33c8c94544f156e4b4a01e93bfa51a9d29b285ef82fd0f3990b9221"
+    sha256 = "8206991c4d32ef73fe23399118688f94edd8d042377617ffd1c315597834062e"
     path = "src/families/aghq_nb2.jl"
     [[execution.entries]]
-    sha256 = "9d4eae2f6e4de47f2349dc6ed02dd837a1f2bc0560b2cef0dd29cadde6971ada"
+    sha256 = "d4c64a5bb1a5e8b15387cc9274b6d8a03d65f53b983f674c6a3ed2acea922e52"
     path = "src/families/aghq_ordinal.jl"
     [[execution.entries]]
-    sha256 = "e9c6967e50d83713e4e67fd57d53c5ac75a47c39f056c15e3db9ecbe2794028a"
+    sha256 = "68906357c61c545e3b8328e951893a96a38a7d2b3c48ea03ca025d170188a164"
     path = "src/families/aghq_outer.jl"
     [[execution.entries]]
     sha256 = "468f189fe21b59e166c2fc727e8df87cc9be2b9c6b36aeca60492d489220888c"
     path = "src/families/aghq_poisson.jl"
     [[execution.entries]]
-    sha256 = "addb959f38ccad1b7e2732b1954f0a6c914cf05eb779bea2fd43bf8f0ff63180"
+    sha256 = "dac8021ad80dae65fec0f5d9d9afa7a20797f6c7923865f1b2028a7683cce630"
     path = "src/families/aghq_poisson_fit.jl"
     [[execution.entries]]
-    sha256 = "98596bd70a01c358ffb37ac3c506dac1303978067becadbfe99b082a2c1a7a8d"
+    sha256 = "ec11cf59aa2e5183d059ba8bec0a3dd5ccad7dcd31796e84569999c99c797358"
     path = "src/families/aghq_tweedie.jl"
     [[execution.entries]]
-    sha256 = "8cb2333ddc0fa2feeee4611d9d10dec6233c0b1b681ed90be6375391132e0a93"
+    sha256 = "07760dc1d1f17248979c5d3bfc33b0ef7dc813bb3850767a614a19bba40374e9"
     path = "src/families/beta.jl"
     [[execution.entries]]
-    sha256 = "0f5d584f0eebe9edadd0be186a83952d163991811ad8f8fa5f6731d816757771"
+    sha256 = "4a437465331fb1087a25d5cc54232979a0beb04e9a8a7928970409cf5ae5980a"
     path = "src/families/beta_binomial.jl"
     [[execution.entries]]
-    sha256 = "a95d6148d83ceee5807c3cef5bcffd71c60db6ef1593c94a6b9ebec35a44c4cf"
+    sha256 = "968c648e85aaa565a75ee574ffa1a749174874dd8f722a6ba512b483077425a1"
     path = "src/families/beta_hurdle.jl"
     [[execution.entries]]
-    sha256 = "293a6368f50bd500a048c6ccfa35ab278d401269070f6f5b979c78de070c2fd2"
+    sha256 = "07ccdcbdc319edefbb894cd44cf12545582ae7efa4c70012e01e06f85a2c0aa8"
     path = "src/families/binomial.jl"
     [[execution.entries]]
-    sha256 = "1738fb68da572beb2b41ef0761683abc02cd27582c9908d78b6318f03c1866bd"
+    sha256 = "baf0c627ffc4b656b5758f23bdc2b6edc48bb5d3842ad9f0803213dd943d711e"
     path = "src/families/censored_poisson.jl"
     [[execution.entries]]
-    sha256 = "96eec03ef0d174357bffc4c6be5d27a8407d146e30045b44cad50da2624d91df"
+    sha256 = "95c17a45b9f70cafa61ab18993bf4b38758e0c7a81cc4476c8091e767ac3b411"
     path = "src/families/com_poisson.jl"
     [[execution.entries]]
     sha256 = "3e059ca04ea2bcbf34d1787a72af3a529fb9c39be7b17bbf5a380b36962c0c60"
     path = "src/families/constrained_ordination.jl"
     [[execution.entries]]
-    sha256 = "79bdec60e2edbc145d3d1139d66a1c58d850665845506286020dcdc1cb0b5a39"
+    sha256 = "4e00a322632d98ff2b05d1d9ad1b3bc006f8aeae8865bdea9294fa61af109726"
     path = "src/families/covariates.jl"
     [[execution.entries]]
-    sha256 = "60327d2ca0509f0c3b4bb210d563bb5a38b57af5d52dbc824a989d1de2641537"
+    sha256 = "54ff91418cba6e62b13cb8d1993f36fbaf2847e3d2ca3fcddebbcf740f5e7ab4"
     path = "src/families/exponential.jl"
     [[execution.entries]]
-    sha256 = "b239330396654f1cd9f7d72e42dd069a146204cff6c2afecd6d025bb014356e1"
+    sha256 = "f58fe85c17e48f6599db1ae3a11483a2de88bffb0a194add408b4c86f43d34f4"
     path = "src/families/fit_gllvm.jl"
     [[execution.entries]]
     sha256 = "381d1c199400667bc3884980460a6f4bbb4e1c4637205371ea24caa9d34ed40b"
     path = "src/families/fourthcorner.jl"
     [[execution.entries]]
-    sha256 = "6936f1c014529b853eff4487d218bce29c30fa59cbd701a1f030aba1a87bf89e"
+    sha256 = "58376b6530313185f5ed7df3fc8a6d20aa0eee4579e32c1233a13a823e5e0d30"
     path = "src/families/gamma.jl"
     [[execution.entries]]
-    sha256 = "1d9d37ce97707d7960ad307ee3561d70c36419de64803792b6414a2920c5eabd"
+    sha256 = "5718bf1077b20d7d9c38d86506e4d09f326eb23d78a73b893ed538f4531e4384"
     path = "src/families/gaussian_pervar.jl"
     [[execution.entries]]
-    sha256 = "ff91c885e980590c621cc0669158cd3db158fbf085d2fe185a7a49cff5e70253"
+    sha256 = "8668c2a5e250392b338f35ae8d3044867a3e0c3ecb276938437633352330850a"
     path = "src/families/gp1.jl"
     [[execution.entries]]
-    sha256 = "a54714567608ea1f96b3b15cc83986a5987dfdfbfe17bedfa32468a3c11c249b"
+    sha256 = "cbbd6e8dde17ef261bb0dd35a23613576c8e431557e4f7cb85dec8a863cbdc98"
     path = "src/families/grouped_dispersion.jl"
     [[execution.entries]]
     sha256 = "c070dd06cee7c83d926abacb84c7be4d9669b150791ecc9de9f5c17a30834d89"
@@ -283,44 +287,47 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "71d4760f06e4d100be2873e00b2ae9d0c043e6d86b19d643f83e3c98ea81c914"
     path = "src/families/isdm_table.jl"
     [[execution.entries]]
-    sha256 = "6cf20a5d326791523785f9c694c0170c4e6b31355631a331d1d6824c6a21bf41"
+    sha256 = "1b531723338f02dbe5e11c58d7e891949d1ebcc3c966b6cd7e3207f67f493a7f"
     path = "src/families/laplace.jl"
     [[execution.entries]]
-    sha256 = "ac8b2e2719c69b3aadb7545953bdcb65526e908f2b2a861e4e1ca0e790e5297f"
+    sha256 = "fe6e9b6e8641bfb27d8df477497329256074978ac742f9664934517d5d81a638"
     path = "src/families/links.jl"
     [[execution.entries]]
-    sha256 = "386ec78e6409c2db55e886055935f05f35143df51e68ab9fba20250d3cd4c406"
+    sha256 = "9556148b4152a8ec1c236f08adadb64aea83b518b0d29ef39362b79060a72dbb"
     path = "src/families/lognormal.jl"
     [[execution.entries]]
-    sha256 = "77d31dd506d26f258492c5ef0c9377823256fcf4b9dd9e3da61433e1e7b27643"
+    sha256 = "6e5023ec2deb6e577d8ca9a5f4bf7bc3dcc867033d128d6c72e8d5207a6373df"
     path = "src/families/mixed.jl"
     [[execution.entries]]
     sha256 = "aa563f77693fb60ecf0763589446bfd6a2066f8b69acce340a474787b69cc99e"
     path = "src/families/multinomial.jl"
     [[execution.entries]]
-    sha256 = "223ebae777d017152db94e7a6008b2b9c0ace06840a8d110ec9406d1d7f4e29c"
+    sha256 = "59abda2335f5cd7aecd87454d9fb46d4b41a9f44757429d34b7fe8e852414dca"
     path = "src/families/nb_grouped_postfit.jl"
     [[execution.entries]]
-    sha256 = "44df41bd50859e25cc763d6edb947bf09ae28672be513c6090938e3bfa6cbcb3"
+    sha256 = "c6501ae0c453b7b21d24ae2406b82c46ed14e0bc0616c268431fa8dfdc2eba0d"
     path = "src/families/negbin.jl"
     [[execution.entries]]
-    sha256 = "a3a33929a0993ad0d1902d5c888717296cc5c3cb7f49287144a2543a86f11012"
+    sha256 = "13ec2a9744d94865ea02cb6b8c75a7b0b97b372d537ade8ad25d2d9167d96fb4"
     path = "src/families/negbin1.jl"
     [[execution.entries]]
-    sha256 = "abbc4c825cc25087471574119c57a71fd28377cb76607b5ef7e7463564838715"
+    sha256 = "2103dfc8104186a028b88d2857cd931a8dd0059b7f5e7acca54a9cec44d19757"
     path = "src/families/ordered_beta.jl"
     [[execution.entries]]
-    sha256 = "71ce444686692ccb02acaf083689828f81ebb18d2c355ab07ee4124b68634cba"
+    sha256 = "f00505d6b898cbedd34ed6dcbc27bf3b91fbfd17830c24f5b5c6c4fb844ef304"
     path = "src/families/ordinal.jl"
     [[execution.entries]]
-    sha256 = "bc23459a4279149ab316b195fbcfc57ee6580e7c8282dafccc27c17fe45a729e"
+    sha256 = "56ec07726ee0440c95cddb9a66a21b246347eec547ae8d52a88764dcc894b1e2"
     path = "src/families/poisson.jl"
     [[execution.entries]]
-    sha256 = "ba53d8358beeeea576e686404db41d6bbf95da5a9ce00abc60772f24bfbe82a0"
+    sha256 = "17e27692612070c962f42402fb33b0db7606989fdc777b8fdb236b7e8ead4ebf"
     path = "src/families/quadratic.jl"
     [[execution.entries]]
     sha256 = "efb176a09b7855d5526c36bb587fdc0b082752019cb125d2f77ced051c21ff08"
     path = "src/families/random_slopes.jl"
+    [[execution.entries]]
+    sha256 = "e31af3f9991fb9921f9aef02751eb31103e1384d069ec1bdba35d77e0269039d"
+    path = "src/families/response_support.jl"
     [[execution.entries]]
     sha256 = "01a8fc9b584ec83569e50da6703079a81bf8aa9e87fa719c2acc8d0277c86c6b"
     path = "src/families/row_effects.jl"
@@ -334,46 +341,46 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "803dc56907082603f750866c3e3a0c656d546c153709c4a639da2f7334dde3b4"
     path = "src/families/species_covariates.jl"
     [[execution.entries]]
-    sha256 = "3de804254d7965633061bdb852467f40679e8e088baf6149f70762499ce4155a"
+    sha256 = "4a2ef90004ca22ad931b3dca9bc7aea8267ca2d143a7bb26e9dba6df5931b12b"
     path = "src/families/studentt.jl"
     [[execution.entries]]
-    sha256 = "eb99549b9f153b3da761d99854142f2c41906d2500c2bbad6fcaef42cfb75f17"
+    sha256 = "273535f3e26c684d729c66544990091f5e2bb2a0bb68bae1d86204c557eb8e4a"
     path = "src/families/truncated_nbinom2.jl"
     [[execution.entries]]
-    sha256 = "c7060ba50fb72635ca1cb395aecc8b6f5a6a738b92e5a9006abf323357118529"
+    sha256 = "2fc44c2a0fb6272498899582fca515b5ed9e81c6d64017887580c96edf81d6df"
     path = "src/families/truncated_poisson.jl"
     [[execution.entries]]
-    sha256 = "a89978281049a24456a6a04adeb148576b216f48edfe78c826fe865a20928815"
+    sha256 = "0826f75ad3ef3820f722d3e4f8f5210c1b2067c96dc1b12349caad6885135677"
     path = "src/families/tweedie.jl"
     [[execution.entries]]
-    sha256 = "69aef207f596bcf8bc1fabc0ba5893f6500b886852bf2d90e978694cab3247e1"
+    sha256 = "ce19f7519f56ce205ba3a0de71f622949ba73ef82d0632da196d610c478da7ce"
     path = "src/families/twopart.jl"
     [[execution.entries]]
-    sha256 = "daeb4c6701be9093ef5d6db3c6ceb08d08887336e323b34b250861c91d9df303"
+    sha256 = "1ae112730c475160730f5b8a602365cee24e2d260ef748649542df107044ad29"
     path = "src/families/variational.jl"
     [[execution.entries]]
-    sha256 = "d8bc96c2c2f7c7b2d9c86aa8e003d3b940b18bf77c18438b2754dc6274f09b6d"
+    sha256 = "5a88e2d643e0e8f7bd3701f6509e0cf74abee0b205ab4c12ca1fa846ad06822f"
     path = "src/families/variational_beta.jl"
     [[execution.entries]]
-    sha256 = "305ce39909f47159d4e441984bdd17bdafea0ed6e00c4ce8eaf05afb538d87b8"
+    sha256 = "87b36d6fd2d9e6adece006265cbce8bc955d80c4ee97da59038dd02e9180da20"
     path = "src/families/variational_binomial.jl"
     [[execution.entries]]
-    sha256 = "cb8203be8b58a46a1321bb949e6205f229a2540bb58aa1aae478f04936bfcfaa"
+    sha256 = "0c56d59adb10bb259c5ec9597d1cbe1f8d5b86b570aad3d10f85710222afc084"
     path = "src/families/variational_dgamma.jl"
     [[execution.entries]]
-    sha256 = "64b48b7b7d92bac0b225a67e61847ab46753c0f0214f3723b2ce3b21be1982f1"
+    sha256 = "ab55a19fabcf76f0b743da8b19e5586ce35bf9d8541a8f0c559f09433abfab58"
     path = "src/families/variational_exponential.jl"
     [[execution.entries]]
-    sha256 = "fae7740d472af20a712104a5f171b5cfa00d68f34e918e768f5275a2bd3160c5"
+    sha256 = "2b74280ae25a1a056e3c79d2aad3b3a78817eef59c77f08574f2fe7da496cabb"
     path = "src/families/variational_gamma.jl"
     [[execution.entries]]
-    sha256 = "422a88c37b1778eec2e511696fc40e22ffd06f348952aba97da8bad757f48045"
+    sha256 = "ec510679bfdd68776aa99a4fda264bd3e11b21050aeea5d146daaf5e60b4b666"
     path = "src/families/variational_negbin.jl"
     [[execution.entries]]
-    sha256 = "b5d094e1b43fed5b748cd0dcff2332b5b9b7f0a0873aec4569b559eddd42ba44"
+    sha256 = "a3461eb9d67233f81cc1686139be7064c244b9da8477bc1cdd1caa76f121f51e"
     path = "src/families/zi_twin.jl"
     [[execution.entries]]
-    sha256 = "e92f55fe8a05b027abd4419c86f466a59245a646c898537eb75bbb5b129f93d6"
+    sha256 = "98c9aafb014a9f5c261775cfbdbaa10e6ede39cc68c3930eaa2a54ba05d8fe4c"
     path = "src/fit.jl"
     [[execution.entries]]
     sha256 = "5cebae5c098bb61de463993037649d9c83ac72427a3271e613a4056c72fa0d8a"
@@ -388,22 +395,22 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "9df7209abdb1359cfaa58555e93bf1fd0b4a8de65ee887b3a53cf11b7fb2a161"
     path = "src/fixed_coefficients.jl"
     [[execution.entries]]
-    sha256 = "08ce6bd44b0814b2c765dab4e8168aedd25898b978f670b1d3509a5a43c2648b"
+    sha256 = "14d0351678a6a293e923011f904a4ee28c3c6f82babe2fe4b54190d95cca20d5"
     path = "src/flag_unreliable_loadings.jl"
     [[execution.entries]]
-    sha256 = "6e004d7fa2c156880207afb96ccba93b3da714395030f116baf8ed172caf0757"
+    sha256 = "3f395094dfe20eb1b325ce16423c3ae4553e825ed2bdcd7c591243a3e38e2b43"
     path = "src/formula.jl"
     [[execution.entries]]
-    sha256 = "596bf5066424a7ad0da0277e5937215909eada2f7d3175dadef12c48363cecbe"
+    sha256 = "cd24056d6e198d92b76cf211ce75c73c5071620eac0a9808101277bda16ff8ed"
     path = "src/gaussian_intercept.jl"
     [[execution.entries]]
     sha256 = "eae6f3f2e2e24af07580ead37799ec3b973f2b0d40b9eff2cb87c4ab83c257fb"
     path = "src/grouped_fit.jl"
     [[execution.entries]]
-    sha256 = "983cfd9cd2a5d7312da572418e66bd63daa04555c2acb02e2d2c2630e3787599"
+    sha256 = "1d8a2b7b9fcbe185e0a274e623479f3a6d1c963f63a231260c9af0170c481c24"
     path = "src/grouped_gaussian.jl"
     [[execution.entries]]
-    sha256 = "4a8734c336a76910ed65f5544f3eca7481febfb0a5751d2e9585f562564cbc2d"
+    sha256 = "19b32b89575389d4a23ad873d977623fc687824b356c869269641f20ad275b02"
     path = "src/grouped_laplace.jl"
     [[execution.entries]]
     sha256 = "85a3e74012c6e31f084c24defc26631da37a3822cd503673d3b8f9b4896117fe"
@@ -433,10 +440,10 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "57b4e31baf4fa1765f34b33d9074e7c549e9399fe4901fc8cf596c7a2d472fcd"
     path = "src/joint_phylo_grouped_gaussian.jl"
     [[execution.entries]]
-    sha256 = "e00db8257117c5ecb339aed5b0b158d51b08a7d2d182d28e16975ccd809993af"
+    sha256 = "af74c5632a922cacd3148a0cdfabbc0ec65edbf9d55e678b677d59e52fb35a18"
     path = "src/joint_phylo_grouped_postfit.jl"
     [[execution.entries]]
-    sha256 = "0a2a29eae0ec062e77bc34ab52ee4abc631a8c6e937ce59c5f96439de04b196e"
+    sha256 = "1fccf397553b22f2e1caffb3234fbef1ce9d99ab4274944a13f4afc995e134d8"
     path = "src/kernel_dep.jl"
     [[execution.entries]]
     sha256 = "e2e99e32cdedc57a78a61b1f196b5df3a2f18037d772c537190ebd7ef661e2db"
@@ -445,7 +452,7 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "988c71056ac4c912a491f819fffdcdd3db927b01544ececa68e6194955b58796"
     path = "src/kernel_latent.jl"
     [[execution.entries]]
-    sha256 = "685931637f70237d6c52561ee524ce5827d5cf9bbd4017192dcc38afeadda187"
+    sha256 = "cff839818876539e9ad56671bd17756745607adc18b7167b141c9aa91c63af01"
     path = "src/laplace_grad.jl"
     [[execution.entries]]
     sha256 = "134aceec4b1a79ad6958b66461ab0cad14bcec68219e5c71d6f857b45b167926"
@@ -487,13 +494,13 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "84999a6f8b5ecbfc5cb50658d0f207dd4edfe4c2c9db22f2a0006d666b2c5a0d"
     path = "src/missing_predictor_phylo.jl"
     [[execution.entries]]
-    sha256 = "4e52b664f798b052ced42720b26ac34a535d5582af8be05e9ee1bcded1281231"
+    sha256 = "d946340d05ade69b1000b398e5d020dbf1d05f5e497490f63b445e9e62d68ebf"
     path = "src/missing_predictor_poisson.jl"
     [[execution.entries]]
     sha256 = "8ac80f312988c81fcc6ba6580eeac11e7ed68087e2ae29755ba07600fc373c87"
     path = "src/model_comparison.jl"
     [[execution.entries]]
-    sha256 = "55a063f237272fb2dd7b3b9c8b4d9b495dd2c92ac86c5b921808f9d2e72ea2a1"
+    sha256 = "a25f5d4f1012407503740f1073ba22d05448240b46c608c97032d17de78951eb"
     path = "src/model_selection.jl"
     [[execution.entries]]
     sha256 = "7e7e18ed30cf628c978ff75307d14f94f4de7a524875934db12fdce8a0a73406"
@@ -502,37 +509,40 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "267d9513d1976422b050a8146c14a75e5da86aa1fe95de3228e607ded8020528"
     path = "src/none_dep.jl"
     [[execution.entries]]
+    sha256 = "3056e061bbd9f45c2cf90994fb0bcd07fc5e1155c99700e2942a14535ecad478"
+    path = "src/optimizer_selection.jl"
+    [[execution.entries]]
     sha256 = "ebe7ec3807f72f867a913a7a043a4a09286f093ef2d817ec4bbbe79509938d2e"
     path = "src/ordination.jl"
     [[execution.entries]]
     sha256 = "b5bf8b1b7df530ec3d93a8aa826d0bd1362678e144b80dfa27bd9dbf55b53976"
     path = "src/ordination_uncertainty.jl"
     [[execution.entries]]
-    sha256 = "53c4e41ef2fb3084cd00399a3e507ff5d0f223692245f61d964d57b518d109f9"
+    sha256 = "f2da7377050750ddabbd2641f7ce40c7130f449390c082a5eacacca3c252cfff"
     path = "src/packing.jl"
     [[execution.entries]]
-    sha256 = "38ac7c25fa09afa5ca75c423f4b006124de66c0ef1885815519ddbb115a7b9ed"
+    sha256 = "660bc80eb7fc8188bd597b2012b7c268dc370d998e259261fbba5440139f0c34"
     path = "src/phylo_beta_xlv.jl"
     [[execution.entries]]
-    sha256 = "0a362281ef1b05f21eb42fa43b22c90bda5e2d1752ab4794bc86ee91c5334235"
+    sha256 = "0ecaa1e5bb89c75b122d5345b86bde59c19b4f526dbc89523af55ad03a303b89"
     path = "src/phylo_binomial_xlv.jl"
     [[execution.entries]]
-    sha256 = "9d9241d5aedb55a6ccb6f1c42f26c4a7221cdd81de90a477feee7340dffb3569"
+    sha256 = "e35f1c692a4459d2514b5377eaef334d0b601180385f9361fcdc8a80287fc5c4"
     path = "src/phylo_branch_re.jl"
     [[execution.entries]]
     sha256 = "09edade1f725df5509099fffa803388cd32d34525da2572b1b70e752cf0afd84"
     path = "src/phylo_contrasts.jl"
     [[execution.entries]]
-    sha256 = "94837f96c7acbbe2677863cd322b858ca976282623da5eea868e87be1bc478f3"
+    sha256 = "93ea40f21c898e85cb6071a908a05848560fd5ad4b3a3b5f4f57c556f975a7d7"
     path = "src/phylo_dep.jl"
     [[execution.entries]]
-    sha256 = "e254a2013cfcdbf0783411119b0166deed7fe140e8d0bde622ebd052f2965a4a"
+    sha256 = "0ab5b80bae55650f4a44614c1bdd4dd1f273e22ab320e0fc4464fa5ad06078f7"
     path = "src/phylo_gamma_xlv.jl"
     [[execution.entries]]
     sha256 = "9dd0bbd9d78ef3219a971cb87d9f280d9c7016dd43a842c70826526538b73e48"
     path = "src/phylo_glm.jl"
     [[execution.entries]]
-    sha256 = "52a6838630bb2534e494a3571de31bfcf74cc9350a1e0310f7dfae4083388629"
+    sha256 = "d48c4d07fc615bd8c956050ea669e2b1228695f0b982b032fe6527e2081e88dd"
     path = "src/phylo_latent.jl"
     [[execution.entries]]
     sha256 = "66c9ee1c1c89f498b8a710436d77cb8d22af884219729247259d240ee6471282"
@@ -541,28 +551,28 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "136f971ba62220f21ede2b467cc035b7efca7c30a82a38750c0081290ba5006b"
     path = "src/phylo_latent_precision.jl"
     [[execution.entries]]
-    sha256 = "a2866ab2be8a3a8e5603f950a24008c199eeb47427bcef4843d3bb03c7fff6cd"
+    sha256 = "ead9a6c272440f9bba4c562f3684c805ec286eda37248b476b247f20bc85b59b"
     path = "src/phylo_nb_xlv.jl"
     [[execution.entries]]
-    sha256 = "db3952a1a10786cc5b4269f58b10d4928661f43532804fb2c81240e23cf2f00f"
+    sha256 = "616eb947e807699e07af1e3a8d1b2e5176e7a19fdf815bb45f1d4ef6a0440d82"
     path = "src/phylo_ordinal_xlv.jl"
     [[execution.entries]]
-    sha256 = "e486d79a985be51bb0f13b06ab123ee2ec329621fa4d5ba885c32eee5e592292"
+    sha256 = "e39f0b041b4488709c4fd653b1ff7ed4dab4b90168fae5bfe6301ded0c764f2c"
     path = "src/phylo_poisson_xlv.jl"
     [[execution.entries]]
     sha256 = "35e17f3fb5d936d009b601ba72b63fcd11c3d900d88f23a8c4070cd941eb77ed"
     path = "src/phylo_precision.jl"
     [[execution.entries]]
-    sha256 = "b1f67875da494d0f352dc436364c05a340fc31888f006cd07e76989e737cc6b9"
+    sha256 = "dfc934cb6ab727d94fa9669e1b2a9b56a2c172d5f237aade32840bf2bebca2e5"
     path = "src/postfit.jl"
     [[execution.entries]]
-    sha256 = "7c4dae92e93af576e199669d0c1b9b1a034f883238569a0ea54450d8513bf685"
+    sha256 = "0066d510bcbfe25529f52ce53c6b70553b7057298455e0c2a93b6e10267e9be8"
     path = "src/postfit_tables.jl"
     [[execution.entries]]
     sha256 = "9d9018fedc648de860fbb82a1b0faaeba4d0563ccdc051f9017163c3590ed807"
     path = "src/ppca_init.jl"
     [[execution.entries]]
-    sha256 = "f13658d4ce404baf3bcb9395700e6c47104bb2a939bbba3d94490cd8567af34e"
+    sha256 = "302f3546305685898d99d693f1b4e72e96ef33c6eb9dc8f352fb7f4d821c37d8"
     path = "src/precision_fit_admission.jl"
     [[execution.entries]]
     sha256 = "3a0eecb500bd9540b752430aeb6de5d57d7b814da2a8fbf1f695bf151176a634"
@@ -571,16 +581,16 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "1eae35fd119aa7747a71608686feb2dfd784b91c0384817a01943bdfcb2d0efb"
     path = "src/precision_multivariate_fit.jl"
     [[execution.entries]]
-    sha256 = "f5b6b791572e994beec71de896464da16294cb900597136452d50061b087fb7c"
+    sha256 = "42a5ccbac9805f08ccee1a1e0700b9e10911fab1ddce662c2a446a5e95a763fc"
     path = "src/profile.jl"
     [[execution.entries]]
     sha256 = "38da8d6e6261b7a2524a96afecacaf4f245c0670784ea9c81a5f85456d07f922"
     path = "src/random_effects.jl"
     [[execution.entries]]
-    sha256 = "0d7209e7da63a09e93d8197be397f33bb44e2aa2fe4313fb34a52979cdbce8c0"
+    sha256 = "5bfbc140b88908495c33946b1377723f1846a4e57f2fb52ae958898efbcce42b"
     path = "src/re_sd.jl"
     [[execution.entries]]
-    sha256 = "a3b1d3f7a98e768a46a9bc60300bd768503de7bf4cab8e0213a6e440dd20a77d"
+    sha256 = "5187e57129e89fa45d710e0e124d48d3e1fb4eb9a7bd9d232c1d51fe9398bc7f"
     path = "src/relaxed_clock.jl"
     [[execution.entries]]
     sha256 = "ab301d60e85f4035c7e66843620800907e8ac735ebede04dedc35564204f985e"
@@ -589,13 +599,13 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "e68978b4defb1e2200f24881743880a529a46cef7e605395fbe994b2c532d70e"
     path = "src/simulate.jl"
     [[execution.entries]]
-    sha256 = "e7272505c2510fe13547b9df1264c9e95c683ce67e6195484d19359b1a158b33"
+    sha256 = "86206784dec8c2cb158e41f2972fb9572db7138ffb3a9cc3bf62e79c5a700729"
     path = "src/simulate_fit.jl"
     [[execution.entries]]
-    sha256 = "1706d02a4d7838986ddd4f0cc6cb4ad09c3e92c6213736c223a314a48ec0263b"
+    sha256 = "67c61d230616bd42cd7b75c036d5d2755b3bba07e444b674320f5cb0b84fa86c"
     path = "src/source_covariance.jl"
     [[execution.entries]]
-    sha256 = "cedd38b61939049364a0a8edb48d5968c29a434fab59f0e82c92733818e3bc45"
+    sha256 = "e05341e13fda575d184f46260419fdfb62863dfab7b23ebece7d2c980dc24b09"
     path = "src/source_fit.jl"
     [[execution.entries]]
     sha256 = "f6a8c8d9319b4c6d2af246108d21364a3cc56fc98ac260345d0f9c3fc78d82aa"
@@ -607,19 +617,19 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "f23dac88e5637bd34c66a44de2fc5e50c975e2240c6aa5979e308e33e1f7c954"
     path = "src/spatial_dep.jl"
     [[execution.entries]]
-    sha256 = "920d890e0e1ee31d09ec67776ecb872571213c7b345af61c2f8521e5938870d5"
+    sha256 = "e048dfe707299c636676c007876898e107615f05df2e55c5df9a9987264e6e1a"
     path = "src/spde.jl"
     [[execution.entries]]
-    sha256 = "def7144f05140805a22f914b71a9c6bb90069fc02096d1d93a6825d14cd64b9e"
+    sha256 = "daff6d10c3e6eef84129969f7d6ed9ba994ebb2bb4b8c44fbfd23c81117c9f0e"
     path = "src/spde_delaunay.jl"
     [[execution.entries]]
-    sha256 = "be1f189de617c600b12388a787e66c1c392c603d79251f45d2b492281b82957c"
+    sha256 = "c7cb793e3861006bb1293f8a87f5a3df5ea64fc823e41c5cbeb2dd7138ce42a1"
     path = "src/spde_fit.jl"
     [[execution.entries]]
-    sha256 = "fccb7b6b2bb7890128afce30d34044bb8698fdabb013b6906026abebe0d23051"
+    sha256 = "3c87cdc05592eaf045f6fc36331f6bfe7340978fd6e8a773fc79f56e2459b66a"
     path = "src/spde_latent.jl"
     [[execution.entries]]
-    sha256 = "f7be3a13a583076e63bbebfc96cdca908b7ea857f5eed3ba1e0dc81f825728d0"
+    sha256 = "80bda10e5a1e69003881f418ed2c543669000d02b45943088cf8ca8112b07247"
     path = "src/spde_latent_postfit.jl"
     [[execution.entries]]
     sha256 = "ed110157ef74be37f2e0cf5cce8f2419e6351d9b8850566c0509f0b777c85718"
@@ -630,6 +640,9 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     [[execution.entries]]
     sha256 = "545bf0489466adc02189fd0f745f30246e14e95e93b137acbf9fe359b6a644b2"
     path = "src/summary_table.jl"
+    [[execution.entries]]
+    sha256 = "5476977bec2e9ef5132bf3e633828d5798b3ee408a439a786bfcaa361cdbbfec"
+    path = "src/symmetric_admission.jl"
     [[execution.entries]]
     sha256 = "c9ed00e3a1b0f521daabf0991a45048ae5319e67000e48dfb6b533bafc7d2e58"
     path = "src/takahashi_selinv.jl"
@@ -643,16 +656,16 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "1392fa4eaa524a75b6cfda73f851be03c3275d843f9303f8dfdd9d30f820ef69"
     path = "src/temporal_likelihood.jl"
     [[execution.entries]]
-    sha256 = "a4bdc233ee68a86efde05ed90879990a22917aa99cfd032d353ac508de53cf42"
+    sha256 = "46cbe1b3b66ffb7bb6eebc4e1df9ffcec128a4c3e990453dbd5805f58ff54164"
     path = "src/temporal_methods.jl"
     [[execution.entries]]
     sha256 = "4f7f911cad585b61e67e8bda043890d8b61550b166c8a44200d92d8ae3c092a4"
     path = "src/twolevel.jl"
     [[execution.entries]]
-    sha256 = "0e5d7ce63ed27a571800e6f6772bc14b8159765920b9a6188006031ba2c83e26"
+    sha256 = "dd7b17b18aee6d02bbe54f1f5b7602a1bdad23b8594d53659604170f694f12e2"
     path = "test/Project.toml"
     [[execution.entries]]
-    sha256 = "e9d621df9c0a0667dd8ff285f3f70ed8d3ad8159aa4b1cacc8d2d365028ca72d"
+    sha256 = "bd19bac08747a51ab17b13d3585af1dd0fdcb8be8fdb7b9c4ed5777a9cdeea36"
     path = "test/parity/Manifest.toml"
     [[execution.entries]]
     sha256 = "fc4c59d9d880a8a7843d73c22645eeb45048a0a1d1175d27b995100267edaceb"
@@ -661,7 +674,7 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "a2ec621466ef14ddc3101f217dc190709915b8e10150b4450eb9e693a87067f7"
     path = "test/parity/core070_case_registry.jl"
     [[execution.entries]]
-    sha256 = "ad24f3c3e957f2c73e4df830ab3136a6f439a6d7d7fc112b0a7fce21c8b8df55"
+    sha256 = "4226e252bce4428f60feb534b5a2b87ee3890ed5aff535943d9762c888c4d471"
     path = "test/parity/core070_pin.jl"
     [[execution.entries]]
     sha256 = "ed142de650c71f72bf4c932f6c3e612f977439e47f54deccb4ebb5b762ba5e9e"
@@ -685,10 +698,13 @@ manifest_sha256 = "98c58d25021ceda58b8346afb56020ce99a46ee5e745f129ec91843871e12
     sha256 = "2df19cd81b17ba38a4f8dca656797bf94085534f0f9b1d5ab495bc9d29cd8ff0"
     path = "test/parity/fixtures/core070_gaussian_reference.R"
     [[execution.entries]]
+    sha256 = "8a0dccb0579ce217321257598c5112262487ea958cf9b40a03cfb541902d8c01"
+    path = "test/parity/frozen_rng.jl"
+    [[execution.entries]]
     sha256 = "0790b27cb826d92a50fd03abda1ba29dd40b258812a6f09416b476c83523b9b0"
     path = "test/parity/nb2_health.jl"
     [[execution.entries]]
-    sha256 = "c274767b9b9f474e39bea0e5940cd5964a07e20a89f1ff6976ffdbba818b83eb"
+    sha256 = "7d34c957ae7c8b4d96edd4be4a4879c2a78b0c9c6d8e5bbc5153b28f2c724e2f"
     path = "test/parity/parity_helpers.jl"
     [[execution.entries]]
     sha256 = "f4bb02fd150c306f635b7f86885272939f0b66faa4a8c5ee8843c64f6f7ea7cd"

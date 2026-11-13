@@ -21,7 +21,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-family.json",
-   "sha256": "793cec004417e630a2774b4c646b7bff06e84c59d26b31ac80faf57697a8a2b2",
+   "sha256": "aaab9ad8dcbf325ed7cf4f946adb8376bfd640330eeb1de9f964c429e9c30c78",
    "rows": 26
   },
   {
@@ -3586,13 +3586,13 @@
    },
    "measured_result": {
     "case_verdicts": {
-     "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "FAIL",
-     "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "FAIL",
+     "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "PASS",
+     "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "PASS",
      "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
     },
     "batch_verifier": {
-     "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "FAIL",
-     "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "FAIL",
+     "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "PASS",
+     "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "PASS",
      "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "n/a"
     },
     "discriminating": {
@@ -3600,8 +3600,9 @@
      "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": true,
      "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": true
     },
-    "executed_cases_verdict": "FAIL"
-   }
+    "executed_cases_verdict": "PASS"
+   },
+   "note": "Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as R_BOUNDARY_UNCHANGED (tracked follow-up). Mixed oracle builds (maintainer ruling 2026-11-13, D8-ORACLE): the FAMILY-11 no-fit boundary probe was checked against the registered 5 Oct Totoro build (build-totoro.json); the 17 batches ran on the 11-04 build (build-totoro-20261104.json). Both are the P1 pin; the probe fits nothing."
   },
   {
    "source_id": "family/FAMILY-01-CLOGLOG",
@@ -3894,7 +3895,8 @@
      "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": true
     },
     "row_verdict": "PASS"
-   }
+   },
+   "note": "Baseline (maintainer ruling 2026-11-13, D8-05LOG): the bridge numbers differ from the earlier committed receipts by up to 7.5e-8 (1 Julia thread against 4); the difference reproduces exactly across reruns and is treated as baseline."
   },
   {
    "source_id": "family/FAMILY-06-FIXED-SHAPE",

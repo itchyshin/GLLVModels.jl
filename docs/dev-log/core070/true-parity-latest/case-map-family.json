@@ -4,7 +4,7 @@
   "scope": "family family: the 21 required rows (required_core, plus the compatibility_adapter row FAMILY-BETA-ALIAS, which tools/true_parity_check.mjs counts as required) the P1 carry scan lists as DANGLING (16) or NO_R_PINS (5). FAMILY-16-LOGIT (NOT_BOUND_AT_P0, empty case list) and the rejected and excluded rows are out of scope.",
   "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries passing R-vs-Julia comparison blocks, from a batch whose verifier passed, with no flagged comparison, cite evidence.receipt. Every cell is a toy fixture (p<=5, n<=250): these rows measure likelihood-level agreement on one small data set each, not full family parity.",
   "generator": "tools/core070_family_p1_receipts.py",
-  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
   "batch_verifiers": {
     "runparity-binomial": {
       "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
@@ -73,7 +73,7 @@
     },
     "runparity-gaussian": {
       "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
-      "status": "FAIL",
+      "status": "PASS",
       "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt"
     },
     "family-links-p1": {
@@ -106,24 +106,24 @@
     "p0_raw_receipts_available_here": false
   },
   "runtimes_seconds": {
-    "runparity-lognormal": 16,
-    "runparity-binomial": 17,
-    "family-links-p1": 19,
-    "runparity-tweedie": 21,
-    "runparity-dispersion": 25,
-    "runparity-poisson": 30,
-    "runparity-truncated-poisson": 11,
+    "family-links-p1": 20,
+    "a6-p1": 20,
+    "runparity-binomial": 19,
+    "runparity-tweedie": 24,
+    "runparity-lognormal": 18,
+    "runparity-poisson": 33,
     "runparity-nb2": 20,
-    "a6-p1": 19,
+    "runparity-nb2-formula": 36,
     "runparity-beta": 29,
-    "runparity-delta-lognormal": 14,
+    "runparity-truncated-poisson": 12,
+    "runparity-truncated-nb2": 72,
+    "runparity-delta-lognormal": 15,
     "runparity-delta-gamma": 16,
-    "runparity-ordinal-probit": 10,
-    "runparity-gaussian": 26,
-    "runparity-nb2-formula": 69,
-    "runparity-truncated-nb2": 81,
-    "bridge-p1": 63,
-    "total_wall_seconds_five_parallel_runparity_plus_side_chain": 174
+    "runparity-ordinal-probit": 11,
+    "runparity-dispersion": 230,
+    "runparity-gaussian": 28,
+    "bridge-p1": 50,
+    "total_wall_seconds_five_parallel_runparity_plus_side_chain": 341
   },
   "batch_artifacts": {
     "runparity-binomial": [
@@ -304,13 +304,13 @@
       },
       "measured_result": {
         "case_verdicts": {
-          "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "FAIL",
-          "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "FAIL",
+          "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "PASS",
+          "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "PASS",
           "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
         },
         "batch_verifier": {
-          "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "FAIL",
-          "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "FAIL",
+          "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "PASS",
+          "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "PASS",
           "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "n/a"
         },
         "discriminating": {
@@ -318,8 +318,9 @@
           "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": true,
           "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": true
         },
-        "executed_cases_verdict": "FAIL"
-      }
+        "executed_cases_verdict": "PASS"
+      },
+      "note": "Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as R_BOUNDARY_UNCHANGED (tracked follow-up). Mixed oracle builds (maintainer ruling 2026-11-13, D8-ORACLE): the FAMILY-11 no-fit boundary probe was checked against the registered 5 Oct Totoro build (build-totoro.json); the 17 batches ran on the 11-04 build (build-totoro-20261104.json). Both are the P1 pin; the probe fits nothing."
     },
     {
       "source_id": "family/FAMILY-01-CLOGLOG",
@@ -612,7 +613,8 @@
           "CORE070-FAMILY-05-LOG-PUBLIC-R-BRIDGE": true
         },
         "row_verdict": "PASS"
-      }
+      },
+      "note": "Baseline (maintainer ruling 2026-11-13, D8-05LOG): the bridge numbers differ from the earlier committed receipts by up to 7.5e-8 (1 Julia thread against 4); the difference reproduces exactly across reruns and is treated as baseline."
     },
     {
       "source_id": "family/FAMILY-06-FIXED-SHAPE",
@@ -1335,9 +1337,5 @@
       },
       "ruling": "itchyshin/GLLVModels.jl#684 item 4"
     }
-  ],
-  "rederived": {
-    "tool_commit": "1527d2c48af87af225e64b061cbe57f2e976ea31",
-    "note": "case receipts and rows re-derived from the tracked batch artifacts (--rederive); no batch was re-run, so glvmodels_commit stays the run commit"
-  }
+  ]
 }

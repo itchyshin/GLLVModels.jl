@@ -25,13 +25,13 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run.toml": "8e7016724c89dfd71131bf97bf0f8c7dc02fb2853250485ffd59a83f6e5fea4a",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "282b669266fa8ce12842fce380d76b45b6ca797b88f78913153bc159747a7afb",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt": "46741718c489dcccddb2e89b57e1110df3e577e2e6d30a612b9c0d582137edad",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "40dae31ceaa65db12af916969c34534adf02124c8633d8c1c55a34b2e4265160",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/formula-nb2-health.toml": "a528f32a3a127336fcff3dbcf2c2fda0a044af9a3d0aa954008b1e898033ebe7",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/nb2-formula.toml": "5a6007891cf2a16dfa722739c8341401fd0f8974252d15064e0911e6e63d4e08"
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run.toml": "e4fbc893db44f22111067a3f792e6fd9cc7b83ce8e1ab70b75c2c5891b4af5f8",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "2afb3ed5b7770d86c9c33b0bfe5c91087e1cbcae884b30a55bc4ab7e93011bbc",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run-commit.json": "7e9fd345ee2b712dca50d188f47f0137edb2fd757f9e23e880f7ec04885d6752",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt": "2010b521e6e80c0dad9d03dfd99c188f0ae9ba636d55c39527cb3ee31b840bb9",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "93d8da36008f413cef3ba3e4c9a5ec0b774fb5636c7dcbb4a0eca604a2c1e97c",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/formula-nb2-health.toml": "468cd0bb045ac4da1d3b3a35b8c8c4e2977ca6fea2b5ffbe5b1524ee001274dc",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/nb2-formula.toml": "de922e308df0981770f9297e73cb937dc2edab6a3d1d0b16aeacdc34ae6057a0"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml",
@@ -42,11 +42,11 @@
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
     "pin": "P1",
@@ -54,12 +54,12 @@
       {
         "case_id": "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE",
         "quantity": "logLik, native route (the formula routes are checked against it)",
-        "max_abs_diff": 3.953276973334141e-06,
+        "max_abs_diff": 3.954095404878899e-06,
         "tolerance": 0.000820548538160879,
         "tolerance_rule": "the cell's own test, @test native.loglik\u2248r.logLik rtol=1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
         "n_values": 1,
         "r_value": -820.548538160879,
-        "julia_value": -820.5485342076021,
+        "julia_value": -820.5485342067836,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       }
