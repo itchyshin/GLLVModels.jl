@@ -1084,6 +1084,7 @@ function _beta_grouped_laplace_weight(hessian::Symbol, f::Beta, μ, me, y, link:
     link isa LogitLink || throw(ArgumentError(
         "hessian=:observed is currently supported only for Beta with LogitLink()"))
     φ = f.α
+    y = _clamp_y(f, y)                              # same guard as `_glm_score` and `_glm_logpdf`
     ystar = log(y) - log1p(-y)
     μstar = digamma(μ * φ) - digamma((1 - μ) * φ)
     ν = trigamma(μ * φ) + trigamma((1 - μ) * φ)
