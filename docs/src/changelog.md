@@ -21,6 +21,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   preserves historical behavior; `optimizer_info(fit)` reports executed
   stages. Explicit selection is refused for unsupported nested routes and
   profile/bootstrap refits that do not yet forward the solver.
+- **IN (refs #1107, #1108), behaviour change:** NaN or Inf at an observed cell of `Y` is
+  an `ArgumentError` naming the fitter and the cell on `fit_gaussian_gllvm`,
+  `fit_dep_gllvm` and `fit_gllvm(Normal())`. At `K = p` they returned `loglik = NaN`
+  with `converged = false` and no message. Use `missing` or `mask = false` for
+  unobserved cells.
 - **CHANGED (default, breaking):** `DeltaLogNormal()` / `DeltaGamma()`
   (`fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`, and `fit_gllvm`)
   default to `disp_group = :species` — one dispersion per trait, matching R
