@@ -542,7 +542,11 @@ function cv_gllvm(Y::AbstractMatrix;
             push!(fold_errs, sq_err)
             push!(all_sq_errs, sq_err)
 
-            cell_ll, cell_res = _cv_cell_eval(fit_k, family, y_val, μ, t_idx !== nothing ? t_idx : 1, s, N, rng)
+            # The Binomial density reads the trial count N[t, s], so it needs the original
+            # species row `t`. `t_idx` is a position among the training species (and `1` for a
+            # held-out species), which picked the wrong trial count under `split = :species`.
+            t_eval = family isa Binomial ? t : (t_idx !== nothing ? t_idx : 1)
+            cell_ll, cell_res = _cv_cell_eval(fit_k, family, y_val, μ, t_eval, s, N, rng)
             residuals_mat[t, s] = cell_res
             fold_ll += cell_ll
             push!(fold_rvec, cell_res)
