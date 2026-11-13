@@ -745,6 +745,7 @@ println(_SHARD === nothing ?
     _shard_include("test_diagnostics.jl")
     _shard_include("test_se_machinery.jl")
     _shard_include("test_nobs_pn_convention.jl")
+    _shard_include("test_beta_grouped_ci_y_clamp_1155.jl")
     _shard_include("test_summary_table.jl")
     _shard_include("test_covariates.jl")
     _shard_include("test_cov_mode_search_gamma.jl")
