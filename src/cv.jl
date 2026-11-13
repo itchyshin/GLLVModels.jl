@@ -241,7 +241,7 @@ function _cv_cell_eval(fit, family::Beta, y::Real, μ::Real, t::Int, s::Int, N_m
     φ = (φ_raw isa AbstractVector) ? Float64(φ_raw[min(t, length(φ_raw))]) : Float64(φ_raw)
     d = Beta(μ_c * φ, (1.0 - μ_c) * φ)
     yc = clamp(Float64(y), 1e-6, 1.0 - 1e-6)
-    ll = logpdf(d, yc)
+    ll = _beta_logpdf(μ_c * φ, (1.0 - μ_c) * φ, yc)
     r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
