@@ -30,7 +30,57 @@ function _glm_weight(f::Beta, μ, n, me)
     return φ^2 * ν * me^2
 end
 
-_glm_logpdf(f::Beta, μ, n, y) = logpdf(Beta(μ * f.α, (1 - μ) * f.α), _clamp_y(f, y))
+_glm_logpdf(f::Beta, μ, n, y) = _beta_logpdf(μ * f.α, (1 - μ) * f.α, _clamp_y(f, y))
+
+# Beta(a, b) log-density, a = μφ, b = (1−μ)φ. `logpdf(Beta(a, b), y)` forms
+# `loggamma(a+b) − loggamma(a) − loggamma(b)` from three terms of size φ log φ, so at φ ≈ 1e12
+# Float64 leaves an error of ~1e-3 per observation and at φ ≈ 1e18 an error of hundreds (measured
+# against BigFloat). A fit that ran to such a precision then reported a large positive
+# log-likelihood (#1143). When BOTH a and b are at least `_BETA_STIRLING_FROM` the three loggammas
+# are replaced by their Stirling series; with s = a + b the large terms cancel analytically:
+#   log f = a [log(y s / a) − u] + b [log((1−y) s / b) − w] + ½ log(a b / (s 2π)) − log y − log(1−y)
+#           + S(s) − S(a) − S(b),     S(x) = 1/(12x) − 1/(360x³) + 1/(1260x⁵) − 1/(1680x⁷),
+# where u = (y s − a)/a and w = −(y s − a)/b (so a u + b w = 0, which is what lets the kernel be
+# written as a [log(1+u) − u] + b [log(1+w) − w]). Both brackets are ≤ 0 and are evaluated by
+# `_log1pmx` without cancellation near y = a/s. The numerator y s − a is formed with an fma and the
+# rounding error of s = a + b, so it is accurate when y is within a few standard deviations of a/s.
+# Below the threshold the original call is used unchanged, so ordinary fits are bit-identical.
+const _BETA_STIRLING_FROM = 1.0e3
+
+# log1p(x) − x for x > −1 without cancellation, given r = 1 + x supplied accurately by the caller:
+# for |x| < 1/2 the series 2 Σ_{k≥3,odd} z^k/k − 2z²/(1−z) in z = x/(2+x) (|z| ≤ 1/3), else log(r) − x.
+@inline function _log1pmx(x, r)
+    abs(x) < 0.5 || return log(r) - x
+    z = x / (2 + x)
+    z2 = z * z
+    term = z * z2          # z³
+    acc = zero(z)
+    k = 3
+    while k <= 41
+        acc += term / k
+        term *= z2
+        k += 2
+    end
+    return 2 * acc - 2 * z2 / (1 - z)
+end
+
+@inline _stirling_corr(x) = inv(12x) - inv(360 * x^3) + inv(1260 * x^5) - inv(1680 * x^7)
+
+_beta_stirling_applies(a, b) = a >= _BETA_STIRLING_FROM && b >= _BETA_STIRLING_FROM
+
+function _beta_logpdf(a, b, y)
+    _beta_stirling_applies(a, b) || return logpdf(Beta(a, b), y)
+    s = a + b
+    bb = s - a
+    e = (a - (s - bb)) + (b - bb)            # exact rounding error of s = a + b
+    n = fma(y, s, -a) + y * e                # y (a + b) − a
+    u = n / a
+    w = -n / b
+    ω = 1 - y
+    kernel = a * _log1pmx(u, y * s / a) + b * _log1pmx(w, ω * s / b)
+    return kernel + 0.5 * log(a * (b / s) / (2π)) - log(y) - log1p(-y) +
+           _stirling_corr(s) - _stirling_corr(a) - _stirling_corr(b)
+end
 
 """
     beta_marginal_loglik_laplace(Y, Λ, β, φ; link=LogitLink(), kwargs...) -> Float64
