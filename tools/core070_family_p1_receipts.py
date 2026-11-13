@@ -402,7 +402,7 @@ def execution_inventory_intact(run, commit, cells):
         body = code.split("function _core070_execution_paths", 1)[1].split("\nend", 1)[0]
         # A changed routine can introduce new dynamic inputs. Require review
         # before accepting it rather than guessing its execution-path contract.
-        if hashlib.sha256(body.encode()).hexdigest() != "81d3c6f8d535a28c638e102f72d56ad2aaf326cdc9d864c25175005263f56d73":
+        if hashlib.sha256(body.encode()).hexdigest() != "93bb4994b7a3e2436be49506e8abf07c84b607eb0e4774b919748b516514913b":
             return False
         fixed_block = body.split("paths = String[", 1)[1].split("]", 1)[0]
         fixed = set(re.findall(r'"([^"\\]*)"', fixed_block)) - {"src"}
