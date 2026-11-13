@@ -87,4 +87,31 @@ using Test, GLLVModels, Random, Distributions, StatsModels
         @test refused(() -> fit_gllvm_cov(Yc; family = Poisson(), K = 1, X = Xn, it...), "fit_gllvm_cov", "X[1, 2, 1]")
         @test isfinite(fit_rrr_gllvm(Yc; K = 1, X = Xs, iterations = 60).loglik)
     end
+
+    # A mask of the wrong size next to a NaN covariate: the covariate scan indexes the mask,
+    # so it must refuse the shape (DimensionMismatch) before reading it, never read past its end.
+    @testset "wrong-size mask plus NaN covariate is a DimensionMismatch" begin
+        bad_mask = trues(3, 29)                          # Y is 5 x 24
+        Xn = copy(Xp); Xn[5, 2, 1] = NaN                 # row 5 does not exist in a 3-row mask
+        Xsn = copy(Xs); Xsn[2, 1] = NaN
+        mism(f) = (e = thrown(f); e isa DimensionMismatch && occursin("mask", e.msg))
+        @test mism(() -> fit_gllvm_cov(Yc; family = Poisson(), K = 1, X = Xn, mask = bad_mask, it...))
+        @test mism(() -> fit_gllvm_cov(Yc; family = Poisson(), K = 1, X = Xp, mask = bad_mask, it...))
+        @test mism(() -> fit_gllvm_speciescov(Yc; family = Poisson(), K = 1, X = Xn, mask = bad_mask, it...))
+        @test mism(() -> fit_nb_gllvm_grouped_cov(Yc; K = 1, X = Xn, mask = bad_mask, it...))
+        # ordinal: the level check runs first and reads the mask by linear index, so use a mask
+        # larger than Y here (a smaller one is refused by the level check itself)
+        big_mask = trues(6, 30)
+        @test mism(() -> fit_ordinal_gllvm_pertrait_cov(Yo; K = 1, X = Xn, mask = big_mask, it...))
+        @test mism(() -> fit_ordinal_gllvm_pertrait_cov(Yo; K = 1, X = Xp, mask = big_mask, it...))
+        @test mism(() -> fit_fourthcorner_gllvm(Yc; family = Poisson(), K = 1, Xenv = Xsn, TR = TR, mask = bad_mask, it...))
+        @test mism(() -> fit_fourthcorner_gllvm(Yc; family = Poisson(), K = 1, Xenv = Xs,
+                                                TR = with(TR, (5, 1), NaN), mask = bad_mask, it...))
+        # the helper itself, for each unit
+        chk = GLLVModels._check_finite_covariates
+        @test_throws DimensionMismatch chk(Xn, "f"; obs = bad_mask)
+        @test_throws DimensionMismatch chk(Xsn, "f"; obs = bad_mask, unit = :site)
+        @test_throws DimensionMismatch chk(TR, "f"; obs = bad_mask, unit = :trait)
+        @test chk(Xp, "f"; obs = trues(p, n)) === nothing
+    end
 end

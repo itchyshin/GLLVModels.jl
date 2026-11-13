@@ -802,8 +802,8 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
     obs = mask === nothing ? trues(p, n) : mask
-    _check_finite_covariates(X, "fit_ordinal_gllvm_pertrait_cov"; obs = obs)
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait_cov")
+    _check_finite_covariates(X, "fit_ordinal_gllvm_pertrait_cov"; obs = obs)
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
         obs[t, i] && (C[t] = max(C[t], Int(Y[t, i])))

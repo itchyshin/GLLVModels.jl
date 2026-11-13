@@ -83,12 +83,25 @@ end
 # array is `p x n x q` and only the entries at observed cells are checked, so a covariate
 # value hidden by `mask = false` / `missing` stays allowed. With `unit = :site` the array
 # is `n x q` and a row is checked when its site has an observed cell; with `unit = :trait`
-# it is `p x r` and a row is checked when its trait has one.
+# it is `p x r` and a row is checked when its trait has one. A mask whose size does not
+# match the array (3 x 29 against a 5 x 24 response, say) is a `DimensionMismatch`, raised
+# before the scan reads it; the scan is bounds-checked as well.
 function _check_finite_covariates(X::AbstractArray, caller::AbstractString;
         obs = nothing, unit::Symbol = :cell, name::AbstractString = "X")
+    if obs !== nothing
+        want = unit === :cell ? (size(X, 1), size(X, 2)) :
+               unit === :site ? (nothing, size(X, 1)) : (size(X, 1), nothing)
+        ok = ndims(obs) == 2 && (unit === :cell ? size(obs) == want :
+             unit === :site ? size(obs, 2) == want[2] : size(obs, 1) == want[1])
+        ok || throw(DimensionMismatch(
+            "$caller: mask is $(size(obs)) but $name is $(size(X)); `mask` must have the shape " *
+            "of Y (traits × units, true = observed) and match $name " *
+            (unit === :cell ? "in its first two dimensions." :
+             unit === :site ? "in its rows (units)." : "in its rows (traits).")))
+    end
     bad = 0
     first_bad = nothing
-    @inbounds for I in CartesianIndices(X)
+    for I in CartesianIndices(X)
         x = X[I]
         (x isa Real && isfinite(x)) && continue
         if obs !== nothing
