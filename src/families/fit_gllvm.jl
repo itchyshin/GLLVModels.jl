@@ -654,6 +654,10 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         return sel.best
     end
 
+    # NB1 with a row effect: refuse here with the real reason (below, the NB1 default
+    # `disp_group = :species` would trip the generic "combination" message instead).
+    row_eff === :none || _refuse_nb1_row_effect(family, "fit_gllvm", row_eff)
+
     # API B (Curie): NB/Beta/NB1/BetaBinom public default matches gllvmTMB per-trait
     # φ — the estimand already shipped on the R bridge and on `@formula` with X, so
     # the unified entry point must not default to a shared scalar instead. Shared-φ
