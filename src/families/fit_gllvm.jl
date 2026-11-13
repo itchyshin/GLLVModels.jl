@@ -279,6 +279,19 @@ function _fit_gllvm_per_column(Y, family::AbstractVector; K, num_lv, row_eff, di
     return fit_mixed_gllvm(Y; families = family, K = K, kw...)
 end
 
+# A response matrix with no sites or no species is refused up front (P81 ZERO-SITES,
+# issue #1188). Before, `p x 0` returned `logLik = 0.0` (`converged = true` for several
+# families) and `0 x n` ended in a raw `BoundsError` or an empty-reduction error from
+# inside the fitter. The message names the empty dimension.
+function _check_nonempty_Y(Y::AbstractMatrix, caller::AbstractString)
+    p, n = size(Y)
+    (p > 0 && n > 0) && return nothing
+    empty = p == 0 && n == 0 ? "no species and no sites" :
+            p == 0 ? "no species (0 rows)" : "no sites (0 columns)"
+    throw(ArgumentError(
+        "$caller: Y has $empty; Y is $p x $n and a fit needs at least one species and one site"))
+end
+
 """
     fit_gllvm(Y; family = Normal(), K = nothing, num_lv = nothing, Kmax = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
@@ -528,6 +541,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
                    species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
+    _check_nonempty_Y(Y, "fit_gllvm")
     if family isa AbstractVector
         return _fit_gllvm_per_column(Y, family; K = K, num_lv = num_lv, row_eff = row_eff,
             disp_group = disp_group, pervar = pervar, grouping = grouping, unit = unit,
