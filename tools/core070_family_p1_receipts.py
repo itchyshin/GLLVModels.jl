@@ -44,9 +44,14 @@ against the reconciliation record.
                         rule but are never read as R-vs-Julia evidence or for the tier.
 
 Not executed at P1 (receipt with evidence_kind not_executed): only the
-00-IDENTITY-PUBLIC-R-BRIDGE case remains outside the frozen three-case bridge
-sub-contract. The 11-LOG-PUBLIC-R-BRIDGE case has a retained P1 R-refusal
-receipt and is handled as boundary context, not as a numeric comparison.
+00-IDENTITY-PUBLIC-R-BRIDGE case can remain outside the frozen three-case bridge
+sub-contract, and only while no P1 model-change probe record is tracked. The
+11-LOG-PUBLIC-R-BRIDGE case has a retained P1 R-refusal receipt and is handled as
+boundary context, not as a numeric comparison. The 00-IDENTITY case is not a refusal:
+R accepts the Gaussian family and fits a reduced model (reference_model_change, df 5
+against 8). When tools/core070_family_bridge_p1.R --family00-model-change has written
+r-public-bridge-model-change.json under receipts/family/first-seven-boundary/, the
+tool validates it and derives a boundary-context receipt with its own tier wording.
 
 Shared gates (PR #567 / #569 / #571 / #579):
 
@@ -976,6 +981,134 @@ def family11_boundary_self_test():
     print("CORE070_FAMILY11_BOUNDARY_SELF_TEST_OK (1 positive, 6 rejected mutations)")
 
 
+# FAMILY-00-IDENTITY's PUBLIC-R-BRIDGE case. R does NOT refuse the Gaussian family at the public bridge: both
+# routes accept it and fit a reduced model (loadings plus one common residual scale, df 5), not the per-trait-unique
+# model the native cases fit (df 8). The registered disposition is reference_model_change
+# (docs/dev-log/core070/bridge-model-admission-contract.json). Maintainer ruling 2026-11-13 (P126b, relayed in
+# BRIAN-1717) lets a P1 probe record of that behaviour stand as non-binding boundary context for this case; it is not a
+# numeric match and not a refusal. The evidence kind and verdict strings below are the checker's context kind (the
+# checker is not edited); the receipt body says what R actually did.
+FAMILY00_BRIDGE_CASE = "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE"
+FAMILY00_MODEL_CHANGE_RAW = f"{REC_REL}/first-seven-boundary/r-public-bridge-model-change.json"
+FAMILY00_FIXTURE = "test/parity/fixtures/core070_gaussian_original.toml"
+FAMILY00_ADMISSION = "docs/dev-log/core070/bridge-model-admission-contract.json"
+FAMILY00_WARNING = "Fitting the reduced-rank latent block only"
+FAMILY00_ROUTES = ("matrix", "formula", "formula_explicit")
+FAMILY00_TOL = 1e-10
+
+
+def validate_family00_model_change(raw):
+    """Validate a P1 model-change probe record. Any refusal, missing route, wrong df, missing warning, changed
+    data or unpinned build raises SystemExit; nothing here turns a bad record into context."""
+    def need(ok, message):
+        if not ok:
+            raise SystemExit(f"FAMILY-00 model change: {message}")
+    need(raw.get("schema") == "core070-family00-r-model-change/v1", "wrong raw schema")
+    need(raw.get("case_id") == FAMILY00_BRIDGE_CASE, "wrong case id")
+    need(raw.get("pin") == "P1" and raw.get("reference_commit") == P1_SHA, "raw probe is not pinned at P1")
+    problem = core070_source_pin_check.source_pin_problem(
+        {"gllvmTMB_version": raw.get("gllvmtmb_version"), "source_pin": raw.get("source_pin")}, "P1")
+    need(problem is None, problem or "")
+    need(raw.get("namespace_sha256") == PINS["P1"]["namespace_sha256"], "installed NAMESPACE hash is not P1")
+    build = load(ROOT / ORACLE_BUILD_TOTORO_20261104)
+    need(raw["source_pin"].get("installed_tree_sha256") == build["installed_tree_sha256"] and
+         raw["source_pin"].get("marker_sha256") == build["marker_sha256"],
+         "loaded installed build is not the registered 11-04 Totoro build the batches ran on")
+    fixture = raw.get("fixture") or {}
+    case = tomllib.loads((ROOT / FAMILY00_FIXTURE).read_text())["cases"][0]
+    need(fixture.get("file") == FAMILY00_FIXTURE and fixture.get("file_sha256") == sha(ROOT / FAMILY00_FIXTURE),
+         "fixture file or its hash differs from the tracked fixture")
+    need((fixture.get("case"), fixture.get("seed"), fixture.get("p"), fixture.get("n"), fixture.get("K")) ==
+         (case["id"], case["seed"], case["p"], case["n"], case["K"]), "fixture shape differs from the tracked case")
+    import struct
+    data_sha = hashlib.sha256(b"".join(struct.pack("<d", float(v)) for v in case["responses"])).hexdigest()
+    need(fixture.get("data_sha256") == data_sha, "recorded data hash differs from the tracked responses")
+    p, n, K = case["p"], case["n"], case["K"]
+    need(raw.get("required_unique_model_df") == 2 * p == 8, "required unique-model df is not 2p = 8")
+    contract = load(ROOT / FAMILY00_ADMISSION)
+    row = [c for c in contract["cases"] if c["id"] == FAMILY00_BRIDGE_CASE]
+    need(len(row) == 1 and row[0].get("bridge_admission") == "reference_model_change",
+         "the tracked admission contract does not register reference_model_change for this case")
+    capture = raw.get("capture") or {}
+    engine_commit = str(capture.get("glvmodels_commit", ""))
+    run_commit_path = f"{batch_rel(BRIDGE_BATCH)}/run-commit.json"
+    need((ROOT / run_commit_path).is_file(), "the bridge-p1 run-commit receipt is missing")
+    need(engine_commit == load(ROOT / run_commit_path).get("glvmodels_commit"),
+         "probe source commit differs from the pinned bridge batch commit")
+    need(capture.get("glvmodels_src_tree") == git("rev-parse", f"{engine_commit}:src").stdout.strip(),
+         "executed source tree differs from the registered commit")
+    need(all(capture.get(k) for k in ("r_version", "julia_version", "glvmodels_path")),
+         "R/Julia runtime provenance is incomplete")
+    routes = raw.get("routes") or {}
+    need(set(routes) == set(FAMILY00_ROUTES), "expected the matrix, formula and formula_explicit routes")
+    for name in FAMILY00_ROUTES:
+        r = routes[name]
+        need(r.get("refused") is False and not r.get("message") and not r.get("error_class"),
+             f"{name} route refused or errored; R is expected to accept this family")
+        need(r.get("call"), f"{name} call string is absent")
+        f = r.get("fit") or {}
+        need(f.get("family") == "gaussian" and f.get("converged") is True, f"{name} fit is not a converged Gaussian fit")
+        need(f.get("df") == p * K + 1 == 5 and f["df"] != raw["required_unique_model_df"],
+             f"{name} df is not the reduced-model df 5 (against the required 8)")
+        need((f.get("d"), f.get("n_traits"), f.get("n_units")) == (K, p, n), f"{name} fit shape is wrong")
+        need(isinstance(f.get("sigma_eps"), (int, float)) and f["sigma_eps"] > 0, f"{name} has no positive common residual")
+        dev = f.get("max_abs_residual_deviation_from_common")
+        need(isinstance(dev, (int, float)) and dev <= FAMILY00_TOL, f"{name} residual is not one common scale")
+        need(isinstance(f.get("loglik"), (int, float)), f"{name} has no logLik")
+    warns = routes["formula"].get("warnings") or []
+    need(any(FAMILY00_WARNING in w for w in warns), "formula route did not record the model-change warning")
+    need(not routes["formula_explicit"].get("warnings") or
+         not any("trait-specific" in w for w in routes["formula_explicit"]["warnings"]),
+         "explicit unique = FALSE route carries the unique-part warning")
+    a, b = routes["formula"]["fit"], routes["formula_explicit"]["fit"]
+    same = max(abs(x - y) for rx, ry in zip(a["Sigma"], b["Sigma"]) for x, y in zip(rx, ry))
+    need(abs(a["loglik"] - b["loglik"]) <= FAMILY00_TOL and same <= FAMILY00_TOL,
+         "default request and explicit unique = FALSE are not the same reduced fit")
+    return fixture, capture, routes, engine_commit
+
+
+def family00_model_change_case():
+    """Derive the FAMILY-00 PUBLIC-R-BRIDGE receipt from the pinned probe record, if one is tracked."""
+    path = ROOT / FAMILY00_MODEL_CHANGE_RAW
+    raw = load(path)
+    fixture, capture, routes, engine_commit = validate_family00_model_change(raw)
+    run_commit_path = f"{batch_rel(BRIDGE_BATCH)}/run-commit.json"
+    f = routes["formula"]["fit"]
+    body = {
+        "batch": "tools/core070_family_bridge_p1.R --family00-model-change (two public routes plus the explicit "
+                 "unique = FALSE request, on the original Gaussian data)",
+        "measures": ("What the pinned P1 public R bridge does with the Gaussian family on the original data. R "
+                     "accepts the family on both public routes and fits a different, reduced model (registered "
+                     "disposition reference_model_change): loadings plus one common residual scale, df 5 where the "
+                     "native same-model fit needs df 8. The formula route warns that the per-trait unique part is "
+                     "not fitted. This is not a refusal and not a numeric match; there is no R-vs-Julia comparison "
+                     "for this case."),
+        "disposition": "reference_model_change",
+        "boundary_note": ("evidence_kind r_public_bridge_boundary and verdict R_BOUNDARY_UNCHANGED are the "
+                          "checker's non-binding context kind (maintainer ruling 2026-11-13, P126b). For this "
+                          "case they record a changed reference model, not an R refusal."),
+        "reduced_model_df": f["df"],
+        "required_unique_model_df": raw["required_unique_model_df"],
+        "common_residual_sigma_eps": f["sigma_eps"],
+        "warnings_verbatim": routes["formula"]["warnings"],
+        "r_calls": [routes[x]["call"] for x in FAMILY00_ROUTES],
+        "data_sha256": fixture["data_sha256"],
+        "fixture": fixture,
+        "routes": routes,
+        "r_version": capture.get("r_version"),
+        "julia_version": capture.get("julia_version"),
+        "gllvmodels_path": capture.get("glvmodels_path"),
+        "gllvmodels_source_commit": engine_commit,
+        "gllvmtmb_version": raw["gllvmtmb_version"],
+        "source_pin": raw["source_pin"],
+        "namespace_sha256": raw["namespace_sha256"],
+        "read_from": read_from(FAMILY00_MODEL_CHANGE_RAW, run_commit_path, BRIDGE_TOOL, "tools/core070_source_pin.R",
+                                "tools/core070_oracle_pins.toml", FAMILY00_FIXTURE, FAMILY00_ADMISSION),
+        "raw": [FAMILY00_MODEL_CHANGE_RAW],
+    }
+    return "r_public_bridge_boundary", "R_BOUNDARY_UNCHANGED", body, None
+
+
 def family11_boundary_receipt_path():
     return ROOT / FAMILY11_BOUNDARY_RECEIPT
 
@@ -1067,6 +1200,8 @@ def in_scope_case_ids():
 def derive_case(cid):
     if cid == FAMILY11_BOUNDARY_CASE:
         return family11_boundary_case()
+    if cid == FAMILY00_BRIDGE_CASE and (ROOT / FAMILY00_MODEL_CHANGE_RAW).is_file():
+        return family00_model_change_case()
     if cid in NOT_EXECUTED:
         kind, (verdict, body, comp) = "not_executed", not_executed_case(cid)
         return kind, verdict, body, comp
@@ -1126,10 +1261,12 @@ def p0_evidence(base):
 
 # Maintainer ruling 2026-10-05 (D-319), N1: a PUBLIC-R-BRIDGE case at which R refuses before any Julia call, shown
 # by a receipt (evidence_kind r_public_bridge_boundary, verdict R_BOUNDARY_UNCHANGED), is non-binding context; the
-# covariance overlay applies the same test. FAMILY-11-LOG now has this retained refusal receipt, but its row binds
-# only through its passing, discriminating numeric comparison cases from an accepted batch. FAMILY-00-IDENTITY's
-# bridge case remains NOT_EXECUTED outside the frozen bridge sub-contract, so it cannot use this context path and
-# stays partial_case_not_executed; its native and formula cases also FAIL on the current receipts. The checker
+# covariance overlay applies the same test. FAMILY-11-LOG has that retained refusal receipt, but its row binds
+# only through its passing, discriminating numeric comparison cases from an accepted batch. FAMILY-00-IDENTITY is
+# different: R does not refuse the Gaussian family, it fits a reduced model (reference_model_change, df 5 against
+# 8). Maintainer ruling 2026-11-13 (P126b, BRIAN-1717) lets a P1 probe record of that behaviour on both public
+# routes stand as the same non-binding context kind, with its own wording (FAMILY00_TIER, never N1_TIER). Without
+# that record the case stays NOT_EXECUTED and the row stays partial_case_not_executed. The checker
 # (boundaryContext) re-validates the context case.
 FAMILY_N1_CONTEXT = {"family/FAMILY-00-IDENTITY", "family/FAMILY-11-LOG"}
 N1_CONTEXT_KIND = ("r_public_bridge_boundary", "R_BOUNDARY_UNCHANGED")
@@ -1137,9 +1274,24 @@ N1_TIER = ("numeric: the native and formula-interface case receipts carry R-vs-J
            "within the harness tolerance, from a batch whose verifier passed; R refuses the PUBLIC-R-BRIDGE case at the "
            "bridge (R_BOUNDARY_UNCHANGED), which is non-binding boundary context under maintainer ruling 2026-10-05 "
            "(D-319), N1")
-N1_HELD_NOTE = ("Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 "
+N1_HELD_NOTE = ("FAMILY-11-LOG, held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 "
                 "does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as "
                 "R_BOUNDARY_UNCHANGED (tracked follow-up).")
+FAMILY00_TIER = ("numeric (native and formula-interface cases): those case receipts carry R-vs-Julia comparison "
+                 "blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed. The "
+                 "PUBLIC-R-BRIDGE case is non-binding boundary context, not a numeric match and not an R refusal: R "
+                 "accepts the Gaussian family at the public bridge and fits a different, reduced model "
+                 "(reference_model_change: df 5 with one common residual scale against the required df 8, with a "
+                 "warning on the formula route), recorded by a P1 probe on both public routes. Context under "
+                 "maintainer ruling 2026-11-13 (P126b), which applies the N1 context kind (D-319) to this case")
+FAMILY00_HELD_NOTE = ("Held: the PUBLIC-R-BRIDGE case was not executed and no P1 model-change probe record is "
+                      "tracked. R does not refuse the Gaussian family; it fits a reduced model (reference_model_change, "
+                      "df 5 against 8). Under maintainer ruling 2026-11-13 (P126b) the row binds once a P1 probe "
+                      "records that behaviour on both public routes.")
+FAMILY00_BOUND_NOTE = ("The PUBLIC-R-BRIDGE case is context only (maintainer ruling 2026-11-13, P126b): R accepts the "
+                       "Gaussian family and fits a reduced model (df 5, one common residual scale) instead of the "
+                       "per-trait-unique model (df 8). It is not a numeric match and not an R refusal. The row binds "
+                       "through its native and formula-interface comparisons.")
 
 
 def n1_context(sid, ids, kinds, verdicts, batch_ok, disc):
@@ -1197,8 +1349,11 @@ def build_rows(in_scope, carry_status, receipts):
             row["boundary_context_case_ids"] = ctx
             row.update(evidence_tier="numeric", measured_against=P1_SHA,
                        evidence={"receipt": list(dict.fromkeys(by_id[i] for i in ids if i not in ctx)),
-                                 "boundary_context_receipts": [by_id[i] for i in ctx], "tier": N1_TIER},
+                                 "boundary_context_receipts": [by_id[i] for i in ctx],
+                                 "tier": FAMILY00_TIER if sid == "family/FAMILY-00-IDENTITY" else N1_TIER},
                        measured_result={**result, "row_verdict": "PASS"})
+            if sid == "family/FAMILY-00-IDENTITY":
+                row["note"] = FAMILY00_BOUND_NOTE
             counts["numeric_pass"] += 1
         elif len(measured) < len(ids):
             ok = all(verdicts[i] == "PASS" for i in measured)
@@ -1209,7 +1364,7 @@ def build_rows(in_scope, carry_status, receipts):
                        measured_result={**result, "executed_cases_verdict": "PASS" if ok else "FAIL"})
             counts["partial_case_not_executed"] += 1
             if sid in FAMILY_N1_CONTEXT and ok:
-                row["note"] = N1_HELD_NOTE
+                row["note"] = FAMILY00_HELD_NOTE if sid == "family/FAMILY-00-IDENTITY" else N1_HELD_NOTE
         elif not all(verdicts[i] == "PASS" for i in ids):
             row.update(evidence_tier="numeric_fail", measured_against=P1_SHA,
                        evidence={"non_binding_receipts": paths,
@@ -1254,7 +1409,7 @@ PROVENANCE_KEYS = {"pin", "reference_commit", "p0_reference_commit", "oracle_bui
 
 def receipt_batch(rec):
     cid = rec["case_id"]
-    if cid == FAMILY11_BOUNDARY_CASE:
+    if cid == FAMILY11_BOUNDARY_CASE or (cid == FAMILY00_BRIDGE_CASE and rec["evidence_kind"] != "not_executed"):
         return BRIDGE_BATCH
     return None if cid in NOT_EXECUTED else REGISTRATION[cid][0]
 
