@@ -22,7 +22,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `e6d69cb2385b5d6cd14ffd22cccab9b6f8b1ad4e22e15db2d40fa3a08288fe62`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `8324af5849a585e3bd6d5cddc39903fa928541852abde6c03c4db684ed53808a`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `5b0c9148e81606d091335ee4de717ec26b5f48c6106dc75f6b3b524d3afcadc5`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `f347bf35b7fc59068b3c43cad241996e73bbcefe01d95bf5c36207388af749ce`)
 
 ## Totals by family
@@ -36,9 +36,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 21 |
-| `namespace` | 55 | 0 | 10 | 2 | 0 | 0 | 0 | 2 | 69 |
+| `namespace` | 55 | 0 | 11 | 2 | 0 | 0 | 0 | 1 | 69 |
 | `postfit` | 45 | 1 | 4 | 0 | 1 | 1 | 0 | 0 | 52 |
-| `all` | 206 | 63 | 35 | 2 | 2 | 1 | 6 | 2 | 317 |
+| `all` | 206 | 63 | 36 | 2 | 2 | 1 | 6 | 1 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -360,7 +360,7 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-Beta `namespace/export/Beta` | required_core; cases: P1-JULIA-BETA-INTERCEPTS, P1-JULIA-BETA-LAMBDA-LAMBDAT, P1-JULIA-BETA-DISPERSION | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/Beta.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-animal_dep `namespace/export/animal_dep` | required_core; cases: FIT-MODE-ANIMAL-DEP, FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-DEP-FORMULA-INTERFACE.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-animal_indep `namespace/export/animal_indep` | required_core; cases: FIT-MODE-ANIMAL-INDEP, FIT-MODE-ANIMAL-COMMON, FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE, FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-INDEP-FORMULA-INTERFACE.json, docs/dev-log/core070/true-parity-latest/receipts/covariance/cases/FIT-MODE-ANIMAL-COMMON-FORMULA-INTERFACE.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-export-animal_latent `namespace/export/animal_latent` | required_core; cases: none | DISPOSITION-UNVERIFIED | not bound; cited: none | family namespace; evidence_tier registration; measured_against None; DISPOSITION-SIGNER-NOT-ALLOWED |
+| namespace-export-animal_latent `namespace/export/animal_latent` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: itchyshin; signed_on: 2026-11-13 | family namespace; evidence_tier registration; measured_against None |
 | namespace-export-animal_scalar `namespace/export/animal_scalar` | required_core; cases: P1-JULIA-ANIMAL-SCALAR-LOGLIK, P1-JULIA-ANIMAL-SCALAR-BETA, P1-JULIA-ANIMAL-SCALAR-SIGMA2-A, P1-JULIA-ANIMAL-SCALAR-SIGMA-EPS, P1-JULIA-ANIMAL-SCALAR-OBJECTIVE-AT-R | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/animal_scalar.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-animal_slope `namespace/export/animal_slope` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-bootstrap_Sigma `namespace/export/bootstrap_Sigma` | required_core; cases: CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-BOOTSTRAP-SIGMA-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

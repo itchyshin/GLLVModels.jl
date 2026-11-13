@@ -995,7 +995,7 @@ Signed option (a). The namespace-2 case for `export/gllvmTMB` now measures Lambd
 names and the case never measured) beside logLik, and the degenerate intercept entry (about 1e-14 on row-centred data)
 moves to `context`. Re-run at P1: logLik |R - Julia| 1.13e-9, Lambda Lambda' max |R - Julia| 2.42e-6 within 1e-4.
 Every comparison in the block discriminates under the unchanged shared rule, so the row binds
-(`tools/core070_namespace_2_p1_receipts.py`). `namespace/export/animal_latent` stays unbound; its disposition is the narrow D6b text (intercept-only, outside the P1 Julia surface), signer fields `AWAITING-SIGNATURE`.
+(`tools/core070_namespace_2_p1_receipts.py`). `namespace/export/animal_latent` stays unbound; its disposition is the narrow D6b text (intercept-only, outside the P1 Julia surface), signed on 2026-11-13 from the owner's card answer (ruling SHINICHI-1406, transcribed by the lane; signer and date are in the row of case-map-namespace.json).
 
 ### Item A, N6 and N10: the behavioural scope is extended by 14 listed rows
 

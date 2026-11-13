@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "8324af5849a585e3bd6d5cddc39903fa928541852abde6c03c4db684ed53808a",
+   "sha256": "5b0c9148e81606d091335ee4de717ec26b5f48c6106dc75f6b3b524d3afcadc5",
    "rows": 69
   },
   {
@@ -8836,13 +8836,13 @@
    "reason": "Not re-measured at P1 in this PR.",
    "not_measured_reason": "P0 evidence came from a non-namespace batch (bulk triage acceptance (maintainer decision round2-3 #9, 2026-09-01)) whose checks are numeric R-vs-Julia fits against a built R oracle; outside the text-scan namespace triple, not re-measured here.",
    "evidence_tier": "registration",
-   "signed_by": "AWAITING-SIGNATURE",
-   "signed_on": "AWAITING-SIGNATURE",
+   "signed_by": "itchyshin",
+   "signed_on": "2026-11-13",
    "signed_disposition": {
-    "ruling": "D6b, narrow disposition, packet of 2026-11-07 (D-number: AWAITING-SIGNATURE)",
+    "ruling": "D6b, narrow disposition, packet of 2026-11-07 (signed 2026-11-13, ruling SHINICHI-1406)",
     "kind": "outside_boundary",
     "text": "Relatedness-structured random slopes, outside the P1 Julia surface. In R, `animal_latent(1 + x | id, A = A, d = d)` fits a rank-d intercept block and a rank-d slope block on the relatedness matrix A, with zero covariance between the two blocks. GLLVModels has no such route. `fit_animal_latent_gllvm(Y, A, d)` is an intercept-only Gaussian matrix fitter with no covariate or slope argument and no pedigree input, and its intercept covariance form is also not R's (its own file header says it is not gllvmTMB's animal_latent). The grouped random-slope fitters (`fit_gaussian_random_slope`, `fit_poisson_random_slope`) give independent groups an unstructured covariance and are a different model, so they are not offered as a stand-in. No R-versus-Julia number exists for this feature, and none is claimed. The three planned cases SLOPE-ANIMAL-LAT-DEFAULT, SLOPE-ANIMAL-LAT-NOUNIQUE and SLOPE-ANIMAL-LAT-RANK4 stay unmeasured and unpaid. This text replaces the 2026-10-05 ruling 'animal_latent: leave unbound' for this row only. It is a documented capability gap. It closes only with a Julia relatedness-structured slope surface. I do not build one now. This disposition does not change any tolerance, any signed failure, or any other row, and does not say that animal_latent passes.",
-    "signature_source": "AWAITING-SIGNATURE"
+    "signature_source": "Shinichi's card answer of 13 Nov 2026, 2:06 PM MT (ruling SHINICHI-1406 in the lane decision file), transcribed by the lane, not typed by him"
    }
   },
   {
