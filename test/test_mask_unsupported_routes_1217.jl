@@ -85,6 +85,13 @@ using GLLVModels, Test, Random, Distributions, LinearAlgebra, SparseArrays, Stat
             @test e1 isa ArgumentError && occursin(name, e1.msg) && occursin("mask is not supported", e1.msg)
             e2 = try f(ym, pp; kw...); nothing catch e; e end
             @test e2 isa ArgumentError && occursin(name, e2.msg) && occursin("missing responses are not supported", e2.msg)
+            # A second argument that is not a `PrecisionPhy` has no method on main: it must stay a
+            # `MethodError` (an untyped forwarding method once recursed into a `StackOverflowError`).
+            aphy = GLLVModels.augmented_phy("((A:1,B:1):1,(C:1,D:1):1);")
+            @test_throws MethodError f(y, aphy; kw...)
+            @test_throws MethodError f(y, 3; kw...)
+            @test_throws MethodError f(ym, aphy; kw...)
+            @test_throws MethodError f(ym, 3; kw...)
         end
     end
 
