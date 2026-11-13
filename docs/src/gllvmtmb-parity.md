@@ -203,7 +203,7 @@ not establish agreement for its uncertainty or for other family combinations.
 | Structured dependence × non-Gaussian | ✅ phylo · 🔨 spatial-latent / animal | phylogenetic GLM (`fit_phylo_glm`, augmented-state joint Laplace); SPDE / Matérn spatial latent field (`fit_spde_latent_gllvm`) for the non-Gaussian GLLVM; broader spatial and animal-model support remains incomplete |
 | Random slopes `(1 + x \| g)` | 🔨 | this formula syntax is not yet supported |
 | Per-species / grouped dispersion (`disp.group`) | ✅ all 5 dispersion families | `fit_{nb,beta,gamma,nb1,tweedie}_gllvm_grouped(Y; K, group)` give each species (or group) its own dispersion; reduces exactly to the shared fit at `G=1`. **gllvm's default is per-species** dispersion, so for parity route Julia through a grouped fitter with `group = 1:p` (or set gllvm `disp.formula = ~1` for the shared model) |
-| Row effects (fixed **and random**) | ✅ | fixed per-site intercepts (`fit_roweffect_gllvm`) **and** random `ρ_s ~ N(0, σ_row²)` (`fit_row_random_gllvm`, gllvmTMB `row.eff="random"`); `σ_row→0` reduces exactly to no-row-effect |
+| Row effects (fixed **and random**) | ✅ | fixed per-site intercepts (`fit_roweffect_gllvm`) **and** random `ρ_s ~ N(0, σ_row²)` (`fit_row_random_gllvm`, CRAN `gllvm` `row.eff = "random"`; gllvmTMB has no row-effect argument); `σ_row→0` reduces exactly to no-row-effect |
 
 ## Post-fit & inference
 
@@ -269,7 +269,7 @@ not bugs on either side.
 | NB1 dispersion | `φ`, `Var = μ + μφ` | `φ`, `Var = μ(1+φ)` | identity (maps 1:1) |
 | Gamma dispersion | `φ` = **shape**, `Var = μ²/φ` | `α` = **shape**, `Var = μ²/α` | relabel `α ↔ φ` (no inversion) |
 | Beta precision | `φ`, `Var = μ(1-μ)/(1+φ)` | `φ` (same) | identity |
-| Tweedie | power `ν`, `Var = φ·μ^ν`, default start `ν = 1.1` | power `p`, `Var = φ·μ^p`, default start `p_init = 1.5` | identity; set `p_init = 1.1` to reproduce gllvm's optimiser path |
+| Tweedie | power `ν`, `Var = φ·μ^ν`; the default `Power = 1.1` is **fixed**, not estimated (`Power = NULL` estimates it) | power `p`, `Var = φ·μ^p`, estimated; start `p_init = 1.5` | pass `Power = NULL` to `gllvm` to compare like with like. `p_init` only moves Julia's start and does not reproduce gllvm's fixed power (see the defaults table below) |
 | Gaussian dispersion | per-species SD `φ_j` | single shared `σ` (profiled) | needs a per-species-variance Gaussian fit for exact parity |
 | Dispersion **structure** | per-species by default (`disp.formula = NULL`) | shared scalar by default; per-species via the grouped fitters | route Julia through `fit_*_gllvm_grouped(Y; K, group = 1:p)`, **or** set gllvm `disp.formula = ~1` |
 | Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples. The Julia VA posterior covariance is diagonal and gllvm's default is `Lambda.struc = "unstructured"`, so for `K ≥ 2` match it with `control.va = list(Lambda.struc = "diagonal")` |
@@ -425,7 +425,7 @@ For model structures that the R package `gllvm` (CRAN) fits and `gllvmTMB` does 
 | species intercepts | `params$beta0` | `fit.β` | equal |
 | loadings | `params$theta %*% diag(params$sigma.lv)` | `fit.Λ` | compare `ΛΛᵀ` |
 | fixed row effects | `row.eff = "fixed"`, `params$row.params` (length `n - 1`) | `fit_roweffect_gllvm`, `ρ[2:n]` | site 1 is the reference (0) on both sides |
-| random row effect | `row.eff = "random"`, `params$sigma` | `fit_row_random_gllvm`, `sigma_row` | standard deviation on both sides |
+| random row effect | `row.eff = "random"`, `params$sigma` | `fit_row_random_gllvm`, `σ_row` | standard deviation on both sides |
 | species-specific slopes | `X` with `formula = ~ x1 + x2`, `params$Xcoef` (`p × q`) | `fit_gllvm_speciescov`, `fit.B` (`p × q`) | |
 | shared covariate slope | `row.eff = ~ x1` with `studyDesign`, `params$row.params.fixed` | `fit_gllvm_cov`, `fit.γ` | `X` with `formula` in `gllvm` gives species-specific slopes, not a shared one |
 | fourth-corner | `TR`, `formula = ~ x1:z1 + ...`, `params$B` ordered `x1:z1, x2:z1, x1:z2, x2:z2` | `fit_fourthcorner_gllvm`, `fit.C[k, l]` (`k` covariate, `l` trait) | reorder before comparing |
