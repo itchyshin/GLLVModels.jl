@@ -1,0 +1,30 @@
+{
+  "arc": "A3",
+  "carry_scan_status": "DANGLING",
+  "classification": "required_core",
+  "disposition": null,
+  "evidence": {
+    "non_binding_receipts": [
+      "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json"
+    ],
+    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
+  },
+  "evidence_tier": "numeric_non_discriminating",
+  "executable_case_ids": [
+    "CORE070-POSTFIT-COEF-EMPTY-NATIVE"
+  ],
+  "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "measured_result": {
+    "batch_verifier": {
+      "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "PASS"
+    },
+    "case_verdicts": {
+      "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "PASS"
+    },
+    "discriminating": {
+      "CORE070-POSTFIT-COEF-EMPTY-NATIVE": false
+    }
+  },
+  "note": "integer_equality on the empty coef length (R 0, Julia 0; maintainer ruling 2026-10-05, D-319, item N2). The shared degenerate-comparison rule flags it: every |R value| < 1e-10, so a constant-zero implementation would pass too. Binding it would need the shared rule to accept a 0 = 0 length, which it does not.",
+  "source_id": "postfit-policy/POST-COEF-EMPTY"
+}

@@ -83,6 +83,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -90,7 +91,7 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-from core070_postfit_p1_receipts import mark_degenerate  # noqa: E402  (PR #569's degenerate-comparison rule)
+from core070_postfit_p1_receipts import mark_degenerate, postcoef_git_env  # noqa: E402  (PR #569's degenerate-comparison rule)
 import core070_source_pin_check  # noqa: E402
 
 OUT_REL = "docs/dev-log/core070/true-parity-latest"
@@ -107,9 +108,11 @@ ORACLE_BUILD = f"{OUT_REL}/receipts/covariance/oracle/build.json"
 # which build receipt it used, and the receipts name it. The Mac string is fixed text; the
 # Totoro string is filled from the versions the runs record (see host_string).
 ORACLE_BUILD_TOTORO = f"{OUT_REL}/receipts/covariance/oracle/build-totoro.json"
+ORACLE_BUILD_TOTORO_20261104 = f"{OUT_REL}/receipts/covariance/oracle/build-totoro-20261104.json"
 ORACLE_BUILDS = {ORACLE_BUILD: "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
                  ORACLE_BUILD_TOTORO: "Totoro (Linux x86_64, R {r}, TMB {tmb}, Matrix {matrix}, Julia {julia}), "
                                       "OPENBLAS/OMP threads {blas}, JULIA_NUM_THREADS={jthreads}"}
+ORACLE_BUILDS[ORACLE_BUILD_TOTORO_20261104] = ORACLE_BUILDS[ORACLE_BUILD_TOTORO]
 ORACLE_SOURCE = f"{OUT_REL}/receipts/covariance/oracle/source.json"
 MANIFEST = f"{OUT_REL}/frozen-r070-contract-p1.toml"
 FL_CONTRACT = f"{OUT_REL}/family-links-batch-contract-p1.json"
@@ -269,7 +272,7 @@ def write_json(path, value):
 
 
 def git(*argv, check=True, text=True):
-    return subprocess.run(["git", "-C", str(ROOT), *argv], check=check, capture_output=True, text=text)
+    return subprocess.run(["git", "-C", str(ROOT), *argv], check=check, capture_output=True, text=text, env=postcoef_git_env())
 
 
 def batch_rel(batch):
@@ -306,7 +309,7 @@ def host_string(build):
     """The receipts' host text for oracle build receipt `build`. For the Totoro build the
     versions and thread counts are read from what the runs record (every runparity run.toml
     [source] and bridge-p1/results.json) and must agree across them."""
-    if build != ORACLE_BUILD_TOTORO:
+    if build not in (ORACLE_BUILD_TOTORO, ORACLE_BUILD_TOTORO_20261104):
         return ORACLE_BUILDS[build]
     seen = set()
     for b in RUNPARITY_RUNS:
@@ -339,7 +342,7 @@ def harness_drift(run, rc):
     if not entries:
         return []
     proc = subprocess.run(["git", "-C", str(ROOT), "cat-file", "--batch"], check=True, capture_output=True,
-                          input="".join(f"{rc}:{e['path']}\n" for e in entries).encode())
+                          input="".join(f"{rc}:{e['path']}\n" for e in entries).encode(), env=postcoef_git_env())
     out, pos, drift = proc.stdout, 0, []
     for e in entries:
         nl = out.index(b"\n", pos)
@@ -349,6 +352,112 @@ def harness_drift(run, rc):
         if hashlib.sha256(blob).hexdigest() != e["sha256"]:
             drift.append(e["path"])
     return drift
+
+
+def matches_registered_oracle_build(source, *, commit=None):
+    """Bind a run to the receipt, installed tree, and marker of one registered build."""
+    for rel in ORACLE_BUILDS:
+        path = ROOT / rel
+        if path.is_file() and source.get("oracle_build_receipt_sha256") == sha(path):
+            if commit is not None:
+                tracked = git("show", f"{commit}:{rel}", check=False, text=False)
+                if (tracked.returncode != 0 or
+                        hashlib.sha256(tracked.stdout).hexdigest() != source["oracle_build_receipt_sha256"]):
+                    return False
+            build = load(path)
+            return (source.get("installed_tree_sha256") == build.get("installed_tree_sha256")
+                    and source.get("source_marker_sha256") == build.get("marker_sha256")
+                    and bool(source.get("installed_tree_sha256"))
+                    and bool(source.get("source_marker_sha256")))
+    return False
+
+
+def matches_committed_oracle_source(source, *, commit):
+    """Require the selected source receipt to match both disk and the run commit."""
+    path = ROOT / ORACLE_SOURCE
+    digest = source.get("oracle_source_receipt_sha256")
+    if not digest or not path.is_file() or sha(path) != digest:
+        return False
+    tracked = git("show", f"{commit}:{ORACLE_SOURCE}", check=False, text=False)
+    return tracked.returncode == 0 and hashlib.sha256(tracked.stdout).hexdigest() == digest
+
+
+def execution_inventory_intact(run, commit, cells):
+    """Check the reviewed inventory routine's fixed inputs, fixtures, and src tree."""
+    execution = run.get("execution", {})
+    entries = execution.get("entries", [])
+    if not isinstance(entries, list) or not entries:
+        return False
+    try:
+        paths = [e["path"] for e in entries]
+        rows = sorted(f'{e["path"]}\0{e["sha256"]}' for e in entries)
+        digest = hashlib.sha256("\n".join(rows).encode()).hexdigest()
+        if len(paths) != len(set(paths)) or digest != execution.get("manifest_sha256"):
+            return False
+        helper = git("show", f"{commit}:test/parity/parity_helpers.jl", check=False, text=False)
+        if helper.returncode != 0:
+            return False
+        code = helper.stdout.decode("utf-8")
+        body = code.split("function _core070_execution_paths", 1)[1].split("\nend", 1)[0]
+        # A changed routine can introduce new dynamic inputs. Require review
+        # before accepting it rather than guessing its execution-path contract.
+        if hashlib.sha256(body.encode()).hexdigest() != "81d3c6f8d535a28c638e102f72d56ad2aaf326cdc9d864c25175005263f56d73":
+            return False
+        fixed_block = body.split("paths = String[", 1)[1].split("]", 1)[0]
+        fixed = set(re.findall(r'"([^"\\]*)"', fixed_block)) - {"src"}
+        contract = load_toml(ROOT / MANIFEST)
+        expected_fixtures = {}
+        for group in ("families", "executable_case", "interfaces", "models"):
+            for case in contract.get(group, []):
+                case_id, fixture = case.get("id"), case.get("fixture")
+                if fixture:
+                    if case_id in expected_fixtures and expected_fixtures[case_id] != fixture:
+                        return False
+                    expected_fixtures[case_id] = fixture
+        if not cells or any(expected_fixtures.get(cid) != cell.get("fixture") for cid, cell in cells.items()):
+            return False
+        required = fixed | {MANIFEST} | {expected_fixtures[cid] for cid in cells}
+        optional = ("Manifest.toml", "test/Manifest.toml", "test/parity/Manifest.toml")
+        manifests = git("ls-tree", "-rz", commit, "--", *optional, check=False, text=False)
+        if manifests.returncode != 0:
+            return False
+        for record in manifests.stdout.split(b"\0"):
+            if record:
+                metadata, path = record.split(b"\t", 1)
+                if metadata.split(b" ", 1)[0] not in (b"100644", b"100755"):
+                    return False
+                required.add(path.decode("utf-8"))
+        if not required.issubset(paths):
+            return False
+        tracked = git("ls-tree", "-rz", commit, "--", *sorted(required), check=False, text=False)
+        if tracked.returncode != 0:
+            return False
+        tracked_paths = set()
+        for record in tracked.stdout.split(b"\0"):
+            if record:
+                metadata, path = record.split(b"\t", 1)
+                if metadata.split(b" ", 1)[0] in (b"100644", b"100755"):
+                    tracked_paths.add(path.decode("utf-8"))
+        if not required.issubset(tracked_paths):
+            return False
+        tree = git("ls-tree", "-rz", commit, "--", "src", check=False, text=False)
+        if tree.returncode != 0:
+            return False
+        expected = set()
+        for record in tree.stdout.split(b"\0"):
+            if not record:
+                continue
+            metadata, path = record.split(b"\t", 1)
+            if metadata.split(b" ", 1)[0] in (b"100644", b"100755"):
+                expected.add(path.decode("utf-8"))
+        actual = {p for p in paths if p.startswith("src/")}
+        src_rows = sorted(f'{e["path"][4:]}\0{e["sha256"]}' for e in entries
+                          if e["path"].startswith("src/"))
+        src_digest = hashlib.sha256("\n".join(src_rows).encode()).hexdigest()
+        return (bool(expected) and actual == expected
+                and src_digest == run.get("source", {}).get("julia_source_tree_sha256"))
+    except (IndexError, KeyError, TypeError, ValueError, UnicodeError):
+        return False
 
 
 @functools.lru_cache(maxsize=None)
@@ -376,13 +485,15 @@ def runparity_checks(batch):
          all(src.get(k) == PINS["P1"][k] for k in ("reference_commit", "archive_sha256", "namespace_sha256",
                                                    "source_tree_sha256"))),
         ("oracle build/source receipts are tracked P1 receipts (a registered build, the pin's source receipt)",
-         src.get("oracle_build_receipt_sha256") in {sha(ROOT / b) for b in ORACLE_BUILDS}
-         and src.get("oracle_source_receipt_sha256") == sha(ROOT / ORACLE_SOURCE)),
+         matches_registered_oracle_build(src, commit=rc)
+         and matches_committed_oracle_source(src, commit=rc)),
         ("runner manifest is frozen-r070-contract-p1.toml", run.get("contract_sha256") == sha(ROOT / MANIFEST)),
         ("every requested cell wrote values-<case>.toml",
          all((d / f"values-{cid}.toml").is_file() and load_toml(d / f"values-{cid}.toml").get("values")
              for cid in requested)),
-        (f"harness files in the execution inventory match run commit {rc[:12]}", not drift),
+        (f"harness files in the execution inventory match run commit {rc[:12]}",
+         not drift and execution_inventory_intact(run, rc, cells)
+         and load(d / "run-commit.json").get("dirty") == []),
     ]
     return checks
 
@@ -481,7 +592,7 @@ SEPARATOR = "# ---- derived checks ----\n"
 def run_external(batch, state):
     argv_t, marker, env = EXTERNAL[batch]
     argv = [a.format(state=str(state)) for a in argv_t]
-    proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, env=dict(os.environ, **env))
+    proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, env=dict(postcoef_git_env(), **env))
     shown = " ".join(a if a != str(state) else "<raw run>" for a in argv)
     return (f"$ {' '.join(f'{k}={v}' for k, v in env.items())} {shown}\n# exit code {proc.returncode}\n"
             + proc.stdout + proc.stderr)
@@ -1316,6 +1427,13 @@ def main():
                          "--allow-dirty: " + ", ".join(dirty))
     for b in all_batches():
         check_run_commit(runs / b, head)
+    # Validate input build identity before deleting or copying any tracked outputs.
+    # The generator currently requires one build across all runparity batches.
+    input_builds = {load_toml(runs / b / "run.toml").get("source", {}).get("oracle_build_receipt_sha256")
+                    for b in RUNPARITY_RUNS}
+    input_oracle = [b for b in ORACLE_BUILDS if {sha(ROOT / b)} == input_builds]
+    if len(input_oracle) != 1:
+        raise SystemExit(f"runparity runs do not name one registered oracle build receipt: {input_builds}")
     previous = load(ROOT / CASEMAP_REL) if (ROOT / CASEMAP_REL).is_file() else {"rows": []}
     # Stale receipts from an earlier write must not survive; receipts/family/campaign/ is not this tool's.
     for sub in ["cases", *all_batches()]:

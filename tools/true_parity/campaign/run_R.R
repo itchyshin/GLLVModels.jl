@@ -5,7 +5,8 @@
 # write_receipts.py reads this file and run_J.jl's TOML and writes the receipts.
 #
 # Usage: Rscript run_R.R <cell>      (env: GLLVMTMB_P1_LIB, GLLVMTMB_P1_SRC, CAMPAIGN_DATA, CAMPAIGN_OUT,
-#                                     CAMPAIGN_SMALL=1 for the development runs, never a receipt)
+#                                     CAMPAIGN_SMALL=1 for the development runs, never a receipt,
+#                                     CAMPAIGN_POLISH=1 (ordinal, isdm, fungi) to also write <cell>_R_polish.json, see the polish block below)
 # The P1 guard (below) refuses to run unless
 #   (a) the loaded gllvmTMB is the library under GLLVMTMB_P1_LIB and reports version 0.7.1,
 #   (b) every P1 source file listed in p1_source_sha256.json hashes to its recorded P1 value in
@@ -168,3 +169,100 @@ if (kind == "isdm") {
 }
 write_json(out, file.path(out_dir, paste0(cell, sfx, "_R.json")), auto_unbox = TRUE, digits = NA, pretty = FALSE, null = "null", na = "null")
 cat("DONE", cell, "logLik", out$logLik, "conv", out$convergence, "pdHess", out$pdHess, "wall_fit", round(wall_fit, 1), "\n")
+
+## ---- optional convergence polish (CAMPAIGN_POLISH=1; N9, GATES.md, and the signed 2026-10-21 stopping rule) -------------
+# Runs AFTER the main JSON is written (so the default output is unaffected even if this block is slow) and writes a SEPARATE
+# file <cell>_R_polish.json; polish_merge.py builds the compared raw file from both. Same objective (fit$tmb_obj) throughout.
+#   stage 0: the nlminb optimum the fit returned (gradient max-abs = out$max_abs_gradient above)
+#   stage 1: nlminb restarted from stage 0 with rel.tol = 1e-13 (x.tol = 0, generous iteration caps)
+#   Newton loop (pre-registered): from stage 1, at most CAMPAIGN_POLISH_MAX_STEPS (default 3) steps par - solve(H, g), stopping
+#     at the FIRST point where max|gradient| < 1e-5 AND TMB's sdreport Hessian AT THAT POINT is positive definite (pdHess true and
+#     the smallest eigenvalue of solve(cov.fixed) > 0). The gradient and the Hessian are evaluated at every visited point. A step
+#     that raises the objective is recorded and not taken; a Hessian that is not positive definite stops the loop with no step.
+#     H is solve(TMB::sdreport(obj, par.fixed = par)$cov.fixed): TMB has no obj$he for random-effect models, and optimHess over
+#     the Laplace gradient took 14 min on the ordinal cell (PR #715), against about 5 s for sdreport.
+#   final point: every compared quantity of the cell is re-extracted, with the same gllvmTMB extractors as above, from a copy of
+#     the fit whose opt$par, opt$objective, report and last.par.best are those of the final point.
+if (nzchar(Sys.getenv("CAMPAIGN_POLISH"))) {
+  if (!(cell %in% c("ordinal", "isdm", "fungi"))) stop("CAMPAIGN_POLISH covers the ordinal, isdm and fungi cells only")
+  bound <- 1e-5; max_steps <- as.integer(Sys.getenv("CAMPAIGN_POLISH_MAX_STEPS", "3"))
+  obj <- fit$tmb_obj
+  gmax <- function(par) max(abs(obj$gr(par)))
+  t2 <- Sys.time()
+  stage0 <- list(logLik = -obj$fn(opt$par), max_abs_gradient = gmax(opt$par))
+  tight <- nlminb(opt$par, obj$fn, obj$gr, control = list(rel.tol = 1e-13, x.tol = 0, iter.max = 500L, eval.max = 1000L))
+  stage1 <- list(logLik = -tight$objective, max_abs_gradient = gmax(tight$par), convergence = tight$convergence,
+                 message = tight$message, iterations = tight$iterations)
+  evalpt <- function(par) {
+    t_ <- Sys.time(); f <- obj$fn(par); g <- as.numeric(obj$gr(par))
+    sdr <- tryCatch(TMB::sdreport(obj, par.fixed = par, getJointPrecision = FALSE), error = function(e) NULL)
+    H <- if (!is.null(sdr)) tryCatch(solve(sdr$cov.fixed), error = function(e) NULL) else NULL
+    ev <- if (is.null(H)) NA_real_ else eigen((H + t(H)) / 2, symmetric = TRUE, only.values = TRUE)$values
+    pd <- !is.null(sdr) && isTRUE(sdr$pdHess) && !is.null(H) && all(is.finite(ev)) && min(ev) > 0
+    list(par = par, f = f, g = g, H = if (is.null(H)) NULL else (H + t(H)) / 2, pd = pd, pdHess = !is.null(sdr) && isTRUE(sdr$pdHess),
+         mineig = if (is.null(H)) NA_real_ else min(ev), maxeig = if (is.null(H)) NA_real_ else max(ev),
+         wall = as.numeric(Sys.time() - t_, units = "secs"))
+  }
+  meets <- function(e) max(abs(e$g)) < bound && e$pd
+  ptrec <- function(k, e) list(step = k, logLik = -e$f, max_abs_gradient = max(abs(e$g)), pdHess = e$pdHess,
+                               hessian_positive_definite = e$pd, hessian_min_eigenvalue = e$mineig, hessian_max_eigenvalue = e$maxeig,
+                               hessian_source = "solve(TMB::sdreport(obj, par.fixed = par)$cov.fixed)", wall_gradient_hessian_sec = e$wall)
+  e <- evalpt(tight$par); points <- list(ptrec(0L, e)); k <- 0L; stopped <- ""
+  while (!meets(e)) {
+    if (k >= max_steps) { stopped <- paste("step cap", max_steps, "reached before the criterion held"); break }
+    if (!e$pd) { stopped <- paste("Hessian not positive definite at step", k, ": no Newton step taken"); break }
+    step <- tryCatch(as.numeric(solve(e$H, e$g)), error = function(err) NULL)
+    if (is.null(step)) { stopped <- paste("solve(H, g) failed at step", k); break }
+    pn <- e$par - step; fn <- obj$fn(pn)
+    if (!(is.finite(fn) && fn <= e$f)) {
+      points[[length(points) + 1L]] <- list(step = k + 1L, rejected = TRUE, f = fn, step_max_abs = max(abs(step)),
+                                            reason = "the Newton step raised the objective; not taken")
+      stopped <- paste("Newton step", k + 1L, "raised the objective"); break
+    }
+    k <- k + 1L; e <- evalpt(pn); pr <- ptrec(k, e); pr$step_max_abs <- max(abs(step)); points[[length(points) + 1L]] <- pr
+  }
+  met <- meets(e); par_f <- e$par
+  # the copy of the fit at the final point
+  f_final <- obj$fn(par_f); rep_f <- obj$report(obj$env$last.par)
+  obj$env$last.par.best <- obj$env$last.par            # predict(newdata = ) reads the random effects from last.par.best
+  fit_f <- fit; fit_f$opt$par <- par_f; fit_f$opt$objective <- f_final; fit_f$report <- rep_f; fit_f$sd_report <- NULL
+  rnd <- obj$env$random
+  fixed_now <- if (length(rnd)) obj$env$last.par[-rnd] else obj$env$last.par
+  pol <- list(engine = "R gllvmTMB", cell = cell, small = SMALL, n_par = length(opt$par), gradient_bound = bound, max_steps = max_steps,
+              note = "convergence polish record (N9); merged into the compared raw file by polish_merge.py, never read as a receipt by itself",
+              host = Sys.info()[["nodename"]], finished_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+              stage0_nlminb_default = stage0, stage1_nlminb_rel_tol_1e13 = stage1, points = points, steps_taken = k,
+              criterion_met = met, stopped = if (met) "criterion held (gradient max-abs < 1e-5 and Hessian positive definite)" else stopped,
+              logLik_before = stage0$logLik, max_abs_gradient_before = stage0$max_abs_gradient,
+              logLik = -f_final, max_abs_gradient = max(abs(e$g)), pdHess = e$pdHess, hessian_positive_definite = e$pd,
+              hessian_min_eigenvalue = e$mineig, hessian_max_eigenvalue = e$maxeig, par = as.numeric(par_f),
+              self_consistency_fixed_par_max_abs_diff = max(abs(fixed_now - par_f)))
+  pl_f <- obj$env$parList(par_f)
+  pol$beta <- as.numeric(pl_f$b_fix)
+  pol$self_consistency_beta_vs_opt_par_max_abs_diff <- max(abs(pol$beta - as.numeric(par_f[names(par_f) == "b_fix"])))
+  if (cell == "fungi") pol$eta <- as.numeric(rep_f$eta)
+  if (kind == "latent") {
+    S <- suppressMessages(extract_Sigma(fit_f, level = "unit", part = "shared", link_residual = "none"))$Sigma
+    Lb <- as.matrix(rep_f$Lambda_B); pol$LLt_from_Lambda_B_max_abs_diff <- max(abs(Lb %*% t(Lb) - S))
+    pol$LLt <- unname(as.matrix(S))
+  }
+  if (cell == "ordinal") {
+    ct <- suppressMessages(extract_cutpoints(fit_f, quiet = TRUE))
+    pol$cutpoints <- list(trait = as.character(ct$trait), index = as.integer(ct$cutpoint_index), tau = as.numeric(ct$tau_estimate))
+  }
+  if (kind == "isdm") {
+    L <- as.matrix(rep_f$Lambda_B); pol$LLt <- unname(L %*% t(L))
+    nd0 <- d; nd0$log_support <- 0
+    pr <- suppressMessages(predict(fit_f))
+    pol$predict_link <- as.numeric(pr$est)
+    pol$self_consistency_predict_link_vs_report_eta_max_abs_diff <- max(abs(pol$predict_link - as.numeric(rep_f$eta)))
+    pol$predict_response <- as.numeric(suppressMessages(predict(fit_f, type = "response"))$est)
+    pol$predict_newdata_offset0_link <- as.numeric(suppressMessages(predict(fit_f, newdata = nd0, type = "link"))$est)
+    pol$predict_newdata_offset0_response <- as.numeric(suppressMessages(predict(fit_f, newdata = nd0, type = "response"))$est)
+    pol$predict_cell_id <- as.character(pr$cell_id); pol$predict_trait <- as.character(pr$trait); pol$predict_source <- as.character(pr$isdm_source)
+  }
+  pol$wall_polish_sec <- as.numeric(Sys.time() - t2, units = "secs")
+  write_json(pol, file.path(out_dir, paste0(cell, sfx, "_R_polish.json")), auto_unbox = TRUE, digits = NA, pretty = FALSE, null = "null", na = "null")
+  cat("POLISH", cell, "grad", stage0$max_abs_gradient, "->", stage1$max_abs_gradient, "->", pol$max_abs_gradient, "steps", k,
+      "met", met, "wall", round(pol$wall_polish_sec, 1), "\n")
+}

@@ -21,6 +21,13 @@ another converged start). Compare `loglik` across `n_init` values to check. Fit 
 fail, the first fit is returned. `n_init > 1` is not available with `aghq`
 (`aghq_control.multistart` is its own multistart).
 
+Laplace retention (all AGHQ fitters share this rule). If the selected AGHQ run never left its start
+(`parameter_shift == 0`) and did not converge, no AGHQ estimate exists: the Laplace fit is returned
+with `integration.actual == :laplace`, `integration.reason` set to the run's own stop reason, and one
+warning. `fit.converged` is the Laplace fit's flag, not the quadrature run's. A run that moved is kept
+as an AGHQ fit even if it did not converge (inspect `fit.converged`). The rule is exact, not
+thresholded, and it also applies to `aghq_control=(n_adapt=1,)`.
+
 `aghq_control` is a named tuple of `n_adapt`, `iter_cap`, `continuation`,
 `escalate_patience`, `shift_tol`, `grad_tol`, `grad_tol_rel`, `f_tol`, `rho_min`,
 `optimizer_iterations`, `multistart`, `mode_gradient_tol`, `mode_maxiter`, and `mode_tol`. Defaults match the
@@ -83,6 +90,14 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,n_init::Integer=1,aghq=f
         return _poisson_with_integration(base,info)
     end
     selected=result.selected;t=selected.parameters
+    # Unmoved and unconverged: no AGHQ estimate exists; retain Laplace and record the
+    # run's own stop reason (policy and the exact stop reasons: _aghq_unmoved_unconverged).
+    if _aghq_unmoved_unconverged(selected)
+        @warn "AGHQ did not move from its start and did not converge; retained Laplace" requested=request reason=selected.stop_reason
+        info=AGHQFitInfo(request,:laplace,1,k,1,selected.stop_reason,false,Inf,c,base_controls,result,
+            AGHQAdaptation[],nothing,"",NaN)
+        return _poisson_with_integration(base,info)
+    end
     prediction_offset=copy(problem.data.offset)
     raw_offset=get(kwargs,:offset,nothing)
     if raw_offset!==nothing

@@ -76,13 +76,43 @@ wave8-conversion-p1/, estimand-rebind-p1/, postfit-policy-p1/, postfit-1-r-p1/,
 postfit-1-julia-p1/, each with its run-commit.json.
 """
 import argparse
+from contextlib import contextmanager
 import hashlib
+import copy
 import json
 import os
+import re
 from pathlib import Path
 import shutil
+import stat
 import subprocess
+import sys
+import tempfile
 import tomllib
+
+from core070_json_semantics import json_value_equal
+from core070_postcoef_transition import structural_transition, assembled_transition, MAP
+
+def postcoef_git_env():
+    """Do not let ambient Git overrides change selected object identity."""
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env["GIT_NO_REPLACE_OBJECTS"] = "1"
+    return env
+
+@contextmanager
+def postcoef_isolated_git_environment():
+    saved = {key: value for key, value in os.environ.items() if key.startswith("GIT_")}
+    try:
+        for key in saved:
+            del os.environ[key]
+        os.environ["GIT_NO_REPLACE_OBJECTS"] = "1"
+        yield
+    finally:
+        for key in list(os.environ):
+            if key.startswith("GIT_"):
+                del os.environ[key]
+        os.environ.update(saved)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/dev-log/core070/true-parity-latest"
@@ -95,6 +125,12 @@ P0_SHA = PINS["P0"]["reference_commit"]
 ORACLE_BUILD = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build.json"
 ORACLE_SOURCE = "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"
 MAX_INLINE = 25  # vectors longer than this stay in the batch raw file only
+POLICY_CAPTURE_ARTIFACTS = ["receipt.json", "results.tsv", "diagnostics.log", "julia-results.json",
+    "r-oracle.json", "run-commit.json", "julia-Manifest.toml", "julia-LocalPreferences.toml",
+    "julia-stdout.log", "julia-stderr.log", "oracle-verify-before.log", "oracle-verify-after.log",
+    "runner-snapshots"] + [f"julia-control-{mode}.{suffix}"
+    for mode in ("always_empty", "spurious_coefficient")
+    for suffix in ("json", "exit", "stdout.log", "stderr.log")]
 DEGENERATE_ABS = 1e-10  # every |R value| below this: the comparison cannot discriminate
 ESTIMAND_ACCESSOR_RECORD = "docs/dev-log/core070/true-parity-latest/estimand-rebind-accessor-diff-p1.json"
 HELD_NOTE = "held pending the maintainer's ruling on the wave6 nobs expectation"
@@ -216,7 +252,7 @@ def write_json(path, value):
 
 
 def git(*args):
-    return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=True).stdout
+    return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=True, env=postcoef_git_env()).stdout
 
 
 def git_state():
@@ -239,12 +275,29 @@ def check_run_commit(run_dir, head):
                          f"not at clean HEAD {head}; re-run at HEAD")
 
 
+def check_policy_run_commit(run_dir, head):
+    """Verify the three-fit capture identity; check a sidecar if one exists."""
+    if git("rev-parse", "HEAD").strip() != head:
+        raise SystemExit("policy capture expected HEAD differs from the checkout")
+    record = load(run_dir / "receipt.json")
+    report = load(run_dir / "julia-results.json")
+    case = report["cases"][COEF_EMPTY_CID]
+    if not isinstance(case, dict) or "three_fit" not in case:
+        raise SystemExit("policy capture has no three-fit evidence")
+    integer_entry(COEF_EMPTY_CID, case, load(run_dir / "r-oracle.json"), run_dir)
+    sidecar = run_dir / "run-commit.json"
+    if sidecar.is_symlink():
+        raise SystemExit("policy capture run-commit sidecar is a symlink")
+    if sidecar.exists():
+        check_run_commit(run_dir, record["postcoef_capture_identity"]["source_commit"])
+
+
 def run_verifier(name, **states):
     """Run a batch verifier at P1 and keep its full output as the tracked <batch>/verify.txt."""
     argv_t, marker = VERIFIERS[name]
     argv = ["python3"] + [a.format(**{k: str(v) for k, v in states.items()}) for a in argv_t]
     proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True,
-                          env=dict(os.environ, GLLVM_PARITY_PIN="P1"))
+                          env=dict(postcoef_git_env(), GLLVM_PARITY_PIN="P1"))
     log = REC / name / "verify.txt"
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text(proc.stdout + proc.stderr)
@@ -274,14 +327,81 @@ def mark_degenerate(entry, r_values):
 
 
 def copy_batch(src_dir, dest_name, names):
+    if (not isinstance(dest_name, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", dest_name)):
+        raise SystemExit("batch destination must be a canonical name")
+    if any(not isinstance(name, str) or not name or name.startswith("/") or "\\" in name
+           or any(part in ("", ".", "..") for part in name.split("/")) for name in names):
+        raise SystemExit("batch artifact paths must be canonical relative paths")
+    if dest_name == "postfit-policy-p1":
+        source_case = load(src_dir / "julia-results.json")["cases"][COEF_EMPTY_CID]
+        if "three_fit" in source_case:
+            raise SystemExit("POST-COEF three-fit capture copying is unavailable until transactional")
     dest = REC / dest_name
+    if REC.is_symlink() or dest.is_symlink() or src_dir.is_symlink():
+        raise SystemExit("refusing symlink batch source or destination")
+    def safe_path(base, path, label):
+        current = base
+        parts = path.relative_to(base).parts
+        for index, part in enumerate(parts):
+            current = current / part
+            try:
+                info = current.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise SystemExit(f"cannot inspect batch {label}") from exc
+            if stat.S_ISLNK(info.st_mode):
+                raise SystemExit(f"refusing symlink in batch {label}")
+            if index < len(parts) - 1 and not stat.S_ISDIR(info.st_mode):
+                raise SystemExit(f"non-directory ancestor in batch {label}")
+        return path
+    # Enumerate and inspect every source and destination before the first write.
+    # This does not make the subsequent copies atomic or race-proof.
+    planned = []
+    seen = set()
+    for n in names:
+        p = safe_path(src_dir, src_dir / n, "source")
+        if p.is_file():
+            candidates = [p]
+        elif p.is_dir():
+            candidates = []
+            def walk_error(error):
+                raise SystemExit("cannot enumerate batch source") from error
+            for base, dirs, files in os.walk(p, followlinks=False, onerror=walk_error):
+                candidates.extend(Path(base) / name for name in dirs + files)
+            candidates.sort()
+        else:
+            candidates = []
+        for child in candidates:
+            safe_path(src_dir, child, "source")
+            if not child.is_file():
+                continue
+            try:
+                with child.open("rb") as stream:
+                    stream.read(1)
+            except OSError as exc:
+                raise SystemExit("cannot read batch source") from exc
+            rel = child.relative_to(src_dir)
+            target = safe_path(REC, dest / rel, "destination")
+            if target in seen:
+                raise SystemExit("duplicate batch destination")
+            if target.exists():
+                try:
+                    target_info = target.lstat()
+                except OSError as exc:
+                    raise SystemExit("cannot inspect batch destination") from exc
+                if not stat.S_ISREG(target_info.st_mode):
+                    raise SystemExit("batch destination is not a regular file")
+                if target_info.st_nlink != 1:
+                    raise SystemExit("refusing hardlinked batch destination")
+            seen.add(target)
+            planned.append((child, target, rel))
     dest.mkdir(parents=True, exist_ok=True)
     out = []
-    for n in names:
-        p = src_dir / n
-        if p.is_file():
-            shutil.copyfile(p, dest / n)
-            out.append(f"{REC_REL}/{dest_name}/{n}")
+    for child, target, rel in planned:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(child, target)
+        out.append(f"{REC_REL}/{dest_name}/{rel.as_posix()}")
     return out
 
 
@@ -355,6 +475,7 @@ INTEGER_EQUALITY = {
     "CORE070-POSTFIT-COEF-EMPTY-NATIVE": ("empty_coef", "length(coef(object)) on a fit with no fixed-effect columns"),
 }
 COEF_EMPTY_CID = "CORE070-POSTFIT-COEF-EMPTY-NATIVE"
+COEF_THREE_FIT_CID = "CORE070-POSTFIT-COEF-THREE-FIT-NATIVE"
 # Receipt text for the four cases, with line numbers read from git show 9539352f6:R/methods-gllvmTMB.R (P1), not P0.
 INTEGER_TEXT = {
     "CORE070-POSTFIT-LOGLIK-DF-NATIVE": {
@@ -408,9 +529,705 @@ INTEGER_TIER = (f"numeric: every executable case receipt carries an integer_equa
                 f"(tolerance 0.5, so the integers must be equal), under {INTEGER_RULING}")
 
 
-def integer_entry(cid, jc, po):
-    """The integer_equality comparison entry for `cid`, from the raw Julia result `jc` and R oracle `po`."""
+def integer_text(cid, jc):
+    """Describe the evidence actually used, preserving legacy scalar wording."""
+    if cid == COEF_EMPTY_CID and "three_fit" in jc:
+        return {"r_call": "coef() on three P1 public fits with 0, 5 and 6 fixed-effect columns",
+                "julia_surface": "StatsAPI.coef() on the corresponding Julia fits",
+                "numeric_note": "Coefficient-vector lengths only; names and numerical coefficient values are separate claims."}
+    return INTEGER_TEXT[cid]
+
+
+def draft_separate_postcoef_case(harness, comparison, historical_bytes):
+    """Build an unqualified, no-write review draft; this does not verify a capture."""
+    historical_hash = "72fdb2739730d2ca763a8b5d291442bd5847403b3e30ac49c82b0ae1a31bab80"
+    if not isinstance(historical_bytes, bytes) or hashlib.sha256(historical_bytes).hexdigest() != historical_hash:
+        raise ValueError("historical POST-COEF receipt differs from protected baseline")
+    if not isinstance(harness, dict) or harness.get("pass") is not True or not isinstance(harness.get("three_fit"), dict):
+        raise ValueError("three-fit harness case is malformed")
+    if not isinstance(comparison, dict) or comparison.get("case_id") != COEF_EMPTY_CID:
+        raise ValueError("three-fit comparison identity differs")
+    expected = [0, 5, 6]
+    for values in (comparison.get("r_value"), comparison.get("julia_value"), harness["three_fit"].get("julia_lengths")):
+        if not isinstance(values, list) or any(type(v) is not int for v in values) or values != expected:
+            raise ValueError("three-fit lengths differ")
+    if (comparison.get("kind") != "integer_equality" or type(comparison.get("tolerance")) not in (int, float) or
+            comparison["tolerance"] != 0.5 or type(comparison.get("max_abs_diff")) not in (int, float) or
+            comparison["max_abs_diff"] != 0 or comparison.get("discriminating") is not True):
+        raise ValueError("three-fit comparison is invalid")
+    return {"case_id": COEF_THREE_FIT_CID, "harness_case_id": COEF_EMPTY_CID,
+            "source_ids": ["postfit-policy/POST-COEF-EMPTY"], "verdict": "UNQUALIFIED",
+            "historical_case": {"path": f"{REC_REL}/cases/{COEF_EMPTY_CID}.json", "sha256": historical_hash},
+            "harness_fields": copy.deepcopy(harness),
+            "comparison": {"pin": "P1", "cases": [copy.deepcopy(comparison)]}}
+
+
+def postcoef_capture_file_snapshot(directory):
+    """Read regular capture files without following symlinks."""
+    directory = Path(directory)
+    if directory.is_symlink() or not directory.is_dir():
+        raise ValueError("capture state must be a directory")
+    result = {}
+    def fail(error):
+        raise ValueError("capture enumeration failed") from error
+    for base, dirs, files in os.walk(directory, followlinks=False, onerror=fail):
+        for name in dirs + files:
+            path = Path(base) / name
+            info = path.lstat()
+            if stat.S_ISLNK(info.st_mode) or not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)):
+                raise ValueError("capture contains linked or non-regular input")
+            if stat.S_ISREG(info.st_mode):
+                result[path.relative_to(directory).as_posix()] = path.read_bytes()
+    return result
+
+
+def run_private_capture_selftest(repo, source, state, runtime):
+    """Run committed source in private checkouts over a private capture snapshot."""
+    repo = Path(repo).resolve()
+    state = Path(state)
+    if state.is_symlink() or not state.is_dir():
+        raise ValueError("capture state must be a directory")
+    if not isinstance(source, str) or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", source):
+        raise ValueError("capture source commit is invalid")
+    if (not isinstance(runtime, dict) or not isinstance(runtime.get("python_executable_path"), str) or
+            Path(runtime["python_executable_path"]).resolve() != Path(sys.executable).resolve()):
+        raise ValueError("captured Python executable differs")
+    before = postcoef_capture_file_snapshot(state)
+    if not before:
+        raise ValueError("capture state is empty")
+    env = postcoef_git_env()
+    for key in list(env):
+        if key.startswith("PYTHON"):
+            del env[key]
+    env.update(PYTHONDONTWRITEBYTECODE="1", PYTHONNOUSERSITE="1", GLLVM_PARITY_PIN="P1", GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1")
+    with tempfile.TemporaryDirectory(prefix="postcoef-draft-source-") as tmp:
+        tmp = Path(tmp); checkout = tmp / "checkout"; template = tmp / "empty-template"; template.mkdir()
+        subprocess.run(["git", "-c", "core.hooksPath=/dev/null", "clone", "--no-local", "--no-hardlinks", "--no-checkout", "--template", str(template), "--", str(repo), str(checkout)],
+                       check=True, capture_output=True, env=env, timeout=60)
+        subprocess.run(["git", "-C", str(checkout), "-c", "core.hooksPath=/dev/null", "checkout", "--quiet", "--detach", source],
+                       check=True, capture_output=True, env=env, timeout=60)
+        if os.path.lexists(checkout / ".git/objects/info/alternates"):
+            raise ValueError("private verifier checkout uses object alternates")
+        tool_entries = subprocess.run(["git", "-C", str(checkout), "ls-tree", "-r", "-z", source, "--", "tools"],
+                                      check=True, capture_output=True, env=env, timeout=30).stdout.split(b"\0")
+        for item in filter(None, tool_entries):
+            meta, raw_path = item.split(b"\t", 1)
+            mode, kind, object_id = meta.split(b" ")
+            if mode not in (b"100644", b"100755") or kind != b"blob" or raw_path.endswith(b".pyc") or b"__pycache__" in raw_path.split(b"/"):
+                raise ValueError("private verifier source contains symlink or bytecode")
+            path = checkout
+            for part in os.fsdecode(raw_path).split("/"):
+                path = path / part
+                if path.is_symlink():
+                    raise ValueError("private verifier source contains symlink or bytecode")
+            if not path.is_file():
+                raise ValueError("private verifier source is not a regular blob")
+            data = path.read_bytes()
+            algorithm = hashlib.sha1 if len(object_id) == 40 else hashlib.sha256
+            if algorithm(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest().encode() != object_id:
+                raise ValueError("private verifier source differs from committed blob")
+        entry_rel = "tools/core070_postcoef_live_ref.py"
+        entry = checkout / entry_rel
+        tree_entry = subprocess.run(["git", "-C", str(checkout), "ls-tree", "-z", source, "--", entry_rel],
+                                    check=True, capture_output=True, env=env, timeout=30).stdout
+        if not re.fullmatch(rb"100(?:644|755) blob [0-9a-f]+\t" + re.escape(entry_rel.encode()) + rb"\0", tree_entry):
+            raise ValueError("private verifier entry is not a regular committed file")
+        committed = subprocess.run(["git", "-C", str(checkout), "show", f"{source}:{entry_rel}"],
+                                   check=True, capture_output=True, env=env, timeout=30).stdout
+        if entry.is_symlink() or entry.parent.is_symlink() or not entry.is_file() or entry.read_bytes() != committed:
+            raise ValueError("private verifier entry differs from committed source")
+        staged = tmp / "state"; staged.mkdir()
+        for rel, data in before.items():
+            dest = staged / rel; dest.parent.mkdir(parents=True, exist_ok=True)
+            with dest.open("xb") as handle:
+                handle.write(data)
+        code = ("import json,sys; sys.path.insert(0,sys.argv[1]+'/tools'); "
+                "import core070_postcoef_live_ref as v; "
+                "sys.stdout.write(v.run_source_selftest(sys.argv[1],sys.argv[2],sys.argv[3],json.loads(sys.argv[4])))")
+        proc = subprocess.run([sys.executable, "-B", "-I", "-c", code, str(checkout), source, str(staged), json.dumps(runtime)],
+                              cwd=checkout, env=env, capture_output=True, text=True, timeout=240)
+        markers = ("CORE070_POSTFIT_POLICY_BATCH_NEGATIVES_PASS 10", "CORE070_POSTFIT_POLICY_CONTRACT_NEGATIVES_PASS 4",
+                   "CORE070_POSTFIT_POLICY_SOURCE_PIN_NEGATIVES_PASS 5", "CORE070_POSTFIT_POLICY_BATCH_VERIFIED 15 negative_controls 2")
+        if proc.returncode or proc.stderr or not all(marker in proc.stdout.splitlines() for marker in markers):
+            raise ValueError("private source verifier rejected capture")
+        if postcoef_capture_file_snapshot(staged) != before:
+            raise ValueError("private capture snapshot changed")
+        if postcoef_capture_file_snapshot(state) != before:
+            raise ValueError("capture changed during private verification")
+        return proc.stdout
+
+
+def prepare_separate_postcoef_case(state):
+    """Request capture checks and return an unqualified draft, not an attestation."""
+    state = Path(state)
+    if state.is_symlink() or not state.is_dir():
+        raise ValueError("capture state must be a directory")
+    all_original = postcoef_capture_file_snapshot(state)
+    names = ("receipt.json", "julia-results.json", "r-oracle.json")
+    original = {}
+    for name in names:
+        path = state / name
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("capture input is not a regular file")
+        original[name] = path.read_bytes()
+        if original[name] != all_original.get(name):
+            raise ValueError("capture changed during draft preparation")
+    record, report, oracle = (json.loads(original[name]) for name in names)
+    if not isinstance(record, dict) or record.get("status") != "PASS":
+        raise ValueError("capture receipt is not PASS")
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
+                          capture_output=True, text=True, env=postcoef_git_env()).stdout.strip()
+    identity = record["postcoef_capture_identity"]
+    if not isinstance(identity, dict) or not all(isinstance(identity.get(k), str) and
+            re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", identity[k]) for k in ("source_commit", "source_tree")):
+        raise ValueError("capture source identity is malformed")
+    historical_rel = f"{REC_REL}/cases/{COEF_EMPTY_CID}.json"
+    historical_path = ROOT / historical_rel
+    if historical_path.is_symlink() or not historical_path.is_file():
+        raise ValueError("historical receipt unavailable")
+    historical = historical_path.read_bytes()
+    committed = subprocess.run(["git", "show", f"{head}:{historical_rel}"], cwd=ROOT, check=True,
+                               capture_output=True, env=postcoef_git_env()).stdout
+    if committed != historical:
+        raise ValueError("historical receipt differs from selected source")
+    if not postcoef_source_compatible(ROOT, identity["source_commit"], head):
+        raise ValueError("capture source is not compatible with selected checkout")
+    transcript = run_private_capture_selftest(ROOT, identity["source_commit"], state, record.get("postcoef_runtime"))
+    harness = report["cases"][COEF_EMPTY_CID]
+    r = [fit["length"] for fit in oracle["postcoef_three_fit"]["fits"]]
+    j = harness["three_fit"]["julia_lengths"]
+    comparison = {"case_id": COEF_EMPTY_CID, "quantity": "coefficient lengths across three paired public fits",
+                  "kind": "integer_equality", "r_value": r, "julia_value": j, "max_abs_diff": 0,
+                  "tolerance": 0.5, "tolerance_rule": INTEGER_RULE, "n_values": 3,
+                  "diff_source": "recomputed from private verified capture", "discriminating": True}
+    build = select_postcoef_build(record, ROOT, head)
+    draft = draft_separate_postcoef_case(harness, comparison, historical)
+    prefix = f"{REC_REL}/postcoef-empty-p1"
+    draft.update({"glvmodels_commit": head, "glvmodels_src_tree": identity["source_tree"],
+                  "glvmodels_worktree_dirty": None, "oracle_build_receipt": build,
+                  "postcoef_capture": {"receipt": f"{prefix}/receipt.json",
+                                       "sha256": hashlib.sha256(original["receipt.json"]).hexdigest()},
+                  "raw": [f"{prefix}/julia-results.json", f"{prefix}/r-oracle.json"],
+                  "batch_verifier": {"status": "UNVERIFIED", "log": f"{prefix}/verify.txt",
+                                     "log_sha256": hashlib.sha256(transcript.encode()).hexdigest()}})
+    if postcoef_capture_file_snapshot(state) != all_original:
+        raise ValueError("capture inputs changed during draft preparation")
+    now = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
+                         capture_output=True, text=True, env=postcoef_git_env()).stdout.strip()
+    if (now != head or historical_path.is_symlink() or historical_path.read_bytes() != historical or
+            not postcoef_source_compatible(ROOT, identity["source_commit"], head)):
+        raise ValueError("selected source changed during draft preparation")
+    return draft
+
+
+def postcoef_capture_binding(cid, jc, state):
+    """Reference the exact capture receipt for the three-fit case only."""
+    if cid != COEF_EMPTY_CID or "three_fit" not in jc:
+        return None
+    return {"receipt": f"{REC_REL}/postcoef-empty-p1/receipt.json",
+            "sha256": sha(state / "receipt.json")}
+
+
+def select_postcoef_build(record, repo, head):
+    """Select the capture's tracked, source-bound oracle receipt before writing."""
+    repo = Path(repo).resolve()
+    expected = record.get("oracle_build_sha256")
+    source = record.get("postcoef_capture_identity", {}).get("source_commit")
+    if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise SystemExit("POST-COEF capture has no valid oracle build hash")
+    if not postcoef_ref_compatible(repo, source, head):
+        raise SystemExit("POST-COEF source and selected commit are not evidence-only compatible")
+    prefix = ORACLE_BUILD.rsplit("/", 1)[0]
+    candidates = [ORACLE_BUILD, f"{prefix}/build-totoro.json", f"{prefix}/build-totoro-20261104.json"]
+    matches = []
+    for rel in candidates:
+        local = repo / rel
+        if local.is_symlink() or not local.is_file() or repo not in local.resolve().parents:
+            continue
+        snapshots = []
+        for commit in (source, head):
+            entry = subprocess.run(["git", "-C", str(repo), "ls-tree", "-z", commit, "--", rel], capture_output=True, env=postcoef_git_env())
+            if entry.returncode or not entry.stdout.startswith((b"100644 blob ", b"100755 blob ")):
+                break
+            blob = subprocess.run(["git", "-C", str(repo), "show", f"{commit}:{rel}"], capture_output=True, env=postcoef_git_env())
+            if blob.returncode:
+                break
+            snapshots.append(blob.stdout)
+        if len(snapshots) == 2 and all(hashlib.sha256(b).hexdigest() == expected for b in snapshots) and sha(local) == expected:
+            matches.append(rel)
+    if len(matches) != 1:
+        raise SystemExit("POST-COEF needs exactly one matching oracle build receipt at the capture and selected commits")
+    try:
+        build = json.loads((repo / matches[0]).read_text())
+    except (OSError, ValueError) as exc:
+        raise SystemExit("POST-COEF oracle build receipt is malformed") from exc
+    pin = record.get("source_pin", {})
+    if not isinstance(build, dict) or not isinstance(pin, dict):
+        raise SystemExit("POST-COEF oracle build or source pin is malformed")
+    for key in ("reference_commit", "archive_sha256", "source_tree_sha256", "installed_tree_sha256", "marker_sha256"):
+        if not pin.get(key) or build.get(key) != pin[key]:
+            raise SystemExit("POST-COEF oracle build identity mismatch: " + key)
+    if build.get("gllvmTMB_version") != pin.get("version"):
+        raise SystemExit("POST-COEF oracle build version mismatch")
+    return matches[0]
+
+
+def postcoef_evidence_paths():
+    """Exact files permitted in the approved evidence-only linear descendants."""
+    raw = f"{REC_REL}/postcoef-empty-p1/"
+    names = [name for name in POLICY_CAPTURE_ARTIFACTS if name != "runner-snapshots"]
+    names += ["oracle-verify-preload.log"]
+    names += ["verify.txt", "runner-snapshots/core070_postfit_policy_batch.R",
+              "runner-snapshots/core070_postfit_policy_batch.jl", "runner-snapshots/julia-launcher"]
+    files = {raw + name for name in names}
+    files.add(f"{REC_REL}/cases/{COEF_THREE_FIT_CID}.json")
+    files.update(f"docs/dev-log/core070/true-parity-latest/{name}" for name in
+                 ("case-map-postfit.json", "case-map-assembled.json", "scoreboard.md"))
+    return files
+
+
+def postcoef_has_failure(value):
+    """Recognize recorded failure indicators; expected controls stay protected."""
+    if isinstance(value, dict):
+        if "postcoef_controls" in value:
+            controls = value["postcoef_controls"]
+            if not isinstance(controls, dict) or set(controls) != {"always_empty", "spurious_coefficient"}:
+                return True
+            for mode, control in controls.items():
+                if (not isinstance(control, dict) or control.get("mode") != mode or control.get("passed") is not True
+                        or type(control.get("exit_code")) is not int or control["exit_code"] != 1):
+                    return True
+        flags = ("pass", "passed", "behaved", "harness_pass", "all_checks", "all_positive_pass",
+                 "negative_controls_behaved_as_expected", "source_unchanged")
+        return (any(key in value and value[key] is not True for key in flags)
+                or ("julia_exit_code" in value and
+                    (type(value["julia_exit_code"]) is not int or value["julia_exit_code"] != 0))
+                or any(postcoef_has_failure(item) for item in value.values()))
+    if isinstance(value, list):
+        return any(postcoef_has_failure(item) for item in value)
+    return isinstance(value, str) and value.upper() in {"FAIL", "FAILED", "FAILURE", "NUMERIC_FAIL", "NUMERIC-FAIL",
+                                                       "ERROR", "ERRORED", "TIMEOUT", "TIMED_OUT",
+                                                       "CANCELLED", "CANCELED", "INTERRUPTED", "ABORTED"}
+
+
+def postcoef_has_signature(value):
+    if isinstance(value, dict):
+        return (bool(value.get("signed_by")) or value.get("disposition") == "DISPOSITION-SIGNED" or
+                any(postcoef_has_signature(item) for item in value.values()))
+    return isinstance(value, list) and any(postcoef_has_signature(item) for item in value)
+
+
+def postcoef_raw_change_safe(run, parent, path, status):
+    """Preserve a previously failed or signed capture and its raw artifacts."""
+    prefix = f"{REC_REL}/postcoef-empty-p1/"
+    if not path.startswith(prefix):
+        return True
+    # Prior artifacts may encode errors or signatures outside the fields
+    # recognized by this version. Keep the original evidence immutable; a
+    # capture can add new files, but cannot replace an existing artifact.
+    if status == b"M":
+        return False
+    receipt_path = prefix + "receipt.json"
+    entry = run("ls-tree", "-z", parent, "--", receipt_path)
+    if entry.returncode:
+        return False
+    if entry.stdout:
+        if not re.fullmatch(rb"100(?:644|755) blob [0-9a-f]+\t" + re.escape(receipt_path.encode()) + rb"\0", entry.stdout):
+            return False
+        previous = run("show", f"{parent}:{receipt_path}")
+        try:
+            if previous.returncode:
+                return False
+            prior_receipt = json.loads(previous.stdout)
+            if not isinstance(prior_receipt, dict) or postcoef_has_failure(prior_receipt) or postcoef_has_signature(prior_receipt):
+                return False
+        except (ValueError, TypeError):
+            return False
+    elif status != b"A":
+        return False
+    return True
+
+
+def postcoef_shared_evidence_safe(path, before, after):
+    """Do not alter other rows or a prior failing/signed target in shared ledgers."""
+    target = "postfit-policy/POST-COEF-EMPTY"
+    has_failure = postcoef_has_failure
+    has_signature = postcoef_has_signature
+    if path == f"{REC_REL}/cases/{COEF_EMPTY_CID}.json":
+        try:
+            old, new = json.loads(before), json.loads(after)
+            if not isinstance(old, dict) or not isinstance(new, dict):
+                return False
+            protected = ("case_id", "signed_by", "signed_on", "signature_ref")
+            if not json_value_equal({k: old[k] for k in protected if k in old}, {k: new[k] for k in protected if k in new}):
+                return False
+            signed = has_signature(old)
+            return not ((has_failure(old) or signed) and not json_value_equal(old, new))
+        except (ValueError, TypeError):
+            return False
+    if path.endswith(("case-map-postfit.json", "case-map-assembled.json")):
+        try:
+            old, new = json.loads(before), json.loads(after)
+            def indexed(doc):
+                rows = doc["rows"]
+                if not isinstance(rows, list) or any(not isinstance(x, dict) or not isinstance(x.get("source_id"), str) for x in rows):
+                    raise ValueError("malformed rows")
+                result = {x["source_id"]: x for x in rows}
+                if len(result) != len(rows) or target not in result:
+                    raise ValueError("duplicate or missing row")
+                return result
+            oldrows, newrows = indexed(old), indexed(new)
+            if oldrows.keys() != newrows.keys() or any(not json_value_equal(oldrows[k], newrows[k]) for k in oldrows if k != target):
+                return False
+            prior, current = oldrows[target], newrows[target]
+            protected = ("classification", "disposition", "signed_by", "signed_on", "signature_ref", "executable_case_ids")
+            if not json_value_equal({k: prior[k] for k in protected if k in prior}, {k: current[k] for k in protected if k in current}):
+                return False
+            signed = has_signature(prior)
+            if (has_failure(prior) or signed) and not json_value_equal(prior, current):
+                return False
+            if "counts" in old or "counts" in new:
+                if not isinstance(old.get("counts"), dict) or not isinstance(new.get("counts"), dict):
+                    return False
+                if not json_value_equal(old["counts"], recount(old)) or not json_value_equal(new["counts"], recount(new)):
+                    return False
+            if "inputs" in old or "inputs" in new:
+                def inputs(doc):
+                    seq = doc.get("inputs")
+                    if not isinstance(seq, list) or any(not isinstance(x, dict) or not isinstance(x.get("path"), str) for x in seq):
+                        raise ValueError("malformed assembled inputs")
+                    result = {x["path"]: x for x in seq}
+                    if len(result) != len(seq):
+                        raise ValueError("duplicate assembled inputs")
+                    return result
+                oi, ni = inputs(old), inputs(new)
+                if oi.keys() != ni.keys():
+                    return False
+                for key in oi:
+                    if key == "docs/dev-log/core070/true-parity-latest/case-map-postfit.json":
+                        if not json_value_equal({k:v for k,v in oi[key].items() if k != "sha256"}, {k:v for k,v in ni[key].items() if k != "sha256"}):
+                            return False
+                    elif not json_value_equal(oi[key], ni[key]):
+                        return False
+            # Only this policy batch may change shared verifier and artifact metadata.
+            for field in ("batch_verifiers", "batch_artifacts", "runtimes_seconds"):
+                a, b = old.get(field, {}), new.get(field, {})
+                if not isinstance(a, dict) or not isinstance(b, dict):
+                    return False
+                if not json_value_equal({k: v for k, v in a.items() if k != "postfit-policy-p1"}, {k: v for k, v in b.items() if k != "postfit-policy-p1"}):
+                    return False
+                prior = a.get("postfit-policy-p1")
+                if (has_failure(prior) or has_signature(prior)) and not json_value_equal(prior, b.get("postfit-policy-p1")):
+                    return False
+            # Shared metadata is stable except generated rollups and provenance.
+            allowed = {"rows", "counts", "glvmodels_commit", "batch_verifiers", "batch_artifacts", "runtimes_seconds", "inputs"}
+            return json_value_equal({k: v for k, v in old.items() if k not in allowed}, {k: v for k, v in new.items() if k not in allowed})
+        except (ValueError, TypeError, KeyError):
+            return False
+    if path.endswith("scoreboard.md"):
+        try:
+            target_board = "postfit-policy-POST-COEF-EMPTY"
+            def indexed(raw):
+                rows = {}
+                for line in raw.decode("utf-8").splitlines():
+                    if re.match(r"^\|\s*[A-Za-z0-9][A-Za-z0-9_-]*\b", line) and not re.match(r"^\|\s*(?:Row id|Capability id)\b", line, re.IGNORECASE):
+                        columns = [x.strip() for x in line.split("|")]
+                        if len(columns) >= 6:
+                            board = re.match(r"^[A-Za-z0-9][A-Za-z0-9_-]*", columns[1])
+                            if board:
+                                key = "board:" + board[0]
+                                if key in rows:
+                                    raise ValueError("duplicate scoreboard id")
+                                rows[key] = line
+                if "board:" + target_board not in rows:
+                    raise ValueError("missing target scoreboard row")
+                if rows["board:" + target_board].split("|")[1].strip() != f"{target_board} `{target}`":
+                    raise ValueError("invalid target scoreboard identity")
+                return rows
+            oldrows, newrows = indexed(before), indexed(after)
+            permitted = {"board:" + target_board}
+            if oldrows.keys() != newrows.keys() or any(not json_value_equal(oldrows[k], newrows[k]) for k in oldrows if k not in permitted):
+                return False
+            # Without the selected case map and receipt, no change to the
+            # displayed target row can be independently authenticated.
+            if any(oldrows[key] != newrows[key] for key in permitted):
+                return False
+            # The case-map digest and generated sections also require the
+            # selected map bytes. Preserve the complete scoreboard for now.
+            return before == after
+        except (UnicodeDecodeError, ValueError):
+            return False
+    return True
+
+
+def postcoef_source_compatible(repo, source, head):
+    """Allow identical HEAD or a linear history changing only listed evidence files."""
+    if not all(isinstance(x, str) and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", x)
+               for x in (source, head)):
+        return False
+    def run(*args):
+        return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, env=postcoef_git_env())
+    if run("merge-base", "--is-ancestor", source, head).returncode != 0:
+        return False
+    # Git's untracked pathspec query can miss a symlinked parent directory.
+    # Inspect every destination component, including dangling symlinks.
+    for rel in postcoef_evidence_paths():
+        current = Path(repo)
+        parts = Path(rel).parts
+        for index, part in enumerate(parts):
+            current = current / part
+            try:
+                mode = current.lstat().st_mode
+            except FileNotFoundError:
+                break
+            except OSError:
+                return False
+            if stat.S_ISLNK(mode):
+                return False
+            if index < len(parts) - 1 and not stat.S_ISDIR(mode):
+                return False
+            if index == len(parts) - 1 and not stat.S_ISREG(mode):
+                return False
+    dirty = run("diff", "--name-status", "-z", "--no-renames", head, "--")
+    if dirty.returncode:
+        return False
+    entries = dirty.stdout.split(b"\0")
+    if entries and entries[-1] == b"":
+        entries.pop()
+    if len(entries) % 2:
+        return False
+    for status, name in zip(entries[::2], entries[1::2]):
+        try:
+            path = name.decode("utf-8")
+        except UnicodeDecodeError:
+            return False
+        candidate = Path(repo) / path
+        if (status not in (b"A", b"M") or path not in postcoef_evidence_paths() or
+            candidate.is_symlink() or not candidate.is_file()):
+            return False
+        if path == f"{REC_REL}/cases/{COEF_THREE_FIT_CID}.json":
+            return False  # A selected three-fit receipt must already be committed.
+        if not postcoef_raw_change_safe(run, head, path, status):
+            return False
+        if (path == f"{REC_REL}/cases/{COEF_EMPTY_CID}.json" or
+            path.endswith(("case-map-postfit.json", "case-map-assembled.json", "scoreboard.md"))):
+            before = run("show", f"{head}:{path}")
+            if before.returncode or not postcoef_shared_evidence_safe(path, before.stdout, candidate.read_bytes()):
+                return False
+    # Inspect even ignored files at output paths: the generator must not overwrite
+    # a prior untracked capture whose ownership or failure status is unknown.
+    untracked_evidence = run("ls-files", "--others", "-z", "--", *sorted(postcoef_evidence_paths()))
+    if untracked_evidence.returncode or untracked_evidence.stdout:
+        return False
+    untracked = run("ls-files", "--others", "--exclude-standard", "--", "src", "tools", "test")
+    if untracked.returncode or untracked.stdout:
+        return False
+    return postcoef_ref_compatible(repo, source, head)
+
+
+# The only non-evidence commit kind: one "bind commit" whose parent is the
+# capture source S. It may move exactly the five POST-COEF gate pins in these
+# four files, to S and to the sha256 of the rebound launcher. Every other byte
+# of tools/ (and of the repository) must equal S, so the gate commit S, the
+# capture tools tree and the caller pins stay one fixed, reviewable identity.
+POSTCOEF_BIND_PINS = (
+    ("launcher_commit", "tools/core070_postcoef_gate_launcher.py",
+     rb"(?m)^TRUSTED_GATE_COMMIT = '([0-9a-f]{40})'$"),
+    ("test_commit", "tools/test_core070_postcoef_gate_launcher.py",
+     rb"(?m)^EXPECTED_GATE = '([0-9a-f]{40})'$"),
+    ("assemble_commit", "tools/true_parity_assemble.py",
+     rb"(?m)^POSTCOEF_GATE_COMMIT = '([0-9a-f]{40})'$"),
+    ("assemble_sha", "tools/true_parity_assemble.py",
+     rb"(?m)^POSTCOEF_LAUNCHER_SHA256 = '([0-9a-f]{64})'$"),
+    ("mjs_sha", "tools/true_parity_check.mjs",
+     rb"update\(launcherBytes\)\.digest\('hex'\) !==\s*'([0-9a-f]{64})'"),
+)
+POSTCOEF_BIND_FILES = frozenset(path for _, path, _ in POSTCOEF_BIND_PINS)
+POSTCOEF_BIND_LAUNCHER = "tools/core070_postcoef_gate_launcher.py"
+
+
+def postcoef_bind_commit_ok(run, source, commit):
+    """Accept only a commit on S that rebinds the five gate pins to S."""
+    if not re.fullmatch(r"[0-9a-f]{40}", source):
+        return False
+    diff = run("diff-tree", "--no-commit-id", "--name-status", "-r", "-z", "--no-renames", source, commit)
+    if diff.returncode:
+        return False
+    parts = diff.stdout.split(b"\0")
+    if parts and parts[-1] == b"":
+        parts.pop()
+    if len(parts) % 2:
+        return False
+    changed = {}
+    for status, name in zip(parts[::2], parts[1::2]):
+        try:
+            changed[name.decode("utf-8")] = status
+        except UnicodeDecodeError:
+            return False
+    if set(changed) != POSTCOEF_BIND_FILES or any(status != b"M" for status in changed.values()):
+        return False
+    texts = {}
+    for path in POSTCOEF_BIND_FILES:
+        modes = []
+        for rev in (source, commit):
+            entry = run("ls-tree", "-z", rev, "--", path)
+            found = re.fullmatch(rb"(100644|100755) blob [0-9a-f]+\t" + re.escape(path.encode()) + rb"\0",
+                                 entry.stdout) if not entry.returncode else None
+            if not found:
+                return False
+            modes.append(found.group(1))
+        if modes[0] != modes[1]:
+            return False
+        before, after = run("show", f"{source}:{path}"), run("show", f"{commit}:{path}")
+        if before.returncode or after.returncode:
+            return False
+        texts[path] = [before.stdout, after.stdout]
+    # Masking is injective only if no original already holds the token it inserts. Otherwise a
+    # bind could move a pin value onto a token-bearing line or comment and still mask equal.
+    for name, path, _ in POSTCOEF_BIND_PINS:
+        if any(b"<" + name.encode() + b">" in text for text in texts[path]):
+            return False
+    masked = {path: list(pair) for path, pair in texts.items()}
+    values = {}
+    for name, path, pattern in POSTCOEF_BIND_PINS:
+        for side in (0, 1):
+            matches = list(re.finditer(pattern, masked[path][side]))
+            if len(matches) != 1:
+                return False
+            match = matches[0]
+            if side:
+                values[name] = match.group(1).decode("ascii")
+            text = masked[path][side]
+            masked[path][side] = text[:match.start(1)] + b"<" + name.encode() + b">" + text[match.end(1):]
+    if any(before != after for before, after in masked.values()):
+        return False
+    launcher_sha = hashlib.sha256(texts[POSTCOEF_BIND_LAUNCHER][1]).hexdigest()
+    return (values["launcher_commit"] == values["test_commit"] == values["assemble_commit"] == source and
+            values["assemble_sha"] == values["mjs_sha"] == launcher_sha)
+
+
+def postcoef_ref_compatible(repo, source, head):
+    """Apply the approved linear evidence-only rule to two immutable commits.
+
+    The first commit after `source` may instead be the single bind commit
+    accepted by postcoef_bind_commit_ok; nothing else outside the evidence
+    paths is allowed.
+    """
+    if not all(isinstance(x, str) and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", x)
+               for x in (source, head)):
+        return False
+    def run(*args):
+        return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, env=postcoef_git_env())
+    if run("merge-base", "--is-ancestor", source, head).returncode != 0:
+        return False
+    listing = run("rev-list", "--reverse", "--ancestry-path", f"{source}..{head}")
+    if listing.returncode:
+        return False
+    previous = source
+    for commit in listing.stdout.decode("ascii").splitlines():
+        parents = run("rev-list", "--parents", "-n", "1", commit)
+        if parents.returncode or parents.stdout.decode("ascii").split() != [commit, previous]:
+            return False
+        if previous == source and postcoef_bind_commit_ok(run, source, commit):
+            previous = commit
+            continue
+        diff = run("diff-tree", "--no-commit-id", "--name-status", "-r", "-z", "--no-renames", previous, commit)
+        if diff.returncode:
+            return False
+        parts = diff.stdout.split(b"\0")
+        if parts and parts[-1] == b"":
+            parts.pop()
+        if len(parts) % 2:
+            return False
+        for status, name in zip(parts[::2], parts[1::2]):
+            try:
+                path = name.decode("utf-8")
+            except UnicodeDecodeError:
+                return False
+            if status not in (b"A", b"M") or path not in postcoef_evidence_paths():
+                return False
+            if path == f"{REC_REL}/cases/{COEF_THREE_FIT_CID}.json" and status != b"A":
+                return False
+            entry = run("ls-tree", commit, "--", path)
+            if entry.returncode or not entry.stdout.startswith((b"100644 blob ", b"100755 blob ")):
+                return False
+            if not postcoef_raw_change_safe(run, previous, path, status):
+                return False
+            if (path == f"{REC_REL}/cases/{COEF_EMPTY_CID}.json" or
+            path.endswith(("case-map-postfit.json", "case-map-assembled.json", "scoreboard.md"))):
+                before = run("show", f"{previous}:{path}")
+                after = run("show", f"{commit}:{path}")
+                if before.returncode or after.returncode:
+                    return False
+                if path.endswith(("scoreboard.md", "case-map-postfit.json", "case-map-assembled.json")):
+                    board_path = "docs/dev-log/core070/true-parity-latest/scoreboard.md"
+                    assembled_path = "docs/dev-log/core070/true-parity-latest/case-map-assembled.json"
+                    old_map = run("show", f"{previous}:{MAP}")
+                    new_map = run("show", f"{commit}:{MAP}")
+                    old_board = run("show", f"{previous}:{board_path}")
+                    new_board = run("show", f"{commit}:{board_path}")
+                    old_assembled = run("show", f"{previous}:{assembled_path}")
+                    new_assembled = run("show", f"{commit}:{assembled_path}")
+                    if any(x.returncode for x in (old_map,new_map,old_board,new_board,old_assembled,new_assembled)):
+                        return False
+                    if not structural_transition(old_board.stdout,new_board.stdout,old_map.stdout,new_map.stdout):
+                        return False
+                    if not assembled_transition(old_assembled.stdout,new_assembled.stdout,old_map.stdout,new_map.stdout):
+                        return False
+                    if not path.endswith("scoreboard.md") and not postcoef_shared_evidence_safe(path,before.stdout,after.stdout):
+                        return False
+                elif not postcoef_shared_evidence_safe(path, before.stdout, after.stdout):
+                    return False
+        previous = commit
+    return previous == head
+
+
+def integer_entry(cid, jc, po, state=None):
+    """Derive an integer comparison; three-fit evidence must pass the full P1 verifier."""
     key, quantity = INTEGER_EQUALITY[cid]
+    if cid == COEF_EMPTY_CID and "three_fit" in jc:
+        if state is None:
+            raise SystemExit(f"{cid}: verified three-fit capture state is required")
+        import core070_verify_postfit_policy_batch as verifier
+        if (getattr(verifier, "SELECTED_PIN", None) != "P1" or
+            Path(getattr(verifier, "ROOT", "")).resolve() != ROOT.resolve() or
+            not all(hasattr(verifier, name) for name in
+                    ("check_postcoef_control_outcome", "check_postcoef_r_oracle_binding",
+                     "check_postcoef_committed_files", "check_postcoef_runtime"))):
+            raise SystemExit(f"{cid}: installed verifier cannot verify three-fit captures")
+        try:
+            with postcoef_isolated_git_environment():
+                verified = verifier.verify_state(Path(state))
+            if verified.get("status") != "CORE070_POSTFIT_POLICY_BATCH_PASS":
+                raise ValueError("three-fit verifier did not pass")
+            real_report = load(Path(state) / "julia-results.json")
+            retained_oracle = load(Path(state) / "r-oracle.json")
+            capture = load(Path(state) / "receipt.json")
+            head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
+                                  capture_output=True, text=True, env=postcoef_git_env()).stdout.strip()
+            if not postcoef_source_compatible(ROOT, capture["postcoef_capture_identity"]["source_commit"], head):
+                raise ValueError("capture source is not an allowed evidence-only ancestor of checkout HEAD")
+            if real_report["cases"][cid] != jc or retained_oracle != po:
+                raise ValueError("comparison inputs differ from verified capture")
+            ev = jc["three_fit"]
+            verifier.check_postcoef_three_fit_evidence(ev)
+            verifier.check_postcoef_r_oracle_binding(ev, po)
+            if jc.get("pass") is not True:
+                raise ValueError("three-fit case did not pass")
+            r = [fit["length"] for fit in po["postcoef_three_fit"]["fits"]]
+            j = ev["julia_lengths"]
+            if len(r) != 3 or len(j) != 3 or any(type(x) is not int for x in r + j):
+                raise ValueError("coefficient lengths must be three integer pairs")
+            if r != j:
+                raise ValueError("three-fit coefficient lengths disagree")
+        except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError) as exc:
+            raise SystemExit(f"{cid}: three-fit verification failed: {exc}") from exc
+        return mark_degenerate(
+            {"case_id": cid, "quantity": "coefficient lengths across three paired public fits",
+             "kind": "integer_equality", "r_value": r, "julia_value": j,
+             "max_abs_diff": max(abs(a-b) for a,b in zip(r,j)), "tolerance": 0.5,
+             "tolerance_rule": INTEGER_RULE, "n_values": 3,
+             "diff_source": "recomputed from verified R oracle and Julia report"}, r)
     if cid == COEF_EMPTY_CID:  # a length: R's empty coef vector against Julia's
         r, j, harness_r = len(po[key]), jc["julia_length"], jc["r_length"]
     else:
@@ -546,12 +1363,22 @@ def bind_numeric(row, paths, verdicts, batch_ok, tier):
     row.update(evidence_tier="numeric", measured_against=P1_SHA,
                evidence={"receipt": paths, "tier": tier},
                measured_result={"case_verdicts": verdicts, "batch_verifier": batch_ok, "row_verdict": "PASS"})
+    if row.get("source_id") == "postfit-policy/POST-COEF-EMPTY":
+        row["note"] = ("Three paired public fits compare coefficient-vector lengths; "
+                       "separate always-empty and extra-coefficient controls are verified. "
+                       "Numerical coefficient values and names are separate claims.")
     return row
 
 
 def apply_integer_equality():
     raw = REC / "postfit-policy-p1"
     pj, po = load(raw / "julia-results.json"), load(raw / "r-oracle.json")
+    # Validate the new capture before writing any neighboring receipt.
+    coef_case = pj["cases"][COEF_EMPTY_CID]
+    postcoef_build = None
+    if "three_fit" in coef_case:
+        raise SystemExit("POST-COEF verified three-fit overlay is unavailable until "
+                         "writes are transactional and protected")
     recs = {}
     for cid in INTEGER_EQUALITY:
         path = REC / "cases" / f"{cid}.json"
@@ -559,10 +1386,14 @@ def apply_integer_equality():
         if rec["harness_fields"] != pj["cases"][cid]:
             raise SystemExit(f"{cid}: receipt harness_fields {rec['harness_fields']} != raw julia-results.json "
                              f"{pj['cases'][cid]}; stop and report")
-        rec["comparison"] = {"pin": "P1", "cases": [integer_entry(cid, pj["cases"][cid], po)]}
+        rec["comparison"] = {"pin": "P1", "cases": [integer_entry(cid, pj["cases"][cid], po, raw)]}
         rec.pop("why_not_numeric", None)
         rec["numeric_note"] = INTEGER_WHY
-        rec.update(INTEGER_TEXT[cid])
+        rec.update(integer_text(cid, pj["cases"][cid]))
+        binding = postcoef_capture_binding(cid, pj["cases"][cid], raw)
+        if binding is not None:
+            rec["postcoef_capture"] = binding
+            rec["oracle_build_receipt"] = postcoef_build
         rec["evidence_kind"] = "numeric_r_vs_julia"
         write_json(path, rec)
         recs[cid] = (str(path.relative_to(ROOT)), rec)
@@ -667,6 +1498,24 @@ def apply_twins():
     print(json.dumps(counts))
 
 
+def integer_capture_state(cid, case_receipt, legacy, dedicated):
+    """Choose the dedicated capture only for the explicitly bound target."""
+    if cid != COEF_EMPTY_CID or 'postcoef_capture' not in case_receipt:
+        return legacy
+    binding = case_receipt['postcoef_capture']
+    if (not isinstance(binding, dict) or
+            binding.get('receipt') != f'{REC_REL}/postcoef-empty-p1/receipt.json' or
+            not isinstance(binding.get('sha256'), str) or
+            not re.fullmatch(r'[0-9a-f]{64}', binding['sha256'])):
+        raise SystemExit('POST-COEF invalid dedicated capture binding')
+    from core070_postcoef_live_ref import check_capture_pointers
+    try:
+        check_capture_pointers(case_receipt)
+    except ValueError as exc:
+        raise SystemExit(f'POST-COEF {exc}') from exc
+    return dedicated
+
+
 def check_twins():
     cur = load(OUT / "case-map-postfit.json")
     import copy
@@ -687,14 +1536,27 @@ def check_twins():
     if stale_w6:
         print("STALE\n  wave6 rows differ from their case receipts: " + ", ".join(stale_w6))
         raise SystemExit(1)
-    raw = REC / "postfit-policy-p1"
-    pj, po = load(raw / "julia-results.json"), load(raw / "r-oracle.json")
+    legacy = REC / "postfit-policy-p1"
+    dedicated = REC / "postcoef-empty-p1"
     drift = []
     for cid in INTEGER_EQUALITY:
         rec = load(REC / "cases" / f"{cid}.json")
-        if (rec.get("comparison") != {"pin": "P1", "cases": [integer_entry(cid, pj["cases"][cid], po)]}
+        raw = integer_capture_state(cid, rec, legacy, dedicated)
+        if raw == dedicated:
+            from core070_postcoef_live_ref import check_verifier_transcript
+            try:
+                check_verifier_transcript(rec, (raw / 'verify.txt').read_bytes())
+            except (OSError, ValueError) as exc:
+                raise SystemExit(f'POST-COEF verifier transcript invalid: {exc}') from exc
+        pj, po = load(raw / "julia-results.json"), load(raw / "r-oracle.json")
+        binding = postcoef_capture_binding(cid, pj["cases"][cid], raw)
+        build = (select_postcoef_build(load(raw / "receipt.json"), ROOT, git("rev-parse", "HEAD").strip())
+                 if binding is not None else None)
+        if (rec.get("comparison") != {"pin": "P1", "cases": [integer_entry(cid, pj["cases"][cid], po, raw)]}
                 or rec["harness_fields"] != pj["cases"][cid]
-                or any(rec.get(k) != v for k, v in INTEGER_TEXT[cid].items())):
+                or any(rec.get(k) != v for k, v in integer_text(cid, pj["cases"][cid]).items())
+                or (binding is not None and (rec.get("postcoef_capture") != binding
+                                             or rec.get("oracle_build_receipt") != build))):
             drift.append(cid)
     frec = load(REC / "cases" / f"{FALLBACK_CID}.json")
     frow = next(r for r in cur["rows"] if r["executable_case_ids"] == [FALLBACK_CID])
@@ -740,9 +1602,9 @@ def receipt_tuple(path, rec):
 
 
 def make_emit(common, receipts):
-    def emit(cid, kind, verdict, body, comparison=None):
+    def emit(cid, kind, verdict, body, comparison=None, common_override=None):
         rec = {"schema": "core070-postfit-p1-case-receipt/v2", "case_id": cid, "verdict": verdict,
-               "evidence_kind": kind, **body, **common}
+               "evidence_kind": kind, **body, **common, **(common_override or {})}
         if comparison is not None:
             rec["comparison"] = {"pin": "P1", "cases": comparison}
         path = REC / "cases" / f"{cid}.json"
@@ -980,14 +1842,27 @@ def main():
         ap.error("--runs and --runtimes are required unless --apply-twins or --check-twins")
     runs = args.runs
     runtimes = load(args.runtimes)
+    policy_state = runs / "postfit-policy-p1"
+    policy_report = load(policy_state / "julia-results.json")
+    coef_case = policy_report["cases"][COEF_EMPTY_CID]
+    if "three_fit" in coef_case:
+        # Do not partially rewrite other batches before the generator can
+        # safely distinguish its own newly copied files from pre-existing data.
+        raise SystemExit("POST-COEF three-fit full ingestion is unavailable until "
+                         "capture copying is transactional and preserves untracked evidence")
     head, dirty = git_state()
     if dirty and not args.allow_dirty:
         raise SystemExit("tracked files are modified outside this tool's outputs; commit first or pass "
                          "--allow-dirty: " + ", ".join(dirty))
+    postcoef_build = (select_postcoef_build(load(policy_state / "receipt.json"), ROOT, head)
+                      if "three_fit" in coef_case else None)
     run_dirs = ["surface-conversion-p1", "estimand-rebind-p1", "wave6-conversion-p1", "wave7-conversion-p1",
                 "wave8-conversion-p1", "postfit-policy-p1", "postfit-1-r-p1", "postfit-1-julia-p1"]
     for d in run_dirs:
-        check_run_commit(runs / d, head)
+        if d == "postfit-policy-p1" and "three_fit" in coef_case:
+            check_policy_run_commit(runs / d, head)
+        else:
+            check_run_commit(runs / d, head)
 
     common = common_block(head, dirty, "local Mac (M1 Ultra), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4")
     receipts = {}  # case_id -> (path, kind, verdict, batch verifier status, discriminating)
@@ -1029,8 +1904,7 @@ def main():
 
     # ---- postfit-policy ----
     rp = runs / "postfit-policy-p1"
-    artifacts["postfit-policy-p1"] = copy_batch(rp, "postfit-policy-p1", ["receipt.json", "results.tsv", "julia-results.json",
-                                                                         "r-oracle.json", "run-commit.json"])
+    artifacts["postfit-policy-p1"] = copy_batch(rp, "postfit-policy-p1", POLICY_CAPTURE_ARTIFACTS)
     verifiers["postfit-policy-p1"] = run_verifier("postfit-policy-p1", state=rp)
     artifacts["postfit-policy-p1"].append(verifiers["postfit-policy-p1"]["log"])
     pj, po = load(rp / "julia-results.json"), load(rp / "r-oracle.json")
@@ -1061,8 +1935,12 @@ def main():
                 body.update(FALLBACK_TEXT)
             elif cid in INTEGER_EQUALITY:
                 body["numeric_note"] = INTEGER_WHY
-                body.update(INTEGER_TEXT[cid])
-                emit(cid, "numeric_r_vs_julia", "PASS" if passed else "FAIL", body, [integer_entry(cid, jc, po)])
+                body.update(integer_text(cid, jc))
+                binding = postcoef_capture_binding(cid, jc, REC / "postfit-policy-p1")
+                if binding is not None:
+                    body["postcoef_capture"] = binding
+                emit(cid, "numeric_r_vs_julia", "PASS" if passed else "FAIL", body, [integer_entry(cid, jc, po, rp)],
+                     common_override={"oracle_build_receipt": postcoef_build} if binding is not None else None)
                 continue
             elif "length" in (c.get("comparand") or ""):
                 why = "Both sides return an empty coefficient vector; there is no number to compare."

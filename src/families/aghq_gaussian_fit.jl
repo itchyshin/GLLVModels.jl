@@ -256,6 +256,15 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         return _gaussian_with_integration(base,info)
     end
     sel=result.selected;t=sel.parameters
+    # Unmoved and unconverged: no AGHQ estimate exists; retain Laplace and record the
+    # run's own stop reason (policy and the exact stop reasons: _aghq_unmoved_unconverged).
+    if _aghq_unmoved_unconverged(sel)
+        @warn "AGHQ did not move from its start and did not converge; retained exact Gaussian/Laplace" requested=request reason=sel.stop_reason
+        lap=aghq_gaussian_problem(Y,K;k=1,X=Xfree,mask=data.mask,offset=data.offset)
+        info=AGHQFitInfo(request,:laplace,1,k,1,sel.stop_reason,false,Inf,c,base_controls,result,
+            lap.adapt(base.pars.θ_packed),data,_aghq_data_digest(data),NaN)
+        return _gaussian_with_integration(base,info)
+    end
     info=AGHQFitInfo(request,:aghq,k,k,length(problem.grid.logw),sel.stop_reason,false,Inf,c,base_controls,result,
         deepcopy(sel.adaptation),data,_aghq_data_digest(data),maximum(d.gradient_max for d in problem.mode_diagnostics(t)))
     return _gaussian_with_integration(_gaussian_update(base,t,-sel.objective,sel.passes,sel.converged,result,time()-t0,fixed),info)
