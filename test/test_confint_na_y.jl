@@ -10,12 +10,13 @@ using Test, GLLVModels, Random
     Y = 0.7 .* randn(p, K) * randn(K, n) .+ 0.4 .* randn(p, n)
     Ym = Matrix{Union{Float64,Missing}}(Y); Ym[1, 2] = missing
     Yn = copy(Y); Yn[1, 2] = NaN
+    Yi = copy(Y); Yi[1, 2] = Inf
     thrown(f) = try; f(); nothing; catch e; e; end
     isarg(e, what) = e isa ArgumentError && occursin(what, e.msg) && occursin("(row, column) = (1, 2)", e.msg)
 
     fit = fit_gaussian_gllvm(Y; K = K)
     term = confint(fit, Y).term[1]
-    for (what, y) in (("missing", Ym), ("NaN", Yn))
+    for (what, y) in (("missing", Ym), ("NaN", Yn), ("Inf", Yi))
         for m in (:wald, :bootstrap)
             @test isarg(thrown(() -> confint(fit, y; method = m, n_boot = 4, seed = 1)), what)
         end

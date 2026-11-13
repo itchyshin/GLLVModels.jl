@@ -78,5 +78,8 @@ using Test, GLLVModels, Random, LinearAlgebra
         Yn = copy(Y); Yn[1, 2] = NaN
         e = thrown(() -> em_fa(Yn, 1))
         @test e isa ArgumentError && occursin("NaN", e.msg) && occursin("(row, column) = (1, 2)", e.msg)
+        Yi = copy(Y); Yi[1, 2] = Inf              # Inf gave loglik = NaN, converged = false, no message
+        e = thrown(() -> em_fa(Yi, 1))
+        @test e isa ArgumentError && occursin("Inf", e.msg) && occursin("(row, column) = (1, 2)", e.msg)
     end
 end
