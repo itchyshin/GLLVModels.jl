@@ -238,6 +238,13 @@ SAME_MEASUREMENT = {
     "CORE070-FAMILY-06-FIXED-SHAPE-NATIVE-MODEL": "CORE070-FAMILY-06-LOG-NATIVE-MODEL",
 }
 ROW_NOTES = {
+    "family/FAMILY-00-IDENTITY": "Mixed oracle builds (maintainer ruling 2026-11-13, D8-ORACLE): the FAMILY-11 "
+                                 "no-fit boundary probe was checked against the registered 5 Oct Totoro build "
+                                 "(build-totoro.json); the 17 batches ran on the 11-04 build "
+                                 "(build-totoro-20261104.json). Both are the P1 pin; the probe fits nothing.",
+    "family/FAMILY-05-LOG": "Baseline (maintainer ruling 2026-11-13, D8-05LOG): the bridge numbers differ from the "
+                            "earlier committed receipts by up to 7.5e-8 (1 Julia thread against 4); the difference "
+                            "reproduces exactly across reruns and is treated as baseline.",
     "family/FAMILY-06-LOG": "FAMILY-06-LOG and FAMILY-06-FIXED-SHAPE are one measurement (the NATIVE-07-TWEEDIE cell, "
                             "by the P0 registration) counted on two rows; whether it counts once or twice is for the "
                             "maintainer.",
