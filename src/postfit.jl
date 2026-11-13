@@ -839,7 +839,10 @@ cell-count analogue (`p` times the stored unit count) so the convention holds
 without requiring `Y`.
 """
 function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
-    mask !== nothing && return count(_check_postfit_mask(mask, Y))
+    # A vector mask is the one column of a single-column `Y` (the response-vector form
+    # `nobs(fit, y; mask)` reshapes `y` to length(y) × 1); it is counted as that column.
+    mask !== nothing && return count(_check_postfit_mask(
+        mask isa AbstractVector && size(Y, 2) == 1 ? reshape(mask, :, 1) : mask, Y))
     Missing <: eltype(Y) && return count(!ismissing, Y)
     return length(Y)
 end

@@ -154,3 +154,23 @@ end
     fco = fit_constrained_gllvm(Y; family = Binomial(), X = Xe, K = 1, N = Nfull)
     @test getLV(fco, Y, Matrix(Xe')'; N = Nfull) == getLV(fco, Y, Xe; N = Nfull)   # Adjoint design
 end
+
+# nobs(fit, Y; mask) counts a vector mask as the one column of a single-column Y, and still refuses a
+# vector mask of the wrong length or against a Y with several columns. The response-vector form
+# `nobs(fit, y; mask)` (draft PR 1194) reshapes y to a column and forwards its vector mask here; it is
+# exercised only when that method exists, so this file passes with and without that PR.
+@testset "nobs: vector mask against a single-column Y" begin
+    nw = "((((t1:0.6,t2:0.6):0.3,t3:0.9):0.4,(t4:0.5,t5:0.5):0.8):0.3,((t6:0.6,t7:0.6):0.5,t8:1.1):0.5);"
+    y = [0.3, -0.4, 1.1, 0.2, -0.9, 0.5, 0.8, -0.1]
+    fit = fit_phylo_gaussian(augmented_phy(nw), y)
+    Y1 = reshape(y, :, 1)
+    vm = [trues(6); false; false]
+    @test nobs(fit, Y1; mask = vm) == 6
+    @test nobs(fit, Y1; mask = reshape(vm, :, 1)) == 6
+    @test_throws DimensionMismatch nobs(fit, Y1; mask = trues(7))
+    @test_throws DimensionMismatch nobs(fit, [Y1 Y1]; mask = vm)
+    if hasmethod(nobs, Tuple{typeof(fit), Vector{Float64}})
+        @test nobs(fit, y; mask = vm) == 6
+        @test_throws DimensionMismatch nobs(fit, y; mask = trues(7))
+    end
+end
