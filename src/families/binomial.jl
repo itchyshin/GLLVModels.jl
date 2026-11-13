@@ -115,8 +115,11 @@ _default_hessian(::Binomial, ::CLogLogLink) = :observed
 # binomial-probit-mode-stalls-at-saturated-cell). Where μ is clamped, the score, the merit
 # term and the step weight below are computed from η with complementary-function forms that
 # do not subtract from one. Where μ is not clamped, the original expressions are used
-# unchanged, so every unsaturated fit is bit-identical. The reported log-det weight and
-# log-density at the final mode are untouched.
+# unchanged, so every unsaturated objective evaluation is bit-identical (probit; cloglog to 6e-12).
+# The final log-density (probit and cloglog, `_glm_logpdf_eta`) and the final probit log-det weight
+# (`_glm_obs_weight` above) also use these forms where μ is clamped. The final cloglog log-det weight
+# does NOT: it is still the generic nested-ForwardDiff fallback, i.e. the derivative of the clamped
+# composition, which is zero at a clamped cell, so it is inconsistent with the exact log-density there.
 # ---------------------------------------------------------------------------
 _binom_clamped(μ) = μ <= 1e-12 || μ >= 1 - 1e-12
 
