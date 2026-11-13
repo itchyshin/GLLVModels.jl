@@ -779,6 +779,7 @@ println(_SHARD === nothing ?
     _shard_include("test_twolevel.jl")
     _shard_include("test_random_slopes_poisson.jl")
     _shard_include("test_bridge_ci.jl")
+    _shard_include("test_bridge_ci_nboot.jl")
     _shard_include("test_bridge_grouped_dispersion.jl")
     _shard_include("test_bridge_capabilities.jl")
     _shard_include("test_mixed_mode_search.jl")
