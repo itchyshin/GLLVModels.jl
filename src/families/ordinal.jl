@@ -142,6 +142,56 @@ _ord_f(x) = _ord_f(x, LogitLink())
     return Fhi - Flo
 end
 
+# Log P(y = c). The default is the direct difference with the 1e-12 floor used throughout.
+# For the probit link, where P is below that floor the difference of two CDFs has lost
+# every digit (both CDFs round to 1, or the true tail is 1e-30), so the floor replaced a
+# decaying log probability with a constant and the mode search saw no gradient. There the
+# log probability, score and curvature come from tail log-CDFs (below). Where P >= 1e-12
+# the original expressions are used unchanged.
+_ord_logprob(c::Integer, η, τ::AbstractVector, link::Link = LogitLink()) =
+    log(max(_ord_prob(c, η, τ, link), 1e-12))
+
+_ord_nlogpdf(x) = -0.5 * x * x - 0.9189385332046727
+_ord_nlogcdf(x) = logcdf(Normal(), x)
+
+# log P(y = c), and the log pdf at both ends, from tail log-CDFs. a = upper, b = lower
+# argument of Φ (±Inf at the end categories). When b >= 0 both CDFs are near 1, so the
+# difference is taken between the complements Φ(-b) > Φ(-a).
+function _ord_probit_tail(c::Integer, η, τ::AbstractVector)
+    C = length(τ) + 1
+    a = c == C ? oftype(η, Inf) : τ[c] - η
+    b = c == 1 ? oftype(η, -Inf) : τ[c - 1] - η
+    if b >= 0
+        lΦb = _ord_nlogcdf(-b); lΦa = isinf(a) ? oftype(η, -Inf) : _ord_nlogcdf(-a)
+        logP = lΦb + log1p(-exp(lΦa - lΦb))
+    else
+        lΦa = isinf(a) ? zero(η) : _ord_nlogcdf(a); lΦb = isinf(b) ? oftype(η, -Inf) : _ord_nlogcdf(b)
+        logP = lΦa + log1p(-exp(lΦb - lΦa))
+    end
+    lφa = isinf(a) ? oftype(η, -Inf) : _ord_nlogpdf(a)
+    lφb = isinf(b) ? oftype(η, -Inf) : _ord_nlogpdf(b)
+    return logP, lφa, lφb, a, b
+end
+
+function _ord_logprob(c::Integer, η, τ::AbstractVector, link::ProbitLink)
+    P = _ord_prob(c, η, τ, link)
+    P >= 1e-12 && return log(P)
+    logP = _ord_probit_tail(c, η, τ)[1]
+    return isfinite(logP) ? logP : log(1e-12)
+end
+
+# Score and observed curvature from the tail form: dP/P and (dP² - P·ddP)/P² with
+# dP = φ(b) - φ(a), ddP = bφ(b) - aφ(a), every ratio taken on the log scale.
+function _ord_score_weight_probit_tail(c::Integer, η, τ::AbstractVector)
+    logP, lφa, lφb, a, b = _ord_probit_tail(c, η, τ)
+    isfinite(logP) || return nothing
+    ra = isinf(a) ? zero(η) : exp(lφa - logP)
+    rb = isinf(b) ? zero(η) : exp(lφb - logP)
+    score = rb - ra
+    ddP_over_P = (isinf(b) ? zero(η) : b * rb) - (isinf(a) ? zero(η) : a * ra)
+    return score, max(score^2 - ddP_over_P, zero(η))
+end
+
 # Derivative of the link density f = F' with respect to its argument.
 _ord_fp(x, ::LogitLink) = begin
     Fx = _ord_F(x, LogitLink())
@@ -152,6 +202,10 @@ _ord_fp(x, ::ProbitLink) = -_clamp_eta(x) * _ord_f(x, ProbitLink())
 
 # Score ∂logP(y=c)/∂η and observed curvature −∂²logP(y=c)/∂η² at η.
 function _ord_score_weight(c::Integer, η, τ::AbstractVector, link::Link = LogitLink())
+    if link isa ProbitLink && _ord_prob(c, η, τ, link) < 1e-12
+        tail = _ord_score_weight_probit_tail(c, η, τ)
+        tail === nothing || return tail
+    end
     C = length(τ) + 1
     fhi = c == C ? zero(η) : _ord_f(τ[c] - η, link)
     flo = c == 1 ? zero(η) : _ord_f(τ[c - 1] - η, link)
@@ -213,7 +267,7 @@ function ordinal_loglik_site(y::AbstractVector, Λ::AbstractMatrix, τ::Abstract
         if mask !== nothing && !mask[t]
             W[t] = 0.0                          # masked ⇒ dropped from logdet, no logpdf
         else
-            ℓ += log(max(_ord_prob(Int(y[t]), η[t], τ, link), 1e-12))
+            ℓ += _ord_logprob(Int(y[t]), η[t], τ, link)
             _, wt = _ord_score_weight(Int(y[t]), η[t], τ, link)
             W[t] = wt
         end
@@ -307,7 +361,7 @@ function _ordinal_site_logpost_pertrait(y, Λ, β, τ, C, link, z, mask, offset)
     ℓ = 0.0
     @inbounds for t in eachindex(η)
         (mask !== nothing && !mask[t]) && continue
-        ℓ += log(max(_ord_prob(Int(y[t]), η[t], _trait_cutpoints(τ, C, t), link), 1e-12))
+        ℓ += _ord_logprob(Int(y[t]), η[t], _trait_cutpoints(τ, C, t), link)
     end
     return ℓ - 0.5 * dot(z, z)
 end
@@ -332,7 +386,7 @@ function ordinal_loglik_site_pertrait(y::AbstractVector, Λ::AbstractMatrix,
             c = Int(y[t])
             1 <= c <= C[t] || throw(ArgumentError(
                 "ordinal response category $c is outside 1:$(C[t]) for trait $t"))
-            ℓ += log(max(_ord_prob(c, η[t], τt, link), 1e-12))
+            ℓ += _ord_logprob(c, η[t], τt, link)
             _, wt = _ord_score_weight(c, η[t], τt, link)
             W[t] = wt
         end

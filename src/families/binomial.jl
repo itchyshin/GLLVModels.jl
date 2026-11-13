@@ -62,7 +62,17 @@ _glm_logpdf(::Binomial, μ, n, y)    = logpdf(Binomial(Int(n), μ), Int(y))
 # unreachable. The assembly-level PD guard in `marginal_loglik_laplace`
 # remains the correct place for any residual defence — this weight is not
 # clamped here, matching the repo-wide convention.
+#
+# CORRECTION (saturated-mode review): the cancellation IS reachable. The clamp bounds
+# μ(1−μ) at ~1e-12 but not η, so at a cell with 7.03 < |η| < ~10 on the wrong side the
+# expression above, evaluated at the clamped μ, is negative (−10.7 at η = −7.21, y = 1;
+# the exact curvature there is about 1). Once the mode search finds the true mode (it
+# stalled short of it before), such a cell can sit at the mode and make Λ'WΛ + I
+# indefinite, so the site value became −Inf. Where μ is clamped the weight therefore
+# comes from η through the same complementary-function form as the mode search
+# (`_laplace_mode_step_weight`, which is the exact observed curvature, > 0).
 _glm_obs_weight(f::Binomial, μ, n, me, y, link::ProbitLink, η) =
+    _binom_clamped(μ) ? _laplace_mode_step_weight(f, μ, n, me, y, link, η) :
     η * me * (y - n * μ) / (μ * (one(μ) - μ)) +
     me^2 * (y / μ^2 + (n - y) / (one(μ) - μ)^2)
 _default_hessian(::Binomial, ::ProbitLink) = :observed
@@ -93,6 +103,70 @@ _default_hessian(::Binomial, ::ProbitLink) = :observed
 # marginal-likelihood default — the saturation guard, not a wrong-by-default
 # likelihood value, is the correct place to police that runaway.
 _default_hessian(::Binomial, ::CLogLogLink) = :observed
+
+# ---------------------------------------------------------------------------
+# Mode search at a saturated cell (probit and cloglog).
+#
+# `_clamp_mu` pins μ to [1e-12, 1 - 1e-12]. At a cell whose linear predictor is far in a
+# tail (probit η = 8.9 gives 1 - Φ(η) = 2.8e-19, which rounds to 0), the μ-based score
+# (y - nμ)/(μ(1-μ))·me and log-density are flat or wrong, so Fisher scoring from z = 0 saw
+# a score near zero and a log posterior that did not rise, and stopped at a point whose
+# Laplace value was 25 below the exact value per such cell (issue draft
+# binomial-probit-mode-stalls-at-saturated-cell). Where μ is clamped, the score, the merit
+# term and the step weight below are computed from η with complementary-function forms that
+# do not subtract from one. Where μ is not clamped, the original expressions are used
+# unchanged, so every unsaturated objective evaluation is bit-identical (probit; cloglog to 6e-12).
+# The final log-density (probit and cloglog, `_glm_logpdf_eta`) and the final probit log-det weight
+# (`_glm_obs_weight` above) also use these forms where μ is clamped. The final cloglog log-det weight
+# does NOT: it is still the generic nested-ForwardDiff fallback, i.e. the derivative of the clamped
+# composition, which is zero at a clamped cell, so it is inconsistent with the exact log-density there.
+# ---------------------------------------------------------------------------
+_binom_clamped(μ) = μ <= 1e-12 || μ >= 1 - 1e-12
+
+# Standard normal log density and log cdf; the log cdf is the stable `logcdf`.
+_nlogpdf(x) = -0.5 * x * x - 0.9189385332046727
+_nlogcdf(x) = Distributions.logcdf(Normal(), x)
+# Inverse Mills ratio φ(x)/Φ(x), computed on the log scale.
+_nmills(x) = exp(_nlogpdf(x) - _nlogcdf(x))
+_binom_logchoose(n, y) = logpdf(Binomial(Int(n), 0.5), Int(y)) + n * log(2.0)
+
+function _glm_score_eta(f::Binomial, μ, n, me, y, link::ProbitLink, η)
+    _binom_clamped(μ) || return _glm_score(f, μ, n, me, y)
+    return y * _nmills(η) - (n - y) * _nmills(-η)
+end
+function _laplace_mode_merit_term_eta(f::Binomial, μ, n, y, link::ProbitLink, η)
+    _binom_clamped(μ) || return _glm_logpdf(f, μ, n, y)
+    return y * _nlogcdf(η) + (n - y) * _nlogcdf(-η) + _binom_logchoose(n, y)
+end
+function _laplace_mode_step_weight(f::Binomial, μ, n, me, y, link::ProbitLink, η)
+    _binom_clamped(μ) || return _glm_weight(f, μ, n, me)
+    m1 = _nmills(η); m0 = _nmills(-η)
+    return y * m1 * (m1 + η) + (n - y) * m0 * (m0 - η)    # observed curvature, > 0 (log-concave)
+end
+
+# cloglog: u = e^η, 1 - μ = e^-u, log μ = log(-expm1(-u)), log(1 - μ) = -u.
+# The same exact forms for the log-density summed into the final Laplace value: where μ is
+# clamped the μ-based density is log(1e-12) for every wrong-side cell however far in the tail
+# (1.3 too high at η = -7.2, 25 too high at η = -8.9), so the value was off even with the
+# mode found. Unclamped cells run the original `_glm_logpdf` (the merit term falls through).
+_glm_logpdf_eta(f::Binomial, μ, n, y, link::Union{ProbitLink,CLogLogLink}, η) =
+    _laplace_mode_merit_term_eta(f, μ, n, y, link, η)
+
+function _glm_score_eta(f::Binomial, μ, n, me, y, link::CLogLogLink, η)
+    _binom_clamped(μ) || return _glm_score(f, μ, n, me, y)
+    u = exp(η)
+    return y * u * exp(-u) / (-expm1(-u)) - (n - y) * u
+end
+function _laplace_mode_merit_term_eta(f::Binomial, μ, n, y, link::CLogLogLink, η)
+    _binom_clamped(μ) || return _glm_logpdf(f, μ, n, y)
+    u = exp(η)
+    return y * log(-expm1(-u)) - (n - y) * u + _binom_logchoose(n, y)
+end
+function _laplace_mode_step_weight(f::Binomial, μ, n, me, y, link::CLogLogLink, η)
+    _binom_clamped(μ) || return _glm_weight(f, μ, n, me)
+    u = exp(η); v = exp(-u); omv = -expm1(-u)
+    return y * (u * u * v / (omv * omv) - u * v / omv) + (n - y) * u
+end
 
 # Binomial-default convenience methods (back-compat: family ⇒ Binomial()), used
 # by getLV(::BinomialFit) and the Binomial tests.
