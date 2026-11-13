@@ -50,12 +50,13 @@ const GM = GLLVModels
     @testset "fit unchanged (wording only)" begin
         # Fingerprint recorded on main 48187dd8 (Linux x86_64, Julia 1.13.3): sha256 of the
         # Float64 bytes of β, γ, vec(Λ), r_group. Bit-identical is only claimed on that
-        # platform; elsewhere the rule above is what is checked.
+        # platform and Julia minor version (the same fit on Linux x86_64 Julia 1.10.12 differs
+        # in the last bits, on main too); elsewhere the rule above is what is checked.
         buf = IOBuffer()
         for v in (fit.β, fit.γ, vec(fit.Λ), fit.r_group)
             write(buf, Float64.(v))
         end
-        if Sys.islinux() && Sys.ARCH === :x86_64
+        if Sys.islinux() && Sys.ARCH === :x86_64 && VERSION.major == 1 && VERSION.minor == 13
             @test bytes2hex(sha256(take!(buf))) == "d4e93e48ceea0d0ece03ec463dacf1ede12db322cd00b3a9ec2d59ee1bd6a4ad"
             @test reinterpret(UInt64, fit.loglik) == 0xc08ddf7bcaeaf341
             @test fit.iterations == 93
