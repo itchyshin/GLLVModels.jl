@@ -176,7 +176,26 @@ function _cv_ds_z_continuous(d, y)
                  lmass = lower ? logcdf(d, y) : Distributions.logccdf(d, y))
 end
 
-function _cv_cell_eval(fit, family::Normal, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+# Fitted dispersion of species `t` for the cell density. Grouped fits (`disp_group`) store one
+# value per group plus `group` (species -> group index), so the value is `raw[group[t]]`; other
+# vector fits are per species. `heldout = true` (a species the training fit never saw, so it has
+# no dispersion of its own) keeps the earlier lookup unchanged: `t` is `1` there, the grouped
+# NB2 field is not read and its constant default applies. Which dispersion a held-out species
+# should get is an open design question.
+function _cv_disp(fit, names::Tuple, default::Float64, t::Int, heldout::Bool)
+    raw = default
+    for nm in names
+        if hasfield(typeof(fit), nm)
+            raw = getfield(fit, nm)
+            break
+        end
+    end
+    raw isa AbstractVector || return Float64(raw)
+    i = (!heldout && hasfield(typeof(fit), :group)) ? fit.group[t] : min(t, length(raw))
+    return Float64(raw[i])
+end
+
+function _cv_cell_eval(fit, family::Normal, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     σ = if fit isa GllvmFit
         fit.pars.σ_eps
     elseif hasfield(typeof(fit), :σ_eps)
@@ -192,7 +211,7 @@ function _cv_cell_eval(fit, family::Normal, y::Real, μ::Real, t::Int, s::Int, N
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Poisson, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Poisson, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = max(Float64(μ), 1e-12)
     d = Poisson(μ_c)
     yi = round(Int, y)
@@ -201,7 +220,7 @@ function _cv_cell_eval(fit, family::Poisson, y::Real, μ::Real, t::Int, s::Int, 
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Binomial, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Binomial, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = clamp(Float64(μ), 1e-12, 1.0 - 1e-12)
     N = N_mat === nothing ? 1 : Int(N_mat[t, s])
     d = Binomial(N, μ_c)
@@ -211,16 +230,9 @@ function _cv_cell_eval(fit, family::Binomial, y::Real, μ::Real, t::Int, s::Int,
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::NegativeBinomial, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::NegativeBinomial, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = max(Float64(μ), 1e-12)
-    r_raw = if hasfield(typeof(fit), :r)
-        fit.r
-    elseif hasfield(typeof(fit), :rvec)
-        fit.rvec
-    else
-        1.0
-    end
-    r_disp = (r_raw isa AbstractVector) ? Float64(r_raw[min(t, length(r_raw))]) : Float64(r_raw)
+    r_disp = _cv_disp(fit, heldout ? (:r, :rvec) : (:r, :rvec, :r_group), 1.0, t, heldout)
     prob = r_disp / (r_disp + μ_c)
     d = NegativeBinomial(r_disp, clamp(prob, 1e-12, 1.0 - 1e-12))
     yi = round(Int, y)
@@ -229,16 +241,9 @@ function _cv_cell_eval(fit, family::NegativeBinomial, y::Real, μ::Real, t::Int,
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Beta, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Beta, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = clamp(Float64(μ), 1e-6, 1.0 - 1e-6)
-    φ_raw = if hasfield(typeof(fit), :φ)
-        fit.φ
-    elseif hasfield(typeof(fit), :φvec)
-        fit.φvec
-    else
-        10.0
-    end
-    φ = (φ_raw isa AbstractVector) ? Float64(φ_raw[min(t, length(φ_raw))]) : Float64(φ_raw)
+    φ = _cv_disp(fit, (:φ, :φvec), 10.0, t, heldout)
     d = Beta(μ_c * φ, (1.0 - μ_c) * φ)
     yc = clamp(Float64(y), 1e-6, 1.0 - 1e-6)
     ll = logpdf(d, yc)
@@ -246,16 +251,9 @@ function _cv_cell_eval(fit, family::Beta, y::Real, μ::Real, t::Int, s::Int, N_m
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Gamma, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Gamma, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = max(Float64(μ), 1e-12)
-    α_raw = if hasfield(typeof(fit), :α)
-        fit.α
-    elseif hasfield(typeof(fit), :αvec)
-        fit.αvec
-    else
-        1.0
-    end
-    α = (α_raw isa AbstractVector) ? Float64(α_raw[min(t, length(α_raw))]) : Float64(α_raw)
+    α = _cv_disp(fit, (:α, :αvec), 1.0, t, heldout)
     θ = μ_c / α
     d = Gamma(α, θ)
     yc = max(Float64(y), 1e-12)
@@ -264,7 +262,7 @@ function _cv_cell_eval(fit, family::Gamma, y::Real, μ::Real, t::Int, s::Int, N_
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = max(Float64(μ), 1e-12)
     d = Exponential(μ_c)
     yc = max(Float64(y), 1e-12)
@@ -542,7 +540,8 @@ function cv_gllvm(Y::AbstractMatrix;
             push!(fold_errs, sq_err)
             push!(all_sq_errs, sq_err)
 
-            cell_ll, cell_res = _cv_cell_eval(fit_k, family, y_val, μ, t_idx !== nothing ? t_idx : 1, s, N, rng)
+            cell_ll, cell_res = _cv_cell_eval(fit_k, family, y_val, μ, t_idx !== nothing ? t_idx : 1, s, N, rng;
+                                              heldout = t_idx === nothing)
             residuals_mat[t, s] = cell_res
             fold_ll += cell_ll
             push!(fold_rvec, cell_res)
