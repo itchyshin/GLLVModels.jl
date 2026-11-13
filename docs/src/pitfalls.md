@@ -43,6 +43,33 @@ global maximum. For non-Gaussian fits with `K ≥ 2`, refit from several starts
 (`n_init` currently covers Poisson only) and keep the highest log-likelihood
 before reading loadings or comparing AIC. Standardising responses to a common scale helps the Gaussian path.
 
+## One species (`p = 1`) with `K ≥ 1`
+
+With a single response row, the loading of a latent variable is **not identified**
+for two cases:
+
+- a `Normal()` response, because the likelihood depends on the loading and the
+  residual variance only through `loading² + σ²`;
+- a `Binomial()` response with one trial per cell, because the sites are then
+  exchangeable Bernoulli draws and the marginal likelihood depends on the
+  intercept and the loading only through `P(y = 1)`.
+
+`fit_gllvm(Y; family, K = 1)` still accepts such a matrix, returns finite
+estimates with `converged = true`, and prints no message. The loading it reports
+is wherever the optimiser stopped, so do not read it. In one Normal example
+(40 sites, `Random.seed!(1)`) loadings of 0, 0.18, 0.35, 0.53 and 0.70, each with
+the residual variance adjusted to keep `loading² + σ²` fixed, all give the
+log-likelihood -47.1072025987138 to 1.5e-14. For one species fit `K = 0`. Other
+families (for example Poisson) have a curved optimum at `p = 1` and are not
+covered by this statement.
+
+The R packages do not give a clean answer either. gllvmTMB 0.7.1 stops at `p = 1`
+for the `0 + trait` form with a raw error (`contrasts can be applied only to
+factors with 2 or more levels`). CRAN `gllvm` 2.0.15 fits the Normal case with
+`num.lv = 1`, gets the same log-likelihood as `num.lv = 0`, and warns that two
+parameters have negative variance estimates. Whether Julia should warn or refuse
+here is an open design question (#1201).
+
 ## Fewer sites than species (`n < p`)
 
 The closed-form Gaussian fitter `fit_gaussian_gllvm` requires `n_sites ≥ p` and
