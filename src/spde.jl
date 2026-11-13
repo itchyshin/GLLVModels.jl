@@ -107,6 +107,14 @@ function spde_fem(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer})
         end
     end
 
+    # A vertex that belongs to no triangle (what a duplicated input point becomes in
+    # `spde_mesh_delaunay`) has zero lumped mass, so the precision is singular and the
+    # fitters returned loglik = -Inf, converged = false and no error. Refuse it here.
+    orphan = findall(iszero, Cdiag)
+    isempty(orphan) || throw(ArgumentError(
+        "mesh node(s) $(orphan) belong to no triangle (zero lumped mass); " *
+        "remove duplicate or unused points before building the mesh"))
+
     G = sparse(I, J, V, N, N)
     return Cdiag, G
 end

@@ -907,6 +907,8 @@ println(_SHARD === nothing ?
     _shard_include("test_zip_betaz_wald_926.jl")
     _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
+    # w2-structured: spde_fem refuses a vertex that belongs to no triangle (duplicate input point).
+    _shard_include("test_spde_orphan_mesh_node.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")
