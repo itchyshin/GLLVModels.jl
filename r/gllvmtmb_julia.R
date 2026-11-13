@@ -228,6 +228,11 @@ gllvm_julia <- function(y, X = NULL, family = "negative.binomial", num.lv = 2L,
     stop(sprintf("family '%s' not supported by the bridge (supported: %s)",
                  family, paste(names(.family_map), collapse = ", ")))
   fmap <- .family_map[[family]]
+  if (family == "negative.binomial1" && row.eff != "none")
+    stop("family 'negative.binomial1' (NB1) with row.eff = '", row.eff, "' is not supported: ",
+         "GLLVModels.jl has no NB1 row-effect fitter, and this bridge would fit NB2 instead. ",
+         "Use row.eff = 'none' with NB1, or family = 'negative.binomial' to keep the row effect.",
+         call. = FALSE)
   link <- if (is.null(link)) .default_link(family) else link
   if (!link %in% names(.link_map))
     stop(sprintf("link '%s' not supported (supported: %s)",
