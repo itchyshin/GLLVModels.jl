@@ -41,6 +41,14 @@ using Test, GLLVModels, Random, Distributions
         @test isK(thrown(() -> fit_gllvm(Float64.(Yc); K = 1.0)), "fit_gllvm")
     end
 
+    @testset "Multinomial keeps its own message" begin
+        Ym = reshape(rand(rng, 1:3, n), 1, n)
+        for K in (-1, 1.0, 1)
+            e = thrown(() -> fit_gllvm(Ym; family = Multinomial(), K = K))
+            @test e isa ArgumentError && occursin("Multinomial v1 is fixed-effects softmax only", e.msg)
+        end
+    end
+
     @testset "gllvm() front end" begin
         @test isK(thrown(() -> gllvm(@formula(y ~ 1), Yc, site; family = Poisson(), K = -1)), "gllvm")
         @test isK(thrown(() -> gllvm(@formula(y ~ 1 + x1), Yc, site; family = Poisson(), K = -1)), "gllvm")

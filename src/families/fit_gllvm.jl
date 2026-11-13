@@ -283,9 +283,11 @@ end
 # dimensions" from inside a fitter, and a non-integer as a `TypeError` on the fitter's
 # keyword. `K = 0` is a valid GLM fit and is not touched here; `K > p` keeps the
 # range message of the fitter (`_check_lambda_rank`). A negative Gaussian `K` is left to
-# the Gaussian fitter, whose message already states its own range (`1:p`).
+# the Gaussian fitter, whose message already states its own range (`1:p`). Multinomial
+# refuses any `K` other than 0 with its own message, which says why, so it is skipped too.
 function _check_K_argument(K, caller::AbstractString; family = nothing)
     K === nothing && return nothing
+    family isa Multinomial && return nothing
     K isa Integer || throw(ArgumentError(
         "$caller: K must be a non-negative integer (got K = $K of type $(typeof(K)))"))
     (K >= 0 || family isa Normal) || throw(ArgumentError(
