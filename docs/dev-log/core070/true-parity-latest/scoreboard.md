@@ -22,7 +22,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `e6d69cb2385b5d6cd14ffd22cccab9b6f8b1ad4e22e15db2d40fa3a08288fe62`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `641e8095db0ff16b479434e0780276dfc63cb341e7be36457cb7ba6749516dbb`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `89a0ac54268973ecbb0fbf8ab08498c1c33a2a229b442fd8007506fa97092f1a`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `f347bf35b7fc59068b3c43cad241996e73bbcefe01d95bf5c36207388af749ce`)
 
 ## Totals by family
@@ -36,9 +36,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 21 |
-| `namespace` | 55 | 0 | 10 | 3 | 0 | 0 | 0 | 1 | 69 |
+| `namespace` | 55 | 0 | 11 | 2 | 0 | 0 | 0 | 1 | 69 |
 | `postfit` | 45 | 1 | 4 | 0 | 1 | 1 | 0 | 0 | 52 |
-| `all` | 206 | 63 | 35 | 3 | 2 | 1 | 6 | 1 | 317 |
+| `all` | 206 | 63 | 36 | 2 | 2 | 1 | 6 | 1 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -351,7 +351,7 @@ decision for the PR that measures it, not something this tool does.
 | namespace-S3method-residuals-gllvmTMB_julia `namespace/S3method/residuals,gllvmTMB_julia` | compatibility_adapter; cases: P1-BRIDGE-READBACK-RESIDUALS-RESPONSE, P1-BRIDGE-READBACK-RESIDUALS-PEARSON | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/bridge_readback.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-residuals-gllvmTMB_multi `namespace/S3method/residuals,gllvmTMB_multi` | required_core; cases: CORE070-WAVE7-RESIDUALS-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE7-RESIDUALS-MULTI.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-simulate-gllvmTMB_julia `namespace/S3method/simulate,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-SIMULATE-JULIA-BRIDGE-COMPARE | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-S3method-simulate-gllvmTMB_multi `namespace/S3method/simulate,gllvmTMB_multi` | required_core; cases: CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-S3method-simulate-gllvmTMB_multi `namespace/S3method/simulate,gllvmTMB_multi` | required_core; cases: CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: itchyshin; signed_on: 2026-11-13 | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-stats-nobs-gllvmTMB_multi `namespace/S3method/stats::nobs,gllvmTMB_multi` | required_core; cases: CORE070-WAVE6-POSTFIT-NOBS-MULTI | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE6-POSTFIT-NOBS-MULTI.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-summary-gllvmTMB_julia `namespace/S3method/summary,gllvmTMB_julia` | compatibility_adapter; cases: CORE070-NAMESPACE-SUMMARY-JULIA-BRIDGE-COMPARE | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-S3method-summary-gllvmTMB_multi `namespace/S3method/summary,gllvmTMB_multi` | required_core; cases: CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-WAVE8-SUMMARY-FIXEF-AND-LOGLIK.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

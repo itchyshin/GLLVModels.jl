@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "641e8095db0ff16b479434e0780276dfc63cb341e7be36457cb7ba6749516dbb",
+   "sha256": "89a0ac54268973ecbb0fbf8ab08498c1c33a2a229b442fd8007506fa97092f1a",
    "rows": 69
   },
   {
@@ -8501,12 +8501,20 @@
     "CORE070-NAMESPACE-SIMULATE-MULTI-NATIVE"
    ],
    "reason": "R S3method(simulate,gllvmTMB_multi) registered and defined at P1; Julia `simulate` is an exported Function (measured). Name match only.",
-   "disposition": null,
+   "disposition": "DISPOSITION-SIGNED",
    "evidence_tier": "registration",
    "measured_result": {
     "case_verdict": "PASS",
     "category": "registration_twin",
     "reason": "R registered and defined; Julia symbol present, exported, a Function"
+   },
+   "signed_by": "itchyshin",
+   "signed_on": "2026-11-13",
+   "signed_disposition": {
+    "ruling": "D3, simulate S3 method disposition, option C (docs/dev-log/plans/2026-11-02-c2-simulate-multi-packet.md section 10)",
+    "kind": "re-scope",
+    "text": "Non-temporal Julia `simulate` methods are unconditional only, by design. They redraw the latent scores at each site, which is the mode R documents as the default and as the one suited to a parametric bootstrap (R/methods-gllvmTMB.R:1457-1464). R's `condition_on_RE = TRUE` (the \"older conditional behaviour\") has no non-temporal Julia counterpart. The call shape differs (Julia: `n` sites and a `p x n` matrix; R: `nsim`, `seed`, `newdata`, observations by `nsim`); this is a documented difference of style, not of distribution.",
+    "signature_source": "Shinichi's card answer of 13 Nov 2026, 2:06 PM MT (ruling SHINICHI-1406 in the lane decision file), transcribed by the lane, not typed by him"
    }
   },
   {
