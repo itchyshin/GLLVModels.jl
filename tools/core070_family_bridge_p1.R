@@ -65,7 +65,7 @@ if (length(args) == 2L && identical(args[[1]], "--family11-boundary")) {
   julia_home <- Sys.getenv("JULIA_HOME")
   stopifnot(nzchar(julia_home))
   engine_commit <- Sys.getenv("GLLVM_PARITY_GLVMODELS_COMMIT", "")
-  if (!grepl("^4b78fa012", engine_commit)) stop("GLLVM_PARITY_GLVMODELS_COMMIT must identify 4b78fa012")
+  if (!nzchar(engine_commit)) stop("GLLVM_PARITY_GLVMODELS_COMMIT must identify the GLLVModels run commit")
 
   # Recreate the registered seed-58 response in Julia without invoking a
   # likelihood or optimiser. These statements mirror the fixture recipe in

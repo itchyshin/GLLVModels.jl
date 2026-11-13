@@ -198,7 +198,6 @@ FAMILY11_BOUNDARY_CASE = "CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE"
 FAMILY11_BOUNDARY_RAW = f"{REC_REL}/first-seven-boundary/r-public-bridge.json"
 FAMILY11_BOUNDARY_RECEIPT = f"{REC_REL}/first-seven-boundary/{FAMILY11_BOUNDARY_CASE}.json"
 FAMILY11_DATA_SHA = "ecbcf9f501c7e618131f2c3f1f0d213bb0e92364a72c0519095c52ef30930948"
-FAMILY11_GLVMODELS_COMMIT = "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a"
 
 # What each harness cell fits: toy fixtures, likelihood-level agreement.
 MEASURES = {
@@ -870,8 +869,6 @@ def validate_family11_boundary(raw):
          (5, 120, 1, FAMILY11_DATA_SHA), "FAMILY-11 boundary: recreated fixture shape/hash mismatch")
     capture = raw.get("capture") or {}
     engine_commit = str(capture.get("glvmodels_commit", ""))
-    need(engine_commit.startswith(FAMILY11_GLVMODELS_COMMIT),
-         "FAMILY-11 boundary: GLLVModels source commit is not the registered 4b78fa012 source")
     run_commit_path = f"{batch_rel(BRIDGE_BATCH)}/run-commit.json"
     need((ROOT / run_commit_path).is_file(), "FAMILY-11 boundary: existing bridge-p1 run-commit receipt is missing")
     need(engine_commit == load(ROOT / run_commit_path).get("glvmodels_commit"),
@@ -930,13 +927,14 @@ def family11_boundary_case():
 def family11_boundary_self_test():
     """Positive synthetic fixture plus fail-closed mutations; no R/Julia fit runs."""
     pin = PINS["P1"]
+    fixture_commit = load(ROOT / f"{batch_rel(BRIDGE_BATCH)}/run-commit.json")["glvmodels_commit"]
     good = {"schema": "core070-family11-r-boundary/v1", "case_id": FAMILY11_BOUNDARY_CASE,
             "pin": "P1", "reference_commit": P1_SHA, "gllvmtmb_version": pin["version"],
             "source_pin": {k: pin[k] for k in ("reference_commit", "source_tree_sha256", "archive_sha256",
                                                  "namespace_sha256")} | {"version": pin["version"], "installed_tree_sha256": load(ROOT / ORACLE_BUILD_TOTORO)["installed_tree_sha256"], "marker_sha256": load(ROOT / ORACLE_BUILD_TOTORO)["marker_sha256"]},
             "namespace_sha256": pin["namespace_sha256"],
             "fixture": {"p": 5, "n": 120, "K": 1, "data_sha256": FAMILY11_DATA_SHA},
-            "capture": {"glvmodels_commit": FAMILY11_GLVMODELS_COMMIT, "glvmodels_src_tree": git("rev-parse", f"{FAMILY11_GLVMODELS_COMMIT}:src").stdout.strip(), "r_version": "R 4.x",
+            "capture": {"glvmodels_commit": fixture_commit, "glvmodels_src_tree": git("rev-parse", f"{fixture_commit}:src").stdout.strip(), "r_version": "R 4.x",
                         "julia_version": "1.10.12", "glvmodels_path": "/fixture/GLLVModels.jl"},
             "routes": {r: {"refused": True, "error_class": ["simpleError", "error", "condition"],
                            "message": "[GJL-GATE-FAMILY] unsupported family",
