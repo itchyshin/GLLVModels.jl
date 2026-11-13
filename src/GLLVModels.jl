@@ -209,6 +209,7 @@ include("grouped_profile_interval.jl") # private actual-refit profile endpoints
 include("joint_phylo_grouped_gaussian.jl") # one joint Gaussian marginal, evaluation only
 include("joint_covariance_identification.jl") # actual covariance tangent aliases
 include("joint_phylo_grouped_fit.jl") # private joint optimizer and marginal intervals
+include("na_input.jl")                   # typed ArgumentError for missing / NaN in Y on the Gaussian fitters that have no mask
 include("joint_phylo_grouped_postfit.jl") # explicit population mean and source-labelled extraction
 include("bootstrap_sigma_r.jl")        # bootstrap_Sigma_r: pinned-R bootstrap_Sigma behaviour driver. AFTER extractors.jl, confint_derived.jl, twolevel.jl, precision_multivariate_fit.jl + destination_b_postfit.jl (PrecisionMultivariateFit tier :phy) and joint_phylo_grouped_fit.jl + joint_phylo_grouped_postfit.jl + joint_covariance_identification.jl (JointPhyloGroupedGaussianFit tier :phy).
 include("diagnostics.jl")                # check_gllvmTMB / gllvmTMB_diagnose / predictive_check / sanity_multi / compare_* / confint_inspect (core070 diagnostics/compare cluster)

@@ -6,6 +6,14 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **IN (refs #1107), behaviour change:** the Gaussian fitters that take no `mask`
+  (`em_fa`, `fit_gaussian_reml`, `fit_twolevel_gaussian`, `fit_gaussian_random_slope`,
+  `em_fit_phylo`, `fit_coevolution_gaussian`, `fit_gaussian_sources`,
+  `fit_precision_multivariate`, `fit_grouped_gaussian`, `fit_phylo_latent_gllvm`,
+  `fit_lognormal_gllvm`, `fit_delta_lognormal_gllvm` and the others listed in the
+  repository CHANGELOG) throw an `ArgumentError` for `missing` in `Y`; `em_fa` also
+  for NaN or Inf. `confint`, `profile_ci` and `bootstrap_ci` throw for `missing`, NaN or Inf in `y`
+  on a fit made without a mask (they returned all-NaN intervals).
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
   and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`
