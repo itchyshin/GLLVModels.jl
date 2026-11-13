@@ -748,6 +748,7 @@ println(_SHARD === nothing ?
     _shard_include("test_summary_table.jl")
     _shard_include("test_covariates.jl")
     _shard_include("test_cov_mode_search_gamma.jl")
+    _shard_include("test_gamma_grouped_ci_y_floor.jl")
     _shard_include("test_cov_analytic_grad.jl")
     _shard_include("test_formula_input.jl")
     _shard_include("test_formula.jl")
