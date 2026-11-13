@@ -40,6 +40,28 @@ function _gauss_hermite(G::Integer)
     return (E.values, sqrt(π) .* (E.vectors[1, :] .^ 2))
 end
 
+# The VA objectives take `Y` untyped, so `missing` reached them as a TypeError, MethodError or
+# InexactError and a NaN gave a NaN value without a word. The same check serves
+# `confint(...; objective = :va)`. NaN is not a missing-value marker in this package, so a missing
+# or NaN cell that the objective would read (observed under `mask`) is refused, first cell named.
+function _va_check_response(caller::AbstractString, Y::AbstractMatrix, mask = nothing)
+    bad = 0
+    first_bad = (0, 0)
+    for i in axes(Y, 2), t in axes(Y, 1)
+        (mask === nothing || mask[t, i]) || continue
+        y = Y[t, i]
+        if ismissing(y) || (y isa AbstractFloat && isnan(y))
+            bad += 1
+            bad == 1 && (first_bad = (t, i))
+        end
+    end
+    bad == 0 && return nothing
+    t, i = first_bad
+    throw(ArgumentError("$caller: Y[$t, $i] = $(Y[t, i]) is a missing or NaN response " *
+        "($bad such cell(s) in total). Remove or impute them, or mark them unobserved with " *
+        "`mask` where the route takes one (NaN is not a missing-value marker)."))
+end
+
 # Missing responses on the VA fitters (#1108). The mask rule is the Laplace one:
 # `_resolve_obs_mask` / `_sanitize_unobserved` in laplace.jl and response_support.jl,
 # which the Gaussian missing-data path (#1107) also uses. This file only calls them.
@@ -155,6 +177,7 @@ function poisson_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
     _va_check_mask(mask, Y)
+    _va_check_response("poisson_marginal_loglik_va", Y, mask)
     Λ2 = Λ .^ 2
     acc = 0.0
     @inbounds for s in axes(Y, 2)

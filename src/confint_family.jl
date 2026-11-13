@@ -3510,6 +3510,7 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
     if objective === :va && mask !== nothing
         throw(ArgumentError("objective=:va is not routed for masked confidence intervals; use objective=:laplace"))
     end
+    objective === :va && _va_check_response("confint(objective = :va)", Y)
     O = nothing
     if offset !== nothing
         fit isa _OffsetCIFit || throw(ArgumentError(

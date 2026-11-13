@@ -114,6 +114,7 @@ function delta_gamma_marginal_loglik_va(Y::AbstractMatrix, Λc::AbstractMatrix,
     size(Λc, 1) == size(Y, 1) == length(βz) == length(βc) ||
         throw(DimensionMismatch("Λc, Y, βz, βc must share p = $(size(Y,1)) rows"))
     _va_check_mask(mask, Y)
+    _va_check_response("delta_gamma_marginal_loglik_va", Y, mask)
     α > 0 || throw(ArgumentError("shape α must be > 0"))
     Λc2 = Λc .^ 2
     acc = 0.0

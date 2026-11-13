@@ -68,7 +68,7 @@ for (_k, _files) in enumerate((
         "test_second_order_lognormal_ci.jl", "test_covariates.jl", "test_cov_mode_search_gamma.jl",
         "test_formula_input.jl", "test_row_random.jl", "test_rrr.jl",
         "test_ordination_uncertainty.jl", "test_ordered_beta.jl", "test_ordered_beta_mode_search.jl",
-        "test_variational.jl", "test_va_vs_laplace.jl", "test_bridge_ci.jl",
+        "test_variational.jl", "test_va_vs_laplace.jl", "test_va_objective_missing_nan.jl", "test_bridge_ci.jl",
         "test_bridge_capabilities.jl", "test_phylo_eta_realized.jl", "test_bridge_missing_mask.jl",
         "test_known_sentinel_defects.jl", "test_edge_incidence_solveQ.jl", "test_branch_re_convergence.jl",
         "test_family11_p1_boundary.jl", "test_ordinal_link_input.jl", "test_em_phylo.jl",
@@ -778,6 +778,7 @@ println(_SHARD === nothing ?
     _shard_include("test_variational_exponential.jl")
     _shard_include("test_fix_1108.jl")
     _shard_include("test_va_vs_laplace.jl")
+    _shard_include("test_va_objective_missing_nan.jl")
     _shard_include("test_random_slopes.jl")
     _shard_include("test_twolevel.jl")
     _shard_include("test_random_slopes_poisson.jl")

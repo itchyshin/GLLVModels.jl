@@ -91,6 +91,7 @@ function exponential_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
     _va_check_mask(mask, Y)
+    _va_check_response("exponential_marginal_loglik_va", Y, mask)
     Λ2 = Λ .^ 2
     acc = 0.0
     @inbounds for s in axes(Y, 2)
