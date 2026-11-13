@@ -67,6 +67,13 @@ using Test, GLLVModels, Random, LinearAlgebra
         end
     end
 
+    @testset "a Matrix{Any} is a typed error, not a StackOverflowError" begin
+        for (name, M, call) in cases
+            e = thrown(() -> quiet(() -> call(Matrix{Any}(M))))
+            @test e isa ArgumentError && occursin(name, e.msg) && occursin("numeric response matrix", e.msg)
+        end
+    end
+
     @testset "em_fa refuses NaN (it returned NaN silently)" begin
         Yn = copy(Y); Yn[1, 2] = NaN
         e = thrown(() -> em_fa(Yn, 1))
