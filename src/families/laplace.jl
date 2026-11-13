@@ -120,6 +120,14 @@ _laplace_mode_should_backtrack(family::Union{
 # every other family's search is bit-identical.
 _laplace_mode_merit_term(family, μ, n, y) = _glm_logpdf(family, μ, n, y)
 
+# Link-aware hooks for the mode search only. They default to the μ-based pieces above and
+# below, so every family that does not opt in is bit-identical. Binomial with a probit or
+# cloglog link opts in (families/binomial.jl): once μ is pinned at the `_clamp_mu` bound the
+# μ-based score and log-density are flat or wrong (1 - μ rounds to 0 while the exact tail
+# probability is still 1e-19 and smaller), which stalled the mode search far from the mode.
+_laplace_mode_merit_term_eta(family, μ, n, y, link, η) = _laplace_mode_merit_term(family, μ, n, y)
+_glm_score_eta(family, μ, n, me, y, link, η) = _glm_score(family, μ, n, me, y)
+
 # Robust step control, for families whose log joint in z need not be concave
 # (StudentTFamily, #623). Two changes, both only for families that opt in:
 # (1) small steps (norm(Δ) <= 1e-3 (1 + norm(z))) no longer skip the line search.
@@ -159,7 +167,7 @@ function _laplace_mode_logpost(family, y::AbstractVector, n::AbstractVector,
     if weights === nothing
         @inbounds for t in 1:p
             (mask === nothing || mask[t]) || continue
-            q += _laplace_mode_merit_term(family, μ[t], n[t], y[t])
+            q += _laplace_mode_merit_term_eta(family, μ[t], n[t], y[t], link, η[t])
         end
     else
         # Observation weights (see `_laplace_mode`): each cell's term scaled by its weight; a
@@ -167,7 +175,7 @@ function _laplace_mode_logpost(family, y::AbstractVector, n::AbstractVector,
         @inbounds for t in 1:p
             (mask === nothing || mask[t]) || continue
             iszero(weights[t]) && continue
-            q += weights[t] * _laplace_mode_merit_term(family, μ[t], n[t], y[t])
+            q += weights[t] * _laplace_mode_merit_term_eta(family, μ[t], n[t], y[t], link, η[t])
         end
     end
     return q
@@ -256,7 +264,7 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         η  .= _clamp_eta.(β .+ off .+ Λz)
         μ  .= _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
         me .= mu_eta.(Ref(link), η)
-        s  .= _glm_score.(Ref(family), μ, n, me, y)
+        s  .= _glm_score_eta.(Ref(family), μ, n, me, y, Ref(link), η)
         W  .= _laplace_mode_step_weight.(Ref(family), μ, n, me, y, Ref(link), η)
         if mask !== nothing
             s .= ifelse.(mask, s, zero(T))        # masked ⇒ no contribution (NaN safe)

@@ -94,6 +94,60 @@ _default_hessian(::Binomial, ::ProbitLink) = :observed
 # likelihood value, is the correct place to police that runaway.
 _default_hessian(::Binomial, ::CLogLogLink) = :observed
 
+# ---------------------------------------------------------------------------
+# Mode search at a saturated cell (probit and cloglog).
+#
+# `_clamp_mu` pins μ to [1e-12, 1 - 1e-12]. At a cell whose linear predictor is far in a
+# tail (probit η = 8.9 gives 1 - Φ(η) = 2.8e-19, which rounds to 0), the μ-based score
+# (y - nμ)/(μ(1-μ))·me and log-density are flat or wrong, so Fisher scoring from z = 0 saw
+# a score near zero and a log posterior that did not rise, and stopped at a point whose
+# Laplace value was 25 below the exact value per such cell (issue draft
+# binomial-probit-mode-stalls-at-saturated-cell). Where μ is clamped, the score, the merit
+# term and the step weight below are computed from η with complementary-function forms that
+# do not subtract from one. Where μ is not clamped, the original expressions are used
+# unchanged, so every unsaturated fit is bit-identical. The reported log-det weight and
+# log-density at the final mode are untouched.
+# ---------------------------------------------------------------------------
+_binom_clamped(μ) = μ <= 1e-12 || μ >= 1 - 1e-12
+
+# Standard normal log density and log cdf; the log cdf is the stable `logcdf`.
+_nlogpdf(x) = -0.5 * x * x - 0.9189385332046727
+_nlogcdf(x) = Distributions.logcdf(Normal(), x)
+# Inverse Mills ratio φ(x)/Φ(x), computed on the log scale.
+_nmills(x) = exp(_nlogpdf(x) - _nlogcdf(x))
+_binom_logchoose(n, y) = logpdf(Binomial(Int(n), 0.5), Int(y)) + n * log(2.0)
+
+function _glm_score_eta(f::Binomial, μ, n, me, y, link::ProbitLink, η)
+    _binom_clamped(μ) || return _glm_score(f, μ, n, me, y)
+    return y * _nmills(η) - (n - y) * _nmills(-η)
+end
+function _laplace_mode_merit_term_eta(f::Binomial, μ, n, y, link::ProbitLink, η)
+    _binom_clamped(μ) || return _glm_logpdf(f, μ, n, y)
+    return y * _nlogcdf(η) + (n - y) * _nlogcdf(-η) + _binom_logchoose(n, y)
+end
+function _laplace_mode_step_weight(f::Binomial, μ, n, me, y, link::ProbitLink, η)
+    _binom_clamped(μ) || return _glm_weight(f, μ, n, me)
+    m1 = _nmills(η); m0 = _nmills(-η)
+    return y * m1 * (m1 + η) + (n - y) * m0 * (m0 - η)    # observed curvature, > 0 (log-concave)
+end
+
+# cloglog: u = e^η, 1 - μ = e^-u, log μ = log(-expm1(-u)), log(1 - μ) = -u.
+function _glm_score_eta(f::Binomial, μ, n, me, y, link::CLogLogLink, η)
+    _binom_clamped(μ) || return _glm_score(f, μ, n, me, y)
+    u = exp(η)
+    return y * u * exp(-u) / (-expm1(-u)) - (n - y) * u
+end
+function _laplace_mode_merit_term_eta(f::Binomial, μ, n, y, link::CLogLogLink, η)
+    _binom_clamped(μ) || return _glm_logpdf(f, μ, n, y)
+    u = exp(η)
+    return y * log(-expm1(-u)) - (n - y) * u + _binom_logchoose(n, y)
+end
+function _laplace_mode_step_weight(f::Binomial, μ, n, me, y, link::CLogLogLink, η)
+    _binom_clamped(μ) || return _glm_weight(f, μ, n, me)
+    u = exp(η); v = exp(-u); omv = -expm1(-u)
+    return y * (u * u * v / (omv * omv) - u * v / omv) + (n - y) * u
+end
+
 # Binomial-default convenience methods (back-compat: family ⇒ Binomial()), used
 # by getLV(::BinomialFit) and the Binomial tests.
 _laplace_mode(y::AbstractVector, n::AbstractVector, Λ::AbstractMatrix,
