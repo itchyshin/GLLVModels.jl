@@ -182,6 +182,7 @@ for (_k, _files) in enumerate((
         "test_temporal_composed.jl", "test_isdm.jl", "test_zip_observed_laplace.jl",
         "test_tweedie_speed.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
         "test_comparator_targets.jl", "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl",
+        "test_confint_na_y.jl",
     ),
     (
         "test_likelihood.jl", "test_packing.jl", "test_docstring_animal_dep_twin.jl",
@@ -693,6 +694,7 @@ println(_SHARD === nothing ?
     _shard_include("test_masked_gaussian_posdef.jl")   # #716
     _shard_include("test_masked_gaussian_converged_735.jl")   # #735
     _shard_include("test_fix_1107.jl")   # #1107 derive Gaussian mask from missing
+    _shard_include("test_confint_na_y.jl")   # #1144 confint / profile_ci / bootstrap_ci refuse missing / NaN in y
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")
     _shard_include("test_missing_predictor_z.jl")
