@@ -4,7 +4,7 @@
  "pin": "P1",
  "is_a_pass": false,
  "bars_changed": false,
- "public_wording": "315 of 317 matched, two real-data cases excluded by signed exception",
+ "public_wording": "Quote the checker figure done_excluding_signed as the matched count (read it from the checker output at the time; it was 304 of 317 when this exception was signed). Two real-data cases (spider and beetle) are excluded by signed exception and are not passes.",
  "revisit": "P2",
  "scoreboard_id": "data-RD-SPIDER-NB2",
  "source_id": "data/RD-SPIDER-NB2",

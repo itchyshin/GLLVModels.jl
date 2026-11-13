@@ -1260,10 +1260,10 @@ confirmation; every receipt says so in `tolerance_status`.
   stops with a message when it is unset: it has no default path. The row's raw outputs were first pushed in an earlier
   commit of this branch; they are removed from the branch tip but remain in the branch history on GitHub.
 
-## Signed known-fail exception (mechanism only; no file is signed)
+## Signed known-fail exception (mechanism; the spider and beetle rows are signed, 2026-11-13)
 
 Shinichi's chat reply "A, mechanics C" (2026-11-09) rules spider and beetle out of P1 scope as signed known fails. This section records the
-checker mechanism. It does not sign anything. A known fail is not a pass, no bar changes, and no row is refit.
+checker mechanism; the two signed files are in `signed-exceptions/`. A known fail is not a pass, no bar changes, and no row is refit.
 
 - Scoreboard Status word `KNOWN-FAIL-SIGNED`, accepted only on the two rows in `KNOWN_FAIL_ROWS` (`data-RD-SPIDER-NB2`, `data-RD-BEETLE-NB2`) and
   only for C4 and X2. It is not in `DONE`. C2, C3 and C5 never accept it.
@@ -1275,6 +1275,6 @@ checker mechanism. It does not sign anything. A known fail is not a pass, no bar
 - C4 and X2 print a second line `C4 signed=N signed_ids=... signed_files_unmatched=...`. A signed file whose row is still FAIL counts nothing and
   is listed as unmatched. When nothing else is open and `signed` is above 0 the verdict is `<mode>_MET_WITH_SIGNED_EXCEPTIONS`, never plain `<mode>_MET`.
   With no file, an unsigned draft, or a changed receipt, the rows stay FAIL and the verdict stays `<mode>_NOT_MET`.
-- Public wording: "315 of 317 matched, two real-data cases excluded by signed exception". Do not say "true parity" without that clause.
+- Public wording: quote `done_excluding_signed` from the checker line as the matched count (304 of 317 when the two files were signed), and say that two real-data cases (spider and beetle) are excluded by signed exception and are not passes. 315 of 317 is not a reachable figure under the rulings that leave D4, D7, D9 and fungi open. Do not say "true parity" without that clause.
 - Assembler: `tools/true_parity_assemble.py` writes `KNOWN-FAIL-SIGNED` only when the same checks pass (`known_fail_exception_problem`); otherwise the row
   stays `FAIL` and the note names the rejection.
