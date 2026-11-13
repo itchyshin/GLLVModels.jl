@@ -34,7 +34,7 @@ end
 # Returns ELBO_s = Σ_t E_q[log p(y_t|η_t,φ)] − KL_s, with E_q by GH quadrature.
 function _va_site_beta_elbo(ψ::AbstractVector, y::AbstractVector,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector,
-        φ::Real, x::AbstractVector, w::AbstractVector)
+        φ::Real, x::AbstractVector, w::AbstractVector; obs = nothing)
     p, K = size(Λ)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -45,6 +45,7 @@ function _va_site_beta_elbo(ψ::AbstractVector, y::AbstractVector,
     invsqrtpi = 1.0 / sqrt(pi)
     ℓ = zero(eltype(ψ))
     @inbounds for t in 1:p
+        (obs !== nothing && !obs[t]) && continue
         sd = sqrt(2.0 * σ2[t])
         et = zero(eltype(ψ))
         for j in 1:G
@@ -72,7 +73,7 @@ end
 # The objective is −ELBO, so G holds the negation. (_clamp_eta's derivative ≈ 1.)
 function _va_site_beta_grad!(G::AbstractVector, ψ::AbstractVector, y::AbstractVector,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector,
-        φ::Real, x::AbstractVector, w::AbstractVector)
+        φ::Real, x::AbstractVector, w::AbstractVector; obs = nothing)
     p, K = size(Λ)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -83,6 +84,7 @@ function _va_site_beta_grad!(G::AbstractVector, ψ::AbstractVector, y::AbstractV
     a = zeros(eltype(ψ), p)
     b = zeros(eltype(ψ), p)
     @inbounds for t in 1:p
+        (obs !== nothing && !obs[t]) && continue
         sd = sqrt(2.0 * max(σ2[t], 0.0))
         at = zero(eltype(ψ)); bt = zero(eltype(ψ))
         ly  = log(y[t]); l1y = log1p(-y[t])
@@ -117,10 +119,10 @@ end
 # [m (K); logv (K)] with L-BFGS (analytic gradient), from m=0, logv=0.
 function _va_site_beta(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
         β::AbstractVector, φ::Real, x::AbstractVector, w::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     K = size(Λ, 2)
-    negelbo(ψ) = -_va_site_beta_elbo(ψ, y, Λ, Λ2, β, φ, x, w)
-    g!(G, ψ) = _va_site_beta_grad!(G, ψ, y, Λ, Λ2, β, φ, x, w)
+    negelbo(ψ) = -_va_site_beta_elbo(ψ, y, Λ, Λ2, β, φ, x, w; obs = obs)
+    g!(G, ψ) = _va_site_beta_grad!(G, ψ, y, Λ, Λ2, β, φ, x, w; obs = obs)
     ψ0 = zeros(2K)
     res = Optim.optimize(negelbo, g!, ψ0, Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
@@ -133,10 +135,10 @@ end
 # optimum ∂ELBO/∂(m,v)=0, so dELBO/dθ = ∂ELBO/∂θ holding (m*,v*) fixed.
 function _va_site_beta_mv(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
         β::AbstractVector, φ::Real, x::AbstractVector, w::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     K = size(Λ, 2)
-    negelbo(ψ) = -_va_site_beta_elbo(ψ, y, Λ, Λ2, β, φ, x, w)
-    g!(G, ψ) = _va_site_beta_grad!(G, ψ, y, Λ, Λ2, β, φ, x, w)
+    negelbo(ψ) = -_va_site_beta_elbo(ψ, y, Λ, Λ2, β, φ, x, w; obs = obs)
+    g!(G, ψ) = _va_site_beta_grad!(G, ψ, y, Λ, Λ2, β, φ, x, w; obs = obs)
     ψ0 = zeros(2K)
     res = Optim.optimize(negelbo, g!, ψ0, Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
@@ -152,15 +154,17 @@ end
 # outer gradient consumes — both objective and gradient come out of one solve.
 function _va_beta_solve_all(Y::AbstractMatrix, Λ::AbstractMatrix, Λ2::AbstractMatrix,
         β::AbstractVector, φ::Real, x::AbstractVector, w::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     K = size(Λ, 2)
     n = size(Y, 2)
     M = Matrix{Float64}(undef, K, n)
     V = Matrix{Float64}(undef, K, n)
     acc = 0.0
     @inbounds for s in 1:n
+        obs = mask === nothing ? nothing : view(mask, :, s)
         elbo_s, m_s, v_s = _va_site_beta_mv(view(Y, :, s), Λ, Λ2, β, float(φ),
-                                            x, w; maxiter = maxiter, tol = tol)
+                                            x, w; maxiter = maxiter, tol = tol,
+                                            obs = obs)
         acc += elbo_s
         M[:, s] = m_s
         V[:, s] = v_s
@@ -183,7 +187,8 @@ end
 #   ∂ELBO/∂φ    = Σ_s Σ_t c_ts,   ∂ELBO/∂(log φ) = φ·∂ELBO/∂φ
 function _va_beta_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector, φ::Real,
-        M::AbstractMatrix, V::AbstractMatrix, x::AbstractVector, w::AbstractVector)
+        M::AbstractMatrix, V::AbstractMatrix, x::AbstractVector, w::AbstractVector;
+        mask = nothing)
     p, K = size(Λ)
     n = size(Y, 2)
     invsqrtpi = 1.0 / sqrt(pi)
@@ -196,6 +201,7 @@ function _va_beta_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
         σ2 = Λ2 * v_s
         μη = β .+ Λ * m_s
         for t in 1:p
+            (mask !== nothing && !mask[t, s]) && continue
             σ2t = σ2[t]
             sd = sqrt(2.0 * max(σ2t, 0.0))
             ly  = log(Y[t, s]); l1y = log1p(-Y[t, s])
@@ -239,7 +245,7 @@ function _va_beta_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
 end
 
 """
-    beta_marginal_loglik_va(Y, Λ, β, φ; maxiter=100, tol=1e-9, gh=20) -> Float64
+    beta_marginal_loglik_va(Y, Λ, β, φ; maxiter=100, tol=1e-9, gh=20, mask=nothing) -> Float64
 
 Gaussian-variational (VA) log-marginal lower bound (ELBO) over the `n` sites
 (columns) of a Beta GLLVM with logit link — `Y` the p×n matrix of proportions in
@@ -250,19 +256,22 @@ negative ELBO over `[m; logv]`; the per-trait expectation is evaluated by `gh`-p
 Gauss–Hermite quadrature. The returned value is a **lower bound** on the true
 log-marginal (≤ it for any `q`); as `Λ→0` it equals the independent-Beta loglik
 exactly. Companion to [`beta_marginal_loglik_laplace`](@ref).
+`mask` drops cells (`nothing` keeps every cell); unobserved entries of `Y` are ignored.
 """
 function beta_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, φ::Real; maxiter::Integer = 100, tol::Real = 1e-9,
-        gh::Integer = 20)
+        gh::Integer = 20, mask = nothing)
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
+    _va_check_mask(mask, Y)
     φ > 0 || throw(ArgumentError("precision φ must be > 0"))
     Λ2 = Λ .^ 2
     x, w = _gauss_hermite(gh)
     acc = 0.0
     @inbounds for s in axes(Y, 2)
+        obs = mask === nothing ? nothing : view(mask, :, s)
         acc += _va_site_beta(view(Y, :, s), Λ, Λ2, β, float(φ), x, w;
-                             maxiter = maxiter, tol = tol)
+                             maxiter = maxiter, tol = tol, obs = obs)
     end
     return acc
 end
@@ -281,18 +290,24 @@ L-BFGS step costs ONE inner-solve pass rather than a finite-difference sweep. Th
 returned `BetaFit`'s `loglik` field holds the maximised ELBO (a lower bound on the
 true log-marginal), so it sits slightly below the Laplace `loglik` for the same data.
 The ELBO is derived for the logit link only: any other `link` throws `ArgumentError`.
+
+A `Y` that contains `missing` is fitted, not rejected: the observation mask is
+derived from those cells (a one-time `@info`) and unobserved cells are dropped
+from the ELBO. Pass `mask` to drop additional cells.
 """
 function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogitLink(),
         β_init = nothing, Λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_beta_gllvm_va", link, LogitLink())
-    _check_response_support(:beta, Y, nothing; caller = "fit_beta_gllvm_va")
+    _va_check_mask(mask, Y)
+    _check_response_support(:beta, Y, mask; caller = "fit_beta_gllvm_va")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
     Zemp = [linkfun(link, clamp(float(Y[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
+    mask === nothing || _mask_warmstart!(Zemp, mask)
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
@@ -319,9 +334,9 @@ function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         Λ2 = Λ .^ 2
         φ = exp(θ[p + rr + 1])
         elbo, M, V = _va_beta_solve_all(Y, Λ, Λ2, β, φ, x, w;
-                                        maxiter = maxiter, tol = tol)
+                                        maxiter = maxiter, tol = tol, mask = mask)
         if G !== nothing
-            _va_beta_outer_grad!(G, Y, Λ, Λ2, β, φ, M, V, x, w)
+            _va_beta_outer_grad!(G, Y, Λ, Λ2, β, φ, M, V, x, w; mask = mask)
         end
         if F !== nothing
             return isfinite(elbo) ? -elbo : 1e12
@@ -336,4 +351,14 @@ function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
     return BetaFit(β̂, Λ̂, φ̂, link, _fit_verdict(res)...)
+end
+
+function fit_beta_gllvm_va(Y::AbstractMatrix{<:Union{Missing,Real}};
+        mask = nothing, kwargs...)
+    if mask === nothing
+        Yc, msk = _va_materialize_derived(Y, 0.5, "fit_beta_gllvm_va")
+    else
+        Yc, msk = _va_materialize_explicit(Y, 0.5, mask)
+    end
+    return fit_beta_gllvm_va(Yc; mask = msk, kwargs...)
 end

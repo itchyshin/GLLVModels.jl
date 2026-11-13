@@ -296,6 +296,7 @@ Nested and other family routes reject explicit selection.
 - `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal. Without `X`,
   one intercept per trait is estimated (`pars.β`); `fit_gaussian_gllvm` itself treats
   `X = nothing` as a zero mean. An explicit `X` defines the complete mean.
+  `missing` entries in `Y` derive an observation mask and emit one `@info`.
 - `Binomial()` → [`fit_binomial_gllvm`](@ref) — Laplace marginal (binary / binomial)
 - `Poisson()`  → [`fit_poisson_gllvm`](@ref) — Laplace marginal (counts)
 - `TruncatedPoisson()` → [`fit_truncated_poisson_gllvm`](@ref) — zero-truncated Poisson
