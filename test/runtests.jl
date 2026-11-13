@@ -259,10 +259,10 @@ end
 #   GLLVM_SPARSE_PHY_GRAD_TESTS=1 : test_sparse_phy_grad.jl (about 900-1100 s alone; opt-in,
 #                        a dedicated variable so it does not also switch on the other
 #                        slow-gated tests that read GLLVM_SLOW_TESTS).
-#   Julia 1.10.x only  : test_destination_b_a4_s4_fixed_coordinate_evaluator.jl
-#                        (asserts the Julia runner matches ^1\.10\.; fails on 1.13).
+#   (no gate now)      : test_destination_b_a4_s4_fixed_coordinate_evaluator.jl runs on every Julia;
+#                        its one version assertion compares the recorded runner version with
+#                        string(VERSION) instead of requiring ^1\.10\. (it failed on 1.13).
 _RUN_SPARSE_PHY_GRAD = get(ENV, "GLLVM_SPARSE_PHY_GRAD_TESTS", "") == "1"
-_IS_JULIA_110 = VERSION.major == 1 && VERSION.minor == 10
 
 function _shard_include(path::AbstractString)
     _shard_pos[] += 1
@@ -954,7 +954,7 @@ println(_SHARD === nothing ?
     # core070 covariance registries (self-contained modules), A4/S4 receipts,
     # kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
     # Gated at the end of this list (see _shard_include_if): test_sparse_phy_grad
-    # (912 s, opt-in) and test_destination_b_a4_s4_fixed_coordinate_evaluator (Julia 1.10.x only).
+    # (912 s, opt-in) and test_destination_b_a4_s4_fixed_coordinate_evaluator (listed last, runs everywhere).
     # Still unwired on purpose: test_phylo_ordinal_xlv and
     # test_phylo_gamma_xlv (optimiser-sensitive canaries), test_binomial_case_contract
     # (stale SHA pins).
@@ -969,7 +969,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bootstrap_sigma_r.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
-    _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
+    _shard_include_if(true, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
 end
 # README examples: shard 1 only. The blocks include Poisson fits and a Gaussian
 # CI trio; they must not run on every CI shard.
