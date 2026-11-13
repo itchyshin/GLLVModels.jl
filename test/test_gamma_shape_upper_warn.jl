@@ -2,7 +2,8 @@ using GLLVModels, Test, TOML, SHA
 const GM = GLLVModels
 
 # Gamma grouped fits: an upper shape-boundary flag that only warns (#864).
-# On per-trait USairpollution (K = 1) the `manu` shape stops at about 3.7e5 where
+# On per-trait USairpollution (K = 1) the `manu` shape stopped at about 3.7e5 with the
+# cancelling Gamma density (it ends near 1e10 with the stable density, #1175) where
 # gllvmTMB reaches 2.8e8, with loglik within 1e-4 of TMB: the likelihood is flat in
 # that direction. Maintainer decision 2026-10-25: tell the user, change nothing else.
 # `dispersion_upper` (per group, shape above 1e5) is informational; it is separate from
