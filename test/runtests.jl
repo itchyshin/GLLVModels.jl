@@ -962,6 +962,8 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_n_init_mite_1022.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
+    # link_residual: an undefined (family, link) pair gives an ArgumentError, not a MethodError.
+    _shard_include("test_link_residual_undefined_link.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
