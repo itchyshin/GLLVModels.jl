@@ -405,6 +405,39 @@ Check these restrictions when translating an R analysis:
   `phylo_indep()` and `fit_phylo_latent_gllvm(...; unique = true)` for the
   paired form (the latter a documented extra, not yet a verified twin).
 
+## Reproducing a CRAN `gllvm` fit
+
+For model structures that the R package `gllvm` (CRAN) fits and `gllvmTMB` does not, `gllvm` with `method = "LA"` is the R reference: reduced-rank terms (`num.RR`), concurrent ordination (`num.lv.c`), fixed and random row effects, species-specific slopes (`formula = ~ x1 + x2` with `X`), the fourth-corner model, and offsets. The map and defaults below were checked against `gllvm` 2.0.15 (R 4.6.1, `method = "LA"`, `n.init = 1`). Compare log-likelihoods first. Loadings and latent scores are identified only up to rotation and sign, so compare `ΛΛᵀ`.
+
+| Quantity | `gllvm` 2.0.15 | GLLVModels.jl | Note |
+|---|---|---|---|
+| species intercepts | `params$beta0` | `fit.β` | equal |
+| loadings | `params$theta %*% diag(params$sigma.lv)` | `fit.Λ` | compare `ΛΛᵀ` |
+| fixed row effects | `row.eff = "fixed"`, `params$row.params` (length `n - 1`) | `fit_roweffect_gllvm`, `ρ[2:n]` | site 1 is the reference (0) on both sides |
+| random row effect | `row.eff = "random"`, `params$sigma` | `fit_row_random_gllvm`, `sigma_row` | standard deviation on both sides |
+| species-specific slopes | `X` with `formula = ~ x1 + x2`, `params$Xcoef` (`p × q`) | `fit_gllvm_speciescov`, `fit.B` (`p × q`) | |
+| shared covariate slope | `row.eff = ~ x1` with `studyDesign`, `params$row.params.fixed` | `fit_gllvm_cov`, `fit.γ` | `X` with `formula` in `gllvm` gives species-specific slopes, not a shared one |
+| fourth-corner | `TR`, `formula = ~ x1:z1 + ...`, `params$B` ordered `x1:z1, x2:z1, x1:z2, x2:z2` | `fit_fourthcorner_gllvm`, `fit.C[k, l]` (`k` covariate, `l` trait) | reorder before comparing |
+| offset | `n × p` matrix | `p × n` matrix | transpose |
+| reduced rank | `num.RR`, `params$LvXcoef` (`q × K`) with `theta` | `fit_rrr_gllvm`, `B` (`q × K`) with `Λ` | compare the products `theta %*% t(LvXcoef)` and `Λ B'`. In the one cell run here (Poisson, `K = 1`) `gllvm`'s single start stopped 2.16 log-likelihood units below Julia's, so the products differ, and Julia's `dof` is 23 against `gllvm`'s 22 (the parameter count is an open question, #1199) |
+| concurrent ordination | `num.lv.c`, `LvXcoef` with `theta` | `fit_constrained_gllvm`, `B` with `Λ` | compare the same products; in the one cell run here the log-likelihoods agree to 3e-6, the products to 1e-4, and the parameter counts (23) are equal |
+
+Defaults of `gllvm` 2.0.15 that change the model (set them explicitly before comparing):
+
+| `gllvm` default | Effect | In GLLVModels.jl |
+|---|---|---|
+| `link = "probit"` for binomial and beta with `method = "LA"` | a default binomial fit is a probit model | binomial default is `LogitLink()`; pass `link = ProbitLink()` to match |
+| `scale.X = TRUE` (the help page says covariates are scaled when a fourth-corner model is fitted) | fourth-corner coefficients are on the standardised scale | covariates are used as given; pass `scale.X = FALSE` to `gllvm` |
+| fourth-corner traits `TR` are centred and scaled, also with `scale.X = FALSE` | with no covariate main effects, centring adds a per-site term, so `gllvm` fits a different model from Julia on raw traits | standardise the traits yourself before `fit_fourthcorner_gllvm` |
+| `Power = 1.1` in the Tweedie family: the power is fixed; `Power = NULL` estimates it | in a default `gllvm` Tweedie fit the power is not a free parameter | Julia estimates the power; pass `Power = NULL` to `gllvm` |
+| `disp.formula = NULL`: one dispersion per species | see the dispersion rows of the table above | shared by default; use the grouped fitters |
+| `control.va = list(Lambda.struc = "unstructured")` for `method = "VA"` | see the variational note in the estimation-method row above | diagonal posterior |
+| ordinal with `method = "LA"` is refused | there is no Laplace reference for ordinal responses | compare with `gllvm` VA or EVA only as an approximation |
+
+The fourth-corner default is the one that is easy to miss. In a Poisson example (8 species, 60 sites, two covariates, two traits, `K = 1`) `gllvm` gives a log-likelihood of -1045.151403 for raw traits and for standardised traits alike, while `fit_fourthcorner_gllvm` gives -812.378075 on the raw traits and -1045.151403 on the standardised ones.
+
+Checked by running, on a Poisson example (6 species, 40 sites, `K = 1`) with one cell per structure (none, fixed row effect, random row effect, species slopes, fixed row effect plus species slopes, fourth-corner, offset): the log-likelihoods agree to 3e-8 or better and the parameter counts are equal. The shared-slope row (`fit_gllvm_cov` against `row.eff = ~ x1`) was checked on one further cell: log-likelihoods -463.9574057172 and -463.9574057 with `dof` 13 against `df` 13, slopes 0.235496 and 0.235495. The maps for species slopes, fixed row effects and the fourth-corner coefficients (after reordering) agree to 1e-4 or better, and the random row-effect standard deviations to about 1e-6 (relative). Not checked here for any family other than Poisson, and `num.RR` and `num.lv.c` on one cell each only.
+
 ## Why likelihood approximations can differ
 
 ### Laplace curvature: Fisher vs observed
