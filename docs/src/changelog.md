@@ -30,6 +30,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   fitting API remains unchanged. After the rename, `using GLLVM` cannot resolve
   a package. Once `GLLVModels` is loaded, `GLLVModels.GLLVM` is only a temporary
   qualified alias; it does not provide import compatibility and is deprecated.
+- **IN, behaviour change:** `spde_fem` throws an `ArgumentError` naming any mesh
+  node that belongs to no triangle (what a duplicated input point becomes in
+  `spde_mesh_delaunay`). Such a node has zero lumped mass; the fit used to return
+  `loglik = -Inf` with `converged = false` and no message. Meshes where every node is in a
+  triangle are unchanged.
 - **Development:** fixed Gaussian source fits accept a complete mean design `X`.
   Explicit-source wide/long formulas expose trait intercepts, shared slopes,
   categorical contrasts and interactions. Fits retain the copied design, response
