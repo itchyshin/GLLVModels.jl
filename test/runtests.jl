@@ -249,6 +249,14 @@ function _in_shard(path::AbstractString, pos::Integer)
     return (pos - 1) % N == k - 1
 end
 
+# Auto-discovered files: every test/auto/test_*.jl runs without any edit to this
+# file (so two PRs that each add a test file never conflict here). Assignment
+# is by a stable hash of the file name (`_auto_shard_of`), for every N, and
+# never touches `_shard_pos`, so it cannot move any listed file. A file under
+# test/auto/ must not use paths relative to test/ (use joinpath(@__DIR__, "..", ...)).
+const _AUTO_FILES = _auto_test_files(@__DIR__)
+_auto_in_shard(f::AbstractString) = _SHARD === nothing || _auto_shard_of(f, _SHARD[2]) == _SHARD[1]
+
 # Gated files (opt-in or version-limited). `_shard_include_if(cond, path)` selects
 # exactly like `_shard_include` (it ALWAYS advances the position counter, so a
 # gate never shifts the position of any later file, and uses `_in_shard` with the
@@ -301,7 +309,7 @@ _n_selected = count(enumerate(m.captures[1] for m in eachmatch(
     r"\n    _shard_include\(\"([^\"]+)\"\)", read(@__FILE__, String)))) do (i, f)
     _in_shard(f, i)
 end
-_n_reported = _n_selected + (_RUN_QUALITY ? 1 : 0)
+_n_reported = _n_selected + count(_auto_in_shard, _AUTO_FILES) + (_RUN_QUALITY ? 1 : 0)
 
 println(_SHARD === nothing ?
     "GLLVModels tests: all files ($_n_reported files)" :
@@ -971,6 +979,10 @@ println(_SHARD === nothing ?
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
+    # New test files go in test/auto/ and are picked up here; no line to add.
+    for _f in _AUTO_FILES
+        _auto_in_shard(_f) && include(joinpath("auto", _f))
+    end
 end
 # README examples: shard 1 only. The blocks include Poisson fits and a Gaussian
 # CI trio; they must not run on every CI shard.
