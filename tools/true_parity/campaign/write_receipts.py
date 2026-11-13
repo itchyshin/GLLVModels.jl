@@ -304,7 +304,7 @@ POLISH_CELLS = ("ordinal", "isdm", "fungi")
 POLISH_RULING = "maintainer ruling 2026-10-05 (vault D-319), N9; stopping rule signed 2026-10-21 (docs/dev-log/decisions/2026-10-21-p1-optimizer-stopping-rule.md)"
 POLISH_PROCEDURE = ("pre-registered Newton polish (tools/true_parity/campaign/run_R.R and polish_J.jl, CAMPAIGN_POLISH=1): R restarts nlminb at rel.tol 1e-13, "
                     "then each engine takes at most max_steps Newton steps, stopping at the first point with gradient max-abs < 1e-5 and a positive-definite "
-                    "Hessian evaluated at that point; a step that raises the objective is not taken; every visited point is recorded in the raw polish files")
+                    "Hessian evaluated at that point; a step is accepted when fn <= f + 1e-12 * max(1, |f|) (a rounding-level rise, flagged accepted_uphill), and a step that raises the objective by more than that bound is not taken; every visited point is recorded in the raw polish files")
 # compared keys taken from each engine's polish record (the values at the polished point)
 R_POLISH_KEYS = ("logLik", "beta", "LLt", "cutpoints", "eta", "predict_link", "predict_response", "predict_newdata_offset0_link",
                  "predict_newdata_offset0_response", "predict_cell_id", "predict_trait", "predict_source")

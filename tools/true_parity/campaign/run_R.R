@@ -172,13 +172,14 @@ cat("DONE", cell, "logLik", out$logLik, "conv", out$convergence, "pdHess", out$p
 
 ## ---- optional convergence polish (CAMPAIGN_POLISH=1; N9, GATES.md, and the signed 2026-10-21 stopping rule) -------------
 # Runs AFTER the main JSON is written (so the default output is unaffected even if this block is slow) and writes a SEPARATE
-# file <cell>_R_polish.json; polish_merge.py builds the compared raw file from both. Same objective (fit$tmb_obj) throughout.
+# file <cell>_R_polish.json; write_receipts.py builds the compared receipts from both. Same objective (fit$tmb_obj) throughout.
 #   stage 0: the nlminb optimum the fit returned (gradient max-abs = out$max_abs_gradient above)
 #   stage 1: nlminb restarted from stage 0 with rel.tol = 1e-13 (x.tol = 0, generous iteration caps)
 #   Newton loop (pre-registered): from stage 1, at most CAMPAIGN_POLISH_MAX_STEPS (default 3) steps par - solve(H, g), stopping
 #     at the FIRST point where max|gradient| < 1e-5 AND TMB's sdreport Hessian AT THAT POINT is positive definite (pdHess true and
 #     the smallest eigenvalue of solve(cov.fixed) > 0). The gradient and the Hessian are evaluated at every visited point. A step
-#     that raises the objective is recorded and not taken; a Hessian that is not positive definite stops the loop with no step.
+#     is accepted when fn <= f + 1e-12 * max(1, |f|) (a rounding-level rise, flagged accepted_uphill); a step that raises the
+#     objective by more than that bound is recorded and not taken; a Hessian that is not positive definite stops the loop with no step.
 #     H is solve(TMB::sdreport(obj, par.fixed = par)$cov.fixed): TMB has no obj$he for random-effect models, and optimHess over
 #     the Laplace gradient took 14 min on the ordinal cell (PR #715), against about 5 s for sdreport.
 #   final point: every compared quantity of the cell is re-extracted, with the same gllvmTMB extractors as above, from a copy of
@@ -214,12 +215,12 @@ if (nzchar(Sys.getenv("CAMPAIGN_POLISH"))) {
     step <- tryCatch(as.numeric(solve(e$H, e$g)), error = function(err) NULL)
     if (is.null(step)) { stopped <- paste("solve(H, g) failed at step", k); break }
     pn <- e$par - step; fn <- obj$fn(pn)
-    if (!(is.finite(fn) && fn <= e$f)) {
+    if (!(is.finite(fn) && fn <= e$f + 1e-12 * max(1, abs(e$f)))) {   # wave 44 rule: accept a rounding-level rise
       points[[length(points) + 1L]] <- list(step = k + 1L, rejected = TRUE, f = fn, step_max_abs = max(abs(step)),
-                                            reason = "the Newton step raised the objective; not taken")
+                                            reason = "the Newton step raised the objective by more than 1e-12 * max(1, |f|); not taken")
       stopped <- paste("Newton step", k + 1L, "raised the objective"); break
     }
-    k <- k + 1L; e <- evalpt(pn); pr <- ptrec(k, e); pr$step_max_abs <- max(abs(step)); points[[length(points) + 1L]] <- pr
+    up <- fn > e$f; k <- k + 1L; e <- evalpt(pn); pr <- ptrec(k, e); pr$step_max_abs <- max(abs(step)); pr$accepted_uphill <- up; points[[length(points) + 1L]] <- pr
   }
   met <- meets(e); par_f <- e$par
   # the copy of the fit at the final point
