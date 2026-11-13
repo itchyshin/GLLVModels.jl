@@ -42,7 +42,7 @@ using Test, GLLVModels, Random, Distributions
     end
 
     @testset "Multinomial keeps its own message" begin
-        Ym = reshape(rand(rng, 1:3, n), 1, n)
+        Ym = rand(rng, 1:3, 4, n)
         for K in (-1, 1.0, 1)
             e = thrown(() -> fit_gllvm(Ym; family = Multinomial(), K = K))
             @test e isa ArgumentError && occursin("Multinomial v1 is fixed-effects softmax only", e.msg)
