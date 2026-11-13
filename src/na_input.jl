@@ -21,8 +21,10 @@ function _refuse_na_response(caller::AbstractString, Y::AbstractMatrix; nan::Boo
             "first at (row, column) = ($(bad[1][1]), $(bad[1][2]))."))
     end
     T = nonmissingtype(eltype(Y))
-    T === eltype(Y) && return Y
+    # `Any` must be refused before the early return: its non-missing type is `Any` itself, so the
+    # method that called this helper would receive the same matrix and call it again forever.
     T === Any && throw(ArgumentError("$caller needs a numeric response matrix; got element type $(eltype(Y))."))
+    T === eltype(Y) && return Y
     return Matrix{T}(Y)
 end
 
