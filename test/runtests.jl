@@ -751,6 +751,7 @@ println(_SHARD === nothing ?
     _shard_include("test_cov_analytic_grad.jl")
     _shard_include("test_formula_input.jl")
     _shard_include("test_formula.jl")
+    _shard_include("test_formula_site_design_rank.jl")
     _shard_include("test_optimizer_selection.jl")
     _shard_include("test_formula_no_intercept_default.jl")
     _shard_include("test_simulate.jl")

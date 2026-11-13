@@ -73,14 +73,20 @@ function _build_site_modelmatrix(rhs, data; contrasts::AbstractDict = Dict{Symbo
         end
     end
 
-    rhs_term = length(non_const) == 1 ? non_const[1] : Tuple(non_const)
-    f_cov = FormulaTerm(ConstantTerm(0), rhs_term)
+    # Keep an implicit intercept while the schema is applied, in the model context, so
+    # StatsModels' rank rules decide the coding (an interaction `x & g` with no main effect
+    # of `x` gets one slope per level of `g`, as in R's `g + x:g`; without the intercept
+    # and the context the first level was dropped and its slope forced to zero). The
+    # engine estimates the species intercepts itself, so the intercept column is removed
+    # again, as `_pervar_formula_design` does for the Gaussian routes.
+    f_cov = FormulaTerm(ConstantTerm(0), (ConstantTerm(1), non_const...))
     sch = StatsModels.schema(f_cov, cols, contrasts)
-    applied = StatsModels.apply_schema(f_cov, sch)
+    applied = StatsModels.apply_schema(f_cov, sch, StatsModels.StatisticalModel)
     mm = StatsModels.modelmatrix(applied.rhs, cols)
     cnames = StatsModels.coefnames(applied.rhs)
     cnames_vec = cnames isa AbstractVector ? string.(cnames) : [string(cnames)]
-    return Matrix{Float64}(mm), cnames_vec
+    keep = findall(!=("(Intercept)"), cnames_vec)
+    return Matrix{Float64}(mm)[:, keep], cnames_vec[keep]
 end
 
 # The per-variance Gaussian fitter treats X as the complete mean design. Use
