@@ -62,7 +62,17 @@ _glm_logpdf(::Binomial, μ, n, y)    = logpdf(Binomial(Int(n), μ), Int(y))
 # unreachable. The assembly-level PD guard in `marginal_loglik_laplace`
 # remains the correct place for any residual defence — this weight is not
 # clamped here, matching the repo-wide convention.
+#
+# CORRECTION (saturated-mode review): the cancellation IS reachable. The clamp bounds
+# μ(1−μ) at ~1e-12 but not η, so at a cell with 7.03 < |η| < ~10 on the wrong side the
+# expression above, evaluated at the clamped μ, is negative (−10.7 at η = −7.21, y = 1;
+# the exact curvature there is about 1). Once the mode search finds the true mode (it
+# stalled short of it before), such a cell can sit at the mode and make Λ'WΛ + I
+# indefinite, so the site value became −Inf. Where μ is clamped the weight therefore
+# comes from η through the same complementary-function form as the mode search
+# (`_laplace_mode_step_weight`, which is the exact observed curvature, > 0).
 _glm_obs_weight(f::Binomial, μ, n, me, y, link::ProbitLink, η) =
+    _binom_clamped(μ) ? _laplace_mode_step_weight(f, μ, n, me, y, link, η) :
     η * me * (y - n * μ) / (μ * (one(μ) - μ)) +
     me^2 * (y / μ^2 + (n - y) / (one(μ) - μ)^2)
 _default_hessian(::Binomial, ::ProbitLink) = :observed
@@ -132,6 +142,13 @@ function _laplace_mode_step_weight(f::Binomial, μ, n, me, y, link::ProbitLink, 
 end
 
 # cloglog: u = e^η, 1 - μ = e^-u, log μ = log(-expm1(-u)), log(1 - μ) = -u.
+# The same exact forms for the log-density summed into the final Laplace value: where μ is
+# clamped the μ-based density is log(1e-12) for every wrong-side cell however far in the tail
+# (1.3 too high at η = -7.2, 25 too high at η = -8.9), so the value was off even with the
+# mode found. Unclamped cells run the original `_glm_logpdf` (the merit term falls through).
+_glm_logpdf_eta(f::Binomial, μ, n, y, link::Union{ProbitLink,CLogLogLink}, η) =
+    _laplace_mode_merit_term_eta(f, μ, n, y, link, η)
+
 function _glm_score_eta(f::Binomial, μ, n, me, y, link::CLogLogLink, η)
     _binom_clamped(μ) || return _glm_score(f, μ, n, me, y)
     u = exp(η)

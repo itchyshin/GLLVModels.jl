@@ -127,6 +127,9 @@ _laplace_mode_merit_term(family, μ, n, y) = _glm_logpdf(family, μ, n, y)
 # probability is still 1e-19 and smaller), which stalled the mode search far from the mode.
 _laplace_mode_merit_term_eta(family, μ, n, y, link, η) = _laplace_mode_merit_term(family, μ, n, y)
 _glm_score_eta(family, μ, n, me, y, link, η) = _glm_score(family, μ, n, me, y)
+# The log-density summed into the final Laplace value, link-aware for the same reason. Default:
+# the μ-based `_glm_logpdf`, so every family that does not opt in is bit-identical.
+_glm_logpdf_eta(family, μ, n, y, link, η) = _glm_logpdf(family, μ, n, y)
 
 # Robust step control, for families whose log joint in z need not be concave
 # (StudentTFamily, #623). Two changes, both only for families that opt in:
@@ -510,13 +513,13 @@ function laplace_loglik_site(family, y::AbstractVector, n::AbstractVector,
     if weights === nothing
         @inbounds for t in 1:p
             (mask === nothing || mask[t]) || continue
-            ℓ += _glm_logpdf(family, μ[t], n[t], y[t])
+            ℓ += _glm_logpdf_eta(family, μ[t], n[t], y[t], link, η[t])
         end
     else
         @inbounds for t in 1:p
             (mask === nothing || mask[t]) || continue
             iszero(weights[t]) && continue
-            ℓ += weights[t] * _glm_logpdf(family, μ[t], n[t], y[t])
+            ℓ += weights[t] * _glm_logpdf_eta(family, μ[t], n[t], y[t], link, η[t])
         end
     end
     # PD guard, keyed on the WEIGHT'S SIGN — not on the selector and not on the

@@ -8,6 +8,7 @@
 # tail probabilities from `erfc` / `expm1`, never from `1 - μ`.
 using Test, GLLVModels
 using SpecialFunctions: erfc
+using LinearAlgebra: Diagonal, I, det
 
 const _GMsat = GLLVModels
 
@@ -74,4 +75,40 @@ end
                   _GMsat._glm_weight(_GMsat.Binomial(), μ[t], 1, me[t])
         end
     end
+end
+
+# A mode that sits at a wrong-side cell just beyond the clamp (|η| of 7.0 to 7.6, probit) must
+# give a finite Laplace value equal to the exact one. The log-det weight there used the
+# unclamped observed-curvature formula at the clamped μ, which is negative (−10.7 at η = −7.21),
+# so Λ'WΛ + I was indefinite and the site value was −Inf, although the mode search was correct.
+@testset "Binomial probit: log-det weight at a clamped wrong-side cell is the exact curvature" begin
+    Λ = [6.26 9.73; -0.71 -20.14; 1.06 -33.75; -21.24 -0.74; -18.78 26.31; 15.8 13.41]
+    β = [-4.67, -4.05, -0.13, -5.39, -5.64, -2.77]
+    y = [0.0, 5.0, 1.0, 0.0, 5.0, 1.0]; n = [5.0, 5.0, 1.0, 5.0, 5.0, 1.0]
+    old = precision(BigFloat); setprecision(BigFloat, 256)
+    ref = try
+        Λb = BigFloat.(Λ); βb = BigFloat.(β); p = length(y); K = size(Λ, 2)
+        pieces(z) = (η = βb .+ Λb * z;
+            (sum(y[t] * log(_Φb(η[t])) + (n[t] - y[t]) * log(_Φb(-η[t])) for t in 1:p) - sum(abs2, z) / 2,
+             [y[t] * _mb(η[t]) - (n[t] - y[t]) * _mb(-η[t]) for t in 1:p],
+             [y[t] * _mb(η[t]) * (_mb(η[t]) + η[t]) + (n[t] - y[t]) * _mb(-η[t]) * (_mb(-η[t]) - η[t]) for t in 1:p]))
+        z = zeros(BigFloat, K)
+        for _ in 1:200
+            f, sc, w = pieces(z)
+            Δ = (Λb' * Diagonal(w) * Λb + I) \ (Λb' * sc - z)
+            st = big(1.0)
+            while st > 1e-12 && pieces(z + st * Δ)[1] < f; st /= 2; end
+            z = z + st * Δ
+            maximum(abs, st * Δ) < big(1e-30) && break
+        end
+        f, _, w = pieces(z)
+        Float64(f - log(det(Λb' * Diagonal(w) * Λb + I)) / 2 + sum(log(binomial(BigInt(Int(n[t])), BigInt(Int(y[t])))) for t in 1:p))
+    finally
+        setprecision(BigFloat, old)
+    end
+    v = _GMsat.laplace_loglik_site(_GMsat.Binomial(), y, n, Λ, β, _GMsat.ProbitLink())
+    @test isfinite(v)
+    # Residual 5.5e-4: cells with 1e-12 < 1 - μ < 1e-9 (here η = -6.56) keep the original
+    # μ-based expressions (the stable forms apply only where μ is clamped).
+    @test isapprox(v, ref; atol = 2e-3)
 end
