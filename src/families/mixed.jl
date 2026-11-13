@@ -705,7 +705,7 @@ function getLV(fit::MixedFamilyFit, Y::AbstractMatrix;
                offset = nothing)
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "getLV")
-    Nm = N === nothing ? ones(Int, p, n) : N
+    Nm = N === nothing ? ones(Int, p, n) : _postfit_trials(N, p, n)
     K = size(fit.Λ, 2)
     # dispersion[t] is NaN for non-dispersion traits; a unit sentinel keeps the
     # marker well-formed (Poisson/Binomial markers ignore the value anyway).

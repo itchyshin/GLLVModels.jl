@@ -313,6 +313,7 @@ function _grouped_getLV(Y::AbstractMatrix, Λ::AbstractMatrix, β::AbstractVecto
     length(fams) == p || throw(ArgumentError("length(fams)=$(length(fams)) must equal p=$p"))
     Nm = N === nothing ? ones(Int, p, n) : N
     size(Nm) == (p, n) || throw(ArgumentError("N must have size $(p)×$(n); got $(size(Nm))"))
+    _check_postfit_mask(mask, Y)
     K = size(Λ, 2)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
@@ -858,7 +859,8 @@ Conditional latent scores at `η = β + Xγ + Λz` with per-trait NB2 dispersion
 function getLV(fit::NBGroupedCovFit, Y::AbstractMatrix{<:Integer},
                X::AbstractArray{<:Real, 3};
                rotate::Bool = true, mask = nothing)
-    p = size(Y, 1)
+    p, n = size(Y)
+    _check_postfit_design(X, p, n)
     rvec = [fit.r_group[fit.group[t]] for t in 1:p]
     fams = [NegativeBinomial(float(rvec[t]), 0.5) for t in 1:p]
     O = _build_offset(X, fit.γ)
@@ -1564,7 +1566,8 @@ Conditional latent scores at `η = β + Xγ + Λz` with per-trait Beta precision
 function getLV(fit::BetaGroupedCovFit, Y::AbstractMatrix{<:Real},
                X::AbstractArray{<:Real, 3};
                rotate::Bool = true, mask = nothing)
-    p = size(Y, 1)
+    p, n = size(Y)
+    _check_postfit_design(X, p, n)
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [Beta(float(φvec[t]), 1.0) for t in 1:p]
     O = _build_offset(X, fit.γ)
@@ -2069,7 +2072,8 @@ Conditional latent scores at `η = β + Xγ + Λz` with per-trait Gamma shape.
 function getLV(fit::GammaGroupedCovFit, Y::AbstractMatrix{<:Real},
                X::AbstractArray{<:Real, 3};
                rotate::Bool = true, mask = nothing)
-    p = size(Y, 1)
+    p, n = size(Y)
+    _check_postfit_design(X, p, n)
     αvec = [fit.α[fit.group[t]] for t in 1:p]
     fams = [Gamma(float(αvec[t]), 1.0) for t in 1:p]
     O = _build_offset(X, fit.γ)
@@ -2601,7 +2605,8 @@ Conditional latent scores at `η = β + Xγ + Λz` with per-trait NB1 φ.
 function getLV(fit::NB1GroupedCovFit, Y::AbstractMatrix{<:Integer},
                X::AbstractArray{<:Real, 3};
                rotate::Bool = true, mask = nothing)
-    p = size(Y, 1)
+    p, n = size(Y)
+    _check_postfit_design(X, p, n)
     φvec = [fit.φ[fit.group[t]] for t in 1:p]
     fams = [NB1(float(φvec[t])) for t in 1:p]
     O = _build_offset(X, fit.γ)

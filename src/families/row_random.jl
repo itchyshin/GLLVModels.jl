@@ -179,7 +179,7 @@ end
 function _row_random_modes(fit::RowRandomFit, Y::AbstractMatrix{<:Real},
                            N::Union{Nothing, AbstractMatrix})
     p, n = size(Y); K = size(fit.Λ, 2)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     fam = _cov_family(fit.family, fit.dispersion)
     Λ̃ = _augment_lambda(fit.Λ, fit.σ_row)
     W = Matrix{Float64}(undef, K + 1, n)
