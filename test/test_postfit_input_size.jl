@@ -119,3 +119,38 @@ using GLLVModels, Test, Random, Distributions
         @test_throws DimensionMismatch nobs(fp, Y; mask = m)
     end
 end
+
+# Valid but unusual argument forms must still be accepted, and give the same answer as the plain form
+# (the size checks compare `size(...)` only; they must not refuse a view, a BitMatrix, an Adjoint or a
+# Float64 trials matrix of the right shape).
+@testset "post-fit: right-shaped mask, N and X of other array types are accepted (refs #1219)" begin
+    rng = MersenneTwister(5); p, n = 5, 40
+    Y = [rand(rng, Binomial(5, 0.3 + 0.1 * randn(rng)^2 / 4)) for t in 1:p, s in 1:n]
+    Nfull = fill(5, p, n)
+    ok = trues(p, n); ok[1, 1] = false; ok[3, 7] = false
+    big = trues(p + 2, n + 2); big[1:p, 1:n] .= ok
+    Nbig = fill(5, p + 1, n + 1)
+
+    fp = fit_poisson_gllvm(Y; K = 1)
+    ref = getLV(fp, Y; mask = Matrix{Bool}(ok))
+    @test getLV(fp, Y; mask = ok) == ref                              # BitMatrix
+    @test getLV(fp, Y; mask = view(big, 1:p, 1:n)) == ref             # view of a larger array
+    @test getLV(fp, Y; N = view(Nbig, 1:p, 1:n), mask = ok) == ref    # N as a view (unused by the Poisson density)
+    @test nobs(fp, Y; mask = view(big, 1:p, 1:n)) == count(ok)
+
+    fb = fit_binomial_gllvm(Y; K = 1, N = Nfull)
+    refb = getLV(fb, Y; N = Nfull)
+    @test getLV(fb, Y; N = view(Nbig, 1:p, 1:n)) == refb
+    @test getLV(fb, Y; N = Nfull, mask = trues(p, n)) == refb
+
+    X = reshape(randn(rng, n), 1, n, 1) .* ones(p, 1, 1)
+    Xbig = randn(rng, p + 2, n + 2, 1); Xbig[1:p, 1:n, :] .= X
+    fc = fit_gllvm_cov(Y; family = Binomial(), X = X, K = 1, N = Nfull)
+    refc = getLV(fc, Y, X; N = Nfull)
+    @test getLV(fc, Y, view(Xbig, 1:p, 1:n, :); N = Nfull) == refc
+    @test getLV(fc, Y, X; N = Float64.(Nfull)) == refc
+
+    Xe = randn(rng, n, 1)
+    fco = fit_constrained_gllvm(Y; family = Binomial(), X = Xe, K = 1, N = Nfull)
+    @test getLV(fco, Y, Matrix(Xe')'; N = Nfull) == getLV(fco, Y, Xe; N = Nfull)   # Adjoint design
+end
