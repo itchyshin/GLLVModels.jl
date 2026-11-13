@@ -273,6 +273,7 @@ not bugs on either side.
 | Gaussian dispersion | per-species SD `φ_j` | single shared `σ` (profiled) | needs a per-species-variance Gaussian fit for exact parity |
 | Dispersion **structure** | per-species by default (`disp.formula = NULL`) | shared scalar by default; per-species via the grouped fitters | route Julia through `fit_*_gllvm_grouped(Y; K, group = 1:p)`, **or** set gllvm `disp.formula = ~1` |
 | Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples |
+| `select_lv` default criterion | `criterion = "bic"`: penalty `log` of the number of observed cells (`p·n` with no missing values) | `criterion = :bic_sites`: penalty `log(n)`, `n` the number of sites | keep the default; pass `criterion = :bic` to reproduce R's choice. The two rules can pick different `K` on the same data |
 
 ### Families, dispersion, and measured covariates
 
