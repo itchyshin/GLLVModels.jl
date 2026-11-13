@@ -870,6 +870,7 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       tol = EM_DEFAULT_TOL, max_iter = 1000, assert_monotone = true,
                       phy::Union{Nothing,GLLVModels.AugmentedPhy{Float64}} = nothing,
                       force_dense_estep::Bool = false)
+    _refuse_na_response("em_fit_phylo", y)
     p, n = size(y)
     K_B ≥ 1 || throw(ArgumentError("K_B must be ≥ 1"))
     K_B < p || throw(ArgumentError("EM requires K_B < p; got K_B=$K_B, p=$p"))

@@ -41,6 +41,7 @@ function em_fa(y::AbstractMatrix, K::Integer;
                λ_init = nothing, ψ_init = nothing,
                tol = 1e-8, max_iter = 500,
                rng::AbstractRNG = MersenneTwister(0))
+    _refuse_na_response("em_fa", y; nan = true)
     p, n = size(y)
     @assert K ≥ 1 && K < p
 

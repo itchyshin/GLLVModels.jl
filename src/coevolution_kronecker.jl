@@ -67,6 +67,7 @@ replication are deferred.
 function fit_coevolution_gaussian(Y::AbstractMatrix, K_star::AbstractMatrix;
                                   d::Integer, g_tol::Real = 1e-8,
                                   iterations::Integer = 1000)
+    _refuse_na_response("fit_coevolution_gaussian", Y)
     T, n = size(Y)
     (size(K_star, 1) == n && size(K_star, 2) == n) ||
         throw(ArgumentError("K_star must be n × n = $n × $n; got $(size(K_star))."))

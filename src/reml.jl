@@ -117,6 +117,7 @@ trait means). Warm start = OLS `β` → PPCA on the residuals. MoreThuente line 
 """
 function fit_gaussian_reml(y::AbstractMatrix, X::AbstractArray{<:Real, 3}; K::Integer,
         g_tol::Real = 1e-6, iterations::Integer = 500)
+    _refuse_na_response("fit_gaussian_reml", y)
     p, n = size(y)
     K ≥ 1 || throw(ArgumentError("K must be ≥ 1; got $K"))
     K < p || throw(ArgumentError("need K < p; got K=$K, p=$p"))
