@@ -55,7 +55,7 @@ end
     eta = [0.3 * j + 0.5 * z[i] for j in 1:p, i in 1:n]
     Yg = [rand(rng, Gamma(3.0, exp(eta[j, i]) / 3.0)) for j in 1:p, i in 1:n]
     Yb = [(m = 1 / (1 + exp(-eta[j, i])); rand(rng, Distributions.Beta(10m, 10(1 - m)))) for j in 1:p, i in 1:n]
-    Yvar = copy(Yg)
+    Yvar = copy(Yg); Ybvar = copy(Yb)
     Yg[1, :] .= 1.5; Yg[2, :] .= 2.5            # species 1 and 2 constant, in one group
     Yb[1, :] .= 0.4; Yb[2, :] .= 0.5
     X = reshape(randn(rng, p * n), p, n, 1)
@@ -78,8 +78,10 @@ end
         @test e isa ArgumentError && startswith(e.msg, "fit_gamma_gllvm_grouped: species 1, 2, 3, 4 (rows of Y) share one dispersion group")
     end
     @testset "constant species grouped with a varying species is not refused" begin
-        @test !(thrown(() -> fit_gamma_gllvm_grouped(Yg; K = 1, group = [1, 2, 2, 3], iterations = 3)) isa ArgumentError)
-        @test !(thrown(() -> fit_beta_gllvm_grouped(Yb; K = 1, group = [1, 2, 2, 3], iterations = 3)) isa ArgumentError)
+        Ym = copy(Yvar); Ym[2, :] .= 2.5          # species 2 constant, species 1 (same group) varies
+        Bm = copy(Ybvar); Bm[2, :] .= 0.5
+        @test !(thrown(() -> fit_gamma_gllvm_grouped(Ym; K = 1, group = [1, 1, 2, 3], iterations = 3)) isa ArgumentError)
+        @test !(thrown(() -> fit_beta_gllvm_grouped(Bm; K = 1, group = [1, 1, 2, 3], iterations = 3)) isa ArgumentError)
     end
     @testset "shared-shape Gamma with a constant column still fits" begin
         Ys = copy(Yvar); Ys[2, :] .= 2.5            # one constant column, the others vary
