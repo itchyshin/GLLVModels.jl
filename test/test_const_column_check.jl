@@ -43,3 +43,48 @@ using Test, GLLVModels, Random, Distributions
         @test !(thrown(() -> fit_gamma_gllvm_grouped(Yg; K = 1, group = [1, 1, 2, 3], iterations = 3)) isa ArgumentError)
     end
 end
+
+# A dispersion group whose members are ALL constant has, in effect, its own dispersion with no
+# information about it: refused like the singleton case (reviewer finding on the first version).
+# A constant species in a group with a varying species is outside CONST-COLUMN-SCOPE: not refused.
+@testset "a dispersion group made only of constant species is refused" begin
+    thrown(f) = try; f(); nothing; catch e; e; end
+    rng = MersenneTwister(23)
+    p, n = 4, 30
+    z = randn(rng, n)
+    eta = [0.3 * j + 0.5 * z[i] for j in 1:p, i in 1:n]
+    Yg = [rand(rng, Gamma(3.0, exp(eta[j, i]) / 3.0)) for j in 1:p, i in 1:n]
+    Yb = [(m = 1 / (1 + exp(-eta[j, i])); rand(rng, Distributions.Beta(10m, 10(1 - m)))) for j in 1:p, i in 1:n]
+    Yvar = copy(Yg)
+    Yg[1, :] .= 1.5; Yg[2, :] .= 2.5            # species 1 and 2 constant, in one group
+    Yb[1, :] .= 0.4; Yb[2, :] .= 0.5
+    X = reshape(randn(rng, p * n), p, n, 1)
+    grp = [1, 1, 2, 3]
+    named(e, caller) = e isa ArgumentError &&
+        startswith(e.msg, "$caller: species 1, 2 (rows of Y) share one dispersion group") &&
+        occursin("every one of them is constant", e.msg)
+
+    @testset "Gamma, all-constant group" begin
+        @test named(thrown(() -> fit_gamma_gllvm_grouped(Yg; K = 1, group = grp)), "fit_gamma_gllvm_grouped")
+        @test named(thrown(() -> fit_gamma_gllvm_grouped_cov(Yg; X = X, K = 1, group = grp)), "fit_gamma_gllvm_grouped_cov")
+    end
+    @testset "Beta, all-constant group" begin
+        @test named(thrown(() -> fit_beta_gllvm_grouped(Yb; K = 1, group = grp)), "fit_beta_gllvm_grouped")
+        @test named(thrown(() -> fit_beta_gllvm_grouped_cov(Yb; X = X, K = 1, group = grp)), "fit_beta_gllvm_grouped_cov")
+    end
+    @testset "one shared group with every species constant" begin
+        Yc = copy(Yg); Yc .= [1.5 * j for j in 1:p, i in 1:n]
+        e = thrown(() -> fit_gamma_gllvm_grouped(Yc; K = 1, group = ones(Int, p)))
+        @test e isa ArgumentError && startswith(e.msg, "fit_gamma_gllvm_grouped: species 1, 2, 3, 4 (rows of Y) share one dispersion group")
+    end
+    @testset "constant species grouped with a varying species is not refused" begin
+        @test !(thrown(() -> fit_gamma_gllvm_grouped(Yg; K = 1, group = [1, 2, 2, 3], iterations = 3)) isa ArgumentError)
+        @test !(thrown(() -> fit_beta_gllvm_grouped(Yb; K = 1, group = [1, 2, 2, 3], iterations = 3)) isa ArgumentError)
+    end
+    @testset "shared-shape Gamma with a constant column still fits" begin
+        Ys = copy(Yvar); Ys[2, :] .= 2.5            # one constant column, the others vary
+        fit = fit_gllvm(Ys; family = Gamma(), K = 1)
+        @test isfinite(fit.loglik)
+        @test fit.converged
+    end
+end

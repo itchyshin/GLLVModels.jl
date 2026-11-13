@@ -58,18 +58,23 @@ function _check_response_support(kind::Symbol, Y::AbstractMatrix, mask;
         "NaN and Inf are not valid responses."))
 end
 
-# Gamma and Beta only: a species whose observed cells are all equal (zero variance) and that
-# has a dispersion of its own has no finite maximum in that dispersion (the log density of a
-# constant column grows like (1/2) log(shape) per cell), so the fit runs the dispersion off to
-# infinity and reports a meaningless log-likelihood (P82 CONST-COLUMN, issue #1143). Refused
-# with the species named. A species that shares its dispersion group with another species is
-# bounded by that species and is not checked; neither is a species with fewer than two
-# observed cells. `gidx[t]` is the dispersion-group index of species `t`.
+# Gamma and Beta only: a dispersion group whose members are ALL constant (every member has
+# zero variance over its observed cells) has no finite maximum in its dispersion (the log
+# density of a constant column grows like (1/2) log(shape) per cell), so the fit runs the
+# dispersion off to infinity and reports a meaningless log-likelihood (P82 CONST-COLUMN,
+# issue #1143). A species with its own dispersion is a group of one. Refused with the
+# species named. A constant species that shares its group with at least one species that
+# varies is NOT refused: that case is outside the ruling (CONST-COLUMN-SCOPE) and the
+# varying member does not guarantee a bounded dispersion (the latent variable can absorb
+# it; the existing large-shape warning is the only guard there). A species with fewer than
+# two observed cells does not count as constant. `gidx[t]` is the dispersion-group index
+# of species `t`.
 function _check_constant_species(Y::AbstractMatrix, mask, gidx::AbstractVector{<:Integer};
         caller::AbstractString)
     p, n = size(Y)
+    const_val = Vector{Any}(nothing, p)   # the constant value of a constant species, else nothing
+    nobs_t = zeros(Int, p)
     for t in 1:p
-        count(==(gidx[t]), gidx) == 1 || continue
         first_y = nothing
         nobs = 0
         constant = true
@@ -85,10 +90,25 @@ function _check_constant_species(Y::AbstractMatrix, mask, gidx::AbstractVector{<
                 break
             end
         end
-        (constant && nobs >= 2) && throw(ArgumentError(
-            "$caller: species $t (row $t of Y) is constant at $(first_y) over its $nobs " *
-            "observed cells and has its own dispersion, whose likelihood has no finite " *
-            "maximum. Drop the species, or put it in a dispersion group with another species."))
+        nobs_t[t] = nobs
+        (constant && nobs >= 2) && (const_val[t] = first_y)
+    end
+    for g in unique(gidx)
+        members = findall(==(g), gidx)
+        all(t -> const_val[t] !== nothing, members) || continue
+        if length(members) == 1
+            t = members[1]
+            throw(ArgumentError(
+                "$caller: species $t (row $t of Y) is constant at $(const_val[t]) over its $(nobs_t[t]) " *
+                "observed cells and has its own dispersion, whose likelihood has no finite " *
+                "maximum. Drop the species, or put it in a dispersion group with a species that varies."))
+        else
+            throw(ArgumentError(
+                "$caller: species $(join(members, ", ")) (rows of Y) share one dispersion group and " *
+                "every one of them is constant over its observed cells, so the group's dispersion " *
+                "likelihood has no finite maximum. Drop these species, or put one of them in a " *
+                "group with a species that varies."))
+        end
     end
     return nothing
 end
