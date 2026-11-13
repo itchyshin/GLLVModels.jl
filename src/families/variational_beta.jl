@@ -264,6 +264,7 @@ function beta_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
     _va_check_mask(mask, Y)
+    _va_check_response("beta_marginal_loglik_va", Y, mask)
     φ > 0 || throw(ArgumentError("precision φ must be > 0"))
     Λ2 = Λ .^ 2
     x, w = _gauss_hermite(gh)
