@@ -312,6 +312,7 @@ function bootstrap_ci(fit::GllvmFit;
     _has_lv_predictor(fit) && throw(ArgumentError(
         "bootstrap_ci for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
 
+    _has_gaussian_record(fit) || _require_complete_y("bootstrap_ci", y)
     if _has_gaussian_record(fit)
         data=y===nothing ? fit.integration.data.responses : y
         n_sites===nothing || n_sites==size(data,2) || throw(ArgumentError("Gaussian integration bootstrap preserves the fitted site count"))
