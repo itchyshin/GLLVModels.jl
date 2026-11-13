@@ -729,7 +729,8 @@ Gaussian/Laplace fallback and retains node counts, controls, starting vectors,
 convergence, caches and observed-input identity. Default `aghq=false` leaves
 legacy fitting unchanged. `X=nothing` remains zero mean, and `β_fixed` retains
 fixed-zero coefficients. `mask`/missing responses and offsets are supported on
-the ordinary loadings-only route. See the executed Gaussian quickstart.
+the ordinary loadings-only route. Omitting `mask` when `Y` contains `missing`
+derives the mask and logs that once. See the executed Gaussian quickstart.
 
 `getLV`, `predict`, `residuals`, `simulate`, `confint`, `profile_ci` and
 `bootstrap_ci` use recorded data and estimator identity. Gaussian `vcov` for a
