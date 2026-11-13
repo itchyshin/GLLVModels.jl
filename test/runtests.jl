@@ -231,6 +231,7 @@ for (_k, _files) in enumerate((
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
         "test_response_support_730_structure.jl", "test_response_support_730_rest.jl",
+        "test_response_support_730_count_cell.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
@@ -932,6 +933,7 @@ println(_SHARD === nothing ?
     _shard_include("test_response_support_730_siblings.jl")
     _shard_include("test_response_support_730_structure.jl")
     _shard_include("test_response_support_730_rest.jl")
+    _shard_include("test_response_support_730_count_cell.jl")
     _shard_include("test_interrupt_rethrow.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
