@@ -66,7 +66,7 @@ for (_k, _files) in enumerate((
         "test_predict_modes_training.jl", "test_confint_bootstrap_verdict_nb1.jl", "test_confint_bootstrap_verdict_zi.jl",
         "test_confint_bootstrap_verdict_bhob.jl", "test_confint_bootstrap_verdict_nb.jl", "test_second_order_delta_followup.jl",
         "test_second_order_lognormal_ci.jl", "test_covariates.jl", "test_cov_mode_search_gamma.jl",
-        "test_formula_input.jl", "test_row_random.jl", "test_rrr.jl",
+        "test_formula_input.jl", "test_row_random.jl", "test_nb1_row_effect_refusal.jl", "test_rrr.jl",
         "test_ordination_uncertainty.jl", "test_ordered_beta.jl", "test_ordered_beta_mode_search.jl",
         "test_variational.jl", "test_va_vs_laplace.jl", "test_bridge_ci.jl",
         "test_bridge_capabilities.jl", "test_phylo_eta_realized.jl", "test_bridge_missing_mask.jl",
@@ -760,6 +760,7 @@ println(_SHARD === nothing ?
     _shard_include("test_fourthcorner.jl")
     _shard_include("test_row_effects.jl")
     _shard_include("test_row_random.jl")
+    _shard_include("test_nb1_row_effect_refusal.jl")
     _shard_include("test_constrained_ordination.jl")
     _shard_include("test_rrr.jl")
     _shard_include("test_quadratic.jl")

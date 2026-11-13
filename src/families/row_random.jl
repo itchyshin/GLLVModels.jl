@@ -126,6 +126,7 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; family = Poisson(),
         link::Union{Nothing, Link} = nothing, σ_row_init::Real = 1.0,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_nb1_row_effect(family, "fit_row_random_gllvm", :random)
     p, n = size(Y)
     n >= 1 || throw(ArgumentError("Y must have at least one site (column)"))
     σ_row_init > 0 || throw(ArgumentError("σ_row_init must be positive (it is fit on the log scale)"))
