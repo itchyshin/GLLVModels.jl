@@ -16,7 +16,7 @@
 
 # Per-site Exponential ELBO at variational params ψ = [m (K); logv (K)].
 function _va_site_exponential_elbo(ψ::AbstractVector, y::AbstractVector,
-        Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector)
+        Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector; obs = nothing)
     p, K = size(Λ)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -25,6 +25,7 @@ function _va_site_exponential_elbo(ψ::AbstractVector, y::AbstractVector,
     μη = β .+ Λ * m
     ℓ = zero(eltype(ψ))
     @inbounds for t in 1:p
+        (obs !== nothing && !obs[t]) && continue
         w = exp(_clamp_eta(-μη[t] + 0.5 * σ2[t]))          # E_q[e^{−η_t}]
         ℓ += -μη[t] - y[t] * w
     end
@@ -40,7 +41,7 @@ end
 # and the objective is −ELBO, so G holds the negation of both. (_clamp_eta's
 # derivative is treated as 1; the clamp is inactive for benign data.)
 function _va_site_exponential_grad!(G::AbstractVector, ψ::AbstractVector, y::AbstractVector,
-        Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector)
+        Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector; obs = nothing)
     p, K = size(Λ)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -50,6 +51,7 @@ function _va_site_exponential_grad!(G::AbstractVector, ψ::AbstractVector, y::Ab
     @inbounds for k in 1:K
         gm = zero(eltype(ψ)); gv = zero(eltype(ψ))
         for t in 1:p
+            (obs !== nothing && !obs[t]) && continue
             w = exp(_clamp_eta(-μη[t] + 0.5 * σ2[t]))      # E_q[e^{−η_t}]
             gm += Λ[t, k] * (y[t] * w - 1)
             gv += Λ2[t, k] * y[t] * w
@@ -64,17 +66,17 @@ end
 
 # Profile (m_s, v_s) for one site by minimising the negative ELBO over [m; logv].
 function _va_site_exponential(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
-        β::AbstractVector; maxiter::Integer = 100, tol::Real = 1e-9)
+        β::AbstractVector; maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     K = size(Λ, 2)
-    negelbo(ψ) = -_va_site_exponential_elbo(ψ, y, Λ, Λ2, β)
-    g!(G, ψ) = _va_site_exponential_grad!(G, ψ, y, Λ, Λ2, β)
+    negelbo(ψ) = -_va_site_exponential_elbo(ψ, y, Λ, Λ2, β; obs = obs)
+    g!(G, ψ) = _va_site_exponential_grad!(G, ψ, y, Λ, Λ2, β; obs = obs)
     res = Optim.optimize(negelbo, g!, zeros(2K), Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
     return -Optim.minimum(res)
 end
 
 """
-    exponential_marginal_loglik_va(Y, Λ, β; maxiter=100, tol=1e-9) -> Float64
+    exponential_marginal_loglik_va(Y, Λ, β; maxiter=100, tol=1e-9, mask=nothing) -> Float64
 
 Gaussian-variational (VA) log-marginal lower bound (ELBO) over the `n` sites
 (columns) of an Exponential GLLVM with log link — `Y` the p×n positive matrix, `Λ`
@@ -82,15 +84,19 @@ p×K, `β` length-p. The per-site posterior `q(z_s)=N(m_s, diag(v_s))` is profil
 the Exponential ELBO is closed-form (no quadrature). The value is a **lower bound**
 on the true log-marginal; as `Λ→0` it equals the independent-Exponential loglik
 exactly. Companion to [`exponential_marginal_loglik_laplace`](@ref).
+`mask` drops cells (`nothing` keeps every cell); unobserved entries of `Y` are ignored.
 """
 function exponential_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
-        β::AbstractVector; maxiter::Integer = 100, tol::Real = 1e-9)
+        β::AbstractVector; maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
+    _va_check_mask(mask, Y)
     Λ2 = Λ .^ 2
     acc = 0.0
     @inbounds for s in axes(Y, 2)
-        acc += _va_site_exponential(view(Y, :, s), Λ, Λ2, β; maxiter = maxiter, tol = tol)
+        obs = mask === nothing ? nothing : view(mask, :, s)
+        acc += _va_site_exponential(view(Y, :, s), Λ, Λ2, β; maxiter = maxiter,
+                                    tol = tol, obs = obs)
     end
     return acc
 end
@@ -106,18 +112,24 @@ finite-difference gradient. The returned `ExponentialFit`'s `loglik` field holds
 maximised ELBO (a lower bound on the true log-marginal), so it sits slightly below
 the Laplace `loglik` for the same data. (No dispersion — `Var = μ²` is fixed.) The
 ELBO is derived for the log link only: any other `link` throws `ArgumentError`.
+
+A `Y` that contains `missing` is fitted, not rejected: the observation mask is
+derived from those cells (a one-time `@info`) and unobserved cells are dropped
+from the ELBO. Pass `mask` to drop additional cells.
 """
 function fit_exponential_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         link::Link = LogLink(),
         β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_exponential_gllvm_va", link, LogLink())
-    _check_response_support(:positive, Y, nothing; caller = "fit_exponential_gllvm_va")
+    _va_check_mask(mask, Y)
+    _check_response_support(:positive, Y, mask; caller = "fit_exponential_gllvm_va")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
     Zemp = log.(max.(Y, 1e-6))
+    mask === nothing || _mask_warmstart!(Zemp, mask)
     β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
@@ -137,7 +149,8 @@ function fit_exponential_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         v = try
-            -exponential_marginal_loglik_va(Y, Λ, β; maxiter = maxiter, tol = tol)
+            -exponential_marginal_loglik_va(Y, Λ, β; maxiter = maxiter, tol = tol,
+                                            mask = mask)
         catch
             return 1e12
         end
@@ -150,4 +163,14 @@ function fit_exponential_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     return ExponentialFit(β̂, Λ̂, link, _fit_verdict(res)...)
+end
+
+function fit_exponential_gllvm_va(Y::AbstractMatrix{<:Union{Missing,Real}};
+        mask = nothing, kwargs...)
+    if mask === nothing
+        Yc, msk = _va_materialize_derived(Y, 1.0, "fit_exponential_gllvm_va")
+    else
+        Yc, msk = _va_materialize_explicit(Y, 1.0, mask)
+    end
+    return fit_exponential_gllvm_va(Yc; mask = msk, kwargs...)
 end
