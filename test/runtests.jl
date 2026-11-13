@@ -962,6 +962,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb_n_init_mite_1022.jl")
     # Binomial probit/cloglog mode search from a saturated wrong-side start (BigFloat reference).
     _shard_include("test_binomial_saturated_mode.jl")
+    _shard_include("test_ordinal_probit_saturated_mode.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
