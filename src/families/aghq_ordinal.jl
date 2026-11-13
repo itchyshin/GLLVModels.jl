@@ -226,3 +226,10 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer
 end
 _ordinal_with_integration(f::OrdinalPerTraitFit,i)=OrdinalPerTraitAGHQFit(f.Λ,f.β,f.τ,f.C,f.link,
     f.loglik,f.converged,f.iterations,vcat(f.β,pack_lambda(f.Λ),_ord_psi_from_tau(f.τ,f.C)),:observed,i)
+
+# Integer-valued float codes: convert once, then run the integer method (#1191).
+function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:AbstractFloat}; kwargs...)
+    return fit_ordinal_gllvm_pertrait_aghq(
+        _ordinal_float_to_int(Y, get(kwargs, :mask, nothing); caller = "fit_ordinal_gllvm_pertrait_aghq");
+        kwargs...)
+end

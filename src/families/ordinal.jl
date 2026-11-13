@@ -57,6 +57,34 @@ function _check_ordinal_levels(Y::AbstractMatrix, obs; caller::AbstractString = 
     return nothing
 end
 
+# Float-valued ordinal codes (what `readdlm` or a CSV reader returns). Integer-valued floats
+# (3.0) are accepted and passed on as `Int`; a non-integer or non-finite observed cell is an
+# `ArgumentError` naming the first such cell. An integer-valued code outside `1:C` (0.0, -1.0)
+# is left to `_check_ordinal_levels`, which gives its own out-of-range error (#1191).
+function _ordinal_float_to_int(Y::AbstractMatrix{<:AbstractFloat}, mask; caller::AbstractString)
+    mask === nothing || size(mask) == size(Y) || throw(DimensionMismatch(
+        "$caller: mask is $(size(mask)); Y is $(size(Y))"))
+    bad = 0
+    first_bad = (0, 0)
+    for i in axes(Y, 2), t in axes(Y, 1)
+        (mask === nothing || mask[t, i]) || continue
+        y = Y[t, i]
+        if !(isfinite(y) && y == round(y) && abs(y) < 1e15)
+            bad += 1
+            bad == 1 && (first_bad = (t, i))
+        end
+    end
+    if bad > 0
+        t, i = first_bad
+        throw(ArgumentError("$caller: Y[$t, $i] = $(Y[t, i]) is not an integer ordinal level " *
+            "($bad observed cell(s) in total). Ordinal codes must be integers coded from 1; " *
+            "integer-valued floats such as 3.0 are accepted. Fix the data, or mark unobserved " *
+            "cells `mask = false`; NaN and Inf are not valid responses."))
+    end
+    return Int[(mask === nothing || mask[t, i]) ? Int(Y[t, i]) : 1
+               for t in axes(Y, 1), i in axes(Y, 2)]
+end
+
 """
     OrdinalLogit
 
@@ -858,3 +886,14 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     return OrdinalPerTraitCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, τ̂, C, link,
                                  _fit_verdict(res)...)
 end
+
+# Integer-valued float codes: convert once, then run the integer method (#1191).
+fit_ordinal_gllvm(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm");
+                      mask = mask, kwargs...)
+fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm_pertrait(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm_pertrait");
+                               mask = mask, kwargs...)
+fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm_pertrait_cov(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm_pertrait_cov");
+                                   mask = mask, kwargs...)
