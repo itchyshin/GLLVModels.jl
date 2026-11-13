@@ -176,6 +176,8 @@ function _laplace_re_sd(family, Y::AbstractMatrix, N::AbstractMatrix,
         mask = nothing, offset = nothing, hessian::Symbol = _default_hessian(family, link))
     p, n = size(Y)
     K = size(Λ, 2)
+    size(N) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
+    _check_postfit_mask(mask, Y)
     out = Matrix{Float64}(undef, n, K)
     @inbounds for s in 1:n
         yi = view(Y, :, s)
