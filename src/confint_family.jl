@@ -1340,7 +1340,9 @@ function _family_ci(fit::GammaGroupedFit, Y::AbstractMatrix;
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
     link = fit.link; group = collect(Int, fit.group); G = length(fit.α)
-    Yf = max.(Float64.(Y), 1e-9)
+    # Not floored here: the Gamma grouped kernel and fitter use `Y` as given (the fitter refuses y <= 0), so the
+    # objective the fitter optimised is rebuilt only if `Y` reaches the kernel unchanged (refs #1155).
+    Yf = Float64.(Y)
     M = _ci_mask(mask, Y)
     θ = vcat(fit.β, pack_lambda(fit.Λ), log.(fit.α))
     nll = function (θv)
@@ -1391,7 +1393,9 @@ function _family_ci(fit::GammaGroupedCovFit, Y::AbstractMatrix;
     link = fit.link; group = collect(Int, fit.group); G = length(fit.α)
     Xfit, γ_free_idx = _slice_fixed_X(X, fit.γ_fixed)
     q = length(γ_free_idx)
-    Yf = max.(Float64.(Y), 1e-9)
+    # Not floored here: the Gamma grouped kernel and fitter use `Y` as given (the fitter refuses y <= 0), so the
+    # objective the fitter optimised is rebuilt only if `Y` reaches the kernel unchanged (refs #1155).
+    Yf = Float64.(Y)
     M = _ci_mask(mask, Y)
     γ_free = fit.γ[γ_free_idx]
     θ = vcat(fit.β, γ_free, pack_lambda(fit.Λ), log.(fit.α))
