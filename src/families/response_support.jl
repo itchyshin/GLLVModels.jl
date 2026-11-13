@@ -58,6 +58,41 @@ function _check_response_support(kind::Symbol, Y::AbstractMatrix, mask;
         "NaN and Inf are not valid responses."))
 end
 
+# Gamma and Beta only: a species whose observed cells are all equal (zero variance) and that
+# has a dispersion of its own has no finite maximum in that dispersion (the log density of a
+# constant column grows like (1/2) log(shape) per cell), so the fit runs the dispersion off to
+# infinity and reports a meaningless log-likelihood (P82 CONST-COLUMN, issue #1143). Refused
+# with the species named. A species that shares its dispersion group with another species is
+# bounded by that species and is not checked; neither is a species with fewer than two
+# observed cells. `gidx[t]` is the dispersion-group index of species `t`.
+function _check_constant_species(Y::AbstractMatrix, mask, gidx::AbstractVector{<:Integer};
+        caller::AbstractString)
+    p, n = size(Y)
+    for t in 1:p
+        count(==(gidx[t]), gidx) == 1 || continue
+        first_y = nothing
+        nobs = 0
+        constant = true
+        for i in 1:n
+            (mask === nothing || mask[t, i]) || continue
+            y = Y[t, i]
+            ismissing(y) && continue
+            nobs += 1
+            if first_y === nothing
+                first_y = y
+            elseif y != first_y
+                constant = false
+                break
+            end
+        end
+        (constant && nobs >= 2) && throw(ArgumentError(
+            "$caller: species $t (row $t of Y) is constant at $(first_y) over its $nobs " *
+            "observed cells and has its own dispersion, whose likelihood has no finite " *
+            "maximum. Drop the species, or put it in a dispersion group with another species."))
+    end
+    return nothing
+end
+
 # Like `_sanitize_missing`, but also replaces the cells that `mask` marks unobserved, so a
 # `NaN` (or any out-of-support) value in a masked-out cell never reaches an
 # `Integer.(...)` conversion, the warm start or the objective. The result always has a
