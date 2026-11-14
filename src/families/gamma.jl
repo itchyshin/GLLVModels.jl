@@ -21,9 +21,12 @@ _glm_logpdf(f::Gamma, μ, n, y)    = _gamma_logpdf(f.α, μ, y)
 const _GAMMA_STIRLING_FROM = 1.0e3
 function _gamma_logpdf(a, μ, y)
     a < _GAMMA_STIRLING_FROM && return logpdf(Gamma(a, μ / a), y)
-    u = (y - μ) / μ
+    r = y / μ
+    # k = r - 1 - log(r). Near r = 1 write it as u - log1p(u), u = r - 1 (no cancellation). Far from 1
+    # that form loses digits (1 + u = r is formed from u, relative error 1e-16 / r), so use the direct form.
+    k = (0.5 < r < 2.0) ? (u = (y - μ) / μ; u - log1p(u)) : (r - 1 - log(r))
     stirling = inv(12a) - inv(360 * a^3) + inv(1260 * a^5)
-    return 0.5 * log(a / (2π)) - stirling - log(y) - a * (u - log1p(u))
+    return 0.5 * log(a / (2π)) - stirling - log(y) - a * k
 end
 
 # ---------------------------------------------------------------------------

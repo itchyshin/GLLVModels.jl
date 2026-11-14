@@ -112,3 +112,14 @@ end
         @test isfinite(d) && isapprox(d, rd; rtol = 1e-10)
     end
 end
+
+# y far below exp(mu_eta): `_gamma_logpdf` used to form log1p(u) with u = y/mu - 1 close to -1, which loses
+# about 1e-16 / (y/mu) of relative accuracy per unit of shape (relative error 1.7e-10 here). Single species,
+# psi = [0, 0] so mu_eta = beta exactly, sigma2 = 1 and KL = 0; literals are the 512-bit BigFloat closed form.
+@testset "variational Gamma ELBO is accurate when y is far from exp(mu_eta)" begin
+    Λ = reshape([1.0], 1, 1)
+    for (a, y, m, ref) in ((1.0e9, 1.0e-6, 5.0, -1.7815510545815067e10), (1.0e15, 1.0e-6, 5.0, -1.781551056907324e16),
+                           (1.0e12, 1.0e-3, 5.0, -1.0907766387958871e13), (1.0e12, 1.0e6, -5.0, -2.4469191244870982e20))
+        @test isapprox(GM._va_site_gamma_elbo([0.0, 0.0], [y], Λ, Λ .^ 2, [m], a), ref; rtol = 1e-13)
+    end
+end
