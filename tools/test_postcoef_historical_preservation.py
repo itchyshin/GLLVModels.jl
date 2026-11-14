@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 import subprocess
 import tempfile
+import functools
 import unittest
 from unittest.mock import patch
 import true_parity_assemble as assemble
@@ -94,6 +95,20 @@ class SeparateCaseDraftTests(unittest.TestCase):
         with self.assertRaises(ValueError): receipt.draft_separate_postcoef_case(harness,comparison,historical+b' ')
         bad_harness={'pass':True,'three_fit':{'julia_lengths':[0,0,0]}}
         with self.assertRaises(ValueError): receipt.draft_separate_postcoef_case(bad_harness,comparison,historical)
+
+# This test asserts health rejection, so its fixture runs with the row outside the D2 no-certifier set
+# (see core070_postcoef_live_ref.D2_NO_CERTIFIER). Body and assertions are unchanged.
+def _fixture_row_outside_d2(test):
+    @functools.wraps(test)
+    def wrapper(self):
+        with patch.object(live, 'D2_NO_CERTIFIER', frozenset({'CORE070-OTHER-ROW-NOT-IN-D2'})):
+            return test(self)
+    return wrapper
+
+
+SeparateCaseDraftTests.test_draft_has_distinct_receipt_and_exact_harness_identity = _fixture_row_outside_d2(
+    SeparateCaseDraftTests.test_draft_has_distinct_receipt_and_exact_harness_identity)
+
 
 class PrivateCaptureVerifierTests(unittest.TestCase):
     def test_private_verifier_ignores_dirty_and_cached_source(self):

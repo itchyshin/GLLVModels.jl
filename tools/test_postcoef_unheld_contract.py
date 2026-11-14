@@ -22,8 +22,7 @@ class CandidateContract(unittest.TestCase):
     def test_report_requires_real_discriminating_evidence(self):
         contract = v.load_contract()
         report = v.synthetic_report(contract)
-        with self.assertRaisesRegex(ValueError, "fit health"):
-            v.check_report(report, contract, "unused")  # numerical admission is held
+        v.check_report(report, contract, "unused")  # D2 (2026-11-09): held health no longer rejects this row
         health = v.core070_postcoef_fit_health
         held = patch.object(health, "classify", health._classify_recorded)
         held.start(); self.addCleanup(held.stop)

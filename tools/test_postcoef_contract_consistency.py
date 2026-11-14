@@ -365,8 +365,8 @@ class PostcoefContract(unittest.TestCase):
         report = verifier.synthetic_report(contract)
         report.update(status="FAIL", all_checks=False, all_positive_pass=False)
         report["cases"]["CORE070-POSTFIT-COEF-EMPTY-NATIVE"] = {"pass": False, "three_fit": mutant}
-        with self.assertRaisesRegex(ValueError, "fit health"):
-            verifier.check_postcoef_control_outcome(real, report, "always_empty", 1, identity, identity, contract)
+        # D2 (2026-11-09, "no certifier"): held health no longer rejects the POST-COEF-EMPTY verifier paths.
+        verifier.check_postcoef_control_outcome(real, report, "always_empty", 1, identity, identity, contract)
         preliminary_health(self)
         verifier.check_postcoef_control_outcome(real, report, "always_empty", 1, identity, identity, contract)
         with self.assertRaises(ValueError):
@@ -436,8 +436,8 @@ class PostcoefContract(unittest.TestCase):
                                 "spurious_coefficient": [1, 6, 7]},
             "fit_health": healthy_fixture(),
         }
-        with self.assertRaisesRegex(ValueError, "fit health"):
-            verifier.check_postcoef_three_fit_evidence(evidence)
+        # D2 (2026-11-09, "no certifier"): held health no longer rejects the POST-COEF-EMPTY verifier paths.
+        verifier.check_postcoef_three_fit_evidence(evidence)
         preliminary_health(self)
         verifier.check_postcoef_three_fit_evidence(evidence)
         absent_names = deepcopy(evidence)
