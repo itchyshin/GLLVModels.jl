@@ -116,6 +116,10 @@ latter a documented extra, not yet a verified twin).
 """
 function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control=(;),
         mask=nothing,offset=nothing,hessian=:observed,lambda_constraint=nothing,kwargs...)
+    # #1107: without a `mask`, `missing` in `Y` is refused with a typed error (it used to be an
+    # internal MethodError); a `Union{Missing,T}` eltype with nothing missing is narrowed to `T`.
+    mask === nothing && (Y = _reject_missing_response("fit_gaussian_gllvm", Y,
+        "Pass `mask = observed_mask(Y)` to fit with missing cells, or remove or impute them."))
     requested_optimizer = get(kwargs, :optimizer, nothing)
     _optimizer_method(requested_optimizer, Optim.LBFGS(); route = "fit_gaussian_gllvm")
     lambda_constraint === nothing || _refuse_optimizer(requested_optimizer,

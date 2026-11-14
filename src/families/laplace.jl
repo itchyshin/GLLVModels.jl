@@ -616,6 +616,21 @@ function _resolve_obs_mask(mask, Y)
                         "(or omit `mask`) to derive it from `missing`."))
 end
 
+# #1107 / #1108: fitters that take no `mask` (and have no `missing` support) used to fail on a
+# `Matrix{Union{Missing,T}}` with an internal MethodError. A `missing` cell now throws an
+# ArgumentError naming `caller`, the count and the first cell, followed by `hint`. When no
+# cell is `missing`, a `Union{Missing,T}` eltype is narrowed to `T` so the matrix behaves
+# exactly like the plain one; any other matrix is returned untouched.
+function _reject_missing_response(caller::AbstractString, Y::AbstractMatrix, hint::AbstractString)
+    if any(ismissing, Y)
+        bad = findall(ismissing, Y)
+        throw(ArgumentError("$caller does not accept `missing` in `Y`: $(length(bad)) missing " *
+                            "cell(s), first at (row, column) = ($(bad[1][1]), $(bad[1][2])). " * hint))
+    end
+    T = nonmissingtype(eltype(Y))
+    return T === eltype(Y) ? Y : Matrix{T}(Y)
+end
+
 # Mask-respecting warm start: overwrite the masked cells of a link-scale empirical
 # matrix `Zemp` with their row's observed mean, so the intercept and SVD loadings
 # warm start ignore missing (and placeholder) values — the fit then depends only on
