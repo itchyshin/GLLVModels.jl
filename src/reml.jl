@@ -115,8 +115,10 @@ profiled out via GLS each step, so they are not optimised parameters). `y` is `p
 `X` the `p×n×q` fixed-effect design (include an intercept column to REML-adjust for
 trait means). Warm start = OLS `β` → PPCA on the residuals. MoreThuente line search.
 """
-function fit_gaussian_reml(y::AbstractMatrix, X::AbstractArray{<:Real, 3}; K::Integer,
+function fit_gaussian_reml(y::AbstractMatrix, X::AbstractArray{<:Real, 3}; mask = nothing, K::Integer,
         g_tol::Real = 1e-6, iterations::Integer = 500)
+    _refuse_mask_route("fit_gaussian_reml", mask)
+    _refuse_missing_gaussian_reml("fit_gaussian_reml", y)
     p, n = size(y)
     K ≥ 1 || throw(ArgumentError("K must be ≥ 1; got $K"))
     K < p || throw(ArgumentError("need K < p; got K=$K, p=$p"))

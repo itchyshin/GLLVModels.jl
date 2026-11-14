@@ -479,7 +479,7 @@ Initial values: `σ₀ = 1.0`, `ν₀ = 3.0` (`log(ν₀ - 1) = log(2.0)`), matc
 `hessian` selects the Laplace log-det curvature (`:observed` default / `:fisher`).
 `disp_group` selects `:species` (per-trait dispersion) or `:shared`.
 """
-function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         nu::Union{Nothing, Real, AbstractVector{<:Real}} = nothing,
         link::Link = IdentityLink(),
         hessian::Symbol = _default_hessian(StudentTFamily(4.0, 1.0), link),
@@ -487,6 +487,7 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         β_init = nothing, Λ_init = nothing, σ_init = nothing, nu_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_studentt_gllvm", mask)
     p, n = size(Y)
     if nu !== nothing
         if nu isa Real
