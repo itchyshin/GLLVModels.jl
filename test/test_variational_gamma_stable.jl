@@ -50,7 +50,7 @@ _vgs_ok(got, ref) = isapprox(got, ref; atol = 2e-8, rtol = 1e-11)
     end
 end
 
-@testset "public marginals at large shape (Lambda = 0: independent Gamma log-likelihood)" begin
+@testset "public marginals at large shape (Lambda = 0: the ELBO equals the independent Gamma density sum)" begin
     Y = [3.0 3.2 2.9; 5.0 4.8 5.1; 0.8 0.81 0.79]; β = log.([3.0, 5.0, 0.8])
     for (a, ref) in ((1.0e9, -3.871915783753714e6), (1.0e12, -3.8719931952169247e9))
         @test _vgs_ok(GM.gamma_marginal_loglik_va(Y, zeros(3, 1), β, a), ref)
