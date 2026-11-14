@@ -93,7 +93,7 @@ for (_k, _files) in enumerate((
         "test_aghq_delta_gamma.jl", "test_aghq_public_binomial.jl", "test_truncated_poisson.jl",
         "test_truncated_nbinom2.jl", "test_truncnb2_precision.jl", "test_truncnb2_mode_search.jl",
         "test_poisson_n_init.jl", "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl",
-        "test_laplace_dual_safety.jl", "test_phylo_nb_xlv.jl", "test_destination_b_joint_identification.jl",
+        "test_laplace_dual_safety.jl", "test_phylo_nb_xlv.jl", "test_phylo_nb_xlv_mode_1125.jl", "test_destination_b_joint_identification.jl",
         "test_destination_b_joint_poisson.jl", "test_gp1_laplace.jl", "test_gp1_verdict.jl",
         "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_nb_grouped_upper_warn.jl",
         "test_gamma_shape_upper_warn.jl", "test_nb_cov_two_starts.jl", "test_fit_verdict_gradient.jl",
@@ -465,6 +465,7 @@ println(_SHARD === nothing ?
     # stays unwired (same flake class; not in #948).
     _shard_include("test_phylo_binomial_xlv.jl")
     _shard_include("test_phylo_nb_xlv.jl")
+    _shard_include("test_phylo_nb_xlv_mode_1125.jl")
     _shard_include("test_xlv_nb_binomial_wired.jl")
 
     #   include("test_phylo_ordinal_xlv.jl")
