@@ -853,6 +853,7 @@ println(_SHARD === nothing ?
     _shard_include("test_cv.jl")
     _shard_include("test_cv_unsupported_773.jl")
     _shard_include("test_cv_species_binomial_trials.jl")
+    _shard_include("test_cv_grouped_dispersion_1211.jl")
     _shard_include("test_gaussian_intercept.jl")
     _shard_include("test_gaussian_formula_covariates.jl")
     _RUN_QUALITY && include("test_quality.jl")
