@@ -170,6 +170,14 @@ end
         zfit = fit_zip_gllvm(YA; K = 1)
         _, w = _zc_records(() -> confint(zfit, YA; method = :bootstrap, n_boot = 4, seed = 1))
         @test isempty(w)
+        afit = fit_poisson_gllvm(YA; K = 1, aghq = 5)
+        _, w = _zc_records(() -> confint(afit, YA; method = :bootstrap, n_boot = 3, seed = 1))
+        @test isempty(w)
+        Xlv = reshape(sin.(1:size(YA, 2)), :, 1)
+        xfit = fit_poisson_gllvm(YA; K = 1, X_lv = Xlv)
+        _, w = _zc_records(() -> confint_lv_effects(xfit, YA, Xlv; method = :bootstrap,
+                                                    n_boot = 3, seed = 1))
+        @test isempty(w)
     end
 
     @testset "sparse columns stay silent in every one of these routes" begin

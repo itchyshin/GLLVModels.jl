@@ -270,7 +270,7 @@ function _family_ci(fit::PoissonFit, Y::AbstractMatrix;
         draw=rng->_poisson_aghq_simulate(fit,n;rng=rng)
         refit=function(Yb)
             fb=try
-                fit_poisson_gllvm(Yb;_poisson_aghq_refit_kwargs(fit)...)
+                fit_poisson_gllvm(Yb;_poisson_aghq_refit_kwargs(fit)...,_warn_zero_columns=false)
             catch e
                 e isa InterruptException && rethrow()
                 return nothing
@@ -302,7 +302,10 @@ function _family_ci(fit::PoissonFit, Y::AbstractMatrix;
     simulate = rng -> _glm_simulate_counts(rng, fit.β, fit.Λ, link, n, offset,
                                            (r, μ) -> Poisson(max(μ, 1e-12)))
     refit = function (Yb)
-        fb = try fit_poisson_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian) catch; return nothing end
+        # Refits are silent about all-zero columns: the user's own fit already warned, and simulated
+        # data can grow new all-zero columns, which would each print a message per replicate.
+        fb = try fit_poisson_gllvm(Yb; K = K, link = link, mask = M, offset = offset, hessian = fit.hessian,
+                                   _warn_zero_columns = false) catch; return nothing end
         return (θ = vcat(fb.β, pack_lambda(fb.Λ)), converged = fb.converged, loglik = fb.loglik)
     end
     return _FamilyCI(θ, nll, _glm_lin_names(p, K), fill(:linear, length(θ)), simulate, refit)
@@ -2436,7 +2439,7 @@ function _family_ci(fit::ZIPFit, Y::AbstractMatrix;
         return Yb
     end
     refit = function (Yb)
-        fb = try fit_zip_gllvm(Yb; K = K, offset = offset) catch; return nothing end
+        fb = try fit_zip_gllvm(Yb; K = K, offset = offset, _warn_zero_columns = false) catch; return nothing end
         return (θ = vcat(fb.βz, fb.βc, pack_lambda(fb.Λc)), converged = fb.converged,
                 loglik = fb.loglik)
     end
@@ -4368,7 +4371,7 @@ function _lv_boot_fns(fit::PoissonFit, Y, X_lv, N,
     boot_kwargs = _lv_boot_kwargs(bootstrap_iterations)
     return (rng -> simulate(fit, n; X_lv = X_lv, rng = rng),
             Yb -> (try fit_poisson_gllvm(Yb; K = K, link = link, X_lv = X_lv,
-                                         boot_kwargs...) catch; nothing end))
+                                         boot_kwargs..., _warn_zero_columns = false) catch; nothing end))
 end
 function _lv_boot_fns(fit::BinomialFit, Y, X_lv, N,
                       bootstrap_iterations::Union{Nothing, Integer})
