@@ -1,7 +1,7 @@
 name: CI
 on:
   # Markdown-only changes skip the suite: a docs push otherwise costs a full
-  # 8-shard run (~1 h of runners) to re-prove code it did not touch. GitHub
+  # 16-job run (2 versions x 8 shards, ~1 h of wall time) to re-prove code it did not touch. GitHub
   # skips the workflow only when EVERY changed file matches, so a mixed
   # commit still runs.
   #
@@ -52,7 +52,7 @@ jobs:
     # Shard suffix only on the routine ubuntu combos (matrix.shard is set there);
     # the full_matrix-only macOS/Windows combos below have no `shard` and run
     # the whole suite in one job, as before.
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }}${{ matrix.shard && format(' shard {0}/4', matrix.shard) || '' }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }}${{ matrix.shard && format(' shard {0}/8', matrix.shard) || '' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -64,16 +64,17 @@ jobs:
         # macOS/Windows coverage runs on demand via workflow_dispatch with
         # full_matrix=true, which is what a release needs.
         #
-        # `shard` 4-ways splits each routine (version, os) combo via
-        # GLLVM_TEST_SHARD (see test/runtests.jl) so 2 versions x 1 os x 4
-        # shards = 8 Julia jobs, each covering ~1/4 of the ~13k tests instead
-        # of one multi-hour job.
+        # `shard` 8-ways splits each routine (version, os) combo via
+        # GLLVM_TEST_SHARD (see test/runtests.jl; its duration table for N = 8
+        # balances the shards) so 2 versions x 1 os x 8 shards = 16 Julia jobs,
+        # each covering ~1/8 of the tests (about 40 to 50 minutes wall) instead
+        # of ~75 to 85 minutes at 4 shards.
         # Pull requests run the current stable Julia only; LTS (1.10) still runs
         # on every push to main and on manual dispatch. This halves the runner
         # queue that held PRs for hours (Shinichi, 24 Oct 2026).
         version: ${{ fromJSON(github.event_name == 'pull_request' && '["1"]' || '["1.10", "1"]') }}
         os: [ubuntu-latest]
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
         include: ${{ (github.event_name == 'workflow_dispatch' && inputs.full_matrix) && fromJSON('[{"version":"1","os":"macOS-latest"},{"version":"1","os":"windows-latest"}]') || fromJSON('[]') }}
     steps:
       - uses: actions/checkout@v6
@@ -84,10 +85,10 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
-          # Empty (not "k/4") on the shard-less full_matrix combos above, which
+          # Empty (not "k/8") on the shard-less full_matrix combos above, which
           # runs the whole suite there unchanged; test/runtests.jl treats an
           # unset/empty GLLVM_TEST_SHARD as "no sharding".
-          GLLVM_TEST_SHARD: ${{ matrix.shard && format('{0}/4', matrix.shard) || '' }}
+          GLLVM_TEST_SHARD: ${{ matrix.shard && format('{0}/8', matrix.shard) || '' }}
           # Julia threads on every sharded job. test/test_bootstrap_sigma_r.jl is the
           # last include in test/runtests.jl, so its shard moves whenever a test file
           # is added (position 544 of 544 was shard 4, 545 of 545 is shard 1); its
@@ -102,7 +103,7 @@ jobs:
           GLLVM_TEST_REQUIRE_THREADS: ${{ matrix.shard && '4' || '' }}
         with:
           # Coverage is off on routine (push/PR) runs — instrumentation cost
-          # across 8 sharded jobs adds up for no benefit most pushes need; turn
+          # across 16 sharded jobs adds up for no benefit most pushes need; turn
           # it on with workflow_dispatch's `coverage` input before a release.
           coverage: ${{ github.event_name == 'workflow_dispatch' && inputs.coverage }}
       - uses: julia-actions/julia-processcoverage@v1
