@@ -1,10 +1,10 @@
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_truncated_nbinom2_parity.jl"
 status = "success"
-run_id = "d983c15faf35c7a183604e1d3780bf000d05000530558f728e890efbdd363bde"
+run_id = "d7f65a2206084b9ec8f7a087dd76f438489026b75b7d487417ab9fa9dafd55b6"
 fixture_sha256 = "d2381c44860777a33fd215479c6eb5e9747753dfa0421c8e9085bddc2f2d7fa5"
 id = "NATIVE-12-TRUNCATED-NB2"
-execution_manifest_sha256 = "2a7dc017c66103af92186756f78a342321e4f332d86d8f722463fca706ac03e9"
+execution_manifest_sha256 = "7aaa9e6316680854bdbdb6ca87eb6cf7750985d15f4f0db625a1c60e70e9f312"
 execution_case_ids = ["NATIVE-12-TRUNCATED-NB2"]
 
 [assertions]

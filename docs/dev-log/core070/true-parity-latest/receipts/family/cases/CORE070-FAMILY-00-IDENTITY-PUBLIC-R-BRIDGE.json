@@ -1,19 +1,295 @@
 {
   "schema": "core070-family-p1-case-receipt/v1",
   "case_id": "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE",
-  "verdict": "NOT_EXECUTED",
-  "evidence_kind": "not_executed",
-  "why_not_executed": "Public R bridge case: gllvmTMB(engine = 'julia') and gllvm_julia_fit() calling GLLVModels through JuliaCall. Not in the frozen three-case bridge sub-contract (docs/dev-log/core070/public-bridge-required-cases.json covers 02, 05 and 07 only), so the P1 bridge twin (tools/core070_family_bridge_p1.R) does not run it. Not run at P1 here.",
-  "read_from": {
-    "docs/dev-log/core070/family-reconciliation-2026-09-01.json": "4623b055d75e3eb9e74fdcf4f4105d6559a5664fdd9663b5953cb8e5856e7f10"
+  "verdict": "R_BOUNDARY_UNCHANGED",
+  "evidence_kind": "r_public_bridge_boundary",
+  "batch": "tools/core070_family_bridge_p1.R --family00-model-change (two public routes plus the explicit unique = FALSE request, on the original Gaussian data)",
+  "measures": "What the pinned P1 public R bridge does with the Gaussian family on the original data. R accepts the family on both public routes and fits a different, reduced model (registered disposition reference_model_change): loadings plus one common residual scale and no per-trait unique part. The formula route (zero mean) has df 5; the matrix route also fits trait intercepts (df 9); the native same-model fit needs df 8. The formula route warns that the per-trait unique part is not fitted. This is not a refusal and not a numeric match; there is no R-vs-Julia comparison for this case.",
+  "disposition": "reference_model_change",
+  "boundary_note": "evidence_kind r_public_bridge_boundary and verdict R_BOUNDARY_UNCHANGED are the checker's non-binding context kind (maintainer ruling 2026-11-13, P126b). For this case they record a changed reference model, not an R refusal.",
+  "reduced_model_df": {
+    "matrix": 9,
+    "formula": 5,
+    "formula_explicit": 5
   },
+  "required_unique_model_df": 8,
+  "common_residual_sigma_eps": 0.697282596385509,
+  "warnings_verbatim": [
+    "! Ordinary `latent()` now includes a per-trait Psi by default (Sigma = Lambda\n  Lambda^T + Psi).\n\u2139 This changed in gllvmTMB 0.2.0; earlier `latent()` was loadings-only (Lambda\n  Lambda^T).\n\u2192 Pass `latent(..., unique = FALSE)` for the old rotation-invariant\n  loadings-only fit.",
+    "engine = 'julia' does not support the trait-specific Psi that ordinary\n`latent()` now carries by default.\n\u2139 Fitting the reduced-rank latent block only. Use `engine = \"tmb\"` for the\n  Lambda Lambda^T + Psi decomposition, or pass `latent(..., unique = FALSE)` to\n  silence this note.\nThis warning is displayed once per session."
+  ],
+  "r_calls": [
+    "gllvm_julia_fit(Y, family = 'gaussian', num.lv = 1)",
+    "gllvmTMB(value ~ 0 + latent(0 + trait | site, d = 1), data = long, unit = 'site', trait = 'trait', family = gaussian(), engine = 'julia')",
+    "gllvmTMB(value ~ 0 + latent(0 + trait | site, d = 1, unique = FALSE), data = long, unit = 'site', trait = 'trait', family = gaussian(), engine = 'julia')"
+  ],
+  "data_sha256": "b87c0cf76d5cf34e5ce475b582d23128fe902b5c7559d147f2e9d9e1d68a4c14",
+  "fixture": {
+    "file": "test/parity/fixtures/core070_gaussian_original.toml",
+    "file_sha256": "52a4664c99295ec675a7b666458350bf57ff57e338c77d5ada1cf9d2e5efba92",
+    "case": "CORE070-AGHQ-K1-GAUSSIAN",
+    "seed": 81031,
+    "p": 4,
+    "n": 120,
+    "K": 1,
+    "data_sha256": "b87c0cf76d5cf34e5ce475b582d23128fe902b5c7559d147f2e9d9e1d68a4c14"
+  },
+  "routes": {
+    "matrix": {
+      "call": "gllvm_julia_fit(Y, family = 'gaussian', num.lv = 1)",
+      "refused": false,
+      "error_class": [],
+      "message": "",
+      "warnings": [],
+      "fit": {
+        "class": [
+          "gllvmTMB_julia",
+          "list"
+        ],
+        "family": "gaussian",
+        "loglik": -580.771348405658,
+        "df": 9,
+        "sigma_eps": 0.695859791510755,
+        "converged": true,
+        "d": 1,
+        "n_traits": 4,
+        "n_units": 120,
+        "alpha": [
+          -0.0115342688491708,
+          -0.0622213314089905,
+          0.0782087615686148,
+          0.0174209967518501
+        ],
+        "loadings_dim": [
+          4,
+          1
+        ],
+        "max_abs_residual_deviation_from_common": 1.11022302462516e-16,
+        "Sigma": [
+          [
+            1.08274645434158,
+            0.427729604548381,
+            -0.334368570220617,
+            0.218198402751513
+          ],
+          [
+            0.427729604548381,
+            0.789893009678586,
+            -0.238952745117267,
+            0.155933039051115
+          ],
+          [
+            -0.334368570220617,
+            -0.238952745117267,
+            0.671017103162273,
+            -0.121897354691472
+          ],
+          [
+            0.218198402751513,
+            0.155933039051115,
+            -0.121897354691472,
+            0.563767225692498
+          ]
+        ],
+        "loadings": [
+          [
+            0.773644365907351
+          ],
+          [
+            0.552876261235003
+          ],
+          [
+            -0.432199321749679
+          ],
+          [
+            0.282039671413627
+          ]
+        ]
+      }
+    },
+    "formula": {
+      "call": "gllvmTMB(value ~ 0 + latent(0 + trait | site, d = 1), data = long, unit = 'site', trait = 'trait', family = gaussian(), engine = 'julia')",
+      "refused": false,
+      "error_class": [],
+      "message": "",
+      "warnings": [
+        "! Ordinary `latent()` now includes a per-trait Psi by default (Sigma = Lambda\n  Lambda^T + Psi).\n\u2139 This changed in gllvmTMB 0.2.0; earlier `latent()` was loadings-only (Lambda\n  Lambda^T).\n\u2192 Pass `latent(..., unique = FALSE)` for the old rotation-invariant\n  loadings-only fit.",
+        "engine = 'julia' does not support the trait-specific Psi that ordinary\n`latent()` now carries by default.\n\u2139 Fitting the reduced-rank latent block only. Use `engine = \"tmb\"` for the\n  Lambda Lambda^T + Psi decomposition, or pass `latent(..., unique = FALSE)` to\n  silence this note.\nThis warning is displayed once per session."
+      ],
+      "fit": {
+        "class": [
+          "gllvmTMB_julia",
+          "list"
+        ],
+        "family": "gaussian",
+        "loglik": -581.668831823926,
+        "df": 5,
+        "sigma_eps": 0.697282596385509,
+        "converged": true,
+        "d": 1,
+        "n_traits": 4,
+        "n_units": 120,
+        "alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "loadings_dim": [
+          4,
+          1
+        ],
+        "max_abs_residual_deviation_from_common": 5.55111512312578e-17,
+        "Sigma": [
+          [
+            1.08236438591359,
+            0.428546209621044,
+            -0.336744512554551,
+            0.21647599983348
+          ],
+          [
+            0.428546209621044,
+            0.794260307133578,
+            -0.242066313801618,
+            0.155612178825695
+          ],
+          [
+            -0.336744512554551,
+            -0.242066313801618,
+            0.676414718723753,
+            -0.122277472370011
+          ],
+          [
+            0.21647599983348,
+            0.155612178825695,
+            -0.122277472370011,
+            0.564809016058134
+          ]
+        ],
+        "loadings": [
+          [
+            0.772114866254672
+          ],
+          [
+            0.55502908744629
+          ],
+          [
+            -0.436132662731921
+          ],
+          [
+            0.280367610176383
+          ]
+        ]
+      }
+    },
+    "formula_explicit": {
+      "call": "gllvmTMB(value ~ 0 + latent(0 + trait | site, d = 1, unique = FALSE), data = long, unit = 'site', trait = 'trait', family = gaussian(), engine = 'julia')",
+      "refused": false,
+      "error_class": [],
+      "message": "",
+      "warnings": [],
+      "fit": {
+        "class": [
+          "gllvmTMB_julia",
+          "list"
+        ],
+        "family": "gaussian",
+        "loglik": -581.668831823926,
+        "df": 5,
+        "sigma_eps": 0.697282596385509,
+        "converged": true,
+        "d": 1,
+        "n_traits": 4,
+        "n_units": 120,
+        "alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "loadings_dim": [
+          4,
+          1
+        ],
+        "max_abs_residual_deviation_from_common": 5.55111512312578e-17,
+        "Sigma": [
+          [
+            1.08236438591359,
+            0.428546209621044,
+            -0.336744512554551,
+            0.21647599983348
+          ],
+          [
+            0.428546209621044,
+            0.794260307133578,
+            -0.242066313801618,
+            0.155612178825695
+          ],
+          [
+            -0.336744512554551,
+            -0.242066313801618,
+            0.676414718723753,
+            -0.122277472370011
+          ],
+          [
+            0.21647599983348,
+            0.155612178825695,
+            -0.122277472370011,
+            0.564809016058134
+          ]
+        ],
+        "loadings": [
+          [
+            0.772114866254672
+          ],
+          [
+            0.55502908744629
+          ],
+          [
+            -0.436132662731921
+          ],
+          [
+            0.280367610176383
+          ]
+        ]
+      }
+    }
+  },
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "julia_version": "1.10.12",
+  "gllvmodels_path": "/home/snakagaw/hsq_work/parity-gllvm-1110-w15-d8/repo/src/GLLVModels.jl",
+  "gllvmodels_source_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
+  "gllvmtmb_version": "0.7.1",
+  "source_pin": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "installed_tree_sha256": "c7a21d29b958e3ebc5778e07fec988366d8f17918a77059701cd50e2db23bb48",
+    "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+    "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+    "version": "0.7.1",
+    "marker_path": "/home/snakagaw/hsq_work/codex-p1-postcoef-current-20261104/totoro-build/library/gllvmTMB/CORE070_SOURCE_PIN.toml",
+    "marker_sha256": "7ea067df756087a1f863c0f8355c89b7f702fd152030c220d344e6d7ea15c355"
+  },
+  "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+  "read_from": {
+    "docs/dev-log/core070/true-parity-latest/receipts/family/first-seven-boundary/r-public-bridge-model-change.json": "d3731bd0cfe7691e46c97d936c43ba134a87a36507428a22469eb20022ae5282",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/run-commit.json": "d533f37732921352c791c4ed4a202b83cf396d6353dc8c0ab2277f38ab445051",
+    "tools/core070_family_bridge_p1.R": "74deecd535dabaa67506be8c784ebc71083c65a0eefef799822f8c62a596412c",
+    "tools/core070_source_pin.R": "ee3e0c9593d7ca236bb2f157fce3acfdb1dc601baeaf9417edbb63e1ff9b332b",
+    "tools/core070_oracle_pins.toml": "898900157320421614eed9e2236441719a7bb815f7131c78332ea4366f4fe720",
+    "test/parity/fixtures/core070_gaussian_original.toml": "52a4664c99295ec675a7b666458350bf57ff57e338c77d5ada1cf9d2e5efba92",
+    "docs/dev-log/core070/bridge-model-admission-contract.json": "723a0c123e5c694d9c8be5951efee3a8a0b9f3507a97f001d612bab33347a6f1"
+  },
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/family/first-seven-boundary/r-public-bridge-model-change.json"
+  ],
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4"
 }

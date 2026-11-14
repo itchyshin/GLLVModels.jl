@@ -25,13 +25,13 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/run.toml": "67d200c4d9586154146005ce68529f24c84949653d9a7825b0916aaa11ea70a0",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/values-NATIVE-12-TRUNCATED-NB2.toml": "c2a8b1fbf24368a9b37c23d41301d09e9d5322cf24b5293def43001f6dd36a4e",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/verify.txt": "5c5ad9e792b82362f4d3587e2f3d9810ea67eb0edcaefbe3301124f79e23b515",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/cell-NATIVE-12-TRUNCATED-NB2.toml": "07f5539ec886090a6283bf0ce4b65895f450c99b51c8605a26ead6ae55c0f4ad",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-policy.toml": "6f46e53535bcb0b20e1deb7d95f4a185fbb0731f3666390946dbaa63f66cfb6e",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-formula.toml": "51acfb2b8510b055ab7d8c7bdab3610c4455984635c2c64e7a102623a239a376"
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/run.toml": "6ed57f1bd3ec929e0c04da07361a03833926fa1891e21f7503da7f2860bcf224",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/values-NATIVE-12-TRUNCATED-NB2.toml": "1556af03179060c0f7a5c28d44bff2f26c0f0aa3e35819aa1fbb9b98e9112637",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/run-commit.json": "d533f37732921352c791c4ed4a202b83cf396d6353dc8c0ab2277f38ab445051",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/verify.txt": "cf97be836b3879467737386fb789c0f9c43d7d3b56c0a4649efc117701f7cf3a",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/cell-NATIVE-12-TRUNCATED-NB2.toml": "19e70c72759ddd69ef54bc6870690261a46c0fcfdd1c2e6d4dbbc78281f58ae2",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-policy.toml": "fde3c60d2ee606e4ecbebc6c1530111d2e3c17539426e34a6e8a323804dd8056",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/truncnb2-formula.toml": "5353bae16f07741a79095c571cafb4e9f5eddd54cdcb694f7265a209eb298f4b"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-truncated-nb2/values-NATIVE-12-TRUNCATED-NB2.toml",
@@ -42,11 +42,11 @@
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
     "pin": "P1",
@@ -66,12 +66,12 @@
       {
         "case_id": "NATIVE-12-TRUNCATED-NB2",
         "quantity": "logLik",
-        "max_abs_diff": 7.35366256776615e-07,
+        "max_abs_diff": 7.363528311543632e-07,
         "tolerance": 0.0013753913742176867,
         "tolerance_rule": "the cell's own test, @test jl_logL \u2248 r.logLik rtol = 1e-6 (rtol=1e-06, atol=0; tolerance = max(atol, rtol*max(|R|,|Julia|)))",
         "n_values": 1,
         "r_value": -1375.3913742176867,
-        "julia_value": -1375.3913734823204,
+        "julia_value": -1375.3913734813339,
         "diff_source": "recomputed from the saved R and Julia values",
         "discriminating": true
       }

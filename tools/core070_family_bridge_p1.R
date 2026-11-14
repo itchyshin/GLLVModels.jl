@@ -3,6 +3,7 @@
 #
 #   Rscript --vanilla tools/core070_family_bridge_p1.R <runs-dir> <destination>
 #   Rscript --vanilla tools/core070_family_bridge_p1.R --family11-boundary <destination>
+#   Rscript --vanilla tools/core070_family_bridge_p1.R --family00-model-change <destination>
 #
 # The second form recreates the registered seed-58 truncated-NB2 response without fitting,
 # probes both public R bridge routes, and writes r-public-bridge.json. It requires the same
@@ -65,7 +66,7 @@ if (length(args) == 2L && identical(args[[1]], "--family11-boundary")) {
   julia_home <- Sys.getenv("JULIA_HOME")
   stopifnot(nzchar(julia_home))
   engine_commit <- Sys.getenv("GLLVM_PARITY_GLVMODELS_COMMIT", "")
-  if (!grepl("^4b78fa012", engine_commit)) stop("GLLVM_PARITY_GLVMODELS_COMMIT must identify 4b78fa012")
+  if (!nzchar(engine_commit)) stop("GLLVM_PARITY_GLVMODELS_COMMIT must identify the GLLVModels run commit")
 
   # Recreate the registered seed-58 response in Julia without invoking a
   # likelihood or optimiser. These statements mirror the fixture recipe in
@@ -134,6 +135,126 @@ if (length(args) == 2L && identical(args[[1]], "--family11-boundary")) {
   out <- file.path(output_dir, "r-public-bridge.json")
   jsonlite::write_json(result, out, auto_unbox = TRUE, pretty = TRUE, null = "null", na = "null")
   cat("CORE070_FAMILY11_BOUNDARY_WRITTEN", sha256_file(out), "\n")
+  quit(save = "no", status = 0L)
+}
+
+# Narrow probe for FAMILY-00's public R bridge case. R does NOT refuse the Gaussian family: both public
+# routes accept it, warn on the formula route, and fit a reduced model (loadings plus one common residual
+# scale, no per-trait unique part), which is not the model the native Gaussian cases fit. This mode runs
+# both routes once on the original Gaussian data, plus the explicit unique = FALSE request the registered
+# rule compares against, and records what R does, verbatim. It decides nothing;
+# tools/core070_family_p1_receipts.py validates the record and derives the case receipt.
+#   Rscript --vanilla tools/core070_family_bridge_p1.R --family00-model-change <destination>
+# Same environment as --family11-boundary. The destination must not exist. The formula route runs first
+# because its model-change warning is emitted once per R session.
+if (length(args) == 2L && identical(args[[1]], "--family00-model-change")) {
+  output_dir <- args[[2]]
+  if (file.exists(output_dir)) stop("destination must not exist: ", output_dir)
+  root <- normalizePath(".")
+  P1 <- "9539352f66f2db2cc26b1c393e67212a359b60c9"
+  parity_pin <- toupper(trimws(Sys.getenv("GLLVM_PARITY_PIN", "P1")))
+  if (!identical(parity_pin, "P1")) stop("this probe runs at P1 only")
+  rlib <- Sys.getenv("GLLVM_P1_RLIB", "")
+  if (!nzchar(rlib)) stop("GLLVM_P1_RLIB is required")
+  rlib <- normalizePath(rlib, mustWork = TRUE)
+  .libPaths(c(rlib, .libPaths()))
+  suppressPackageStartupMessages(library(gllvmTMB, lib.loc = rlib))
+  stopifnot(normalizePath(find.package("gllvmTMB")) == normalizePath(file.path(rlib, "gllvmTMB")),
+            as.character(packageVersion("gllvmTMB")) == "0.7.1")
+  source(file.path(root, "tools/core070_source_pin.R"))
+  source_pin <- core070_source_pin(root, rlib, "P1", P1)
+  jlenv <- Sys.getenv("GLLVM_BRIDGE_JLENV")
+  stopifnot(nzchar(jlenv), identical(normalizePath(Sys.getenv("JULIA_PROJECT")), normalizePath(jlenv)))
+  julia_home <- Sys.getenv("JULIA_HOME")
+  stopifnot(nzchar(julia_home))
+  engine_commit <- Sys.getenv("GLLVM_PARITY_GLVMODELS_COMMIT", "")
+  if (!nzchar(engine_commit)) stop("GLLVM_PARITY_GLVMODELS_COMMIT must identify the GLLVModels run commit")
+  gllvm_julia_setup(jl_path = jlenv, julia_home = julia_home)
+  engine_path <- JuliaCall::julia_eval("pathof(GLLVModels)")
+  engine_root <- dirname(dirname(engine_path))
+  actual_commit <- trimws(system2("git", c("-C", shQuote(engine_root), "rev-parse", "HEAD"), stdout = TRUE))
+  stopifnot(identical(actual_commit, engine_commit))
+  if (system2("git", c("-C", shQuote(engine_root), "diff", "--quiet", "HEAD", "--", "src")) != 0L)
+    stop("executed Julia source differs from the registered commit")
+  actual_src_tree <- trimws(system2("git", c("-C", shQuote(engine_root), "rev-parse", "HEAD:src"), stdout = TRUE))
+  fixture_rel <- "test/parity/fixtures/core070_gaussian_original.toml"
+  fixture_path <- file.path(root, fixture_rel)
+  JuliaCall::julia_assign("core070_fixture_path", fixture_path)
+  JuliaCall::julia_command("using TOML; core070_case = TOML.parsefile(core070_fixture_path)[\"cases\"][1]")
+  case_id <- JuliaCall::julia_eval("core070_case[\"id\"]")
+  stopifnot(identical(case_id, "CORE070-AGHQ-K1-GAUSSIAN"))
+  p <- as.integer(JuliaCall::julia_eval("core070_case[\"p\"]"))
+  n <- as.integer(JuliaCall::julia_eval("core070_case[\"n\"]"))
+  K <- as.integer(JuliaCall::julia_eval("core070_case[\"K\"]"))
+  seed <- as.integer(JuliaCall::julia_eval("core070_case[\"seed\"]"))
+  values <- as.numeric(JuliaCall::julia_eval("Vector{Float64}(core070_case[\"responses\"])"))
+  stopifnot(length(values) == p * n)
+  sha256_values <- function(v) {
+    path <- tempfile(); on.exit(unlink(path), add = TRUE)
+    writeBin(as.double(v), path, size = 8L, endian = "little")
+    unname(tools::sha256sum(path))
+  }
+  sha256_file <- function(path) unname(tools::sha256sum(path))
+  Y <- matrix(values, nrow = p, ncol = n)
+  dimnames(Y) <- list(sprintf("trait%02d", seq_len(p)), sprintf("site%03d", seq_len(n)))
+  d <- expand.grid(trait = rownames(Y), site = colnames(Y))
+  d$value <- as.vector(Y)
+  d$trait <- factor(d$trait, levels = rownames(Y)); d$site <- factor(d$site, levels = colnames(Y))
+  num <- function(x) if (is.null(x)) NULL else as.numeric(x)
+  summarise_fit <- function(fit) {
+    sigma_eps <- num(fit$sigma_eps)[1L]
+    load <- if (is.null(fit$loadings)) NULL else as.matrix(fit$loadings)
+    Sigma <- if (is.null(fit$Sigma)) NULL else as.matrix(fit$Sigma)
+    resid_dev <- NULL
+    if (!is.null(load) && !is.null(Sigma) && is.finite(sigma_eps))
+      resid_dev <- max(abs(Sigma - tcrossprod(load) - diag(sigma_eps^2, nrow(Sigma))))
+    list(class = class(fit), family = as.character(fit$family)[1L], loglik = num(fit$loglik)[1L],
+         df = as.integer(fit$df)[1L], sigma_eps = sigma_eps, converged = isTRUE(fit$converged),
+         d = as.integer(fit$d)[1L], n_traits = as.integer(fit$n_traits)[1L], n_units = as.integer(fit$n_units)[1L],
+         alpha = num(fit$alpha), loadings_dim = if (is.null(load)) NULL else dim(load),
+         max_abs_residual_deviation_from_common = resid_dev,
+         Sigma = if (is.null(Sigma)) NULL else unname(Sigma),
+         loadings = if (is.null(load)) NULL else unname(load))
+  }
+  capture_route <- function(expr, call) {
+    warnings <- character()
+    value <- tryCatch(withCallingHandlers(expr, warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w)); invokeRestart("muffleWarning")
+    }), error = function(e) e)
+    refused <- inherits(value, "error")
+    list(call = call, refused = refused,
+         error_class = if (refused) class(value) else character(),
+         message = if (refused) conditionMessage(value) else "",
+         warnings = warnings,
+         fit = if (refused) NULL else summarise_fit(value))
+  }
+  fam <- gaussian()
+  formula_call <- paste0("gllvmTMB(value ~ 0 + latent(0 + trait | site, d = ", K, "), data = long, unit = 'site', ",
+                         "trait = 'trait', family = gaussian(), engine = 'julia')")
+  matrix_call <- paste0("gllvm_julia_fit(Y, family = 'gaussian', num.lv = ", K, ")")
+  formula_route <- capture_route(gllvmTMB::gllvmTMB(
+    value ~ 0 + latent(0 + trait | site, d = K), data = d, unit = "site", trait = "trait",
+    family = fam, engine = "julia"), formula_call)
+  matrix_route <- capture_route(gllvmTMB::gllvm_julia_fit(Y, family = "gaussian", num.lv = K), matrix_call)
+  explicit_call <- paste0("gllvmTMB(value ~ 0 + latent(0 + trait | site, d = ", K, ", unique = FALSE), data = long, ",
+                          "unit = 'site', trait = 'trait', family = gaussian(), engine = 'julia')")
+  explicit_route <- capture_route(gllvmTMB::gllvmTMB(
+    value ~ 0 + latent(0 + trait | site, d = K, unique = FALSE), data = d, unit = "site", trait = "trait",
+    family = fam, engine = "julia"), explicit_call)
+  dir.create(output_dir, recursive = TRUE)
+  result <- list(schema = "core070-family00-r-model-change/v1",
+    case_id = "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE", pin = "P1", reference_commit = P1,
+    gllvmtmb_version = as.character(packageVersion("gllvmTMB")), source_pin = source_pin,
+    namespace_sha256 = unname(tools::sha256sum(file.path(rlib, "gllvmTMB", "NAMESPACE"))),
+    fixture = list(file = fixture_rel, file_sha256 = sha256_file(fixture_path), case = case_id, seed = seed,
+                   p = p, n = n, K = K, data_sha256 = sha256_values(values)),
+    required_unique_model_df = 2L * p,
+    routes = list(matrix = matrix_route, formula = formula_route, formula_explicit = explicit_route),
+    capture = list(r_version = R.version.string, julia_version = JuliaCall::julia_eval("string(VERSION)"),
+      glvmodels_path = engine_path, glvmodels_commit = actual_commit, glvmodels_src_tree = actual_src_tree))
+  out <- file.path(output_dir, "r-public-bridge-model-change.json")
+  jsonlite::write_json(result, out, auto_unbox = TRUE, pretty = TRUE, null = "null", na = "null", digits = NA)
+  cat("CORE070_FAMILY00_MODEL_CHANGE_WRITTEN", sha256_file(out), "\n")
   quit(save = "no", status = 0L)
 }
 

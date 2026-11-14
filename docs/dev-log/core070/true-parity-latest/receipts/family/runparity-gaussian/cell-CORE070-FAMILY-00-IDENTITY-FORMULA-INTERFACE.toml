@@ -1,14 +1,14 @@
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_gaussian_original_required.jl"
-status = "failed"
-run_id = "a2b5427c4ed8e528cb69d3eda854cebf2951e723011796da19b7b506e896e957"
-fixture_sha256 = "2fc23a385c71aac712c3029784917e5f8138c0c10448363ec1116dccf3ddea44"
+status = "success"
+run_id = "580992e35e544ce46fb4d378cd9e7cd70aa087adb2353789eac7535366b5a0af"
+fixture_sha256 = "72d07566dd39763922910dfb45379ab5faadc49d9956d7bbb34d419f3603127f"
 id = "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE"
-execution_manifest_sha256 = "02003e2aa36618c4b0ff8c1167ad8258db576795c16271ec8540c4deba78666c"
+execution_manifest_sha256 = "380639725d7a82d78f15b265c5e605ebdc74279133abe42adce22a9b088045f7"
 execution_case_ids = ["CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE", "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL"]
 
 [assertions]
-passed = 30
+passed = 31
 broken = 0
-failed = 1
+failed = 0
 errored = 0

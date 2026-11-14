@@ -27,11 +27,11 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run.toml": "765d61005fb4ea21bdc11a3018a927359c0ac0a090d491d4b196428df13100b0",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run.toml": "74221a683382d74590b0d8f01be8fd98676e1c121ba5a1c6f4a730779193facb",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-05-GAMMA.toml": "5cb1c4fbdfb2988a40d05ca886274f37be39e938126470eac4dd690496fdd3f9",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run-commit.json": "08ed3d72513dc9465ad0518c303887d24f27d370873c8661d089703746d3f805",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt": "7526101ac0b5001f6d6610a2796d3f7f88b3561689baf2a75decf48eb5332bc4",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-05-GAMMA.toml": "8a7152107ad81c5e8653c07efc4851c126694f8063b431649b015c857bcf9ef6"
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/run-commit.json": "d533f37732921352c791c4ed4a202b83cf396d6353dc8c0ab2277f38ab445051",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/verify.txt": "58712c81c75db1f9f7d86eae3d0f1dae4b720976cd8c36f76e79b6fd7e65e66a",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/cell-NATIVE-05-GAMMA.toml": "52592ca03380efe62ed031f3937f9f3303707ac8ad98a6285128c354783f5d02"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-dispersion/values-NATIVE-05-GAMMA.toml",
@@ -41,11 +41,11 @@
   "pin": "P1",
   "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
-  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+  "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "4b78fa01245381f6c0ab8a8b9ea0bc581ade825a",
+  "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
   "glvmodels_worktree_dirty": [],
-  "glvmodels_src_tree": "ee4140b88eb634453f24bcd70bdfe9a6914281d6",
+  "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",
   "comparison": {
     "pin": "P1",

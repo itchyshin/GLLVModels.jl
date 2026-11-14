@@ -2,7 +2,7 @@ case_id = "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE"
 
 [[values]]
 label = "logLik, native route (the formula routes are checked against it)"
-julia = -820.5485342076021
+julia = -820.5485342067836
 test = "@test native.loglik≈r.logLik rtol=1e-6"
 rtol = 1.0e-6
 r = -820.548538160879

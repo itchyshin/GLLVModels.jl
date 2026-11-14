@@ -18,7 +18,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-aghq.json` (21 rows, sha256 `ab5ecf9bbd472e75b1acfc1087d2672c4bc9b20ab7442fedf077d8da3301be50`)
 - `docs/dev-log/core070/true-parity-latest/case-map-covariance.json` (19 rows, sha256 `dab8c29bdd6d6285d8fbe8a928609db6a4a405fbc8c5d07be507593fbb0c0b20`)
 - `docs/dev-log/core070/true-parity-latest/case-map-data.json` (36 rows, sha256 `611906beb2d513aa8f055a00cf7658460f35fe45b4f31f29cc676b75b73a9c9f`)
-- `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `793cec004417e630a2774b4c646b7bff06e84c59d26b31ac80faf57697a8a2b2`)
+- `docs/dev-log/core070/true-parity-latest/case-map-family.json` (26 rows, sha256 `0178c6bda010d7e3aa941b61b6f381e9dc85eb2707ffcef3a13f6729c35f57ba`)
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `e6d69cb2385b5d6cd14ffd22cccab9b6f8b1ad4e22e15db2d40fa3a08288fe62`)
@@ -32,13 +32,13 @@ Inputs:
 | `aghq` | 14 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 21 |
 | `covariance` | 17 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 19 |
 | `data` | 27 | 0 | 5 | 0 | 0 | 0 | 4 | 0 | 36 |
-| `family` | 24 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 26 |
+| `family` | 25 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 26 |
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 21 |
 | `namespace` | 55 | 0 | 10 | 3 | 0 | 0 | 0 | 1 | 69 |
 | `postfit` | 45 | 1 | 4 | 0 | 1 | 1 | 0 | 0 | 52 |
-| `all` | 206 | 63 | 35 | 3 | 2 | 1 | 6 | 1 | 317 |
+| `all` | 207 | 63 | 35 | 3 | 1 | 1 | 6 | 1 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -215,7 +215,7 @@ decision for the PR that measures it, not something this tool does.
 | data-RD-PHYLO-DISPOSITION `data/RD-PHYLO-DISPOSITION` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family data; evidence_tier not_measured; measured_against P1 |
 | data-RD-TEMPORAL-DISPOSITION `data/RD-TEMPORAL-DISPOSITION` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family data; evidence_tier not_measured; measured_against P1 |
 | data-RD-ISDM-DISPOSITION `data/RD-ISDM-DISPOSITION` | required_core; cases: none | DISPOSITION-SIGNED | Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; signed_on: 2026-10-05 | family data; evidence_tier not_measured; measured_against P1 |
-| family-FAMILY-00-IDENTITY `family/FAMILY-00-IDENTITY` | required_core; cases: CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL, CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE, CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE | PARTIAL | not bound; cited: non-binding docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.json, non-binding docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.json, non-binding docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE.json | family family; evidence_tier partial_case_not_executed; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| family-FAMILY-00-IDENTITY `family/FAMILY-00-IDENTITY` | required_core; cases: CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL, CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE, CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.json, docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.json | family family; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | family-FAMILY-01-CLOGLOG `family/FAMILY-01-CLOGLOG` | required_core; cases: CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL.json | family family; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | family-FAMILY-01-LOGIT `family/FAMILY-01-LOGIT` | required_core; cases: CORE070-FAMILY-01-LOGIT-NATIVE-MODEL | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-01-LOGIT-NATIVE-MODEL.json | family family; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | family-FAMILY-01-PROBIT `family/FAMILY-01-PROBIT` | required_core; cases: CORE070-FAMILY-01-PROBIT-NATIVE-MODEL | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-01-PROBIT-NATIVE-MODEL.json | family family; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |

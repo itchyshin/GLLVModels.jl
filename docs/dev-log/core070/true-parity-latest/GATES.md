@@ -830,19 +830,27 @@ Otherwise the row reads `NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT` with a reason th
 (maintainer ruling 2026-10-05 (D-319), N1)". A row without the field is judged exactly as before. The context receipts
 are not read by the receipt-status check, because their verdicts are not pass values by design. The row still counts
 in `bound=` and `bound_numeric=`: what binds it is the compared cases, and the context case is recorded, not
-compared. Note on FAMILY-00: its R bridge silently fits a different model (df 5 against 8); the rule sets the case
-aside but does not make it a twin, and the row also needs its formula-interface case to pass.
+compared. Note on FAMILY-00: R does not refuse the Gaussian family at its public bridge. It accepts it and fits a
+different, reduced model (registered disposition `reference_model_change`: one common residual scale and no per-trait
+unique part; df 5 on the formula route, and df 9 on the matrix route, which also fits trait intercepts, against the
+required df 8; the formula route warns). The rule sets the case aside but does not make it a twin, and
+the row also needs its native and formula-interface cases to pass.
 
 Row edits, made by the owning tools (never by hand): `tools/core070_covariance_p1_receipts.py` (`COV_N1_CONTEXT`,
 `n1_overlay`) binds the 7 covariance rows above, each only when every non-bridge case is a passing numeric comparison
 from an accepted batch and each bridge case has an `R_BOUNDARY_UNCHANGED` receipt;
 `tools/core070_family_p1_receipts.py` (`FAMILY_N1_CONTEXT`, `n1_context`) applies the same test to the two family rows.
-Both stay `partial_case_not_executed` (HELD): their bridge cases `CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE` and
-`CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE` are `NOT_EXECUTED` (outside the frozen three-case bridge sub-contract), not
-an R refusal on a receipt. `family/FAMILY-11-LOG` binds once a P1 R probe records the bridge refusal
-(`GJL-GATE-FAMILY`) as `R_BOUNDARY_UNCHANGED` (tracked follow-up; its row carries this note).
-`family/FAMILY-00-IDENTITY` would still not bind then: its native and formula-interface cases FAIL on the current
-receipts.
+`family/FAMILY-11-LOG` has a retained P1 probe record of R's refusal (`GJL-GATE-FAMILY`) and its context case is an
+`R_BOUNDARY_UNCHANGED` receipt. `family/FAMILY-00-IDENTITY` is a different situation and is not an N1 refusal: R
+accepts the family and fits a reduced model. Under the maintainer ruling of 13 Nov 2026 (P126b) a P1 probe record that
+captures both public routes (`gllvm_julia_fit` and `gllvmTMB(..., engine = "julia")`) on the original Gaussian data, with
+the `reference_model_change` behaviour (warning on the formula route, common residual, df 5 on the formula route and 9
+on the matrix route against df 8) validated by
+`tools/core070_family_p1_receipts.py`, stands as the same non-binding context kind for that one case. The row carries
+its own tier and note wording ("not a numeric match and not an R refusal"); the checker, the assembler and every
+tolerance are unchanged, and `FAMILY-00` is not in the numeric bridge contract. Without the record the case stays
+`NOT_EXECUTED` and the row stays `partial_case_not_executed`. The row binds only if its native and formula-interface
+cases also pass; they pass on the current receipts.
 
 Negative controls (checker, group "N1 boundary context"): a bridge refusal and an admission-only case each bind as
 context; without the field the uncompared case still blocks the row; a not-executed bridge case, a context

@@ -9,7 +9,7 @@ r = 1375.3913742176867
 atol = 1.0e-6
 [[values]]
 label = "logLik"
-julia = -1375.3913734823204
+julia = -1375.3913734813339
 test = "@test jl_logL ≈ r.logLik rtol = 1e-6"
 rtol = 1.0e-6
 r = -1375.3913742176867

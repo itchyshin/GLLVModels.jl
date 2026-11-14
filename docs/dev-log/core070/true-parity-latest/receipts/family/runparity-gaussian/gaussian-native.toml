@@ -2,6 +2,7 @@ delta_loglik = 6.821210263296962e-13
 native_unique_variances = [0.8083893035297767, 0.1617950193449987, 0.5784715840665381, 0.4264564407064839]
 native_health = true
 native_total_variances = [0.8083900845891858, 0.16179580040440783, 0.5784723651259472, 0.42645722176589307]
+expected_random_effects = ["z_B"]
 r_sigma_mapped = true
 r_health = true
 native_dof = 8
