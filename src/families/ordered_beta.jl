@@ -98,7 +98,7 @@ function ordered_beta_logp(y, η, c0, c1, φ)
         logb = _ob_logsigmoid(η - c1)
         logmass = loga + _ob_log1mexp(logb - loga)
         μ = clamp(_ob_logistic(η), _OB_MU_LO, _OB_MU_HI)
-        return logmass + logpdf(Beta(μ * φ, (one(μ) - μ) * φ), y)
+        return logmass + _beta_logpdf(μ * φ, (one(μ) - μ) * φ, y)
     end
 end
 

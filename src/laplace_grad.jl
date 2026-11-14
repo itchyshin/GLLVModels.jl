@@ -467,7 +467,10 @@ _beta_score_scalar(η, φ, y) = begin
     μstar = digamma(μ * φ) - digamma((1 - μ) * φ)
     return φ * (ystar - μstar) * me
 end
-_beta_logker(μ, φ, y) = (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
+# Stable `_beta_logpdf` once both shapes are large (the expanded form cancels, #1143); below that the
+# expanded form is kept, so ordinary fits are bit-identical.
+_beta_logker(μ, φ, y) = _beta_stirling_applies(μ * φ, (1 - μ) * φ) ? _beta_logpdf(μ * φ, (1 - μ) * φ, y) :
+                        (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
                         (loggamma(μ * φ) + loggamma((1 - μ) * φ) - loggamma(φ))
 
 function _beta_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, logφ;
