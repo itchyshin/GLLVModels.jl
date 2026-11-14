@@ -55,3 +55,41 @@ using GLLVModels
         end
     end
 end
+
+@testset "Ordinal fitters reject all-masked trait rows" begin
+    Y = [
+        1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1
+        1 2 3 3 1 2 3 2 1 2 3 1 1 2 3 2
+        1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+    ]
+    p, n = size(Y)
+    X = reshape(repeat(collect(range(-1.0, 1.0; length = n))', p), p, n, 1)
+    M = trues(p, n)
+    M[2, :] .= false
+    fitters = [
+        ("fit_ordinal_gllvm", (Yv; kw...) -> fit_ordinal_gllvm(Yv; K = 1, kw...)),
+        ("fit_ordinal_gllvm_pertrait",
+         (Yv; kw...) -> fit_ordinal_gllvm_pertrait(Yv; K = 1, kw...)),
+        ("fit_ordinal_gllvm_pertrait_cov",
+         (Yv; kw...) -> fit_ordinal_gllvm_pertrait_cov(Yv; X = X, K = 1, kw...)),
+    ]
+    for (name, f) in fitters
+        @testset "$name" begin
+            r = @test_throws ArgumentError f(Y; mask = M)
+            @test occursin("trait 2", r.value.msg)
+            @test occursin("no observed", r.value.msg)
+        end
+    end
+end
+
+@testset "Ordinal AGHQ route rejects all-masked trait rows" begin
+    Y = [
+        1 2 3 1 2 3 1 2 3 1 2 3 1 2 3 1
+        1 2 3 3 1 2 3 2 1 2 3 1 1 2 3 2
+        1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2
+    ]
+    p, n = size(Y)
+    M = trues(p, n)
+    M[2, :] .= false
+    @test_throws ArgumentError fit_gllvm(Y; family = Ordinal(), K = 1, mask = M, aghq = :auto)
+end

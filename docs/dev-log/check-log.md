@@ -1,3 +1,14 @@
+2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
+`julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
+Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).
+New testset `Ordinal fitters reject all-masked trait rows` on main source:
+`fit_ordinal_gllvm` 0/3 (no throw); `fit_ordinal_gllvm_pertrait` 1/3
+(already `ArgumentError` via category guard, message lacks trait wording);
+`fit_ordinal_gllvm_pertrait_cov` 1/3 (same). Branch with guard: 3/3 each,
+9/9. AGHQ public route testset: 1/1 on branch (`ArgumentError` before problem
+build). Full `Pkg.test` not run. See after-task
+`2026-11-12-ordinal-masked-trait-1140.md`.
+
 2026-11-11: #1107 derive the Gaussian observation mask from `missing`.
 Julia 1.10.13, `JULIA_NUM_THREADS=1`, `julia --project=. -e 'include(...)'`.
 `test/test_fix_1107.jl`: 27 passed, 0 failed, 0 errored, 35.4s.
