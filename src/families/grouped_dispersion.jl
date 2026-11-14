@@ -987,6 +987,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_nb_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped_cov")
     Yc = Integer.(_sanitize_missing(Y, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
@@ -1606,6 +1607,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_beta_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
@@ -2110,6 +2112,7 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_gamma_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
@@ -2642,6 +2645,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_nb1_gllvm_grouped_cov"; obs = msk)
     Yc = Integer.(_sanitize_missing(Y, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
