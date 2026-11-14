@@ -259,7 +259,7 @@ function _cv_cell_eval(fit, family::Gamma, y::Real, μ::Real, t::Int, s::Int, N_
     θ = μ_c / α
     d = Gamma(α, θ)
     yc = max(Float64(y), 1e-12)
-    ll = logpdf(d, yc)
+    ll = _gamma_logpdf(α, μ_c, yc)
     r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
