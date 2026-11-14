@@ -625,6 +625,14 @@ that states there is no twin or parity claim and no scoreboard row admission.
 held. C6 decision accounting can be MET with nine explicit evidence holds. The
 holds and outstanding scoreboard evidence remain open.
 
+`HOLD_PENDING_EVIDENCE` is a defined word of the C6 vocabulary: the item has been
+looked at and its disposition is deliberately held until evidence exists. The checker
+counts an item carrying it as decided for clause C6 (the nine named holds, signed
+2026-10-17). Ruling, owner's decision card, 2026-11-10 10:02 MT: "HOLD counts: yes" /
+"The 9 HOLD_PENDING_EVIDENCE rows count as decided in C6." Limit: decided is not
+evidenced and not passed. A hold makes no equivalence or parity claim, it admits no
+scoreboard row, and the evidence it waits for is still owed.
+
 Basis rules. An `EXCLUDED_INTERNAL_HELPER` basis must be visible text. A `KEPT_AS_JULIA_EXTRA` basis must also
 cite at least one page under `docs/src`, and every page it cites must be an existing `.md` file written exactly as
 `docs/src/<path>.md`. The basis is read as tokens: it is split at ASCII whitespace and at `( ) [ ] { } < > " ' `
@@ -1119,7 +1127,7 @@ modes on `origin/main`, which is the honest state, not a false pass.
 - [x] C6: the reverse-gap list is tool-produced and every item (including the Julia-only
       extras: `SourceCovariance`, two-part ZI) has a written decision from a fixed vocabulary
       (`KEPT_AS_JULIA_EXTRA`, `PORT_TO_MATCH_R`, `DEPRECATE_AND_REMOVE`,
-      `RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`) — a placeholder like `"TBD"` or
+      `RENAME_TO_AVOID_COLLISION`, `EXCLUDED_INTERNAL_HELPER`, `HOLD_PENDING_EVIDENCE`) — a placeholder like `"TBD"` or
       an empty string does not count as decided just because the field is non-empty or present;
       a decided item also needs a visible basis and a signed ruling, and a `KEPT_AS_JULIA_EXTRA`
       basis must cite a `docs/src/...` file that resolves at the ref (see "Rulings of 2026-10-02",
