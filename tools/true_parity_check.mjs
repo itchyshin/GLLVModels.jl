@@ -582,7 +582,7 @@ function numericReceiptStatus(row) {
       if (lstatSync(tool).isSymbolicLink()) throw new Error('untrusted launcher');
       launcherBytes = readFileSync(tool);
       if (createHash('sha256').update(launcherBytes).digest('hex') !==
-          '57ad42a6e5b5ba29c705bf79397efbde6ebdcdc53e0833245849daca8cfbe6c2')
+          '15bc3d54ec2ec4d994ac35796a8c2c6556fcc78d5842dc0b24a8b64bd33c55cc')
         throw new Error('untrusted launcher');
     const bootstrap = `__file__ = ${JSON.stringify(tool)}; __gate_root_fd__ = 3; exec(compile(bytes.fromhex('${launcherBytes.toString('hex')}'), __file__, 'exec'))`;
     if (pinned !== 'FS') {
