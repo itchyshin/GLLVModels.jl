@@ -143,7 +143,14 @@ function _phylo_poisson_xlv_mode(Y, beta, Lambda, mean_eta, Q, leaf_pos;
             end
             step *= 0.5
         end
-        accepted || return nothing, nothing, nothing
+        # A line search that cannot raise the log-posterior while the Newton decrement
+        # `g'delta` is below rounding level means (eps, u) is the mode to floating
+        # point (#1048); convergence, not a failed search. Same rule as
+        # `_phylo_gamma_xlv_mode`, `_mixed_mode` and `_isdm_mode` (`nd_tol = 1e-12`).
+        if !accepted
+            abs(dot(grad, delta)) < 1e-12 && (mode_found = true; break)
+            return nothing, nothing, nothing
+        end
         if step * max_delta < tol
             mode_found = true
             break
