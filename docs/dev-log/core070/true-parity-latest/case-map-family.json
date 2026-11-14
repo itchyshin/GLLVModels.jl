@@ -1312,24 +1312,24 @@
         "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS"
       ],
       "disposition": null,
-      "evidence_tier": "numeric_fail",
+      "evidence_tier": "numeric",
       "measured_against": "P1",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/family/campaign/ORDINAL-LOGIT-RSZ.json"
         ],
-        "tier": "measured, does not bind: LLt: abs difference 0.000129891 > tolerance 0.0001"
+        "tier": "numeric: the receipt carries an R-vs-Julia comparison block pinned to P1; both engines converged and every listed quantity is within its tolerance (pass rule and tolerances as PROPOSED in the C3 to C5 campaign plan, PR #650, rows added under itchyshin/GLLVModels.jl#684 item 4; the maintainer has not yet confirmed the tolerances or the pass rule)"
       },
       "measured_result": {
-        "verdict": "FAIL",
+        "verdict": "PASS",
         "max_abs_diff_by_case": {
-          "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LOGLIK": 2.1035339159425348e-07,
-          "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT": 0.00012989127759771568,
-          "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS": 5.585089662085707e-06
+          "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LOGLIK": 1.564330887049437e-10,
+          "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT": 1.532503418388842e-06,
+          "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS": 1.101821489601917e-07
         },
         "within_tolerance_by_case": {
           "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LOGLIK": true,
-          "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT": false,
+          "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-LLT": true,
           "CAMPAIGN-C3-ORDINAL-LOGIT-RSZ-THRESHOLDS": true
         }
       },
