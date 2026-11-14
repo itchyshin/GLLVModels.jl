@@ -32,6 +32,14 @@ const _VGS_CELLS = (
 )
 # The new form is limited by Float64 rounding of exp(mu_eta) (relative 1.1e-16) times a (u + sigma2/2), at most
 # 1e-8 absolute and 1e-11 relative on these cells; the old form is off by 6e-7 to 1.9 on the same cells.
+# Measured worst error of the new form against the literals: 1.64e-8 absolute (delta-Gamma, shape 1e15, loading
+# scale 1e-6, value -196.6), which is 0.745 of the allowed atol + rtol |ref| = 2.2e-8, so the bound is 1.34 times the
+# worst error; the largest absolute error over all cells is 3.1e-2 on values near -2.4e14 (1.3e-16 relative).
+# Why the bound is that tight: the references take the Float64 mu_eta the site forms, so what is left is the
+# rounding of exp(mu_eta), which the value inherits multiplied by the condition number a (|u| + sigma2/2), u = y /
+# exp(mu_eta) - 1 (u of order 1e-7 at a = 1e15 gives about 1e-8); no regrouping removes it, and a looser bound would
+# let the old form pass the small-value cells. These cells all have y close to exp(mu_eta); for y / exp(mu_eta)
+# below about 1e-6 the density helper's log1p(u), with u near -1, is the limit instead (see the last testset).
 _vgs_ok(got, ref) = isapprox(got, ref; atol = 2e-8, rtol = 1e-11)
 
 @testset "variational Gamma and delta-Gamma ELBO are accurate at large shape" begin
