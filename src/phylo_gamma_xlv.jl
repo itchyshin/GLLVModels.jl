@@ -160,7 +160,17 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
             end
             step *= 0.5
         end
-        accepted || return nothing, nothing, nothing
+        # A line search that cannot raise the log-posterior while the Newton
+        # decrement `g'delta` is below rounding level means (eps, u) is the mode to
+        # floating point: the Fisher-scaled Newton step stalls near 1e-7 and `q1 >= q0`
+        # is lost to noise (measured: g'delta below 1e-12 at the stall). That is
+        # convergence, not a failed search; same rule as `_mixed_mode`/`_isdm_mode`
+        # (`nd_tol = 1e-12`). Without it the objective is 1e12 at a knife-edge
+        # finite-difference step and LBFGS stops at "gradient_at_failure_value".
+        if !accepted
+            abs(dot(grad, delta)) < 1e-12 && (mode_found = true; break)
+            return nothing, nothing, nothing
+        end
         if step * max_delta < tol
             mode_found = true
             break

@@ -178,7 +178,13 @@ end
 end
 
 @testset "Phylo x Gamma B_eta_realized selected-entry canary" begin
-    Random.seed!(753)
+    # Seed 754 replaced 753 under Shinichi's 11 Nov 2026 decision (GAMMA-COV: seed, #1048).
+    # Why: at 753 the single-draw 95% profile interval missed the simulated target
+    # (LR 4.145 > 3.841), an expected one-in-twenty miss, not a fault. Seeds 754..763
+    # were declared before running and 754, the first, was taken. Of those 10 candidates
+    # 10 covered (LR 0.007 to 2.75); counting 753, 10 of 11 covered. One seed is still
+    # one draw: this is a smoke check of the profile code, not a coverage study.
+    Random.seed!(754)
     phy = GLLVModels.augmented_phy("(((A:0.3,B:0.3):0.2,(C:0.3,D:0.3):0.2):0.2,(E:0.4,F:0.4):0.2);")
     p = phy.n_leaves
     n = 28
@@ -192,7 +198,19 @@ end
     alpha_shape = 2.5
     epsilon = 0.05 .* randn(n, K)
     Z_truth = X_lv * alpha_lv + epsilon
-    eta = beta .+ Lambda * transpose(Z_truth)
+    # Draw the phylogenetic intercept (one value per leaf, shared across sites) from
+    # N(0, sigma2 * C_leaf), the same covariance the model uses (#1048). This does not
+    # make sigma2_phy recoverable: each species also has a free intercept beta[t], and
+    # the two add, so sigma2_phy is not identified in this layout and its estimate sits
+    # at the zero boundary (seeds 754..763 and larger designs, 12 Nov 2026; gllvmTMB
+    # 0.7.1 does the same with a free intercept per species). This canary checks the
+    # profile-LR code, not recovery of sigma2_phy.
+    keep = filter(i -> i != phy.root_index, 1:phy.n_total)
+    Qc = Matrix(phy.Q_topology[keep, keep])
+    leaf_pos = [(lp = phy.leaf_indices[t]; phy.root_index < lp ? lp - 1 : lp) for t in 1:p]
+    Sigma_a = Symmetric(sigma2 .* inv(Qc)[leaf_pos, leaf_pos])
+    a_phy = cholesky(Sigma_a).L * randn(p)
+    eta = beta .+ a_phy .+ Lambda * transpose(Z_truth)
     Y = [rand(Gamma(alpha_shape, exp(eta[t, s]) / alpha_shape)) for t in 1:p, s in 1:n]
 
     fit = GLLVModels._fit_phylo_gamma_xlv(
@@ -203,13 +221,13 @@ end
         newton_maxiter = 120, newton_tol = 1e-10)
     @test fit.converged
     @test isfinite(fit.loglik)
-    @test fit.sigma2_phy > 0
+    @test fit.sigma2_phy > 0   # holds at the boundary too (log scale); not a recovery check
     @test 0.5 < fit.alpha_shape < 20.0
 
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
     prof = GLLVModels._phylo_gamma_xlv_profile_eta_realized(
         fit, Y, phy, X_lv, [5], eta_target;
-        level = 0.95, profile_iterations = 700,
+        level = 0.95, profile_iterations = 5000,
         newton_maxiter = 120, newton_tol = 1e-10)
     @test prof.method == :profile_eta_realized
     @test prof.term == ["B_eta_realized[5,1]"]

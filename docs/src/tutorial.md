@@ -647,6 +647,14 @@ fph.σ²_phy                                            # estimated phylogenetic
 `Binomial()`, …); supply `N` for Binomial. As `σ²_phy → 0` the fit reduces to the
 independent-family marginal.
 
+Each species also has its own free intercept, and the phylogenetic intercept is
+one value per species shared across sites, so the two add and the data cannot
+separate them: in this layout `σ²_phy` is not identified and is usually estimated
+at or near zero. gllvmTMB does the same when every species has a free intercept;
+its usual layout (intercepts per trait shared across species, with replicated
+species-by-trait cells) does identify the variance, and this route has no
+equivalent mode yet.
+
 #### R-convention precision (`PrecisionPhy`) and the `correlation` estimand
 
 `AugmentedPhy` (from `augmented_phy`/`make_phy`) is the native-Julia
