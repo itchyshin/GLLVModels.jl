@@ -920,6 +920,7 @@ println(_SHARD === nothing ?
     _shard_include("test_zip_observed_laplace.jl")
     # #926: ZIP betaz-hat matches the exact-likelihood betaz (Wald centre), not the Fisher-Laplace one.
     _shard_include("test_zip_betaz_wald_926.jl")
+    _shard_include("test_twin_parity_zip_tweedie_beta_gamma_739.jl")
     _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
     # w2-structured: spde_fem refuses a vertex that belongs to no triangle (duplicate input point).
