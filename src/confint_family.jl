@@ -980,7 +980,9 @@ function _family_ci(fit::BetaGroupedFit, Y::AbstractMatrix;
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
     link = fit.link; group = collect(Int, fit.group); G = length(fit.φ)
-    Yf = clamp.(Float64.(Y), 1e-6, 1 - 1e-6)
+    # Not clamped here: the Beta grouped kernel clamps y at [1e-12, 1 - 1e-12] itself (gllvmTMB's
+    # y_safe), so the objective the fitter optimised is rebuilt only if `Y` reaches it as given (#1155).
+    Yf = Float64.(Y)
     M = _ci_mask(mask, Y)
     θ = vcat(fit.β, pack_lambda(fit.Λ), log.(fit.φ))
     nll = function (θv)
@@ -1159,7 +1161,9 @@ function _family_ci(fit::BetaGroupedCovFit, Y::AbstractMatrix;
     link = fit.link; group = collect(Int, fit.group); G = length(fit.φ)
     Xfit, γ_free_idx = _slice_fixed_X(X, fit.γ_fixed)
     q = length(γ_free_idx)
-    Yf = clamp.(Float64.(Y), 1e-6, 1 - 1e-6)
+    # Not clamped here: the Beta grouped kernel clamps y at [1e-12, 1 - 1e-12] itself (gllvmTMB's
+    # y_safe), so the objective the fitter optimised is rebuilt only if `Y` reaches it as given (#1155).
+    Yf = Float64.(Y)
     M = _ci_mask(mask, Y)
     γ_free = fit.γ[γ_free_idx]
     θ = vcat(fit.β, γ_free, pack_lambda(fit.Λ), log.(fit.φ))
