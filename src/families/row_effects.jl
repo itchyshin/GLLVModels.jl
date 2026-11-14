@@ -156,6 +156,7 @@ function fit_roweffect_gllvm(Y::AbstractMatrix; family,
 
     # NA handling: derive the observation mask and a sanitized response matrix.
     msk = _resolve_obs_mask(mask, Y)
+    _check_family_response_support(family, Y, msk; caller = "fit_roweffect_gllvm", N = N)
     Yc = _sanitize_missing(Y, _cov_placeholder(family))
 
     # warm start: per-species link-scale row means for β, zeros for ρfree, SVD for Λ
