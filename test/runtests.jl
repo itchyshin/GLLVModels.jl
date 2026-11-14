@@ -254,6 +254,9 @@ end
 # is by a stable hash of the file name (`_auto_shard_of`), for every N, and
 # never touches `_shard_pos`, so it cannot move any listed file. A file under
 # test/auto/ must not use paths relative to test/ (use joinpath(@__DIR__, "..", ...)).
+# Auto files do not pass through `_shard_include`, so the `_THREADED_FILES` thread
+# check does not cover them: a test that needs Julia threads must be listed in the
+# include list below, not placed in test/auto/.
 const _AUTO_FILES = _auto_test_files(@__DIR__)
 _auto_in_shard(f::AbstractString) = _SHARD === nothing || _auto_shard_of(f, _SHARD[2]) == _SHARD[1]
 
@@ -980,6 +983,8 @@ println(_SHARD === nothing ?
     _shard_include("test_predictive_check_binomial.jl")
     _shard_include("test_nb_mite_multistart_1022.jl")
     _shard_include("test_nb_n_init_mite_1022.jl")
+    # An explicit mask of another size than Y is a DimensionMismatch (Laplace and ordinal fitters).
+    _shard_include("test_mask_size_check.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
     # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
