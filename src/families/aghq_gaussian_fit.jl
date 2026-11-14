@@ -127,6 +127,10 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
     # #1107: derive the mask before the exact-path gate (`mask === nothing` would
     # otherwise copy `missing` into the closed-form fitter).
     mask = _derive_obs_mask(mask, Y; caller = "fit_gaussian_gllvm")
+    # A NaN or Inf at an observed cell is not a missing value: at `K == p` it gave `loglik = NaN`
+    # with no error, and at `K < p` an unnamed LinearAlgebra error. Cells hidden by `mask` or
+    # `missing` are not checked.
+    _check_response_support(:finite, Y, mask; caller = "fit_gaussian_gllvm")
     offset=_normalize_offset(offset,size(Y,1),size(Y,2);Y=Y,mask=mask,caller="fit_gaussian_gllvm")
     if lambda_constraint!==nothing
         aghq===false || throw(ArgumentError(
