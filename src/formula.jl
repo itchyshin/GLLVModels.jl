@@ -54,6 +54,25 @@ function _extract_formula_symbols(term)
     return syms
 end
 
+# Covariate columns named in the formula RHS. A column holding a `missing` stopped with
+# `KeyError: key missing not found` inside `StatsModels.schema`; `gllvm` does not drop or
+# impute sites, so it refuses such a column with a message that names it. A column whose type
+# allows `Missing` but holds none is passed through unchanged (how it is read is a separate,
+# undecided question), and columns the formula does not use are not looked at.
+function _formula_covariate_columns(rhs, cols::NamedTuple)
+    for s in unique(_extract_formula_symbols(rhs))
+        haskey(cols, s) || continue
+        v = cols[s]
+        Missing <: eltype(v) || continue
+        nmiss = count(ismissing, v)
+        nmiss == 0 || throw(ArgumentError(
+            "covariate `$s` in the formula has $nmiss `missing` value(s) (first at site " *
+            "$(findfirst(ismissing, v))); `gllvm` does not drop or impute sites. Remove those " *
+            "sites from `Y` and `data`, or fill the covariate, before fitting"))
+    end
+    return cols
+end
+
 # Extract site-level model matrix mm (n × q) and coefficient names from formula RHS.
 function _build_site_modelmatrix(rhs, data; contrasts::AbstractDict = Dict{Symbol, Any}())
     cols = Tables.columntable(data)
@@ -255,6 +274,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
         length(column) == n || throw(DimensionMismatch(
             "`data` column `$name` has $(length(column)) rows but Y has $n sites (columns)"))
     end
+    _formula_covariate_columns(formula.rhs, cols)
     if grouping !== nothing || get(kwargs, :phylo, nothing) !== nothing
         sources === nothing || throw(ArgumentError("do not combine grouping with explicit sources"))
         K === _FORMULA_K_UNSET || throw(ArgumentError("grouping terms own their ranks; do not supply K"))
