@@ -146,12 +146,12 @@ for (_k, _files) in enumerate((
         "test_censored_poisson.jl", "test_truncnb2_laplace_breakdown.jl", "test_gamma_laplace.jl",
         "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl", "test_phylo_binomial_xlv.jl",
         "test_boundary_inference.jl", "test_grouped_laplace_identity.jl", "test_grouped_identification_diagnostics.jl",
-        "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl",
+        "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl", "test_nb1_fisher_large_counts.jl",
         "test_nb2_grouped_mode_search.jl", "test_grouped_getlv_mode.jl", "test_gamma_grouped_mode_search.jl",
         "test_betabinomial_x_identity.jl", "test_zinb_x_identity.jl", "test_beta_fit.jl",
         "test_link_honoured.jl", "test_issue_725_extractor_docs.jl", "test_studentt_disp_group.jl",
         "test_studentt_normalizer_precision.jl", "test_studentt_retained_precision.jl", "test_studentt_grouped_mode_search.jl",
-        "test_ordinal_pertrait.jl", "test_ordinal_level_check.jl", "test_fit_gllvm.jl",
+        "test_ordinal_pertrait.jl", "test_ordinal_level_check.jl", "test_ordinal_rowcheck.jl", "test_getlv_rowcheck.jl", "test_fit_gllvm.jl",
         "test_truncated_formula.jl", "test_gaussian_pervar.jl", "test_ledermann_pervar_k.jl",
         "test_postfit.jl", "test_issue_737_omega_doc.jl", "test_model_selection.jl",
         "test_select_lv_print.jl", "test_binomial_ridge.jl", "test_c1_behaviour_p1.jl",
@@ -231,6 +231,7 @@ for (_k, _files) in enumerate((
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
+        "test_gaussian_nonfinite_y.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
     ),
@@ -504,6 +505,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb1_poisson_ridge.jl")
     _shard_include("test_nb1_scalar_gradient_gate.jl")
     _shard_include("test_nb1_grouped_mode_search.jl")
+    _shard_include("test_nb1_fisher_large_counts.jl")
     _shard_include("test_nb2_grouped_mode_search.jl")
     _shard_include("test_grouped_init_kwargs.jl")
     _shard_include("test_grouped_getlv_mode.jl")
@@ -550,6 +552,8 @@ println(_SHARD === nothing ?
     _shard_include("test_ordinal_probit.jl")
     _shard_include("test_ordinal_logit_twin.jl")
     _shard_include("test_ordinal_level_check.jl")
+    _shard_include("test_ordinal_rowcheck.jl")
+    _shard_include("test_getlv_rowcheck.jl")
     _shard_include("test_fit_gllvm.jl")
     _shard_include("test_issue_749_fit_gllvm_doc.jl")
     _shard_include("test_truncated_formula.jl")
@@ -909,6 +913,8 @@ println(_SHARD === nothing ?
     _shard_include("test_zerostep_verdict_sweep.jl")
     # w2-structured: spde_fem refuses a vertex that belongs to no triangle (duplicate input point).
     _shard_include("test_spde_orphan_mesh_node.jl")
+    # w2-structured: NaN/Inf response refused by fit_phylo_gaussian, fit_spde_gaussian, fit_relaxed_clock.
+    _shard_include("test_nonfinite_y_phylo_spde_relaxed.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")
@@ -933,6 +939,8 @@ println(_SHARD === nothing ?
     _shard_include("test_branch_re_helpers.jl")
     _shard_include("test_response_support_730_siblings.jl")
     _shard_include("test_interrupt_rethrow.jl")
+    # NaN or Inf at an observed Gaussian response cell is an ArgumentError (K == p gave loglik = NaN).
+    _shard_include("test_gaussian_nonfinite_y.jl")
     # Algebraic invariants of the residual cov/cor, rotation, cutpoint and repeatability extractors.
     _shard_include("test_extractors_invariants.jl")
     _shard_include("test_phylo_sparse_solvers.jl")
