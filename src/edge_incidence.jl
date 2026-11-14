@@ -213,6 +213,7 @@ function edge_phy(newick::AbstractString)
 
     c.i <= lastindex(c.s) &&
         error("extra characters after end of tree at position $(c.i)")
+    _check_unique_tip_names(leaf_names)
 
     n_total = length(node_parent_raw)
     p       = length(leaf_indices_raw)
