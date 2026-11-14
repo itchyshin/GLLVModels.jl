@@ -254,6 +254,9 @@ end
 # is by a stable hash of the file name (`_auto_shard_of`), for every N, and
 # never touches `_shard_pos`, so it cannot move any listed file. A file under
 # test/auto/ must not use paths relative to test/ (use joinpath(@__DIR__, "..", ...)).
+# Auto files do not pass through `_shard_include`, so the `_THREADED_FILES` thread
+# check does not cover them: a test that needs Julia threads must be listed in the
+# include list below, not placed in test/auto/.
 const _AUTO_FILES = _auto_test_files(@__DIR__)
 _auto_in_shard(f::AbstractString) = _SHARD === nothing || _auto_shard_of(f, _SHARD[2]) == _SHARD[1]
 

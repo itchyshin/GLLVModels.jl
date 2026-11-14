@@ -1,0 +1,1 @@
+- **Infrastructure: `test/runtests.jl` now says that a test needing Julia threads must not go in `test/auto/` (refs #1265).** Auto-discovered files bypass `_shard_include`, so the `_THREADED_FILES` thread check does not cover them; such a test is listed in the include list as before. Comment only, no change to which tests run.
