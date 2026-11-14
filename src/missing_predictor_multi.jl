@@ -357,6 +357,7 @@ function fit_gllvm_mi_multi(family, Y::AbstractMatrix, X::AbstractMatrix; K::Int
         "fit_gllvm_mi_multi: supports Poisson()/NegativeBinomial()/Gamma() + LogLink and " *
         "Binomial()/Beta() + LogitLink."))
     Nm = N === nothing ? ones(Int, p, n) : N
+    _check_family_response_support(family, Y, nothing; caller = "fit_gllvm_mi_multi", N = Nm)
 
     # Observed mask + warm starts for (μ, Σ_x) from observed predictor cells.
     isobs = [!(ismissing(X[s, j]) || (X[s, j] isa Real && isnan(X[s, j])))

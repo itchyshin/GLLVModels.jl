@@ -209,6 +209,7 @@ function fit_constrained_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family
     lk = link === nothing ? _cov_default_link(family) : link
     Nm = N === nothing ? fill(1, p, n) : N
     has_disp = _cov_has_disp(family)
+    _check_family_response_support(family, Y, nothing; caller = "fit_constrained_gllvm", N = N)
 
     # Warm start: link-scale row means for β, SVD loadings, zero RRR coefficients —
     # the same machinery as fit_gllvm_speciescov (B starts at the unconstrained
