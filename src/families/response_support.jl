@@ -75,9 +75,13 @@ end
 # All-zero count columns (ruling on constant columns, second sentence). A species whose
 # observed cells are all zero has no finite maximum-likelihood intercept: the fit runs to a
 # large negative value and still reports `converged = true`. The Poisson and ZIP fitters call
-# this once per fit; it only warns (no number changes). A column with even one non-zero
+# this once per public call; it only warns (no number changes). A column with even one non-zero
 # observed cell, a column with no observed cell at all, and sparse inputs are left alone.
-# `maxlog = 1` as the NB2 Poisson-limit warning.
+# `maxlog = 1` as the NB2 Poisson-limit warning, but the logger's repeat counter is keyed by
+# `_id`, which here is the fitter name and the exact column list written out (a Symbol made
+# from that text: equal only when the text is equal, so two different column sets can never
+# share a counter, and the same text gives the same id in every session and Julia version). A console therefore shows
+# one message per distinct (fitter, columns) per session, not one per session.
 function _warn_all_zero_count_columns(Y::AbstractMatrix, mask; caller::AbstractString)
     p, n = size(Y)
     cols = Int[]
@@ -97,6 +101,6 @@ function _warn_all_zero_count_columns(Y::AbstractMatrix, mask; caller::AbstractS
         (allzero && nobs > 0) && push!(cols, t)
     end
     isempty(cols) && return nothing
-    @warn "$caller: species column(s) $cols have no non-zero count in any observed cell. The fit still runs, but the intercept of such a species has no finite maximum-likelihood value (it ends at a large negative number set by where the optimiser stops), so `converged = true` does not mean it is identified. Drop the column or treat its estimates as not identified." maxlog=1
+    @warn "$caller: species column(s) $cols have no non-zero count in any observed cell. The fit still runs, but the intercept of such a species has no finite maximum-likelihood value (it ends at a large negative number set by where the optimiser stops), so `converged = true` does not mean it is identified. Drop the column or treat its estimates as not identified." maxlog=1 _id=Symbol("all_zero_count_columns:", caller, ":", join(cols, ","))
     return nothing
 end
