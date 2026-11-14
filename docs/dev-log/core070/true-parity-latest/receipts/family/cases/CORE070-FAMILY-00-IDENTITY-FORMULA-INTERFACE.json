@@ -26,11 +26,11 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run.toml": "28ea28b82dc7de039d3be342e74d047c1443cfdf4a2a87001d14e5123d004cb2",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run.toml": "2dc3548e37ace0ef1e5c11f7e6f8e9eccfd25c91a2aeaf6e94434b5bd17a4c50",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/values-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "cfcdca4a928b6dac7160c70ab0fca4a0724e89017c41a61eea99b9ec68c97ba3",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run-commit.json": "7e9fd345ee2b712dca50d188f47f0137edb2fd757f9e23e880f7ec04885d6752",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt": "dcd4cf7cd5e80889aef3e8f47b461c031ad22a984450c646bb07722477dbeb71",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "eba7522e10e679c325f59bba33bffed5c68095399fca03f42362e9b2e16a744e",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/run-commit.json": "d533f37732921352c791c4ed4a202b83cf396d6353dc8c0ab2277f38ab445051",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/verify.txt": "e46375da93050bd5b71c63226eda587211ce6666de4d2ba2fc2394c25dcca02b",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/cell-CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.toml": "c7cf6ce0ee303010240852446565dc31b4081357c5329f16150915ab9f23aff5",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-native.toml": "3f922603b3023faa9f357496aa8375d1fd9aaddb5f373b09cdc82254f682bdc6",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-formula.toml": "40755b7943058389a1d18f441563699c72db9c97ce5d1976d3e36cb51b4d6bb2",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-gaussian/gaussian-long.toml": "0b1aa690c6d90692bba26e0c6bf237b84e1cb1d84383e15e04be1bc652a40b34"
@@ -47,7 +47,7 @@
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
+  "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",

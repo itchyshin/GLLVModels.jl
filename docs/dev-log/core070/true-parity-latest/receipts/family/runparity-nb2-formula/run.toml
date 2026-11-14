@@ -7,7 +7,7 @@ success_marker = "CORE070_PARITY_SUCCESS"
 exit_code = 0
 actual_assertions = 19
 status = "success"
-run_id = "bf9e71711745df73933ba348a63ab2815da2ae0c243de82381d7b3052dad507b"
+run_id = "777a698a08bebaf8adb8178b2428f8dc55d3d14f4dcbef02fa69bb439c75060a"
 completed_case_ids = ["CORE070-FAMILY-05-LOG-FORMULA-INTERFACE"]
 selected_family_count = 0
 
@@ -15,7 +15,7 @@ selected_family_count = 0
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_nb2_formula_parity.jl"
 status = "success"
-run_id = "bf9e71711745df73933ba348a63ab2815da2ae0c243de82381d7b3052dad507b"
+run_id = "777a698a08bebaf8adb8178b2428f8dc55d3d14f4dcbef02fa69bb439c75060a"
 fixture_sha256 = "f15fe1cc6e8e43fceaded4122d1ddd9e7d035e11a5561d3a699cae03c1b86e10"
 id = "CORE070-FAMILY-05-LOG-FORMULA-INTERFACE"
 execution_manifest_sha256 = "0608e303f0e338074d4597b628e7c4f27b3bddb5c9e49d5eae4b14e0c64e9429"

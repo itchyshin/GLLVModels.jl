@@ -42,7 +42,7 @@
     "r_version": "R version 4.6.1 (2026-06-24)",
     "julia_version": "1.10.12",
     "glvmodels_path": "/home/snakagaw/hsq_work/parity-gllvm-1110-w15-d8/repo/src/GLLVModels.jl",
-    "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
+    "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
     "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c"
   }
 }

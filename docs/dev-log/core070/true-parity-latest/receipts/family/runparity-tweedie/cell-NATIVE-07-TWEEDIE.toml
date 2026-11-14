@@ -1,7 +1,7 @@
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_tweedie_parity.jl"
 status = "success"
-run_id = "8cc67d0371f9c881ec481d0b1f63863fc507194665938de19c2b5746567f4245"
+run_id = "c0ca07f22b7d4825c276e6f67ba700352efbc415a01316d91dfbdda44dc6089c"
 fixture_sha256 = "c18083379fc407a6af1557b4cc618a18a5a5820ef6a8004c4da8a31c4263005c"
 id = "NATIVE-07-TWEEDIE"
 execution_manifest_sha256 = "d7626523b4d1c4946d5c0558b3bb6f48848cce43dd3705e6609af642ce234937"

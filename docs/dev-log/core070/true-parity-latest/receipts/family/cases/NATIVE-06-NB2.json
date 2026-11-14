@@ -25,11 +25,11 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run.toml": "0ff4c054ac072d9d5eb6a1f064efbe3d37a1aa4f189419b26d6be7066227b8ea",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run.toml": "78e2da4de60fa0cf17324faa23ab81b066b3786ae10f2651e4bc330a33e2558f",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/values-NATIVE-06-NB2.toml": "77999d77520c83fc14608d5ca97c10f94da172e499564968a095bfad067a03cf",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run-commit.json": "7e9fd345ee2b712dca50d188f47f0137edb2fd757f9e23e880f7ec04885d6752",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt": "45e3811b24bb814eac1b94c6bb53ff609413f1a33057d7b2b5c9566637f08af5",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/cell-NATIVE-06-NB2.toml": "3c9d458dfab98c901668079f67c1a4ec542cebdcb38e8c7f4730e3f5bfb7b0b8",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/run-commit.json": "d533f37732921352c791c4ed4a202b83cf396d6353dc8c0ab2277f38ab445051",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/verify.txt": "034321d8fdb730d12988cf5275055249bfe4930978e31e28a2d11a2b46965f1d",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/cell-NATIVE-06-NB2.toml": "e114f67f45e4ef010f47f9e611044994875ab3b3dc4ca1e04bb19712b72e1ad6",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml": "00a9287aa123402d3aaafa7a14318919e5f105bbc86fd82d0a920d36e94387d1"
   },
   "raw": [
@@ -42,7 +42,7 @@
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
+  "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",

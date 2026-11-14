@@ -25,11 +25,11 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt"
   },
   "read_from": {
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run.toml": "e4fbc893db44f22111067a3f792e6fd9cc7b83ce8e1ab70b75c2c5891b4af5f8",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run.toml": "4f645e08ee059e90f0831a75d6095daf4a188bf3d32e0724a0c603688ded9575",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/values-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "2afb3ed5b7770d86c9c33b0bfe5c91087e1cbcae884b30a55bc4ab7e93011bbc",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run-commit.json": "7e9fd345ee2b712dca50d188f47f0137edb2fd757f9e23e880f7ec04885d6752",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt": "2010b521e6e80c0dad9d03dfd99c188f0ae9ba636d55c39527cb3ee31b840bb9",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "93d8da36008f413cef3ba3e4c9a5ec0b774fb5636c7dcbb4a0eca604a2c1e97c",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/run-commit.json": "d533f37732921352c791c4ed4a202b83cf396d6353dc8c0ab2277f38ab445051",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/verify.txt": "a91b9a67aefab4f177cfbc506ed6c2dbc4073cac78b984b81c9924cd8b56fecf",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/cell-CORE070-FAMILY-05-LOG-FORMULA-INTERFACE.toml": "a3de6d47daf2017046ba5dbb938f689d442bdfe70c9061050fab84e245cf7c98",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/formula-nb2-health.toml": "468cd0bb045ac4da1d3b3a35b8c8c4e2977ca6fea2b5ffbe5b1524ee001274dc",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2-formula/nb2-formula.toml": "de922e308df0981770f9297e73cb937dc2edab6a3d1d0b16aeacdc34ae6057a0"
   },
@@ -44,7 +44,7 @@
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
+  "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",

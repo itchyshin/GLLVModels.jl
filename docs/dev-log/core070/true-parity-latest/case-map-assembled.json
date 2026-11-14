@@ -21,7 +21,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-family.json",
-   "sha256": "aaab9ad8dcbf325ed7cf4f946adb8376bfd640330eeb1de9f964c429e9c30c78",
+   "sha256": "0178c6bda010d7e3aa941b61b6f381e9dc85eb2707ffcef3a13f6729c35f57ba",
    "rows": 26
   },
   {
@@ -3574,21 +3574,26 @@
     "raw_available_in_repo_or_on_this_host": false,
     "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
    },
-   "evidence_tier": "partial_case_not_executed",
+   "boundary_context_case_ids": [
+    "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE"
+   ],
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
+    "receipt": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.json",
-     "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.json",
+     "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.json"
+    ],
+    "boundary_context_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE.json"
     ],
-    "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+    "tier": "numeric (native and formula-interface cases): those case receipts carry R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed. The PUBLIC-R-BRIDGE case is non-binding boundary context, not a numeric match and not an R refusal: R accepts the Gaussian family at the public bridge and fits a different, reduced model (reference_model_change: one common residual scale and no per-trait unique part, df 5 on the formula route and df 9 on the matrix route, which also fits trait intercepts, against the required df 8; a warning on the formula route), recorded by a P1 probe on both public routes. Context under maintainer ruling 2026-11-13 (P126b), which applies the N1 context kind (D-319) to this case"
    },
    "measured_result": {
     "case_verdicts": {
      "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "PASS",
      "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "PASS",
-     "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+     "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
     },
     "batch_verifier": {
      "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "PASS",
@@ -3600,9 +3605,9 @@
      "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": true,
      "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": true
     },
-    "executed_cases_verdict": "PASS"
+    "row_verdict": "PASS"
    },
-   "note": "Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as R_BOUNDARY_UNCHANGED (tracked follow-up). Mixed oracle builds (maintainer ruling 2026-11-13, D8-ORACLE): the FAMILY-11 no-fit boundary probe was checked against the registered 5 Oct Totoro build (build-totoro.json); the 17 batches ran on the 11-04 build (build-totoro-20261104.json). Both are the P1 pin; the probe fits nothing."
+   "note": "The PUBLIC-R-BRIDGE case is context only (maintainer ruling 2026-11-13, P126b): R accepts the Gaussian family and fits a reduced model (one common residual scale, no per-trait unique part; df 5 on the formula route, df 9 on the matrix route, which adds trait intercepts) instead of the per-trait-unique model (df 8). It is not a numeric match and not an R refusal. The row binds through its native and formula-interface comparisons. Mixed oracle builds (maintainer ruling 2026-11-13, D8-ORACLE): the FAMILY-11 no-fit boundary probe was checked against the registered 5 Oct Totoro build (build-totoro.json); the 17 batches ran on the 11-04 build (build-totoro-20261104.json). Both are the P1 pin; the probe fits nothing."
   },
   {
    "source_id": "family/FAMILY-01-CLOGLOG",

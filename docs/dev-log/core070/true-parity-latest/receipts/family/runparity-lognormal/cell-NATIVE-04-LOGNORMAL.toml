@@ -1,7 +1,7 @@
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_lognormal_parity.jl"
 status = "success"
-run_id = "ee969c3fc9dacba2f478abdbb65110a8ada78eab4de3cc5863e83f1b9b309b66"
+run_id = "6a3c3aacea84ba0db661b82590a0fae0d779b6b0c5b112329eee5339aed558b0"
 fixture_sha256 = "1367f0b80beb825b60d2d1dd392a91c3d6a0b1a48375fa1e73c39f47e210d874"
 id = "NATIVE-04-LOGNORMAL"
 execution_manifest_sha256 = "b6e5cf3dc71a1ca1c6901b89ac5fa8265b6ef89f2f29b9e9dde8b1b23389ffe1"

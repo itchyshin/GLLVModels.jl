@@ -1,7 +1,7 @@
 contract_sha256 = "bc282aed156488eee12c519fb0e8a68b53a508197a89a34d6620f07adaee0765"
 fixture = "test/parity/test_delta_lognormal_required.jl"
 status = "success"
-run_id = "563c48c0fe2a2f569948aa7acdb178e9e3a8fc0715f5794b006102d55a3e1909"
+run_id = "53bf35798f14f1ef123af7926861b384a93c22370ba07c62abec748f314ddce5"
 fixture_sha256 = "9d56445fa7f0c60a9ef657d04457c436e7ba6a04efa06f448d821d25032c5348"
 id = "NATIVE-13-DELTA-LOGNORMAL"
 execution_manifest_sha256 = "05fa3d74ce80842ddb90b32d9aea1b3ede7bdf6ca9864b031b5b72ea55acd363"

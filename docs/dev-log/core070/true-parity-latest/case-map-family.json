@@ -4,7 +4,7 @@
   "scope": "family family: the 21 required rows (required_core, plus the compatibility_adapter row FAMILY-BETA-ALIAS, which tools/true_parity_check.mjs counts as required) the P1 carry scan lists as DANGLING (16) or NO_R_PINS (5). FAMILY-16-LOGIT (NOT_BOUND_AT_P0, empty case list) and the rejected and excluded rows are out of scope.",
   "note": "Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with PARITY_CASEMAP pointing at this file. Classification and disposition are carried from docs/dev-log/core070/required-source-case-map.json unchanged; nothing is signed by an agent. Only rows whose every executable case id carries passing R-vs-Julia comparison blocks, from a batch whose verifier passed, with no flagged comparison, cite evidence.receipt. Every cell is a toy fixture (p<=5, n<=250): these rows measure likelihood-level agreement on one small data set each, not full family parity.",
   "generator": "tools/core070_family_p1_receipts.py",
-  "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
+  "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
   "batch_verifiers": {
     "runparity-binomial": {
       "tool": "tools/core070_family_p1_receipts.py (runparity run receipts)",
@@ -93,11 +93,11 @@
     }
   },
   "counts": {
-    "numeric_pass": 20,
+    "numeric_pass": 21,
     "numeric_fail": 0,
     "numeric_held_batch_verifier_failed": 0,
     "numeric_non_discriminating": 0,
-    "partial_case_not_executed": 1,
+    "partial_case_not_executed": 0,
     "not_measured": 0
   },
   "p0_evidence_summary": {
@@ -106,24 +106,24 @@
     "p0_raw_receipts_available_here": false
   },
   "runtimes_seconds": {
-    "family-links-p1": 20,
-    "a6-p1": 20,
-    "runparity-binomial": 19,
-    "runparity-tweedie": 24,
-    "runparity-lognormal": 18,
-    "runparity-poisson": 33,
-    "runparity-nb2": 20,
+    "family-links-p1": 29,
+    "a6-p1": 21,
+    "runparity-binomial": 28,
+    "runparity-tweedie": 32,
+    "runparity-lognormal": 20,
+    "runparity-poisson": 38,
+    "runparity-nb2": 22,
     "runparity-nb2-formula": 36,
-    "runparity-beta": 29,
+    "runparity-beta": 33,
     "runparity-truncated-poisson": 12,
-    "runparity-truncated-nb2": 72,
-    "runparity-delta-lognormal": 15,
-    "runparity-delta-gamma": 16,
-    "runparity-ordinal-probit": 11,
-    "runparity-dispersion": 230,
+    "runparity-truncated-nb2": 75,
+    "runparity-delta-lognormal": 17,
+    "runparity-delta-gamma": 18,
+    "runparity-dispersion": 235,
+    "runparity-ordinal-probit": 13,
     "runparity-gaussian": 28,
-    "bridge-p1": 50,
-    "total_wall_seconds_five_parallel_runparity_plus_side_chain": 341
+    "bridge-p1": 61,
+    "total_wall_seconds_five_parallel_runparity_plus_side_chain": 376
   },
   "batch_artifacts": {
     "runparity-binomial": [
@@ -292,21 +292,26 @@
         "raw_available_in_repo_or_on_this_host": false,
         "note": "P0 receipts live under .unlazy/ (untracked; absent on this host). Only the P0 case map's record remains."
       },
-      "evidence_tier": "partial_case_not_executed",
+      "boundary_context_case_ids": [
+        "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE"
+      ],
+      "evidence_tier": "numeric",
       "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
       "evidence": {
-        "non_binding_receipts": [
+        "receipt": [
           "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL.json",
-          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.json",
+          "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE.json"
+        ],
+        "boundary_context_receipts": [
           "docs/dev-log/core070/true-parity-latest/receipts/family/cases/CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE.json"
         ],
-        "tier": "some case ids were measured at P1 and at least one was not executed, so the row does not bind"
+        "tier": "numeric (native and formula-interface cases): those case receipts carry R-vs-Julia comparison blocks pinned to P1, within the harness tolerance, from a batch whose verifier passed. The PUBLIC-R-BRIDGE case is non-binding boundary context, not a numeric match and not an R refusal: R accepts the Gaussian family at the public bridge and fits a different, reduced model (reference_model_change: one common residual scale and no per-trait unique part, df 5 on the formula route and df 9 on the matrix route, which also fits trait intercepts, against the required df 8; a warning on the formula route), recorded by a P1 probe on both public routes. Context under maintainer ruling 2026-11-13 (P126b), which applies the N1 context kind (D-319) to this case"
       },
       "measured_result": {
         "case_verdicts": {
           "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "PASS",
           "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": "PASS",
-          "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "NOT_EXECUTED"
+          "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": "R_BOUNDARY_UNCHANGED"
         },
         "batch_verifier": {
           "CORE070-FAMILY-00-IDENTITY-NATIVE-MODEL": "PASS",
@@ -318,9 +323,9 @@
           "CORE070-FAMILY-00-IDENTITY-FORMULA-INTERFACE": true,
           "CORE070-FAMILY-00-IDENTITY-PUBLIC-R-BRIDGE": true
         },
-        "executed_cases_verdict": "PASS"
+        "row_verdict": "PASS"
       },
-      "note": "Held under maintainer ruling 2026-10-05 (D-319), N1: the PUBLIC-R-BRIDGE case was not executed, which N1 does not cover. The row binds once a P1 R probe records the bridge refusal (GJL-GATE-FAMILY) as R_BOUNDARY_UNCHANGED (tracked follow-up). Mixed oracle builds (maintainer ruling 2026-11-13, D8-ORACLE): the FAMILY-11 no-fit boundary probe was checked against the registered 5 Oct Totoro build (build-totoro.json); the 17 batches ran on the 11-04 build (build-totoro-20261104.json). Both are the P1 pin; the probe fits nothing."
+      "note": "The PUBLIC-R-BRIDGE case is context only (maintainer ruling 2026-11-13, P126b): R accepts the Gaussian family and fits a reduced model (one common residual scale, no per-trait unique part; df 5 on the formula route, df 9 on the matrix route, which adds trait intercepts) instead of the per-trait-unique model (df 8). It is not a numeric match and not an R refusal. The row binds through its native and formula-interface comparisons. Mixed oracle builds (maintainer ruling 2026-11-13, D8-ORACLE): the FAMILY-11 no-fit boundary probe was checked against the registered 5 Oct Totoro build (build-totoro.json); the 17 batches ran on the 11-04 build (build-totoro-20261104.json). Both are the P1 pin; the probe fits nothing."
     },
     {
       "source_id": "family/FAMILY-01-CLOGLOG",

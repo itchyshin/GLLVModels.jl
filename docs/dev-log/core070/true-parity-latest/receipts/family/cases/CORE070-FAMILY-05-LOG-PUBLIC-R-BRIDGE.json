@@ -287,11 +287,11 @@
   },
   "read_from": {
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/results.json": "4b1e33f94e98a7ad824476c333b42bca75443434c9f98c09ab2602edba14e5e0",
-    "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/run-commit.json": "7e9fd345ee2b712dca50d188f47f0137edb2fd757f9e23e880f7ec04885d6752",
+    "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/run-commit.json": "d533f37732921352c791c4ed4a202b83cf396d6353dc8c0ab2277f38ab445051",
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/verify.txt": "9b0fd01a18849b610fc866dc91ab159840af37f6d67fb929f7a238c94da709cc",
     "docs/dev-log/core070/true-parity-latest/receipts/family/runparity-nb2/nb2-health.toml": "00a9287aa123402d3aaafa7a14318919e5f105bbc86fd82d0a920d36e94387d1",
     "docs/dev-log/core070/public-bridge-required-cases.json": "72597c8905af7f680984089f89fbb89a6972be02c8bef207986a035f27377e4b",
-    "tools/core070_family_bridge_p1.R": "46bcf124db18be073f89a481ec611681a918293e170f67b8452ecb4630df019d"
+    "tools/core070_family_bridge_p1.R": "74deecd535dabaa67506be8c784ebc71083c65a0eefef799822f8c62a596412c"
   },
   "raw": [
     "docs/dev-log/core070/true-parity-latest/receipts/family/bridge-p1/results.json"
@@ -302,7 +302,7 @@
   "p0_reference_commit": "b4d5fee64def88bc768dda1f1f77c29b295edd86",
   "oracle_build_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
   "oracle_source_receipt": "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json",
-  "glvmodels_commit": "17eeaa1f6bfe6fc2cc399e2e1aeef609e0e2412a",
+  "glvmodels_commit": "ab93b2dfd8fd23a9350551e14ab50946dc28103f",
   "glvmodels_worktree_dirty": [],
   "glvmodels_src_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
   "host": "Totoro (Linux x86_64, R 4.6.1, TMB 1.9.21, Matrix 1.7.5, Julia 1.10.12), OPENBLAS/OMP threads 1, JULIA_NUM_THREADS=4",

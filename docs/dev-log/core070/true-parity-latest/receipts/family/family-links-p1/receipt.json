@@ -14,7 +14,7 @@
   "expected_case_ids": ["CORE070-FAMILY-01-PROBIT-NATIVE-MODEL", "CORE070-FAMILY-01-CLOGLOG-NATIVE-MODEL"],
   "negative_control_case_ids": ["NEG-COEF-SHIFTED-PROBIT", "NEG-LOGLIK-SHIFTED-CLOGLOG", "NEG-LINK-SWAPPED", "NEG-SATURATED-FIT-MUST-FAIL"],
   "julia_exit_code": 0,
-  "julia_elapsed_seconds": 19.4795,
+  "julia_elapsed_seconds": 27.8378,
   "julia_results_sha256": "4b65fe6309805b0c33559a84b1762f5d69898496c96b5ab2056e9ed16bddddcb",
   "raw_sha256": "dddb56993514de9bab25e7d3d136a74551e71be79ce02b12e78b24b2687c19f4",
   "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
