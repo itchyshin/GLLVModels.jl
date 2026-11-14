@@ -40,6 +40,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   categorical contrasts and interactions. Fits retain the copied design, response
   shape and coefficient labels. No R source-grammar, bridge, random-slope or
   calibrated-uncertainty claim is implied.
+- **IN (refs #730), behaviour change:** a NaN or Inf in `y` is an `ArgumentError`
+  naming the fitter and the offending indices on `fit_phylo_gaussian`,
+  `fit_spde_gaussian` and `fit_relaxed_clock`. These fitters take no `mask` or `missing`;
+  they used to return `loglik = -Inf` (or an all-NaN fit) with `converged = false` and no
+  message. Finite data is unchanged.
 - **Development:** per-trait Gaussian fitting accepts an explicit fixed residual
   SD and estimates unique variances within that constraint. Results retain unique
   and total diagonal variances; existing defaults and parameter counts are unchanged.
