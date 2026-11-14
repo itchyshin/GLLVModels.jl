@@ -203,6 +203,7 @@ function fit_rrr_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family = Poiss
     size(X, 1) == n ||
         throw(DimensionMismatch("X must be (n, q) = ($n, q) with one row per site; got $(size(X))"))
     q = size(X, 2)
+    _check_finite_covariates(X, "fit_rrr_gllvm"; unit = :site)
     rr = rr_theta_len(p, K)
     lk = link === nothing ? _cov_default_link(family) : link
     Nm = N === nothing ? fill(1, p, n) : N

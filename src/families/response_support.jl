@@ -71,3 +71,53 @@ function _sanitize_unobserved(Y::AbstractMatrix, mask, placeholder)
     isconcretetype(eltype(out)) && return out
     return convert(Matrix{mapreduce(typeof, promote_type, out; init = typeof(placeholder))}, out)
 end
+
+# _check_finite_covariates(X, caller; obs = nothing, unit = :cell, name = "X")
+#
+# Covariates must be finite where they are used. A NaN (or `missing`, or Inf) in `X` used
+# to give an objective of NaN or -Inf, so the fitter returned `loglik = -Inf` and
+# `converged = false` with no message. This throws an `ArgumentError` naming `caller`, the
+# array, the first offending entry and the number of offending entries.
+#
+# `obs` is the observation mask (`nothing` = every cell observed). With `unit = :cell` the
+# array is `p x n x q` and only the entries at observed cells are checked, so a covariate
+# value hidden by `mask = false` / `missing` stays allowed. With `unit = :site` the array
+# is `n x q` and a row is checked when its site has an observed cell; with `unit = :trait`
+# it is `p x r` and a row is checked when its trait has one. A mask whose size does not
+# match the array (3 x 29 against a 5 x 24 response, say) is a `DimensionMismatch`, raised
+# before the scan reads it; the scan is bounds-checked as well.
+function _check_finite_covariates(X::AbstractArray, caller::AbstractString;
+        obs = nothing, unit::Symbol = :cell, name::AbstractString = "X")
+    if obs !== nothing
+        want = unit === :cell ? (size(X, 1), size(X, 2)) :
+               unit === :site ? (nothing, size(X, 1)) : (size(X, 1), nothing)
+        ok = ndims(obs) == 2 && (unit === :cell ? size(obs) == want :
+             unit === :site ? size(obs, 2) == want[2] : size(obs, 1) == want[1])
+        ok || throw(DimensionMismatch(
+            "$caller: mask is $(size(obs)) but $name is $(size(X)); `mask` must have the shape " *
+            "of Y (traits × units, true = observed) and match $name " *
+            (unit === :cell ? "in its first two dimensions." :
+             unit === :site ? "in its rows (units)." : "in its rows (traits).")))
+    end
+    bad = 0
+    first_bad = nothing
+    for I in CartesianIndices(X)
+        x = X[I]
+        (x isa Real && isfinite(x)) && continue
+        if obs !== nothing
+            seen = unit === :cell ? obs[I[1], I[2]] :
+                   unit === :site ? any(view(obs, :, I[1])) : any(view(obs, I[1], :))
+            seen || continue
+        end
+        bad += 1
+        first_bad === nothing && (first_bad = I)
+    end
+    bad == 0 && return nothing
+    idx = join(Tuple(first_bad), ", ")
+    loc = obs === nothing ? "" : " at observed cells"
+    hint = obs === nothing ? "Fix or impute the covariate." :
+        "Fix or impute the covariate, or mark the response cell unobserved (`missing` / `mask = false`)."
+    throw(ArgumentError("$caller: $name[$idx] = $(X[first_bad]) is not a finite number " *
+        "($bad non-finite entr$(bad == 1 ? "y" : "ies")$loc). " *
+        "Covariates must be finite; NaN, `missing` and Inf are not accepted. " * hint))
+end

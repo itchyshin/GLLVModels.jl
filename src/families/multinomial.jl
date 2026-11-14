@@ -312,6 +312,7 @@ function fit_multinomial_gllvm(Y::AbstractVecOrMat;
     p = X === nothing ? 0 : size(X, 2)
     X === nothing || size(X, 1) == n || throw(DimensionMismatch(
         "multinomial X must be n×p = ($n, $p); got $(size(X))"))
+    X === nothing || _check_finite_covariates(X, "fit_multinomial_gllvm")
     β0 = β_init === nothing ? _multinomial_β_init(y, ncat) : collect(float.(β_init))
     length(β0) == ncat - 1 || throw(DimensionMismatch(
         "β_init length $(length(β0)) ≠ K-1 = $(ncat - 1)"))
