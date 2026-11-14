@@ -6,6 +6,8 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **IN (#1190):** a formula covariate holding `missing` is an `ArgumentError` naming the column and
+  the first site (it was `KeyError: key missing not found`).
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
   and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`
