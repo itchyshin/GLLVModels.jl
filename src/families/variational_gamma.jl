@@ -26,7 +26,9 @@
 # series and a (u - log1p(u)) kernel). So
 #   E_q[log f] = `_gamma_logpdf(α, e^{μη}, y)` - α (y / e^{μη}) expm1(σ2/2).
 # The last term is a sum-free product of nonnegative factors, so no two large terms are subtracted.
-# Below the switch, or where the η clamp on `-μη + σ2/2` is active, the original expression is kept.
+# Below the switch, or where the η clamp on `-μη + σ2/2` is active, the original expression is kept; so it is
+# wherever the stable value is not finite (`exp(μη)` overflows above μη ≈ 709.78, `expm1(σ2/2)` above σ2 ≈ 1419,
+# and y / exp(μη) below 2^-54 gives `log1p(-1)` in the helper), where the original expression is finite and exact.
 @inline _gamma_va_use_stable(α, μη, σ2) =
     α >= _GAMMA_STIRLING_FROM && abs(-μη + 0.5 * σ2) <= _ETA_CLAMP
 @inline function _gamma_va_expect_stable(α, y, μη, σ2)
@@ -48,8 +50,11 @@ function _va_site_gamma_elbo(ψ::AbstractVector, y::AbstractVector,
     @inbounds for t in 1:p
         (obs !== nothing && !obs[t]) && continue
         if _gamma_va_use_stable(α, μη[t], σ2[t])
-            ℓ += _gamma_va_expect_stable(α, y[t], μη[t], σ2[t])
-            continue
+            e = _gamma_va_expect_stable(α, y[t], μη[t], σ2[t])
+            if isfinite(e)                                  # else the original expression below
+                ℓ += e
+                continue
+            end
         end
         w = exp(_clamp_eta(-μη[t] + 0.5 * σ2[t]))          # E_q[e^{−η_t}]
         ℓ += (α - 1) * log(y[t]) - y[t] * α * w - α * μη[t] + α * log(α) - loggamma(α)

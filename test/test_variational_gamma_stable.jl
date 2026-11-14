@@ -86,3 +86,21 @@ end
         @test isapprox(G, ForwardDiff.gradient(fd, ψ); rtol = 1e-8, atol = 1e-8 * max(1.0, a * s^2))
     end
 end
+
+# Where the stable form is not finite the original expression is kept. exp(mu_eta) overflows for mu_eta above
+# about 709.78, expm1(sigma2 / 2) overflows for sigma2 above about 1419, and y / exp(mu_eta) below 2^-54 makes
+# the helper form log1p(-1); each gave NaN or -Inf where the original expression is finite (checked against the
+# 512-bit BigFloat closed form; literals below). psi = [0, 0], so mu_eta = beta,
+# sigma2 = Lambda^2 and KL = 0; the delta-Gamma literal adds log(1/2).
+@testset "variational Gamma and delta-Gamma sites keep the original value where the stable form is not finite" begin
+    # (shape, y, beta, Lambda, BigFloat Gamma ELBO, BigFloat delta-Gamma ELBO)
+    for (a, y, β, l, rg, rd) in ((1.0e4, 3.0, 800.0, 40.0, -8.009011289502288e6, -8.009011982649469e6),
+                                 (1.0e4, 3.0, 700.0, 38.0, -1.0754739236295903e14, -1.0754739236295973e14),
+                                 (1.0e4, 1.0e-6, 30.0, 1.0e-8, -428137.60384576535, -428138.2969929459))
+        Λ = reshape([l], 1, 1)
+        g = GM._va_site_gamma_elbo([0.0, 0.0], [y], Λ, Λ .^ 2, [β], a)
+        d = GM._va_site_dgamma_elbo([0.0, 0.0], [y], Λ, Λ .^ 2, [0.0], [β], a)
+        @test isfinite(g) && isapprox(g, rg; rtol = 1e-10)
+        @test isfinite(d) && isapprox(d, rd; rtol = 1e-10)
+    end
+end
