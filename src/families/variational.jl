@@ -189,6 +189,12 @@ gradient. The returned `PoissonFit`'s `loglik` field holds the maximised ELBO (a
 lower bound on the true log-marginal), so it is directly comparable across VA fits
 but sits slightly below the Laplace `loglik` for the same data.
 
+The posterior is a Gaussian with a diagonal covariance per site. R `gllvm`'s default
+(`control.va = list(Lambda.struc = "unstructured")`) is a full covariance, so with
+`K ≥ 2` this fit matches `gllvm(...; method = "VA")` only when `gllvm` is given
+`Lambda.struc = "diagonal"`; at `K = 1` the two coincide. The other `fit_*_gllvm_va`
+drivers use the same posterior form.
+
 A `Y` that contains `missing` is fitted, not rejected: the observation mask is
 derived from those cells (a one-time `@info`) and unobserved cells are dropped
 from the ELBO, the same NA rule as [`fit_poisson_gllvm`](@ref). Pass `mask` to
