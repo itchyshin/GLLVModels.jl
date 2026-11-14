@@ -126,6 +126,22 @@ class Validator(unittest.TestCase):
         self.rejects(lambda r: r.update(case_id="CORE070-FAMILY-11-LOG-PUBLIC-R-BRIDGE"))
 
 
+class TrackedRecord(unittest.TestCase):
+    def test_tracked_probe_record_validates_and_edits_are_refused(self):
+        path = t.ROOT / t.FAMILY00_MODEL_CHANGE_RAW
+        if not path.is_file():
+            self.skipTest("no tracked model-change record on this tree")
+        raw = t.load(path)
+        t.validate_family00_model_change(raw)
+        for mutate in (lambda r: r["routes"]["formula"].update(warnings=[]),
+                       lambda r: r["routes"]["formula"]["fit"].update(df=8),
+                       lambda r: r["routes"].pop("matrix")):
+            bad = copy.deepcopy(raw)
+            mutate(bad)
+            with self.assertRaises(SystemExit):
+                t.validate_family00_model_change(bad)
+
+
 class Derivation(unittest.TestCase):
     def derive(self, rec):
         with tempfile.TemporaryDirectory() as d:
