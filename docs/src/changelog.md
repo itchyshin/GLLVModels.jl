@@ -18,6 +18,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   preserves historical behavior; `optimizer_info(fit)` reports executed
   stages. Explicit selection is refused for unsupported nested routes and
   profile/bootstrap refits that do not yet forward the solver.
+- **IN (refs #1107, #1108), behaviour change:** NaN or Inf at an observed cell of `Y` is
+  an `ArgumentError` naming the fitter and the cell on `fit_gaussian_gllvm`,
+  `fit_dep_gllvm` and `fit_gllvm(Normal())`. At `K = p` they returned `loglik = NaN`
+  with `converged = false` and no message. Use `missing` or `mask = false` for
+  unobserved cells.
 - **CHANGED (default, breaking):** `DeltaLogNormal()` / `DeltaGamma()`
   (`fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`, and `fit_gllvm`)
   default to `disp_group = :species` — one dispersion per trait, matching R
@@ -30,11 +35,21 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   fitting API remains unchanged. After the rename, `using GLLVM` cannot resolve
   a package. Once `GLLVModels` is loaded, `GLLVModels.GLLVM` is only a temporary
   qualified alias; it does not provide import compatibility and is deprecated.
+- **IN, behaviour change:** `spde_fem` throws an `ArgumentError` naming any mesh
+  node that belongs to no triangle (what a duplicated input point becomes in
+  `spde_mesh_delaunay`). Such a node has zero lumped mass; the fit used to return
+  `loglik = -Inf` with `converged = false` and no message. Meshes where every node is in a
+  triangle are unchanged.
 - **Development:** fixed Gaussian source fits accept a complete mean design `X`.
   Explicit-source wide/long formulas expose trait intercepts, shared slopes,
   categorical contrasts and interactions. Fits retain the copied design, response
   shape and coefficient labels. No R source-grammar, bridge, random-slope or
   calibrated-uncertainty claim is implied.
+- **IN (refs #730), behaviour change:** a NaN or Inf in `y` is an `ArgumentError`
+  naming the fitter and the offending indices on `fit_phylo_gaussian`,
+  `fit_spde_gaussian` and `fit_relaxed_clock`. These fitters take no `mask` or `missing`;
+  they used to return `loglik = -Inf` (or an all-NaN fit) with `converged = false` and no
+  message. Finite data is unchanged.
 - **Development:** per-trait Gaussian fitting accepts an explicit fixed residual
   SD and estimates unique variances within that constraint. Results retain unique
   and total diagonal variances; existing defaults and parameter counts are unchanged.
