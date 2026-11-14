@@ -229,8 +229,9 @@ function fit_rrr_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family = Poiss
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         B = reshape(θ[(p + rr + 1):(p + rr + qK)], q, K)
         disp = has_disp ? exp(θ[p + rr + qK + 1]) : NaN
-        fam = _cov_family(family, disp)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(family, disp)
             -rrr_marginal_loglik(fam, Y, Nm, Λ, B, β, X, lk)
         catch
             return 1e12
