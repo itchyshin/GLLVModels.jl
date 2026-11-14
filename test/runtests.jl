@@ -99,7 +99,7 @@ for (_k, _files) in enumerate((
         "test_gamma_shape_upper_warn.jl", "test_nb_cov_two_starts.jl", "test_fit_verdict_gradient.jl",
         "test_nb_beta_x_identity.jl", "test_beta_grouped_mode_search.jl", "test_nb1_x_identity.jl",
         "test_zip_x_identity.jl", "test_issue_719_docs_deploy_guard.jl", "test_tweedie.jl",
-        "test_tweedie_grouped_mode_search_503.jl", "test_studentt_core070.jl", "test_lognormal.jl",
+        "test_tweedie_grouped_mode_search_503.jl", "test_tweedie_grouped_k1_mode_1042.jl", "test_studentt_core070.jl", "test_lognormal.jl",
         "test_zib_x_identity.jl", "test_ordinal_fit.jl", "test_ordinal_logit_twin.jl",
         "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
         "test_formula_pervar.jl", "test_formula_default_x_guard.jl", "test_statsapi.jl",
@@ -541,6 +541,7 @@ println(_SHARD === nothing ?
     _shard_include("test_tweedie_engine_health.jl")
     _shard_include("test_tweedie_grouped_engine_health.jl")
     _shard_include("test_tweedie_grouped_mode_search_503.jl")
+    _shard_include("test_tweedie_grouped_k1_mode_1042.jl")
     _shard_include("test_tweedie_power_contract.jl")
     _shard_include("test_tweedie_cdf.jl")
     _shard_include("test_exponential.jl")
