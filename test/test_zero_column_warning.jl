@@ -84,3 +84,102 @@ end
         @test za.loglik == zb.loglik && za.βc == zb.βc && za.βz == zb.βz && za.Λc == zb.Λc
     end
 end
+
+# ---- once per public call, once per distinct (fitter, columns) per session ------------------
+# `maxlog` is applied by the logger, so a TestLogger or a ConsoleLogger hides repeats inside
+# one logger. `_ZcRecorder` ignores `maxlog` and keeps every record, which is the only honest
+# way to count how many times a fit calls the warning.
+struct _ZcRecorder <: Logging.AbstractLogger
+    msgs::Vector{String}
+end
+_ZcRecorder() = _ZcRecorder(String[])
+Logging.min_enabled_level(::_ZcRecorder) = Logging.Warn
+Logging.shouldlog(::_ZcRecorder, args...) = true
+Logging.handle_message(l::_ZcRecorder, level, msg, args...; kwargs...) =
+    push!(l.msgs, string(msg))
+
+function _zc_records(f)
+    rec = _ZcRecorder()
+    res = Logging.with_logger(f, rec)
+    return res, filter(m -> occursin(_zc_pattern, m), rec.msgs)
+end
+
+# Messages seen by ONE maxlog-honouring logger across several fits (what a user's console sees).
+function _zc_session(fs...)
+    logger = Test.TestLogger(min_level = Logging.Warn)
+    Logging.with_logger(logger) do
+        foreach(f -> f(), fs)
+    end
+    return filter(m -> occursin(_zc_pattern, m),
+                  [string(l.message) for l in logger.logs if l.level == Logging.Warn])
+end
+
+@testset "all-zero column warning: per distinct fitter and columns, once per public call" begin
+    Y0 = _zc_counts()
+    YA = copy(Y0); YA[2, :] .= 0                      # columns [2]
+    YB = copy(Y0); YB[1, :] .= 0; YB[3, :] .= 0       # columns [1, 3]
+
+    @testset "a second data set with other all-zero columns warns, naming its own columns" begin
+        w = _zc_session(() -> fit_poisson_gllvm(YA; K = 1), () -> fit_poisson_gllvm(YB; K = 1))
+        @test length(w) == 2
+        @test occursin("species column(s) [2]", w[1])
+        @test occursin("species column(s) [1, 3]", w[2])
+        # the same through a ConsoleLogger, which also applies maxlog itself
+        io = IOBuffer()
+        Logging.with_logger(Logging.ConsoleLogger(io, Logging.Warn)) do
+            fit_poisson_gllvm(YA; K = 1); fit_poisson_gllvm(YB; K = 1)
+        end
+        txt = String(take!(io))
+        @test occursin("species column(s) [2]", txt) && occursin("species column(s) [1, 3]", txt)
+    end
+
+    @testset "Poisson and ZIP are separate messages" begin
+        w = _zc_session(() -> fit_poisson_gllvm(YA; K = 1), () -> fit_zip_gllvm(YA; K = 1))
+        @test length(w) == 2
+        @test occursin("fit_poisson_gllvm", w[1]) && occursin("fit_zip_gllvm", w[2])
+        w = _zc_session(() -> fit_zip_gllvm(YA; K = 1), () -> fit_zip_gllvm(YB; K = 1))
+        @test length(w) == 2 && occursin("[2]", w[1]) && occursin("[1, 3]", w[2])
+    end
+
+    @testset "the same data fitted twice warns once in a session" begin
+        w = _zc_session(() -> fit_poisson_gllvm(YA; K = 1), () -> fit_poisson_gllvm(YA; K = 1))
+        @test length(w) == 1
+        w = _zc_session(() -> fit_zip_gllvm(YA; K = 1), () -> fit_zip_gllvm(YA; K = 1))
+        @test length(w) == 1
+    end
+
+    @testset "one public call emits exactly one record (maxlog ignored)" begin
+        for (label, f) in (
+                ("poisson", () -> fit_poisson_gllvm(YA; K = 1)),
+                ("poisson n_init = 3", () -> fit_poisson_gllvm(YA; K = 1, n_init = 3)),
+                ("poisson n_init = 3, K = 2", () -> fit_poisson_gllvm(YA; K = 2, n_init = 3)),
+                ("fit_gllvm poisson n_init = 3",
+                 () -> fit_gllvm(YA; family = Poisson(), K = 1, n_init = 3)),
+                ("poisson aghq = 5", () -> fit_poisson_gllvm(YA; K = 1, aghq = 5)),
+                ("zip", () -> fit_zip_gllvm(YA; K = 1)),
+                ("zip fisher", () -> fit_zip_gllvm(YA; K = 1, hessian = :fisher)))
+            _, w = _zc_records(f)
+            @test (label, length(w)) == (label, 1)
+        end
+    end
+
+    @testset "bootstrap refits do not repeat the warning" begin
+        fit = fit_poisson_gllvm(YA; K = 1)
+        _, w = _zc_records(() -> confint(fit, YA; method = :bootstrap, n_boot = 4, seed = 1))
+        @test isempty(w)
+        zfit = fit_zip_gllvm(YA; K = 1)
+        _, w = _zc_records(() -> confint(zfit, YA; method = :bootstrap, n_boot = 4, seed = 1))
+        @test isempty(w)
+    end
+
+    @testset "sparse columns stay silent in every one of these routes" begin
+        Ys = copy(YA); Ys[2, 7] = 1
+        for f in (() -> fit_poisson_gllvm(Ys; K = 1, n_init = 3),
+                  () -> fit_poisson_gllvm(Ys; K = 1, aghq = 5),
+                  () -> fit_zip_gllvm(Ys; K = 1),
+                  () -> fit_gllvm(Ys; family = Poisson(), K = 1, n_init = 3))
+            _, w = _zc_records(f)
+            @test isempty(w)
+        end
+    end
+end
