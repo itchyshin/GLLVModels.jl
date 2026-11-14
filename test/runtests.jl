@@ -146,7 +146,7 @@ for (_k, _files) in enumerate((
         "test_censored_poisson.jl", "test_truncnb2_laplace_breakdown.jl", "test_gamma_laplace.jl",
         "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl", "test_phylo_binomial_xlv.jl",
         "test_boundary_inference.jl", "test_grouped_laplace_identity.jl", "test_grouped_identification_diagnostics.jl",
-        "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl",
+        "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl", "test_nb1_fisher_large_counts.jl",
         "test_nb2_grouped_mode_search.jl", "test_grouped_getlv_mode.jl", "test_gamma_grouped_mode_search.jl",
         "test_betabinomial_x_identity.jl", "test_zinb_x_identity.jl", "test_beta_fit.jl",
         "test_link_honoured.jl", "test_issue_725_extractor_docs.jl", "test_studentt_disp_group.jl",
@@ -250,6 +250,17 @@ function _in_shard(path::AbstractString, pos::Integer)
     return (pos - 1) % N == k - 1
 end
 
+# Auto-discovered files: every test/auto/test_*.jl runs without any edit to this
+# file (so two PRs that each add a test file never conflict here). Assignment
+# is by a stable hash of the file name (`_auto_shard_of`), for every N, and
+# never touches `_shard_pos`, so it cannot move any listed file. A file under
+# test/auto/ must not use paths relative to test/ (use joinpath(@__DIR__, "..", ...)).
+# Auto files do not pass through `_shard_include`, so the `_THREADED_FILES` thread
+# check does not cover them: a test that needs Julia threads must be listed in the
+# include list below, not placed in test/auto/.
+const _AUTO_FILES = _auto_test_files(@__DIR__)
+_auto_in_shard(f::AbstractString) = _SHARD === nothing || _auto_shard_of(f, _SHARD[2]) == _SHARD[1]
+
 # Gated files (opt-in or version-limited). `_shard_include_if(cond, path)` selects
 # exactly like `_shard_include` (it ALWAYS advances the position counter, so a
 # gate never shifts the position of any later file, and uses `_in_shard` with the
@@ -302,7 +313,7 @@ _n_selected = count(enumerate(m.captures[1] for m in eachmatch(
     r"\n    _shard_include\(\"([^\"]+)\"\)", read(@__FILE__, String)))) do (i, f)
     _in_shard(f, i)
 end
-_n_reported = _n_selected + (_RUN_QUALITY ? 1 : 0)
+_n_reported = _n_selected + count(_auto_in_shard, _AUTO_FILES) + (_RUN_QUALITY ? 1 : 0)
 
 println(_SHARD === nothing ?
     "GLLVModels tests: all files ($_n_reported files)" :
@@ -506,6 +517,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb1_poisson_ridge.jl")
     _shard_include("test_nb1_scalar_gradient_gate.jl")
     _shard_include("test_nb1_grouped_mode_search.jl")
+    _shard_include("test_nb1_fisher_large_counts.jl")
     _shard_include("test_nb2_grouped_mode_search.jl")
     _shard_include("test_grouped_init_kwargs.jl")
     _shard_include("test_grouped_getlv_mode.jl")
@@ -912,6 +924,10 @@ println(_SHARD === nothing ?
     _shard_include("test_zip_betaz_wald_926.jl")
     _shard_include("test_zinb_observed_laplace.jl")
     _shard_include("test_zerostep_verdict_sweep.jl")
+    # w2-structured: spde_fem refuses a vertex that belongs to no triangle (duplicate input point).
+    _shard_include("test_spde_orphan_mesh_node.jl")
+    # w2-structured: NaN/Inf response refused by fit_phylo_gaussian, fit_spde_gaussian, fit_relaxed_clock.
+    _shard_include("test_nonfinite_y_phylo_spde_relaxed.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")
@@ -948,6 +964,8 @@ println(_SHARD === nothing ?
     _shard_include("test_docstring_ref_linebreaks.jl")
     # #763: an explicit mask that marks a `missing` cell observed throws an ArgumentError.
     _shard_include("test_mask_missing_763.jl")
+    # #1217: a mask or `missing` in Y on a route without mask support is an ArgumentError, not a raw MethodError.
+    _shard_include("test_mask_unsupported_routes_1217.jl")
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")
@@ -967,11 +985,17 @@ println(_SHARD === nothing ?
     _shard_include("test_predictive_check_binomial.jl")
     _shard_include("test_nb_mite_multistart_1022.jl")
     _shard_include("test_nb_n_init_mite_1022.jl")
+    # An explicit mask of another size than Y is a DimensionMismatch (Laplace and ordinal fitters).
+    _shard_include("test_mask_size_check.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
+    # New test files go in test/auto/ and are picked up here; no line to add.
+    for _f in _AUTO_FILES
+        _auto_in_shard(_f) && include(joinpath("auto", _f))
+    end
 end
 # README examples: shard 1 only. The blocks include Poisson fits and a Gaussian
 # CI trio; they must not run on every CI shard.
