@@ -1557,7 +1557,8 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         offset = nothing,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
+        _warn_zero_columns::Bool = true)
     _refuse_mask_route("fit_zip_gllvm", mask)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
@@ -1565,6 +1566,7 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zip_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_zip_gllvm", Y, _tp_count_ok, "non-negative integer counts")
+    _warn_zero_columns && _warn_all_zero_count_columns(Y, nothing; caller = "fit_zip_gllvm")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zi_warmstart(Y, K; offset = offset)
     θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
@@ -1592,14 +1594,14 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
                                                       offset, newton_maxiter, newton_tol) >= 1.1 * ZI_LAPLACE_EIGMIN_FLOOR)
         ff = fit_zip_gllvm(Y; K = K, offset = offset, hessian = :fisher, g_tol = g_tol,
                            iterations = iterations, newton_maxiter = newton_maxiter,
-                           newton_tol = newton_tol)
+                           newton_tol = newton_tol, _warn_zero_columns = false)
         θf = vcat(ff.βz, ff.βc, pack_lambda(ff.Λc))
         res2 = Optim.optimize(negll, θf, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
                               autodiff = :finite)
         Optim.minimum(res2) < Optim.minimum(res) && (res = res2)
     end
     # #573: never end below the nested Poisson fit (see `_zi_nested_guard`).
-    pf = try fit_poisson_gllvm(Y; K = K, offset = offset) catch; nothing end
+    pf = try fit_poisson_gllvm(Y; K = K, offset = offset, _warn_zero_columns = false) catch; nothing end
     if pf !== nothing
         θn = vcat(fill(_ZI_NESTED_BETAZ, p), pf.β, pack_lambda(pf.Λ))
         res = _zi_nested_guard(negll, res, pf.loglik, θn, g_tol, iterations)

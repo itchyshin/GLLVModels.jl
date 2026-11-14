@@ -102,7 +102,8 @@ end
 # Best of `n_init` Laplace fits (#915). Start 1 is the unchanged default call; the extra
 # starts replace `Λ_init` with a seeded lower-triangular draw. Converged fits rank before
 # unconverged ones, then higher `loglik`; ties keep the earlier start, so `n_init = 1` and any
-# case where start 1 wins are exactly the single-start fit.
+# case where start 1 wins are exactly the single-start fit. Only start 1 runs the all-zero
+# column check, so one public call gives one warning however large `n_init` is.
 function _poisson_best_of_starts(Y,K,n_init,kwargs)
     best=_fit_poisson_gllvm_laplace(Y;K=K,kwargs...)
     n_init==1 && return best
@@ -112,7 +113,7 @@ function _poisson_best_of_starts(Y,K,n_init,kwargs)
         L=0.3 .* randn(Random.Xoshiro(915+s),p,K)
         for k in 1:K,i in 1:min(k-1,p);L[i,k]=0.0;end
         cand=try
-            _fit_poisson_gllvm_laplace(Y;K=K,merge((;kwargs...),(Λ_init=L,))...)
+            _fit_poisson_gllvm_laplace(Y;K=K,merge((;kwargs...),(Λ_init=L,_warn_zero_columns=false))...)
         catch e
             e isa InterruptException && rethrow()
             nothing
