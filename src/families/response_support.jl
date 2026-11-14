@@ -101,6 +101,9 @@ function _warn_all_zero_count_columns(Y::AbstractMatrix, mask; caller::AbstractS
         (allzero && nobs > 0) && push!(cols, t)
     end
     isempty(cols) && return nothing
-    @warn "$caller: species column(s) $cols have no non-zero count in any observed cell. The fit still runs, but the intercept of such a species has no finite maximum-likelihood value (it ends at a large negative number set by where the optimiser stops), so `converged = true` does not mean it is identified. Drop the column or treat its estimates as not identified." maxlog=1 _id=Symbol("all_zero_count_columns:", caller, ":", join(cols, ","))
+    # ZIP only: the zero-inflation logit can also absorb the column, so it runs off too (observed: both
+    # at about +/-450 with `converged = true`).
+    zinote = caller == "fit_zip_gllvm" ? " The zero-inflation term of such a species also runs off to a large value, so it is not identified either." : ""
+    @warn "$caller: species column(s) $cols have no non-zero count in any observed cell. The fit still runs, but the intercept of such a species has no finite maximum-likelihood value (it ends at a large negative number set by where the optimiser stops), so `converged = true` does not mean it is identified.$zinote Drop the column or treat its estimates as not identified." maxlog=1 _id=Symbol("all_zero_count_columns:", caller, ":", join(cols, ","))
     return nothing
 end

@@ -30,6 +30,7 @@ end
         _, w = _zc_warnings(() -> fit_poisson_gllvm(Yz; K = 1))
         @test length(w) == 1
         @test occursin("fit_poisson_gllvm: species column(s) [2]", only(w))
+        @test !occursin("zero-inflation", only(w))      # the ZIP sentence is for ZIP only
         # the same message through fit_gllvm, and with two all-zero columns
         _, w = _zc_warnings(() -> fit_gllvm(Yz; family = Poisson(), K = 1))
         @test length(w) == 1
@@ -53,8 +54,10 @@ end
         _, w = _zc_warnings(() -> fit_zip_gllvm(Yz; K = 1))
         @test length(w) == 1
         @test occursin("fit_zip_gllvm: species column(s) [2]", only(w))
+        @test occursin("The zero-inflation term of such a species also runs off to a large value, so it is not identified either.", only(w))
         _, w = _zc_warnings(() -> fit_gllvm(Yz; family = ZIPoisson(), K = 1))
         @test length(w) == 1        # the Fisher restart and the nested Poisson fit stay quiet
+        @test occursin("zero-inflation term", only(w))
     end
 
     @testset "sparse columns stay silent and fit as before" begin
