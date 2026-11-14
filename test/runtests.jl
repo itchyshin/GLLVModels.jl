@@ -959,6 +959,8 @@ println(_SHARD === nothing ?
     _shard_include("test_docstring_ref_linebreaks.jl")
     # #763: an explicit mask that marks a `missing` cell observed throws an ArgumentError.
     _shard_include("test_mask_missing_763.jl")
+    # #1217: a mask or `missing` in Y on a route without mask support is an ArgumentError, not a raw MethodError.
+    _shard_include("test_mask_unsupported_routes_1217.jl")
     _shard_include("test_changelog_structure.jl")
     # #276: fixture index (comparator_targets.toml) parses, every row has its keys, every path exists. Index only, no comparator claim.
     _shard_include("test_comparator_targets.jl")

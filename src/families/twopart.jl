@@ -581,13 +581,14 @@ DeltaGamma is the only two-part family whose observed weight is implemented).
 Exposing the kwarg is the measurement prerequisite for closing that gap. This
 holds under both `predictor` modes.
 """
-function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         offset = nothing,
         hessian::Symbol = :observed,
         predictor::Symbol = :separate,
         disp_group::Symbol = :species,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_delta_lognormal_gllvm", mask)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
                                caller = "fit_delta_lognormal_gllvm", maskable = false)
@@ -779,11 +780,12 @@ currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
 Exposing the kwarg is the measurement prerequisite for closing that gap.
 """
-function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         offset = nothing,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_hurdle_poisson_gllvm", mask)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
                                caller = "fit_hurdle_poisson_gllvm", maskable = false)
@@ -945,11 +947,12 @@ currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
 Exposing the kwarg is the measurement prerequisite for closing that gap.
 """
-function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         offset = nothing,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_hurdle_nb_gllvm", mask)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
                                caller = "fit_hurdle_nb_gllvm", maskable = false)
@@ -1201,12 +1204,13 @@ standardised positives.
 two-part family whose observed count-part weight is implemented, so the two
 selectors genuinely differ here. This holds under both `predictor` modes.
 """
-function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         offset = nothing, hessian::Symbol = :observed,
         predictor::Symbol = :separate,
         disp_group::Symbol = :species,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_delta_gamma_gllvm", mask)
     # Validated up front: the objective wraps its body in a try/catch that converts any
     # throw into a large penalty, so a typo'd symbol would otherwise be laundered into
     # a converged-looking garbage fit.
@@ -1549,11 +1553,12 @@ singularity, so there is no interior maximum to report (gllvmTMB's `zi_poisson()
 also fails there; #1006). `hessian = :fisher` gives a converged Fisher-weight Laplace
 fit, whose `loglik` is on that different surface.
 """
-function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         offset = nothing,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_zip_gllvm", mask)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
                                caller = "fit_zip_gllvm", maskable = false)
@@ -1695,10 +1700,11 @@ fitter, the observed count-part weight is not yet specialised for this family,
 so both selectors currently produce the identical objective (the
 `TWOPART_KNOWN_OPEN` census gap).
 """
-function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3},
+function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; mask = nothing, X::AbstractArray{<:Real, 3},
         K::Integer, γ_fixed = nothing, hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_zip_gllvm_cov", mask)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zip_gllvm_cov: hessian must be :observed or :fisher; got :$hessian"))
     p, n = size(Y)
@@ -1855,11 +1861,12 @@ smallest eigenvalue is below `ZI_LAPLACE_EIGMIN_FLOOR` is a failed evaluation (a
 `zi_nbinom2()` route), and an optimum within 10% of the floor is reported
 `converged = false`. `:fisher` is unchanged and unguarded.
 """
-function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         offset = nothing,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_zinb_gllvm", mask)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
                                caller = "fit_zinb_gllvm", maskable = false)
@@ -1986,10 +1993,11 @@ runs and no gradient is tested.
 fitter, `:observed` is the exact ZINB curvature with the eigenvalue floor (#932); unlike
 `fit_zinb_gllvm`, this fitter does not flag an optimum at the floor as not converged.
 """
-function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3},
+function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; mask = nothing, X::AbstractArray{<:Real, 3},
         K::Integer, γ_fixed = nothing, θ_init = nothing, hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_zinb_gllvm_cov", mask)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zinb_gllvm_cov: hessian must be :observed or :fisher; got :$hessian"))
     p, n = size(Y)
@@ -2211,11 +2219,12 @@ currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
 Exposing the kwarg is the measurement prerequisite for closing that gap.
 """
-function fit_zib_gllvm(Y::AbstractMatrix{<:Real}; K::Integer, N::Integer,
+function fit_zib_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer, N::Integer,
         offset = nothing,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_zib_gllvm", mask)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
                                caller = "fit_zib_gllvm", maskable = false)
@@ -2300,10 +2309,11 @@ fitter, the observed count-part weight is not yet specialised for this family,
 so both selectors currently produce the identical objective (the
 `TWOPART_KNOWN_OPEN` census gap).
 """
-function fit_zib_gllvm_cov(Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3},
+function fit_zib_gllvm_cov(Y::AbstractMatrix{<:Real}; mask = nothing, X::AbstractArray{<:Real, 3},
         K::Integer, N::Integer, γ_fixed = nothing, hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_zib_gllvm_cov", mask)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_zib_gllvm_cov: hessian must be :observed or :fisher; got :$hessian"))
     p, n = size(Y)

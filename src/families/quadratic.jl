@@ -225,11 +225,12 @@ fit = fit_quadratic_gllvm(Y; family = Poisson(), K = 2)
 fit.D            # estimated quadratic (optimum/tolerance) coefficients, p×K
 ```
 """
-function fit_quadratic_gllvm(Y::AbstractMatrix{<:Real}; family = Poisson(),
+function fit_quadratic_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family = Poisson(),
         K::Integer, link::Union{Nothing, Link} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_quadratic_gllvm", mask)
     p, n = size(Y)
     rr = rr_theta_len(p, K)
     lk = link === nothing ? _cov_default_link(family) : link
