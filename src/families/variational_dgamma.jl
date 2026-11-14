@@ -36,6 +36,10 @@ function _va_site_dgamma_elbo(ψ::AbstractVector, y::AbstractVector,
         π = inv(one(βz[t]) + exp(-βz[t]))                  # occurrence prob (constant in z)
         π = clamp(π, 1e-12, 1 - 1e-12)
         if y[t] > 0
+            if _gamma_va_use_stable(α, μη[t], σ2[t])       # stable form: see variational_gamma.jl
+                ℓ += log(π) + _gamma_va_expect_stable(α, y[t], μη[t], σ2[t])
+                continue
+            end
             w = exp(_clamp_eta(-μη[t] + 0.5 * σ2[t]))      # E_q[e^{−η^c_t}]
             ℓ += log(π) + (α - 1) * log(y[t]) - y[t] * α * w -
                  α * μη[t] + α * log(α) - loggamma(α)

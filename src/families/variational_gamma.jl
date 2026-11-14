@@ -15,6 +15,25 @@
 # independent-Gamma loglik. The variational params (m_s, v_s) are profiled per site by
 # minimising the negative ELBO over [m; logv] with L-BFGS (K small).
 
+# Stable closed-form expectation, used from shape `_GAMMA_STIRLING_FROM` (refs #1175, #1143).
+# E_q[log f(y | η, α)] for η ~ N(μη, σ2) is
+#   (α-1) log y - α y e^{-μη+σ2/2} - α μη + α log α - loggamma(α),
+# whose last two terms and the α-sized terms before them cancel at large α. Write
+# ρ = y e^{-μη} and e^{σ2/2} = 1 + expm1(σ2/2). Then
+#   -α y e^{-μη+σ2/2} = -α ρ - α ρ expm1(σ2/2), and with μ = e^{μη} the remaining terms are
+#   (α-1) log y - α μη + α log α - loggamma(α) - α ρ = `_gamma_logpdf(α, μ, y)`
+# (the Gamma(shape α, mean μ) log-density, which already regroups loggamma through the Stirling
+# series and a (u - log1p(u)) kernel). So
+#   E_q[log f] = `_gamma_logpdf(α, e^{μη}, y)` - α (y / e^{μη}) expm1(σ2/2).
+# The last term is a sum-free product of nonnegative factors, so no two large terms are subtracted.
+# Below the switch, or where the η clamp on `-μη + σ2/2` is active, the original expression is kept.
+@inline _gamma_va_use_stable(α, μη, σ2) =
+    α >= _GAMMA_STIRLING_FROM && abs(-μη + 0.5 * σ2) <= _ETA_CLAMP
+@inline function _gamma_va_expect_stable(α, y, μη, σ2)
+    μ = exp(μη)
+    return _gamma_logpdf(α, μ, y) - α * (y / μ) * expm1(0.5 * σ2)
+end
+
 # Per-site Gamma ELBO at variational params ψ = [m (K); logv (K)].
 function _va_site_gamma_elbo(ψ::AbstractVector, y::AbstractVector,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector, α::Real;
@@ -28,6 +47,10 @@ function _va_site_gamma_elbo(ψ::AbstractVector, y::AbstractVector,
     ℓ = zero(eltype(ψ))
     @inbounds for t in 1:p
         (obs !== nothing && !obs[t]) && continue
+        if _gamma_va_use_stable(α, μη[t], σ2[t])
+            ℓ += _gamma_va_expect_stable(α, y[t], μη[t], σ2[t])
+            continue
+        end
         w = exp(_clamp_eta(-μη[t] + 0.5 * σ2[t]))          # E_q[e^{−η_t}]
         ℓ += (α - 1) * log(y[t]) - y[t] * α * w - α * μη[t] + α * log(α) - loggamma(α)
     end
