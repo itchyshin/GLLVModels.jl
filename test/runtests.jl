@@ -146,7 +146,7 @@ for (_k, _files) in enumerate((
         "test_censored_poisson.jl", "test_truncnb2_laplace_breakdown.jl", "test_gamma_laplace.jl",
         "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl", "test_phylo_binomial_xlv.jl",
         "test_boundary_inference.jl", "test_grouped_laplace_identity.jl", "test_grouped_identification_diagnostics.jl",
-        "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl",
+        "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl", "test_nb1_fisher_large_counts.jl",
         "test_nb2_grouped_mode_search.jl", "test_grouped_getlv_mode.jl", "test_gamma_grouped_mode_search.jl",
         "test_betabinomial_x_identity.jl", "test_zinb_x_identity.jl", "test_beta_fit.jl",
         "test_link_honoured.jl", "test_issue_725_extractor_docs.jl", "test_studentt_disp_group.jl",
@@ -505,6 +505,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nb1_poisson_ridge.jl")
     _shard_include("test_nb1_scalar_gradient_gate.jl")
     _shard_include("test_nb1_grouped_mode_search.jl")
+    _shard_include("test_nb1_fisher_large_counts.jl")
     _shard_include("test_nb2_grouped_mode_search.jl")
     _shard_include("test_grouped_init_kwargs.jl")
     _shard_include("test_grouped_getlv_mode.jl")
