@@ -2087,8 +2087,12 @@ test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode to
         mkdirSync(dirname(join(tmp, gen)), { recursive: true });
         cpSync(join(REPO_ROOT, gen), join(tmp, gen));
       }
+      // The copy has no .git and no capture-host runtime root, so a row whose status depends on either (POST-COEF-EMPTY)
+      // reads differently here than in the tracked board. Regenerate the copy's outputs first (a write run, no --check) so
+      // the positive control below asks the question this test is about: is a hand edit of the copy detected?
+      execFileSync('python3', [ASSEMBLER, '--root', tmp], { encoding: 'utf8' });
       const clean = runAssemble(tmp);
-      assert.equal(clean.code, 0, clean.stdout); // positive control on the copy
+      assert.equal(clean.code, 0, clean.stdout); // positive control on the regenerated copy
       const sb = join(tmp, LEDGER_REL, 'scoreboard.md');
       const txt = readFileSync(sb, 'utf8');
       const edited = txt.replace(/^(\| \S+ `[^`]*` \| [^|]* \| )(?!EVIDENCED )[A-Z-]+( \|)/m, '$1EVIDENCED$2');
