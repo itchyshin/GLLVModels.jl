@@ -92,9 +92,20 @@ function _phylo_beta_xlv_grad_hessian(Y, beta, Lambda, alpha_lv, phi,
         # was — the mode search wants expected information (W ≥ 0, so the step is
         # always well-defined). Only the FINAL assembly, at the converged mode,
         # asks for `:observed`, which is what the log-det needs to match TMB.
-        weight_ts = hessian === :fisher ?
-            _glm_weight(fam, mu_ts, 1, me_ts) :
+        # `:step` (mode search only) is max(observed, Fisher), as in the NB search
+        # (#1125) and the grouped Tweedie search (#1122): pure Fisher can under-state
+        # the curvature where observed exceeds it, and the Newton loop then crawls or
+        # cycles. Both weights are >= 0 after the max, so every step still ascends, and
+        # the mode (grad = 0) does not involve the weight. The final log-det assembly
+        # keeps the observed weight.
+        weight_ts = if hessian === :fisher
+            _glm_weight(fam, mu_ts, 1, me_ts)
+        elseif hessian === :step
+            max(_glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s], LogitLink(), eta_c),
+                _glm_weight(fam, mu_ts, 1, me_ts))
+        else
             _glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s], LogitLink(), eta_c)
+        end
         uidx = n_z + leaf_pos[t]
 
         grad[uidx] += score_ts
@@ -126,7 +137,8 @@ function _phylo_beta_xlv_mode(Y, beta, Lambda, alpha_lv, phi,
 
     for _ in 1:maxiter
         grad, H = _phylo_beta_xlv_grad_hessian(
-            Y, beta, Lambda, alpha_lv, phi, mean_eta, Q, leaf_pos, eps, u)
+            Y, beta, Lambda, alpha_lv, phi, mean_eta, Q, leaf_pos, eps, u;
+            hessian = :step)
         cholH = try
             cholesky(Symmetric(H))
         catch
@@ -138,6 +150,7 @@ function _phylo_beta_xlv_mode(Y, beta, Lambda, alpha_lv, phi,
         q0 = _phylo_beta_xlv_logpost(Y, beta, Lambda, alpha_lv, phi,
                                       mean_eta, Q, leaf_pos, eps, u)
         accepted = false
+        tied = false
         step = 1.0
         n_z = n * K
         max_delta = maximum(abs, delta)
@@ -153,6 +166,7 @@ function _phylo_beta_xlv_mode(Y, beta, Lambda, alpha_lv, phi,
             q1 = _phylo_beta_xlv_logpost(Y, beta, Lambda, alpha_lv, phi,
                                           mean_eta, Q, leaf_pos, eps_trial, u_trial)
             if isfinite(q1) && q1 >= q0
+                tied = q1 == q0
                 eps = eps_trial
                 u = u_trial
                 accepted = true
@@ -160,7 +174,22 @@ function _phylo_beta_xlv_mode(Y, beta, Lambda, alpha_lv, phi,
             end
             step *= 0.5
         end
-        accepted || return nothing, nothing, nothing
+        # A line search that cannot raise the log-posterior while the Newton decrement
+        # `g'delta` is below rounding level means (eps, u) is the mode to floating
+        # point (#1048); convergence, not a failed search. Same rule as
+        # `_phylo_gamma_xlv_mode`, `_mixed_mode` and `_isdm_mode` (`nd_tol = 1e-12`).
+        if !accepted
+            abs(dot(grad, delta)) < 1e-12 && (mode_found = true; break)
+            return nothing, nothing, nothing
+        end
+        # The max(observed, Fisher) step is not near-exact Newton, so at `tol = 0` the line
+        # search keeps accepting exact ties (q1 == q0) instead of stalling, and the stall
+        # rule above is never reached. An accepted step that changes q by nothing, with
+        # the Newton decrement under the same 1e-12, is the same convergence (refs #1125).
+        if tied && abs(dot(grad, delta)) < 1e-12
+            mode_found = true
+            break
+        end
         if step * max_delta < tol
             mode_found = true
             break

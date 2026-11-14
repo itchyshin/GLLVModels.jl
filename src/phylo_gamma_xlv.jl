@@ -91,9 +91,20 @@ function _phylo_gamma_xlv_grad_hessian(Y, beta, Lambda, alpha_lv, alpha_shape,
         # was — the mode search wants expected information (W ≥ 0, so the step
         # is always well-defined). Only the FINAL call, at the converged mode,
         # asks for `:observed`, which is what the log-det needs to match TMB.
-        weight_ts = hessian === :fisher ?
-            _glm_weight(fam, mu_ts, 1, me_ts) :
+        # `:step` (mode search only) is max(observed, Fisher), as in the NB search
+        # (#1125) and the grouped Tweedie search (#1122): pure Fisher can under-state
+        # the curvature where observed exceeds it, and the Newton loop then crawls or
+        # cycles. Both weights are >= 0 after the max, so every step still ascends, and
+        # the mode (grad = 0) does not involve the weight. The final log-det assembly
+        # keeps the observed weight.
+        weight_ts = if hessian === :fisher
+            _glm_weight(fam, mu_ts, 1, me_ts)
+        elseif hessian === :step
+            max(_glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s], LogLink(), eta_c),
+                _glm_weight(fam, mu_ts, 1, me_ts))
+        else
             _glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s], LogLink(), eta_c)
+        end
         uidx = n_z + leaf_pos[t]
 
         grad[uidx] += score_ts
@@ -126,7 +137,8 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
 
     for _ in 1:maxiter
         grad, H = _phylo_gamma_xlv_grad_hessian(
-            Y, beta, Lambda, alpha_lv, alpha_shape, mean_eta, Q, leaf_pos, eps, u)
+            Y, beta, Lambda, alpha_lv, alpha_shape, mean_eta, Q, leaf_pos, eps, u;
+            hessian = :step)
         cholH = try
             cholesky(Symmetric(H))
         catch
@@ -160,7 +172,17 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
             end
             step *= 0.5
         end
-        accepted || return nothing, nothing, nothing
+        # A line search that cannot raise the log-posterior while the Newton
+        # decrement `g'delta` is below rounding level means (eps, u) is the mode to
+        # floating point: the Fisher-scaled Newton step stalls near 1e-7 and `q1 >= q0`
+        # is lost to noise (measured: g'delta below 1e-12 at the stall). That is
+        # convergence, not a failed search; same rule as `_mixed_mode`/`_isdm_mode`
+        # (`nd_tol = 1e-12`). Without it the objective is 1e12 at a knife-edge
+        # finite-difference step and LBFGS stops at "gradient_at_failure_value".
+        if !accepted
+            abs(dot(grad, delta)) < 1e-12 && (mode_found = true; break)
+            return nothing, nothing, nothing
+        end
         if step * max_delta < tol
             mode_found = true
             break
