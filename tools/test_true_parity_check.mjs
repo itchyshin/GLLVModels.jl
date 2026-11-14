@@ -345,12 +345,15 @@ for (const [fixture, why] of [
   });
 }
 // The reviewer's mutation, on a real registration row and its real receipts: namespace/export/
-// extract_phylo_signal relabelled "numeric" in an otherwise faithful copy. It must be NOT_MET on C1 and C8.
-// (Repointed from S3method/coef,gllvmTMB_multi, which now binds on a numeric receipt; maintainer OK, D-319, W1-1.)
-test('numeric tier: the real extract_phylo_signal row relabelled "numeric" is NOT_MET on C1 and C8', () => {
+// bootstrap_Sigma relabelled "numeric" in an otherwise faithful copy. It must be NOT_MET on C1 and C8.
+// (Repointed from S3method/coef,gllvmTMB_multi, which now binds on a numeric receipt; maintainer OK, D-319, W1-1;
+// and again from export/extract_phylo_signal, which now binds on the namespace-3 numeric receipt. bootstrap_Sigma is
+// the one namespace row that stays registration-only with no signed disposition (known open); a row that carries a
+// signed disposition would be MET on C1 here, so the control must not point at one.)
+test('numeric tier: the real bootstrap_Sigma row relabelled "numeric" is NOT_MET on C1 and C8', () => {
   const cmPath = 'docs/dev-log/core070/true-parity-latest/case-map-namespace.json';
   const cm = JSON.parse(readFileSync(join(REPO_ROOT, cmPath), 'utf8'));
-  const row = cm.rows.find((r) => r.source_id === 'namespace/export/extract_phylo_signal');
+  const row = cm.rows.find((r) => r.source_id === 'namespace/export/bootstrap_Sigma');
   assert.ok(row, 'real row not found in case-map-namespace.json');
   const dir = mkdtempSync(join(tmpdir(), 'true-parity-mut-'));
   try {
