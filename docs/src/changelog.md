@@ -35,11 +35,21 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   fitting API remains unchanged. After the rename, `using GLLVM` cannot resolve
   a package. Once `GLLVModels` is loaded, `GLLVModels.GLLVM` is only a temporary
   qualified alias; it does not provide import compatibility and is deprecated.
+- **IN, behaviour change:** `spde_fem` throws an `ArgumentError` naming any mesh
+  node that belongs to no triangle (what a duplicated input point becomes in
+  `spde_mesh_delaunay`). Such a node has zero lumped mass; the fit used to return
+  `loglik = -Inf` with `converged = false` and no message. Meshes where every node is in a
+  triangle are unchanged.
 - **Development:** fixed Gaussian source fits accept a complete mean design `X`.
   Explicit-source wide/long formulas expose trait intercepts, shared slopes,
   categorical contrasts and interactions. Fits retain the copied design, response
   shape and coefficient labels. No R source-grammar, bridge, random-slope or
   calibrated-uncertainty claim is implied.
+- **IN (refs #730), behaviour change:** a NaN or Inf in `y` is an `ArgumentError`
+  naming the fitter and the offending indices on `fit_phylo_gaussian`,
+  `fit_spde_gaussian` and `fit_relaxed_clock`. These fitters take no `mask` or `missing`;
+  they used to return `loglik = -Inf` (or an all-NaN fit) with `converged = false` and no
+  message. Finite data is unchanged.
 - **Development:** per-trait Gaussian fitting accepts an explicit fixed residual
   SD and estimates unique variances within that constraint. Results retain unique
   and total diagonal variances; existing defaults and parameter counts are unchanged.
