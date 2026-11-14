@@ -1,0 +1,223 @@
+using GLLVModels, Test
+
+# Ordinal gradient gate (refs #498, #505). `fit_ordinal_gllvm_pertrait` took `converged`
+# from `Optim.converged`, which also fires when the line search makes a zero-length step
+# (NoObjectiveChange / NoXChange) far from a stationary point. It now also requires the
+# scale-aware gradient test scalar NB1 uses (`_nb1_grouped_g_met`).
+#
+# The data below are literal (rows are sites, columns are traits, categories 1 to 4, from
+# the simulation of the R-versus-Julia ordinal grid: 4 categories, cutpoints -0.8, 0.2, 1.1,
+# loadings sd 0.7 / sqrt(K)), so the draw cannot differ between Julia versions.
+const GM = GLLVModels
+
+function _ord_literal(s)
+    rows = split(strip(s), '\n')
+    return reduce(hcat, [[parse(Int, c) for c in r] for r in rows])   # p x n, one column per site
+end
+
+const _ORD_SHORT_60x10 = _ord_literal("""
+4123211421
+4142231134
+1423411341
+3131412214
+1344324322
+4331131122
+3412222121
+3111331144
+2212123112
+1412413424
+1111341122
+1134413114
+4232311424
+1414444112
+3311221134
+3411331211
+2233221341
+4444321211
+2214142141
+3321112223
+2422321311
+3431131111
+4422321314
+2233443424
+4311212423
+4241131324
+1424244443
+3141141341
+2124334342
+4241332443
+1313444334
+1423412114
+2211142341
+1314134331
+1234314222
+4421411233
+1212343133
+4111413214
+2143221224
+4441141234
+4411341324
+1444333211
+2421231444
+2243112112
+1114114341
+1112112312
+3441111114
+4111121314
+1244413242
+1412122112
+4111114423
+4411141342
+4314124441
+4412423333
+4431412234
+4211223232
+4123122241
+3421311224
+2141211144
+1114421434
+""")
+
+const _ORD_SHORT_40x25 = _ord_literal("""
+1444412422421114141331434
+1121244224434421423121133
+3444331114142322441231323
+2211122112411433122131311
+3143322332113312321243232
+2124432213441241121134111
+1233311123444113111121312
+4142442421314114441113432
+4334324212423321143442432
+4314231232112112343134441
+1241111142114121341144413
+4313244234433312121444323
+1323321121123143312344431
+1212313211422122121442414
+4114424221121413321111141
+1242314111321312144311243
+2111424134413433231441432
+1144212432311243143411333
+1343244142213214141224443
+2311333242421421111121411
+2124411224131122143114142
+4122124312244421413411134
+2344421144113144313414241
+1111444343423424422311421
+1141244412144441234144442
+2241124144211241434331434
+4333211114114114143111142
+2413411211112334144123244
+2131214114423322123412423
+3233122112321144114314323
+2114412124431211112424221
+4131242134412124241141141
+3344211111111432142114421
+2412123441224211422411424
+1113311213214444431411142
+4112434313421431441432333
+1121122111231324144434143
+1413422324244131144334344
+2214411131411234141231411
+4224211244121424332431241
+""")
+
+const _ORD_CONTROL_60x10 = _ord_literal("""
+4331111123
+1344134211
+4121413124
+1121422244
+2431343214
+4432311314
+3313421213
+1121421423
+1141442341
+1342124442
+2431441313
+2214211112
+4213242114
+1442112412
+3111213114
+1214312114
+4411331242
+2224131114
+3113111124
+2441223343
+2311241123
+1314144432
+1441424424
+1433432314
+1434114414
+4114141214
+1144211242
+2134431332
+4323141424
+1242444414
+3111121113
+4223123421
+1314212123
+1432434114
+1314413443
+4123324213
+3314321142
+4311111343
+4214241123
+4134111343
+1231341244
+1123234332
+3432231414
+4333311342
+1331112141
+3232423214
+4242233212
+1231114311
+3323441124
+4314421114
+1442413442
+4121113124
+1312141242
+1411114413
+1322413244
+4211421134
+1124141112
+2111313332
+3434141311
+3324412412
+""")
+
+# max |central-difference gradient| of the per-trait ordinal negative log-likelihood at the fit
+function _ord_pertrait_gmax(fit, Y, K)
+    p = size(Y, 1)
+    rr = GM.rr_theta_len(p, K)
+    ncut = sum(fit.C .- 2)
+    θ = vcat(fit.β, GM.pack_lambda(fit.Λ), GM._ord_psi_from_tau(fit.τ, fit.C))
+    function f(θ)
+        Λ = GM.unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+        τ = GM._unpack_cutpoints_pertrait(θ[(p + rr + 1):(p + rr + ncut)], fit.C)
+        return -GM.ordinal_marginal_loglik_laplace_pertrait(Y, Λ, θ[1:p], τ, fit.C;
+                                                            link = fit.link)
+    end
+    h = 1e-5
+    g = map(eachindex(θ)) do i
+        e = zeros(length(θ)); e[i] = h
+        (f(θ .+ e) - f(θ .- e)) / 2h
+    end
+    return maximum(abs, g), f(θ)
+end
+
+@testset "fit_ordinal_gllvm_pertrait: converged requires a small gradient" begin
+    # Two real short stops: the optimiser stops on a zero-length step with a gradient
+    # above the gradient test's scale (about 1e-5 * |negative log-likelihood|); before the
+    # gate these reported converged = true.
+    for (Y, K) in ((_ORD_SHORT_60x10, 1), (_ORD_SHORT_40x25, 1))
+        fit = GM.fit_ordinal_gllvm_pertrait(Y; K = K)
+        @test isfinite(fit.loglik)
+        gmax, nll = _ord_pertrait_gmax(fit, Y, K)
+        @test gmax > max(1e-5, 1e-5 * abs(nll))   # the stop is above the gradient test's scale
+        @test fit.converged == false
+    end
+    # An ordinary well-converged fit is still reported converged.
+    fit = GM.fit_ordinal_gllvm_pertrait(_ORD_CONTROL_60x10; K = 1)
+    gmax, nll = _ord_pertrait_gmax(fit, _ORD_CONTROL_60x10, 1)
+    @test gmax <= 10 * max(1e-5, 1e-5 * abs(nll))
+    @test fit.converged == true
+end
