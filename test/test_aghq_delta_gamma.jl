@@ -4,7 +4,7 @@ function _dg_draw(rng,ηz,ηc,α)
     rand(rng)<inv(1+exp(-ηz)) ? rand(rng,Gamma(α,exp(ηc)/α)) : 0.0
 end
 @testset "Delta-Gamma AGHQ" begin
-    rng=MersenneTwister(20261101)
+    rng=MersenneTwister(20261108)
     # n = 15 put one Laplace dispersion on its boundary (alpha ~ 1e6), so the AGHQ fit was
     # ill-conditioned and fell back to Laplace on some BLAS paths; n = 40 is interior.
     p,n=3,40
@@ -85,4 +85,24 @@ end
         @test_throws ArgumentError GLLVModels.aghq_delta_gamma_problem(-Y,1;k=3)
         @test_throws ArgumentError GLLVModels.aghq_delta_gamma_problem(Y,1;k=0)
     end
+end
+
+# Pinning case (refs #1143, #1175): the data this file used before the seed change (seed 20261101,
+# n = 40). The Laplace stage of the shared-predictor fit runs the dispersion of trait 2 along a flat
+# direction (alpha 6.7e5 with the old expanded Gamma density, 3.9e10 with the stable one), the AGHQ
+# adaptation then fails, and `fit_gllvm(...; aghq = :auto)` must fall back to the Laplace fit and say so.
+@testset "Delta-Gamma AGHQ: flat-dispersion data falls back to Laplace (adaptation_failed)" begin
+    # The 3 x 40 matrix is stored literally: `MersenneTwister(20261101)` draws different values on
+    # Julia 1.10 and 1.13 (the positive-part count of trait 2 is 22 on 1.10 and 15 on 1.13), so the
+    # seed alone does not pin this data. The values below are the 1.13.3 draw.
+    Yf = [
+            2.6136058658546566 1.8955309850253077 0.0 0.11480054609348972 1.9697807161637406 0.0 0.0 0.0 3.297885861973782 1.064828763741059 0.09730671607651455 11.156597139096984 0.0 0.0 2.06048306480036 4.133073727719765 2.393720393996826 0.427970756743974 0.0 0.0 4.4173591469497335 0.0 7.922738068366275 0.0 0.0 8.314936854001095 2.530633524655659 1.889278559313261 0.0 0.0 0.346013753439387 0.9526243968198755 2.1091498252346503 2.0765091258057575 0.0 0.368306011201179 2.2745673585117734 0.0 0.0 0.0;
+            0.0 0.8645257486153674 0.0 0.0 0.3628544283544455 0.295166183280948 0.0 0.0 0.0 1.3830464022551157 0.0 0.0 0.0 1.2630350667222319 0.0 0.7686312041043118 0.0 0.8881810924410614 0.0 1.185481334581761 0.0 0.0 0.0 2.5527498168015943 0.0 0.0 0.0 0.0 0.4715419520913611 1.3337939988038525 0.0 0.0 0.3244522113243229 0.0 0.0 1.05695963540205 0.0 0.0 1.429998108785363 1.0510903450227256;
+            0.19542507592480593 1.4342463076896392 0.13403879921970024 0.0 5.751268193190827 0.0 0.0 0.0 3.586602523858139 0.5732667744180024 0.0 8.611541535637205 3.326563784158761 0.0 3.7219526829006107 0.5671702622450158 7.923913073180206 0.7963574069638342 0.6813502554922128 0.2617583173765219 0.0 6.4605878753866195 0.0 0.0 0.26626145027538217 5.378118786496272 0.0 3.0889769259628945 0.0 0.0 6.414074860299385 0.0 2.8526637025986203 1.0747291429805836 0.0 0.0 3.1581382396062527 1.2658129837178986 0.8549993578983026 0.0
+        ]
+    a=@test_logs (:warn,r"AGHQ.*Laplace") match_mode=:any fit_gllvm(Yf;family=GLLVModels.DeltaGamma(),K=1,aghq=:auto,
+        aghq_control=(multistart=false,),predictor=:shared)
+    @test a.integration.actual===:laplace
+    @test a.integration.reason===:adaptation_failed
+    @test isfinite(a.loglik)
 end

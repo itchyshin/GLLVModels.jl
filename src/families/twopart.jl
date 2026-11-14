@@ -1047,8 +1047,10 @@ function _tp_pieces(f::DeltaGamma, y, ηz, ηc)
         α = f.α
         μ = exp(ηc)                             # mean (log link)
         sc = α * (y - μ) / μ                    # ∂logf/∂η^c (Gamma GLM, log link)
+        # stable Gamma density from shape 1e3 (the expanded form cancels, refs #1175); below it
+        # `_gamma_logpdf` is `logpdf(Gamma(α, μ / α), y)` unchanged
         return (one(π) - π, sc, Wz, α,
-                log(π) + logpdf(Gamma(α, μ / α), y))
+                log(π) + _gamma_logpdf(α, μ, y))
     else
         return (-π, zero(ηc), Wz, zero(ηc), log1p(-π))
     end
