@@ -738,7 +738,11 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     Λ̂ = unpack_lambda(@view(θ̂[(p + 1):(p + rr)]), p, K)
     τ̂ = _unpack_cutpoints_pertrait(@view(θ̂[(p + rr + 1):(p + rr + ncut)]), C)
     _warn_runaway_loadings(Λ̂, "Ordinal")
-    return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, _fit_verdict(res)...)
+    # `Optim.converged` also fires on a zero-length step far from a stationary point;
+    # require the gradient test too, as scalar NB1 does (#505, `_nb1_grouped_g_met`).
+    ll, conv, iters = _fit_verdict(Optim.minimum(res),
+        Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
+    return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, ll, conv, iters)
 end
 
 """
