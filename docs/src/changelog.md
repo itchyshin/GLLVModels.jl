@@ -6,6 +6,9 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **IN (refs #1144), behaviour change:** `confint`, `profile_ci` and `bootstrap_ci` on a Gaussian fit made
+  without a mask throw an `ArgumentError` for `missing`, NaN or Inf in `y` (they returned all-NaN
+  intervals). Masked fits are unchanged. No signature change.
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
   and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`

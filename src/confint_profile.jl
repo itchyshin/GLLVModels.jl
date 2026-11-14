@@ -456,6 +456,7 @@ function profile_ci(fit::GllvmFit, param_index::Integer;
         "profile_ci for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
     y === nothing && throw(ArgumentError(
         "profile_ci requires the data matrix `y` (the same matrix passed to fit_gaussian_gllvm)"))
+    _has_gaussian_record(fit) || _require_complete_y("profile_ci", y)
     X = _mean_X(fit, X, size(y, 2))
 
     if _has_gaussian_record(fit)
