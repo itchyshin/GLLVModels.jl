@@ -301,7 +301,7 @@ function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_beta_gllvm_va", link, LogitLink())
-    _va_check_mask(mask, Y)
+    _va_check_fit_mask(mask, Y)
     _check_response_support(:beta, Y, mask; caller = "fit_beta_gllvm_va")
     p, n = size(Y)
     rr = rr_theta_len(p, K)

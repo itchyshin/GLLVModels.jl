@@ -208,8 +208,10 @@ function _derive_obs_mask(mask, Y; caller::AbstractString)
     end
     Missing <: eltype(Y) || return nothing
     any(ismissing, Y) || return nothing
+    msk = observed_mask(Y)
+    _check_every_trait_observed(msk, Y)          # one shared message (#1107 follow-up)
     @info "$caller: derived the observation mask from missing entries in Y" maxlog=1
-    return observed_mask(Y)
+    return msk
 end
 
 """

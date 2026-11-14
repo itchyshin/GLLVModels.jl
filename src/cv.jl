@@ -273,6 +273,20 @@ function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::I
     return (ll, r)
 end
 
+# Per-species keyword arguments for a fit on the training species only: `weights` given as a
+# p-row matrix and `disp_group` given as a length-p vector are subset to `ts`; scalars, symbols,
+# per-unit vectors and everything else pass through unchanged.
+function _cv_species_subset_kwargs(kwargs, ts::Vector{Int}, p::Int)
+    kw = NamedTuple(kwargs)
+    if haskey(kw, :weights) && kw.weights isa AbstractMatrix && size(kw.weights, 1) == p
+        kw = merge(kw, (weights = kw.weights[ts, :],))
+    end
+    if haskey(kw, :disp_group) && kw.disp_group isa AbstractVector && length(kw.disp_group) == p
+        kw = merge(kw, (disp_group = kw.disp_group[ts],))
+    end
+    return kw
+end
+
 # -----------------------------------------------------------------------------
 # Main cv_gllvm entry point
 # -----------------------------------------------------------------------------
@@ -495,7 +509,18 @@ function cv_gllvm(Y::AbstractMatrix;
                                 fit_gaussian_gllvm(Y_imputed; K = K_actual, X = X, fit_kw...)
             end
         else
-            if N !== nothing
+            if split_mode === :species
+                # Fit the training species only: a held-out species has no observed cell
+                # in this fold, and a trait with no observed cell is refused by the
+                # fitters. `_cv_site_mode` reads the n_train-row fit directly.
+                ts = findall(t -> any(view(train_mask, t, :)), 1:p)
+                kw_k = _cv_species_subset_kwargs(kwargs, ts, p)
+                if N !== nothing
+                    fit_gllvm(Y[ts, :]; family = family, K = K_actual, mask = train_mask[ts, :], N = N[ts, :], kw_k...)
+                else
+                    fit_gllvm(Y[ts, :]; family = family, K = K_actual, mask = train_mask[ts, :], kw_k...)
+                end
+            elseif N !== nothing
                 fit_gllvm(Y; family = family, K = K_actual, mask = train_mask, N = N, kwargs...)
             else
                 fit_gllvm(Y; family = family, K = K_actual, mask = train_mask, kwargs...)

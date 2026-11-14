@@ -151,7 +151,7 @@ function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_delta_gamma_gllvm_va", link, LogLink())
     p, n = size(Y)
-    _va_check_mask(mask, Y)
+    _va_check_fit_mask(mask, Y)
     _check_twopart_support("fit_delta_gamma_gllvm_va", Y, _tp_positive_ok, "0 or a finite positive real")
     rr = rr_theta_len(p, K)
 
