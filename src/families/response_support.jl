@@ -36,7 +36,7 @@ end
 # Non-finite cells count as offending; mask them or use `missing` for unobserved cells.
 # `mask = nothing` means every non-`missing` cell is observed.
 function _check_response_support(kind::Symbol, Y::AbstractMatrix, mask;
-        caller::AbstractString, N = nothing)
+        caller::AbstractString, N = nothing, row0::Integer = 0)
     p, n = size(Y)
     bad = 0
     first_bad = (0, 0)
@@ -51,11 +51,56 @@ function _check_response_support(kind::Symbol, Y::AbstractMatrix, mask;
     end
     bad == 0 && return nothing
     t, i = first_bad
-    extra = kind === :binomial ? " with N[$t, $i] = $(N === nothing ? 1 : N[t, i])" : ""
-    throw(ArgumentError("$caller: Y[$t, $i] = $(Y[t, i]) is outside the " *
+    extra = kind === :binomial ? " with N[$(t + row0), $i] = $(N === nothing ? 1 : N[t, i])" : ""
+    throw(ArgumentError("$caller: Y[$(t + row0), $i] = $(Y[t, i]) is outside the " *
         _support_text(kind) * extra * " ($bad observed cell(s) in total). " *
         "Fix the data, or mark unobserved cells `missing` / `mask = false`; " *
         "NaN and Inf are not valid responses."))
+end
+
+# Support kind for the families the model-structure fitters share (`_cov_default_link`
+# lists them); `nothing` for a family this table does not know, which is left unchecked.
+function _family_support_kind(family)
+    (family isa Poisson || family isa NegativeBinomial || family isa NB1) && return :count
+    family isa Binomial && return :binomial
+    family isa Beta && return :beta
+    (family isa Gamma || family isa Exponential) && return :positive
+    return nothing
+end
+
+# `_family_support_kind` plus `Normal` (any finite real), for the fitters whose family set
+# includes a Gaussian response (SPDE latent, coevolution, mixed-family).
+_family_support_kind_normal(family) =
+    family isa Normal ? :finite : _family_support_kind(family)
+
+# `_check_response_support` for a fitter that takes `family`; `N` is the trials matrix
+# (or `nothing`, meaning one trial) and is used for `Binomial` only.
+function _check_family_response_support(family, Y::AbstractMatrix, mask;
+        caller::AbstractString, N = nothing)
+    kind = _family_support_kind(family)
+    kind === nothing && return nothing
+    return _check_response_support(kind, Y, mask; caller = caller, N = N)
+end
+
+# Same as `_check_family_response_support` but a `Normal` family is also checked (finite).
+function _check_family_response_support_normal(family, Y::AbstractMatrix, mask;
+        caller::AbstractString, N = nothing)
+    kind = _family_support_kind_normal(family)
+    kind === nothing && return nothing
+    return _check_response_support(kind, Y, mask; caller = caller, N = N)
+end
+
+# Mixed-family fitter: one family per row of `Y`, checked row by row so the message names
+# the true trait row. `N` is the p x n trials matrix (or `nothing`).
+function _check_mixed_response_support(families, Y::AbstractMatrix, N;
+        caller::AbstractString)
+    for t in axes(Y, 1)
+        kind = _family_support_kind_normal(families[t])
+        kind === nothing && continue
+        _check_response_support(kind, view(Y, t:t, :), nothing; caller = caller,
+                                N = N === nothing ? nothing : view(N, t:t, :), row0 = t - 1)
+    end
+    return nothing
 end
 
 # Like `_sanitize_missing`, but also replaces the cells that `mask` marks unobserved, so a

@@ -332,6 +332,7 @@ function fit_gllvm_mi(family, Y::AbstractMatrix, x::AbstractVector; K::Integer,
         "fit_gllvm_mi: supports Poisson()/NegativeBinomial()/Gamma() + LogLink and " *
         "Binomial()/Beta() + LogitLink."))
     Nm = N === nothing ? ones(Int, p, n) : N
+    _check_family_response_support(family, Y, nothing; caller = "fit_gllvm_mi", N = Nm)
 
     isobs = [!(ismissing(xi) || (xi isa Real && isnan(xi))) for xi in x]
     any(isobs) || throw(ArgumentError("x has no observed values."))
