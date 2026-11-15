@@ -131,6 +131,68 @@ predict(fit::GammaGroupedFit, Y::AbstractMatrix{<:Real}; type::Symbol = :respons
     _grouped_glm_predict(fit, Y, type, mask, offset, modes, (;))
 
 """
+    predict(fit::TweedieGroupedFit, Y; type=:response, mask=nothing, offset=nothing,
+            modes=:refit) -> p×n matrix
+    predict(fit::TweediePerTraitPowerFit, Y; type=:response, mask=nothing, offset=nothing,
+            modes=:refit) -> p×n matrix
+
+As [`predict(::BetaGroupedFit, Y)`](@ref) for a grouped-dispersion Tweedie fit: `type=:link`
+returns `η = β + offset + Λẑ`, `type=:response` the fitted mean `exp(η)` (non-negative reals),
+as `predict(::TweedieFit)`.
+"""
+predict(fit::Union{TweedieGroupedFit,TweediePerTraitPowerFit}, Y::AbstractMatrix{<:Real};
+        type::Symbol = :response, mask = nothing, offset = nothing, modes::Symbol = :refit) =
+    _grouped_glm_predict(fit, Y, type, mask, offset, modes, (;))
+
+"""
+    residuals(fit::TweedieGroupedFit, Y; type=:dunnsmyth, rng=Random.default_rng(),
+              mask=nothing, offset=nothing) -> p×n matrix
+    residuals(fit::TweediePerTraitPowerFit, Y; type=:dunnsmyth, rng=Random.default_rng(),
+              mask=nothing, offset=nothing) -> p×n matrix
+
+Conditional residuals for a grouped-dispersion Tweedie fit, as `residuals(::TweedieFit)` with the
+per-species dispersion `φ[group[t]]` and the shared or per-trait power. `:dunnsmyth` draws `u`
+uniform on `[0, F(0)]` at `y = 0` and is the deterministic PIT `Φ⁻¹(F(y))` for `y > 0`
+(pass a fixed `rng` to reproduce); `:pearson` returns `(Y − μ) / √(φ μ^power)`. Cells with
+`mask[t, s] == false` are `NaN` and consume no random draw. The fitted means include the fit's
+offset by the rule of [`predict`](@ref).
+
+!!! note "Dunn–Smyth values are capped at ±7.034"
+    As for `TweedieFit`, `u` is limited to `[1e-12, 1 − 1e-12]` before `Φ⁻¹`, so
+    `|z| ≤ 7.034`; the Tweedie CDF is a quadrature with no upper-tail form. Use `|z| ≳ 7` as an
+    outlier flag only. The CDF can also return exactly 1 for some inputs near `power > 1.5`
+    (#767), which pins those residuals at the cap.
+"""
+function residuals(fit::Union{TweedieGroupedFit,TweediePerTraitPowerFit}, Y::AbstractMatrix{<:Real};
+                   type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng(),
+                   mask = nothing, offset = nothing)
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    p, n = size(Y)
+    μ = predict(fit, Y; type = :response, mask = mask, offset = offset)
+    fams = _tweedie_grouped_fams(fit)
+    R = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        if mask !== nothing && !mask[t, s]
+            R[t, s] = NaN
+            continue
+        end
+        φ = fams[t].φ; pw = fams[t].p
+        if type === :pearson
+            R[t, s] = (Y[t, s] - μ[t, s]) / sqrt(φ * μ[t, s]^pw)
+            continue
+        end
+        if Y[t, s] <= 0
+            u = exp(tweedie_logpdf(0.0, μ[t, s], φ, pw)) * rand(rng)   # P(Y = 0) (the atom)
+        else
+            u = tweedie_cdf(float(Y[t, s]), μ[t, s], φ, pw)
+        end
+        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+    end
+    return R
+end
+
+"""
     predict(fit::NB1GroupedFit, Y; type=:response, N=nothing, mask=nothing, offset=nothing,
             modes=:refit) -> p×n matrix
 
