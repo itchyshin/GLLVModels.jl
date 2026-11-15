@@ -21,6 +21,14 @@
 # start), failure = throw or `!converged`. Evidence level: STRUCTURAL (code read against the pinned R plus
 # tests and mutants); no numerical comparison with an R run exists. See the docstring.
 #
+# JointPhyloGroupedGaussianFit (tier :phy only, Stage 2) follows the same contract plus the ordinary
+# grouping terms redrawn through their incidence matrices. Evidence level: STRUCTURAL plus JULIA
+# DESCRIPTIVE (a pre-run on fixtures measured the failure fractions; no R run was compared). Documented
+# DEVIATIONS: a replicate whose refit throws, does not converge OR is not component-identified is a failure
+# (R's rule is convergence only); B and W are dropped (R would report them; the mapping of the ordinary
+# terms to R's B/W is unverified); the per-replicate identification @warn of the fitter is silenced and
+# counted. Converged replicates with a non-positive-definite Hessian are kept (as in R) and counted.
+#
 # WIRING: included by src/GLLVModels.jl after extractors.jl, confint_derived.jl and twolevel.jl
 # (PR #1056). The legacy `bootstrap_Sigma` (confint_derived_wald.jl) is not touched and is a
 # different estimand.
@@ -32,7 +40,11 @@ Result of [`bootstrap_Sigma_r`](@ref); mirrors the fields of the R `bootstrap_Si
 `point_est`, `ci_lower`, `ci_upper` are `NamedTuple`s in R's entry order (per tier in
 `level` order: `Sigma_*`, `R_*`, `communality_*`; then `ICC_site`). `n_effective` has
 entries for vector summaries only (R limitation, kept). `level` holds the internal tier
-names (`:B`, `:W`, `:phy`), never `:unit`/`:unit_obs`.
+names (`:B`, `:W`, `:phy`), never `:unit`/`:unit_obs`. `what` echoes the request as in R (after `:ICC` is
+dropped when B and W are not both present), so it can list `:cross_corr`, which is never produced for a
+Gaussian fit: the keys of `point_est` are the authoritative list of summaries. `diagnostics` is an empty `NamedTuple` except for a
+`JointPhyloGroupedGaussianFit`, where it carries the failure breakdown and the Hessian-curvature count
+(see [`bootstrap_Sigma_r`](@ref)).
 """
 struct BootstrapSigmaR
     point_est::NamedTuple
@@ -49,7 +61,15 @@ struct BootstrapSigmaR
     level::Vector{Symbol}
     what::Vector{Symbol}
     draws::Union{Nothing, Vector{NamedTuple}}
+    diagnostics::NamedTuple
 end
+
+# `diagnostics` is empty for GllvmFit / TwoLevelFit / PrecisionMultivariateFit. For a
+# JointPhyloGroupedGaussianFit it holds n_thrown, n_not_converged, n_non_identified (their sum is
+# `n_failed`), n_converged (converged replicates, identified or not), n_hessian_not_pd (of those) and
+# original_hessian_pd (Bool).
+BootstrapSigmaR(pe, lo, hi, ne, bm, ci, lr, conf, nb, ceil, nf, level, what, draws) =
+    BootstrapSigmaR(pe, lo, hi, ne, bm, ci, lr, conf, nb, ceil, nf, level, what, draws, NamedTuple())
 
 function Base.show(io::IO, r::BootstrapSigmaR)
     print(io, "BootstrapSigmaR(level=", r.level, ", what=", r.what, ", n_boot=", r.n_boot,
@@ -77,6 +97,13 @@ function Base.show(io::IO, ::MIME"text/plain", r::BootstrapSigmaR)
         end
     end
     r.n_failed > 0 && println(io, "  ", r.n_failed, " of ", r.n_boot, " replicates failed (excluded).")
+    if haskey(r.diagnostics, :n_hessian_not_pd)
+        dg = r.diagnostics
+        r.n_failed > 0 && println(io, "  (", dg.n_thrown, " thrown, ", dg.n_not_converged, " non-converged, ",
+                                  dg.n_non_identified, " non-identified).")
+        println(io, "  non-positive-definite Hessian in ", dg.n_hessian_not_pd, " of ", dg.n_converged,
+                " converged replicates (kept; see ?bootstrap_Sigma_r).")
+    end
     print(io, "  Full matrices: r.point_est, r.ci_lower, r.ci_upper.")
 end
 
@@ -87,6 +114,7 @@ _bsig_refuse(msg::AbstractString) = throw(ArgumentError("bootstrap_Sigma_r: " * 
 
 # ---------------------------------------------------------------- argument handling
 _bsig_symvec(x::Symbol) = Symbol[x]
+_bsig_symvec(x::AbstractString) = Symbol[Symbol(x)]   # a String is not iterated as characters
 _bsig_symvec(x) = Symbol[Symbol(s) for s in x]
 
 # R: `.normalise_level` (unit -> B, unit_obs -> W) after match.arg; then unique, first-seen.
@@ -123,6 +151,9 @@ _bsig_available_tiers(fit::GllvmFit) =
 _bsig_available_tiers(::TwoLevelFit) = Symbol[:B, :W]
 # R keeps `phy` when phylo_rr || phylo_diag is fit; the class has no B/W tier. R has only B, W, phy.
 _bsig_available_tiers(::PrecisionMultivariateFit) = Symbol[:phy]
+# JointPhyloGroupedGaussianFit: phy only. R would also report B/W for a comparable multi-tier fit; the
+# mapping of the ordinary grouping terms to R's B/W is UNVERIFIED, so they are not offered (dropped with an @info).
+_bsig_available_tiers(::JointPhyloGroupedGaussianFit) = Symbol[:phy]
 
 function _bsig_pair(fit::GllvmFit, tier::Symbol)
     tier === :B || throw(ArgumentError("internal: GllvmFit has only tier :B in v1"))
@@ -144,6 +175,15 @@ function _bsig_pair(fit::PrecisionMultivariateFit, tier::Symbol)
     tier === :phy || throw(ArgumentError("internal: PrecisionMultivariateFit has only tier :phy"))
     shared, _, total = _destination_b_covariance_parts(fit, :phy)
     return total, shared
+end
+
+# JointPhyloGroupedGaussianFit tier :phy. Total = `fit.phylo_covariance` = LL' + diag(unique) (NO residual and
+# NO ordinary-term variance: the ordinary terms are separate sources, never added to the phy tier);
+# shared = LL'. `:barelowrank` gives total == shared, so communality is exactly 1.
+function _bsig_pair(fit::JointPhyloGroupedGaussianFit, tier::Symbol)
+    tier === :phy || throw(ArgumentError("internal: JointPhyloGroupedGaussianFit has only tier :phy"))
+    parts = _joint_phylo_grouped_covariance_parts(fit, :phylo)
+    return parts.total, parts.shared
 end
 
 # R `.safe_icc_ratio`: NaN where the denominator is not finite or <= 0.
@@ -178,7 +218,7 @@ _bsig_nan_like(v::AbstractVector) = fill(NaN, length(v))
 
 # ---------------------------------------------------------------- class-specific setup
 # Each returns (simulate_batch(rng) -> Vector{Matrix}, refit(Y) -> fit).
-function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
+function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit; sufficient_stat::Bool = false)
     m = fit.model
     p = m.p
     n = n_sites !== nothing ? Int(n_sites) :
@@ -224,9 +264,14 @@ function _bsig_setup(fit::GllvmFit, n_boot::Int, y, n_sites, X, _refit)
     # DEVIATION from the pinned-R behaviour (optimizer settings), see the PR description.
     refit_opts = (_refit === nothing && (m.has_diag || m.K_W > 0)) ?
         (iterations = 2000, f_tol = 1e-12) : NamedTuple()
+    # Sufficient-statistic objective for the built-in refit only (a user `_refit` is never touched): the
+    # same profile likelihood, evaluated through p x p cross products instead of p x n Dual temporaries
+    # (`gaussian_profile_nll(...; suff)`); the reported logLik is still the stock form. Same function to
+    # rounding, but L-BFGS then follows a rounding-level different path, so draws move by about 1e-6.
+    suff_opts = (_refit === nothing && sufficient_stat) ? (_sufficient_stat = true,) : NamedTuple()
     refit = Y -> refit_fn(Y; K = m.K, K_W = m.K_W, has_diag = m.has_diag,
                           K_phy = m.K_phy, has_phy_unique = m.has_phy_unique,
-                          Σ_phy = nothing, X = Xm, refit_opts...)
+                          Σ_phy = nothing, X = Xm, refit_opts..., suff_opts...)
     return simulate, refit
 end
 
@@ -302,16 +347,94 @@ end
 function _bsig_setup(fit::PrecisionMultivariateFit, n_boot::Int, _refit)
     refit_fn = _refit === nothing ? fit_precision_multivariate : _refit
     simulate = rng -> _bsig_pmv_simulate_batch(rng, fit, n_boot)
-    refit = Y -> refit_fn(Y, fit.phy; rank = fit.rank, mode = fit.mode,
-                          residual_mode = fit.residual_mode, species_id = fit.species_id,
-                          X = fit.mean_design, coefficient_names = fit.coefficient_names)
+    # The fitter's structural-redundancy @warn fires on every likelihood evaluation (about 1e3 per refit for
+    # d = 2 rank 1 :explicitunique), so it is silenced here; the driver counts and announces failed refits
+    # itself, and an exception is NOT silenced (it propagates to the driver's catch).
+    refit = Y -> Base.CoreLogging.with_logger(Base.CoreLogging.NullLogger()) do
+        refit_fn(Y, fit.phy; rank = fit.rank, mode = fit.mode,
+                 residual_mode = fit.residual_mode, species_id = fit.species_id,
+                 X = fit.mean_design, coefficient_names = fit.coefficient_names)
+    end
+    return simulate, refit
+end
+
+# JointPhyloGroupedGaussianFit, tier :phy. Batch simulator: the PMV draw (phylogenetic effects redrawn,
+# loadings held fixed) PLUS, for each ordinary term k, one independent N(0, diag(ordinary_covariances[k]))
+# draw per GROUP, added to each observation through its incidence row (`fit.incidences[k]` is n x groups).
+# The ordinary terms must be redrawn: otherwise the phy estimate is bootstrapped on the wrong data law.
+# Draw order per replicate: g (n_aug x rank), h (n_aug x d, only with a unique component), the ordinary
+# terms in term order (d x groups each), then the residual. The RNG stream cannot equal R's. Dense Cholesky
+# of Q: O(n_aug^3), fixtures and modest trees only.
+function _bsig_jpg_simulate_batch(rng, fit::JointPhyloGroupedGaussianFit, n_boot::Integer)
+    phy = fit.phy
+    d, m = fit.response_shape
+    U = cholesky(Symmetric(Matrix(phy.Q))).U
+    nodes = phy.species_aug_id[fit.species_id]
+    μ = reshape(fit.mean_design * fit.beta, d, m)
+    r = size(fit.loading, 2)
+    sd_res = sqrt.(fit.residual_variance)
+    sd_uni = fit.phylo_unique_variance === nothing ? nothing : sqrt.(fit.phylo_unique_variance)
+    sd_ord = [sqrt.(diag(C)) for C in fit.ordinary_covariances]
+    incT = [sparse(transpose(inc)) for inc in fit.incidences]      # groups x n, so `z * incT[k]` is the fast dense-by-sparse product
+    Ys = Vector{Matrix{Float64}}(undef, n_boot)
+    for b in 1:n_boot
+        g = U \ randn(rng, phy.n_aug, r)
+        yb = μ .+ fit.loading * transpose(g[nodes, :])
+        if sd_uni !== nothing
+            h = U \ randn(rng, phy.n_aug, d)
+            yb .+= sd_uni .* transpose(h[nodes, :])
+        end
+        for (k, inc) in enumerate(fit.incidences)
+            z = sd_ord[k] .* randn(rng, d, size(inc, 2))
+            yb .+= z * incT[k]
+        end
+        yb .+= sd_res .* randn(rng, d, m)
+        Ys[b] = yb
+    end
+    return Ys
+end
+
+# Group labels for the refit, recovered from the stored incidences (one nonzero per row; the label is its
+# column), keyed by the TERM NAME (`unit`, `unit_obs`, `cluster`, `cluster2`), never by position. The fitter
+# validates `unit_obs` nesting against `unit` labels, which a fit without a `:unit` term does not store; the
+# unit_obs partition itself is then a valid stand-in (every unit_obs level nested in itself) and adds no term.
+function _bsig_jpg_group_labels(fit::JointPhyloGroupedGaussianFit)
+    n = fit.response_shape[2]
+    pairs = Pair{Symbol, Vector{Int}}[]
+    for (term, inc) in zip(fit.terms, fit.incidences)
+        rows, cols, _ = findnz(inc)
+        lab = zeros(Int, n); lab[rows] = cols
+        push!(pairs, term.name => lab)
+    end
+    names = Symbol[first(pr) for pr in pairs]
+    if :unit_obs in names && !(:unit in names)
+        push!(pairs, :unit => copy(last(pairs[findfirst(==(:unit_obs), names)])))
+    end
+    return NamedTuple(pairs)
+end
+
+# Refit: the SAME tree object, rank, phylo mode, ordinary terms, recovered labels, observation-to-tip map and
+# complete mean design, default optimiser controls (g_tol 1e-5, 200 iterations), NO `start`, no `f_tol`. The
+# fitter's per-replicate identification @warn is silenced here (the status is checked and counted by the driver
+# instead, so n_boot warnings do not spam); an exception is NOT silenced, it propagates to the driver's catch.
+function _bsig_setup(fit::JointPhyloGroupedGaussianFit, n_boot::Int, _refit)
+    refit_fn = _refit === nothing ? fit_joint_phylo_grouped_gaussian : _refit
+    labels = _bsig_jpg_group_labels(fit)
+    simulate = rng -> _bsig_jpg_simulate_batch(rng, fit, n_boot)
+    refit = Y -> Base.CoreLogging.with_logger(Base.CoreLogging.NullLogger()) do
+        refit_fn(Y, fit.phy; rank = fit.rank, phylo_mode = fit.phylo_mode, terms = fit.terms,
+                 species_id = fit.species_id, X = fit.mean_design,
+                 coefficient_names = fit.coefficient_names, labels...)
+    end
     return simulate, refit
 end
 
 # One dispatching call per class (the driver passes the same argument bundle to all of them).
-_bsig_build(fit::GllvmFit, nb, a, _refit) = _bsig_setup(fit, nb, a.y, a.n_sites, a.X, _refit)
+_bsig_build(fit::GllvmFit, nb, a, _refit) =
+    _bsig_setup(fit, nb, a.y, a.n_sites, a.X, _refit; sufficient_stat = a.sufficient_stat)
 _bsig_build(fit::TwoLevelFit, nb, a, _refit) = _bsig_setup(fit, nb, a.individual, a.center, _refit)
 _bsig_build(fit::PrecisionMultivariateFit, nb, a, _refit) = _bsig_setup(fit, nb, _refit)
+_bsig_build(fit::JointPhyloGroupedGaussianFit, nb, a, _refit) = _bsig_setup(fit, nb, _refit)
 
 # ---------------------------------------------------------------- refusals
 function _bsig_check_fit(fit::GllvmFit, Σ_phy)
@@ -335,21 +458,102 @@ function _bsig_check_fit(::PrecisionMultivariateFit, Σ_phy)
     return nothing
 end
 
-# Per-class refusal of arguments that would otherwise be silently ignored. A PrecisionMultivariateFit
-# keeps its response shape, mean design and tree, so `y`, `n_sites`, `X` and `individual` mean nothing.
+# JointPhyloGroupedGaussianFit: refuse unless the ORIGINAL fit converged and its covariance components are
+# identified (the phy tier is not separately interpretable otherwise, and replicates inherit the problem).
+function _bsig_check_fit(fit::JointPhyloGroupedGaussianFit, Σ_phy)
+    Σ_phy === nothing || _bsig_refuse(
+        "Σ_phy is not accepted for a JointPhyloGroupedGaussianFit: the tree is stored in the fit.")
+    fit.converged || _bsig_refuse(
+        "the original JointPhyloGroupedGaussianFit did not converge (stopping reason :$(fit.stopping_reason)); " *
+        "a parametric bootstrap around a non-converged fit is refused.")
+    reason = _joint_phylo_grouped_component_identification(fit).reason
+    reason === :identified || _bsig_refuse(
+        "the original JointPhyloGroupedGaussianFit is not component-identified (reason :$reason): its " *
+        "phylogenetic and ordinary covariance components are not separately interpretable, so a phy-tier " *
+        "bootstrap is refused.")
+    _bsig_jpg_check_group_terms(fit)
+    return nothing
+end
+
+# Driver-level guard for ordinary group terms the upstream identification gate does not judge (it returns
+# `:identified` with a group variance near 1e-13 for these; fuzz finding S2-F1). These rules and the numbers
+# in them are THIS DRIVER'S choices, not R's and not the fitter's.
+#   1. Fewer than `_BSIG_MIN_GROUPS` (3) groups in a term: refused. With 1 group the term is the intercept;
+#      with 2 the variance rests on one degree of freedom. Three is the smallest count with a contrast to
+#      spare after the intercept; it is a floor, not a guarantee of a well-estimated variance.
+#   2. Aliasing with FIXED group dummies: for each trait, the group-indicator columns of the term are
+#      projected on the mean-design columns of that trait; if they add no rank (rank([X_t Z_k]) == rank(X_t))
+#      the group effect is exactly a fixed effect and its variance is not identified: refused. This is exact
+#      (a rank statement on a 0/1 matrix), so it detects only TOTAL aliasing for a trait; near-aliasing
+#      (fixed dummies for some groups plus a covariate nearly proportional to a group contrast) is NOT
+#      detected. Cost: one rank of an m x (q_t + G) matrix per trait and term.
+const _BSIG_MIN_GROUPS = 3
+function _bsig_jpg_check_group_terms(fit::JointPhyloGroupedGaussianFit)
+    d, m = fit.response_shape
+    for (term, inc) in zip(fit.terms, fit.incidences)
+        ng = count(j -> inc.colptr[j + 1] > inc.colptr[j], 1:size(inc, 2))
+        ng >= _BSIG_MIN_GROUPS || _bsig_refuse(
+            "the ordinary group term :$(term.name) of this JointPhyloGroupedGaussianFit has $ng group(s); " *
+            "at least $_BSIG_MIN_GROUPS are required (the upstream identification gate does not catch this: the " *
+            "group variance would sit at the boundary and the :phy intervals are not trustworthy). The " *
+            "threshold is this driver's choice, not R's.")
+        Z = Matrix(inc)
+        for t in 1:d
+            Xt = fit.mean_design[t:d:(d * m), :]
+            rank(hcat(Xt, Z)) > rank(Xt) || _bsig_refuse(
+                "the ordinary group term :$(term.name) is aliased with fixed effects in the mean design for " *
+                "trait $t of this JointPhyloGroupedGaussianFit (its group indicators add no rank to the fixed " *
+                "design, e.g. fixed group dummies); its variance is not identified, so a :phy bootstrap is refused.")
+        end
+    end
+    return nothing
+end
+
+# Terms (name, trait) whose estimated variance is below `_BSIG_TINY_REL` of the trait's total variance
+# (phylogenetic + every ordinary term + residual): the group interval then sits on the boundary. Driver's
+# choice: 1e-8 is about the fitter's own boundary behaviour (observed 1e-13 to 1e-15 against O(1) totals) with
+# a margin of several orders of magnitude, and far below any variance share a user would call small.
+const _BSIG_TINY_REL = 1e-8
+function _bsig_jpg_boundary_terms(fit::JointPhyloGroupedGaussianFit)
+    d = fit.response_shape[1]
+    tot = [fit.phylo_covariance[t, t] + fit.residual_variance[t] +
+           sum(diag(C)[t] for C in fit.ordinary_covariances) for t in 1:d]
+    out = Tuple{Symbol, Int}[]
+    for (term, C) in zip(fit.terms, fit.ordinary_covariances), t in 1:d
+        C[t, t] < _BSIG_TINY_REL * tot[t] && push!(out, (term.name, t))
+    end
+    return out
+end
+
+# Per-class refusal of arguments that would otherwise be silently ignored. These classes keep their response
+# shape, mean design and tree, so `y`, `n_sites`, `X` and `individual` mean nothing.
 _bsig_check_args(fit, a) = nothing
-function _bsig_check_args(::PrecisionMultivariateFit, a)
+function _bsig_check_args(fit::Union{PrecisionMultivariateFit, JointPhyloGroupedGaussianFit}, a)
     for k in (:y, :n_sites, :X, :individual)
         getfield(a, k) === nothing || _bsig_refuse(
-            "`$k` is not accepted for a PrecisionMultivariateFit (the fit stores its response " *
+            "`$k` is not accepted for a $(nameof(typeof(fit))) (the fit stores its response " *
             "shape, mean design and tree); it would be silently ignored.")
     end
     return nothing
 end
 
+# Status of a CONVERGED replicate: `:ok`, or `:non_identified` (JointPhyloGroupedGaussianFit only; DEVIATION
+# from R, whose rule is convergence only). A throw while diagnosing counts as non-identified.
+_bsig_replicate_status(fit, fb) = :ok
+function _bsig_replicate_status(::JointPhyloGroupedGaussianFit, fb)
+    reason = try
+        _joint_phylo_grouped_component_identification(fb).reason
+    catch e
+        e isa InterruptException && rethrow()
+        :invalid
+    end
+    return reason === :identified ? :ok : :non_identified
+end
+
 # ---------------------------------------------------------------- driver
 """
-    bootstrap_Sigma_r(fit::Union{GllvmFit,TwoLevelFit,PrecisionMultivariateFit}; n_boot=999,
+    bootstrap_Sigma_r(fit::Union{GllvmFit,TwoLevelFit,PrecisionMultivariateFit,
+        JointPhyloGroupedGaussianFit}; n_boot=999,
         level=(:unit,:unit_obs,:phy,:B,:W), what=(:Sigma,:R,:communality,:ICC,:cross_corr),
         conf=0.95, seed=nothing, n_cores=1, progress=true, keep_draws=false,
         link_residual=:auto, y=nothing, n_sites=nothing, X=nothing, Σ_phy=nothing,
@@ -359,9 +563,9 @@ Parametric percentile bootstrap of covariance summaries, following the pinned R
 `bootstrap_Sigma` (gllvmTMB 9539352f6). `GllvmFit` (no W tier, no pins, no phylo block,
 no retained record): tier `:B` only; `Sigma`, `R`, `communality`; `ICC` is dropped and
 `cross_corr` is always skipped (R needs a multinomial trait). `TwoLevelFit` (pass
-`individual`): tiers `:B`, `:W` and `ICC_site`. `PrecisionMultivariateFit`: tier `:phy` only
-(see below). Everything else, including `JointPhyloGroupedGaussianFit`, throws `ArgumentError`.
-`n_cores > 1` is refused. See the ledger Spec for the full contract; the legacy
+`individual`): tiers `:B`, `:W` and `ICC_site`. `PrecisionMultivariateFit` and
+`JointPhyloGroupedGaussianFit`: tier `:phy` only (see below). Everything else throws `ArgumentError`.
+`n_cores > 1` runs replicates on that many Julia threads (see below). See the ledger Spec for the full contract; the legacy
 `bootstrap_Sigma` is a different estimand and is unchanged.
 
 # What tier `:B` means for a `GllvmFit` (it changes with `has_diag`)
@@ -410,6 +614,48 @@ starts (no warm start, no relative `f_tol`). This is a parametric bootstrap cond
   likelihood. NO numerical comparison with an R `bootstrap_Sigma` run exists, so "matches R output" is
   not claimed. (R's own test-suite has no phy-tier bootstrap test.) `center` is ignored.
 
+# `JointPhyloGroupedGaussianFit` (tier `:phy` only; refused unless the ORIGINAL fit is identified and converged)
+
+`Sigma_phy = ΛΛ' + diag(unique)` (`fit.phylo_covariance`): it contains NEITHER the residual variance NOR any
+ordinary grouping-term variance; those are separate sources and are never added to the phy tier. `R_phy` and
+`communality_phy = diag(ΛΛ') ./ diag(Sigma_phy)` follow. Each replicate redraws every phylogenetic effect as for
+`PrecisionMultivariateFit` AND, for each ordinary term, one independent `N(0, diag(ordinary_covariances[k]))`
+draw per group, added through the stored incidence matrix; loadings, fixed effects and variances are held at
+the fit. Each replicate is refit once from default starts (no warm start, no relative `f_tol`; the fitter's
+defaults `g_tol = 1e-5`, `iterations = 200`), with the same tree, rank, phylo mode, terms, `species_id` and
+mean design. Group labels are recovered from the stored incidences and passed under each TERM's keyword
+(`unit`, `unit_obs`, `cluster`, `cluster2`), so only the partitions (not the original label values) are kept.
+B and W are dropped with an `@info` (default `level`; `level = :B` alone throws) and `ICC` is dropped.
+
+DEVIATIONS from the pinned R, all counted and reported:
+
+- **Failure rule.** A replicate FAILS (is in `n_failed`, NaN-shaped, excluded from the percentiles) when the
+  refit throws, does not converge (`converged` also needs a finite-difference gradient norm below `g_tol`,
+  unlike R's `nlminb` convergence code), OR its covariance components are not identified
+  (`_joint_phylo_grouped_component_identification(refit).reason !== :identified`). R's rule is convergence only
+  and has no identification check. The breakdown is in `result.diagnostics` (`n_thrown`, `n_not_converged`,
+  `n_non_identified`; they sum to `n_failed`). Failure rates are therefore not comparable with R's.
+- **B/W omitted.** R would report B/W tiers for a comparable multi-tier fit. How this class's ordinary terms
+  map to R's B/W is unverified, so they are not bootstrapped.
+- **Silenced fitter warning.** The fitter's per-replicate "not separately identifiable" `@warn` is silenced in
+  the loop and counted in `diagnostics.n_non_identified`. Exceptions are not silenced.
+
+Curvature. A converged replicate with a non-positive-definite Hessian is KEPT (as in R, which checks only
+convergence, and as the percentile method needs only point estimates), and counted: `diagnostics.n_converged`
+(converged replicates, identified or not) and `diagnostics.n_hessian_not_pd` (of those), reported in an `@info`.
+Such replicates often have a variance on its boundary (a unique or ordinary variance near 0), so percentile ends
+of quantities that depend on it can be truncated there. If the ORIGINAL fit's Hessian is not positive definite
+(`diagnostics.original_hessian_pd == false`) a `@warn` says so; the run proceeds. In a pre-run on fixtures the
+non-PD fraction among converged replicates was 0% to 71%: 33.7% and 71.4% in the two explicit-unique cases.
+
+EVIDENCE LEVEL: structural plus Julia-descriptive. The contract is read from the pinned R source for the shared
+parts and pinned by tests and mutation checks. The only other evidence is a diagnostic pre-run (six fixtures, one
+seed each, `n_boot = 200`, `g_tol` 1e-5 to 2e-4, up to 200 iterations) in which 0% to 2.5% of replicates failed
+(thrown, non-converged or non-identified); with `n_boot = 200` a count of 5 does not exclude a true failure rate
+above 5%. Not tested: more than one ordinary term in a real refit, rank above 1 in a real refit, `:unit_obs` and
+`:cluster2` in a real refit, covariates beyond trait intercepts, larger trees, unbalanced trees. NO numerical
+comparison with an R run exists and NO R parity is claimed; `link_residual` and `center` are ignored.
+
 # Other behaviour worth knowing
 
 - `X` is the p x n_sites x q design array used at fit time (a 2-d matrix is refused) and
@@ -438,6 +684,12 @@ starts (no warm start, no relative `f_tol`). This is a parametric bootstrap cond
   f_tol = 1e-12` (R's nlminb stops on a relative objective change); a deviation from the pinned
   R. It rescues the replicates that hit the stock 500-iteration cap and moves even
   already-converged replicates slightly (bounds by about 1e-5 in the fixtures measured).
+- Internal keyword `_sufficient_stat::Bool = false` (not public API; `GllvmFit` only, built-in refit only,
+  never a user `_refit`): refit with the sufficient-statistic form of the same profile likelihood
+  (10 to 13x faster measured on the fixtures). It is the same function to rounding, but L-BFGS then takes a
+  rounding-level different path, so draws move: typically about 2e-6, up to 3e-5 for Heywood-boundary
+  replicates and up to about 4e-4 for flat-ridge ones (bounds at n_boot = 999 within 8.1e-6). It is therefore
+  opt-in: the default reproduces the stock path. Not run for `K_W > 0` refit grids; phylo paths untouched.
 - Entries whose point estimate is itself non-finite (for example a zero-variance trait) are
   not counted in the attrition warning.
 - `TwoLevelFit` does not store `center`; the refit assumes `center = true` unless the
@@ -450,10 +702,18 @@ starts (no warm start, no relative `f_tol`). This is a parametric bootstrap cond
   extracting summaries from a converged refit blanks every entry of that replicate to `NaN`
   and is NOT counted in `n_failed` (R skips per level; here one or two tiers make the
   difference small). `InterruptException` is never swallowed.
+- **`n_cores` (Julia threads).** `n_cores = 1` (default) runs serially. `n_cores = k > 1` refits replicates on
+  `k` tasks. Julia must be started with at least `k` threads (`julia -t k` or `JULIA_NUM_THREADS`); `n_cores < 1`
+  or `n_cores > Threads.nthreads()` throws `ArgumentError`. The batch of datasets is simulated first from `seed`
+  and each refit is independent, so the draws, bounds and `n_failed` are bit-identical and the driver's warnings the same as for `n_cores = 1`
+  for the same seed, whatever the thread count or scheduling. A user `_refit` must itself be thread-safe. With
+  `progress = true` the replicate `@info` lines come out in completion order. Each thread's refit is single-threaded
+  only if BLAS is: set `OPENBLAS_NUM_THREADS=1` (or `BLAS.set_num_threads(1)`) to avoid oversubscription.
+  `InterruptException` still propagates (on the calling task or in a worker); the workers are told to stop, the in-flight refits finish, and no worker outlives the call. Any other unexpected error in a worker stops the others and is rethrown. The once-per-session identification warning of the fitter is emitted once (its warn-once set is lock-guarded).
 - `n_boot = 999` and `progress = true` (one `@info` per replicate) mirror R and need
   maintainer agreement as Julia defaults.
 """
-function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivariateFit};
+function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivariateFit, JointPhyloGroupedGaussianFit};
         n_boot::Integer = 999,
         level = _BSIG_LEVELS_ALL,
         what = _BSIG_WHAT_ALL,
@@ -465,11 +725,13 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
         link_residual::Symbol = :auto,
         y = nothing, n_sites = nothing, X = nothing, Σ_phy = nothing,
         individual = nothing, center::Bool = true,
-        _refit::Union{Nothing, Function} = nothing)
+        _refit::Union{Nothing, Function} = nothing,
+        _sufficient_stat::Bool = false)
 
     # 1. class-specific refusals (R: class and structural asserts come first)
     _bsig_check_fit(fit, Σ_phy)
-    args = (y = y, n_sites = n_sites, X = X, individual = individual, center = center)
+    args = (y = y, n_sites = n_sites, X = X, individual = individual, center = center,
+            sufficient_stat = _sufficient_stat)
     _bsig_check_args(fit, args)
     # 2-4. level, what, link_residual, conf, n_boot (R order)
     lev = _bsig_normalise_level(level)
@@ -479,8 +741,12 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
     (0 < conf < 1) || _bsig_refuse("conf must be in (0, 1); got $conf")
     (seed === nothing || seed >= 0) || _bsig_refuse("seed must be >= 0; got $seed")
     n_boot >= 1 || _bsig_refuse("n_boot must be >= 1; got $n_boot")
-    n_cores == 1 || _bsig_refuse("n_cores = $n_cores is unsupported in v1 (use 1).")
+    n_cores >= 1 || _bsig_refuse("n_cores must be >= 1; got $n_cores")
+    n_cores <= Threads.nthreads() || _bsig_refuse(
+        "n_cores = $n_cores exceeds Threads.nthreads() = $(Threads.nthreads()); start Julia with at least " *
+        "that many threads (for example `julia -t $n_cores`).")
     nb = Int(n_boot)
+    n_cores = Int(n_cores)
 
     # 5a. coverage ceiling warnings (R:252-277). Never both; neither throws.
     min_boot = ceil(Int, 2 / (1 - conf)) - 1
@@ -499,7 +765,11 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
     isempty(kept) && _bsig_refuse(
         "None of the requested level(s) are present in the fit. Available: " *
         (isempty(avail) ? "(none)" : join(avail, ", ")))
-    isempty(dropped) || @info "bootstrap_Sigma_r: level(s) $(join(dropped, ", ")) not present in this fit; dropped."
+    isempty(dropped) || @info "bootstrap_Sigma_r: level(s) $(join(dropped, ", ")) not present in this fit; dropped." *
+        (fit isa JointPhyloGroupedGaussianFit ?
+         " For a JointPhyloGroupedGaussianFit R would report B/W tiers for a comparable multi-tier fit; the " *
+         "mapping of this class's ordinary terms to R's B/W is unverified, so they are not bootstrapped " *
+         "(a coverage difference from R)." : "")
     # 5c. ICC needs both B and W (R:299-306)
     if :ICC in wh && !(:B in kept && :W in kept)
         @info "bootstrap_Sigma_r: ICC requires both B and W tiers; dropping ICC from what."
@@ -510,9 +780,9 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
     pe_pairs = _bsig_entries(fit, kept, wh)
     isempty(pe_pairs) && _bsig_refuse(
         "none of the requested summaries ($(isempty(wh) ? "none left after dropping ICC" : join(wh, ", "))) " *
-        "is available for this fit and level; nothing to bootstrap (a GllvmFit supports what = :Sigma, " *
-        ":R or :communality; :ICC needs a TwoLevelFit with levels :B and :W; :cross_corr is never " *
-        "available, R needs a multinomial trait).")
+        "is available for this fit and level; nothing to bootstrap (a GllvmFit, PrecisionMultivariateFit or " *
+        "JointPhyloGroupedGaussianFit supports what = :Sigma, :R or :communality; :ICC needs a TwoLevelFit " *
+        "with levels :B and :W; :cross_corr is never available, R needs a multinomial trait).")
     keys_pe = Symbol[k for (k, _) in pe_pairs]
 
     # rr-only GllvmFit: B = ΛΛ' only, so communality_B is identically 1 (zero-width interval)
@@ -522,12 +792,35 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
               "It carries no information; refit with has_diag = true for an informative communality."
     end
 
-    # PrecisionMultivariateFit :barelowrank (R `phylo_latent` alone): phy total = LL' = shared
-    if fit isa PrecisionMultivariateFit && fit.phylo_unique_variance === nothing && :communality in wh
+    # PrecisionMultivariateFit / JointPhyloGroupedGaussianFit :barelowrank (R `phylo_latent` alone):
+    # phy total = LL' = shared
+    if (fit isa PrecisionMultivariateFit || fit isa JointPhyloGroupedGaussianFit) &&
+       fit.phylo_unique_variance === nothing && :communality in wh
+        mk = fit isa JointPhyloGroupedGaussianFit ? "phylo_mode" : "mode"
         @info "bootstrap_Sigma_r: communality_phy is exactly 1 with a zero-width interval for a fit " *
-              "without a phylogenetic unique component (mode = :barelowrank): the phy tier is LL' with " *
+              "without a phylogenetic unique component ($mk = :barelowrank): the phy tier is LL' with " *
               "no diagonal, so shared/total = 1. It carries no information; refit with " *
-              "mode = :explicitunique for an informative communality."
+              "$mk = :explicitunique for an informative communality."
+    end
+
+    # JointPhyloGroupedGaussianFit: a non-PD Hessian at the original fit does not stop the run (the percentile
+    # bootstrap needs only point estimates, as in R) but the interval ends can be boundary-truncated.
+    if fit isa JointPhyloGroupedGaussianFit && !fit.hessian_positive_definite
+        @warn "bootstrap_Sigma_r: the Hessian of the original fit is not positive definite (smallest " *
+              "eigenvalue $(fit.hessian_min_eigenvalue)); a variance component is probably on its boundary. " *
+              "The bootstrap runs, but interval ends of quantities that depend on that component can be " *
+              "truncated at the boundary."
+    end
+
+    # JointPhyloGroupedGaussianFit: a group variance at (numerically) zero relative to its trait's total.
+    if fit isa JointPhyloGroupedGaussianFit
+        for nm in unique(first.(_bsig_jpg_boundary_terms(fit)))
+            trs = [t for (n, t) in _bsig_jpg_boundary_terms(fit) if n == nm]
+            @warn "bootstrap_Sigma_r: the estimated variance of the ordinary group term :$nm is below " *
+                  "$(_BSIG_TINY_REL) of the total variance for trait $(join(trs, ", ")) (boundary estimate): " *
+                  "its group interval sits on a boundary, and the :phy intervals that depend on it can be " *
+                  "unreliable. The threshold is this driver's choice, not R's."
+        end
     end
 
     # 6. one batch drawn first, then one refit per replicate
@@ -535,10 +828,10 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
     rng = seed === nothing ? Random.default_rng() : Random.MersenneTwister(seed)
     Ys = simulate(rng)
 
-    draws = Vector{Dict{Symbol, Any}}(undef, nb)
-    failed = fill(false, nb)
-    n_extract_err = 0
-    for b in 1:nb
+    # One replicate: refit on Ys[b] and summarise. Pure in `b` (reads only Ys, the fit and the closures; no
+    # shared mutable state), so the result is the same whichever thread runs it and in whatever order.
+    # InterruptException is rethrown; any other refit or extraction error becomes a failed / lost replicate.
+    function one_replicate(b)
         progress && @info "bootstrap_Sigma_r: replicate $b / $nb"
         fb = try
             refit(Ys[b])
@@ -546,10 +839,17 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
             e isa InterruptException && rethrow()
             nothing
         end
-        if fb === nothing || !(fb isa typeof(fit)) || !fb.converged
-            failed[b] = true
-            draws[b] = Dict{Symbol, Any}(k => _bsig_nan_like(v) for (k, v) in pe_pairs)
-            continue
+        status = fb === nothing ? :thrown :
+                 (!(fb isa typeof(fit)) || !fb.converged) ? :not_converged : :converged
+        conv = false; nonpd = false
+        if status === :converged
+            conv = true
+            fb isa JointPhyloGroupedGaussianFit && !fb.hessian_positive_definite && (nonpd = true)
+            status = _bsig_replicate_status(fit, fb)         # :ok or :non_identified
+        end
+        if status !== :ok
+            return (draw = Dict{Symbol, Any}(k => _bsig_nan_like(v) for (k, v) in pe_pairs),
+                    status = status, conv = conv, nonpd = nonpd, extract_err = false)
         end
         ent = try
             Dict{Symbol, Any}(_bsig_entries(fb, kept, wh))
@@ -559,16 +859,74 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
         end
         # a summary of the wrong shape is treated like an extraction error (NaN draw, counted as lost)
         bad_shape = ent !== nothing && any(haskey(ent, k) && size(ent[k]) != size(v) for (k, v) in pe_pairs)
-        (ent === nothing || bad_shape) && (n_extract_err += 1)
-        draws[b] = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) && size(ent[k]) == size(v) ?
-                                           ent[k] : _bsig_nan_like(v)) for (k, v) in pe_pairs)
+        draw = Dict{Symbol, Any}(k => (ent !== nothing && haskey(ent, k) && size(ent[k]) == size(v) ?
+                                       ent[k] : _bsig_nan_like(v)) for (k, v) in pe_pairs)
+        return (draw = draw, status = :ok, conv = conv, nonpd = nonpd,
+                extract_err = ent === nothing || bad_shape)
     end
+
+    # Per-replicate results go to preallocated slots; counters are reduced afterwards in replicate order.
+    results = Vector{Any}(undef, nb)
+    if n_cores == 1
+        for b in 1:nb
+            results[b] = one_replicate(b)
+        end
+    else
+        # `n_cores` tasks pull replicate indices from an atomic counter (dynamic balance: refit times vary).
+        # Each replicate writes only its own slot. A worker that hits an error stops the others from
+        # taking new work; an InterruptException is rethrown as such, never wrapped.
+        next = Threads.Atomic{Int}(0)
+        stop = Threads.Atomic{Bool}(false)
+        errs = Vector{Any}(nothing, n_cores)
+        tasks = map(1:n_cores) do w
+            Threads.@spawn begin
+                try
+                    while !stop[]
+                        b = Threads.atomic_add!(next, 1) + 1
+                        b > nb && break
+                        results[b] = one_replicate(b)
+                    end
+                catch e
+                    stop[] = true
+                    errs[w] = e
+                end
+            end
+        end
+        try
+            foreach(wait, tasks)
+        catch e
+            # Ctrl-C (or any error) on the calling task: tell the workers to stop taking new replicates and wait
+            # for the in-flight refits, so no worker outlives the call.
+            stop[] = true
+            foreach(t -> (try; wait(t); catch; end), tasks)
+            throw(e)
+        end
+        any(e -> e isa InterruptException, errs) && throw(InterruptException())
+        i = findfirst(!isnothing, errs)
+        i === nothing || throw(errs[i])
+    end
+    draws = Dict{Symbol, Any}[r.draw for r in results]
+    failed = Bool[r.status !== :ok for r in results]
+    n_extract_err = count(r -> r.extract_err, results)
+    n_thrown = count(r -> r.status === :thrown, results)
+    n_not_conv = count(r -> r.status === :not_converged, results)
+    n_non_ident = count(r -> r.status === :non_identified, results)
+    n_conv = count(r -> r.conv, results)
+    n_nonpd = count(r -> r.nonpd, results)
     n_failed = count(failed)
     # replicates lost to failed refits or to extraction errors (the latter are not in n_failed)
     n_lost = n_failed + n_extract_err
     n_lost > 0 && @warn "bootstrap_Sigma_r: $n_lost of $nb replicates were lost " *
         "($n_failed failed refits, $n_extract_err extraction errors); bounds rest on the survivors" *
-        (n_lost == nb ? " and are all NaN." : ".")
+        (n_lost == nb ? " and are all NaN." : ".") *
+        (fit isa JointPhyloGroupedGaussianFit ?
+         " Failed refits: $n_thrown thrown, $n_not_conv non-converged, $n_non_ident non-identified." : "")
+    if fit isa JointPhyloGroupedGaussianFit && n_nonpd > 0
+        @info "bootstrap_Sigma_r: $n_nonpd of $n_conv converged replicates have a non-positive-definite " *
+              "Hessian. They are kept (R checks convergence only and the percentile bootstrap needs only " *
+              "point estimates), but such replicates often sit on a variance boundary, so interval ends of " *
+              "quantities that depend on the unique or ordinary variances can be truncated there."
+    end
 
     # 7. aggregation: type-7 percentiles of the finite draws, no minimum survivor rule
     α = 1 - conf
@@ -614,11 +972,15 @@ function bootstrap_Sigma_r(fit::Union{GllvmFit, TwoLevelFit, PrecisionMultivaria
         NamedTuple{Tuple(nkeys)}(Tuple(neff[k] for k in nkeys)),
         NamedTuple(), "percentile", link_residual, Float64(conf), nb, ceiling, n_failed,
         kept, wh,
-        keep_draws ? NamedTuple[nt(d, keys_pe) for d in draws] : nothing)
+        keep_draws ? NamedTuple[nt(d, keys_pe) for d in draws] : nothing,
+        fit isa JointPhyloGroupedGaussianFit ?
+            (n_thrown = n_thrown, n_not_converged = n_not_conv, n_non_identified = n_non_ident,
+             n_converged = n_conv, n_hessian_not_pd = n_nonpd,
+             original_hessian_pd = fit.hessian_positive_definite) : NamedTuple())
 end
 
 # Any other class: refuse explicitly (no verified simulate-and-refit route).
 bootstrap_Sigma_r(fit; kwargs...) = _bsig_refuse(
-    "unsupported fit class $(typeof(fit)). Supported: GllvmFit, TwoLevelFit and " *
-    "PrecisionMultivariateFit (tier :phy only). JointPhyloGroupedGaussianFit and non-Gaussian " *
-    "fits have no verified simulate-and-refit route.")
+    "unsupported fit class $(typeof(fit)). Supported: GllvmFit, TwoLevelFit, " *
+    "PrecisionMultivariateFit and JointPhyloGroupedGaussianFit (tier :phy only for the last two). " *
+    "Non-Gaussian fits have no verified simulate-and-refit route.")

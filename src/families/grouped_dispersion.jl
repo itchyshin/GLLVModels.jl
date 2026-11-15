@@ -659,7 +659,7 @@ function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init;
 end
 
 """
-    fit_nb_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
+    fit_nb_gllvm_grouped(Y; K, group, n_init=1, link=LogLink(), mask=nothing, offset=nothing,
                          hessian=:observed, β_init=nothing, Λ_init=nothing,
                          optimizer=nothing, …) -> NBGroupedFit
 
@@ -688,8 +688,23 @@ as in [`fit_nb_gllvm`](@ref); `r_group` still starts at `r₀ = 10`.
 conditional BFGS Poisson-ridge polish. Explicit LBFGS uses LBFGS for the initial
 and boundary stages and skips the polish; explicit BFGS uses BFGS at every
 executed stage. [`optimizer_info`](@ref) retains the per-attempt results.
+
+`n_init` (default `1`, a single start; the call is then exactly the fit without the keyword)
+fits from `n_init` starts and returns the one with the highest log-likelihood, preferring
+converged fits, with the same seeding and selection as `n_init` in [`fit_nb_gllvm`](@ref)
+(start 1 is the usual warm start or your `Λ_init`; starts `2:n_init` use seeded
+lower-triangular `0.3 * randn` loadings). Each start runs the full single-start procedure
+above, including the boundary restarts and polish. Fit time is roughly `n_init` times the
+single-start time. A start that throws is skipped; if all of starts `2:n_init` fail, the first
+fit is returned. `n_init > 1` is not available with `aghq` in `fit_gllvm`.
 """
-function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
+function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, n_init::Integer = 1, kwargs...)
+    n_init >= 1 || throw(ArgumentError("fit_nb_gllvm_grouped: n_init must be at least 1; got $n_init"))
+    return _best_of_starts(_fit_nb_gllvm_grouped_start, Y, K, n_init, kwargs)
+end
+
+# One Laplace grouped-NB2 fit from a single start (the historical `fit_nb_gllvm_grouped` body).
+function _fit_nb_gllvm_grouped_start(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
         optimizer = nothing, g_tol::Real = 1e-5, iterations::Integer = 500,
@@ -972,6 +987,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped_cov")
     Yc = Integer.(_sanitize_missing(Y, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
@@ -2472,6 +2488,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped")
     Yc = Integer.(_sanitize_missing(Y, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
@@ -3046,6 +3063,7 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_response_support(:nonneg_real, Y, msk; caller = "fit_tweedie_gllvm_grouped")
     Yc  = _sanitize_missing(Y, 1e-6)
     Zemp = log.(Yc .+ _tweedie_log_offset(Yc, msk))
     offset === nothing || (Zemp .-= offset)

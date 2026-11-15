@@ -369,6 +369,7 @@ unlike that function there is no `-Inf` sentinel here (a latent score, not a
 log-likelihood), so the best `z` the retried search found is still returned.
 """
 function getLV(fit::COMPoissonFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Z = Matrix{Float64}(undef, K, n)

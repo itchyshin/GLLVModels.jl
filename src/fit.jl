@@ -70,14 +70,21 @@ GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration)=
 # loops call the fitter many times and must not repeat the message.
 const _UNIDENTIFIED_WARNED = Set{Symbol}()
 
+# The check-and-push is under a lock: threaded bootstrap refits (bootstrap_Sigma_r with n_cores > 1) call this
+# concurrently, and an unguarded Set both races (double warning) and is not safe to mutate from several tasks.
+const _UNIDENTIFIED_LOCK = ReentrantLock()
+
 function _warn_unidentified_once(key::Symbol, msg::AbstractString)
-    key in _UNIDENTIFIED_WARNED && return nothing
-    push!(_UNIDENTIFIED_WARNED, key)
-    @warn msg
+    first = lock(_UNIDENTIFIED_LOCK) do
+        key in _UNIDENTIFIED_WARNED && return false
+        push!(_UNIDENTIFIED_WARNED, key)
+        return true
+    end
+    first && @warn msg
     return nothing
 end
 
-_reset_unidentified_warnings!() = (empty!(_UNIDENTIFIED_WARNED); nothing)
+_reset_unidentified_warnings!() = (lock(() -> empty!(_UNIDENTIFIED_WARNED), _UNIDENTIFIED_LOCK); nothing)
 
 """
     fit_gaussian_gllvm(y; K, K_W=0, has_diag=false, K_phy=0,
@@ -214,7 +221,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             f_tol = 0.0,
                             g_tol = 1e-6,
                             iterations = 500,
-                            optimizer = nothing)
+                            optimizer = nothing,
+                            _sufficient_stat::Bool = false)
     p, n = size(y)
     default_optimizer = Optim.LBFGS()
     outer_optimizer = _optimizer_method(optimizer, default_optimizer; route = "fit_gaussian_gllvm")
@@ -570,10 +578,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         vcat(log_τ_B₀, log_τ_W₀, θ_B₀, θ_W₀, ρ_phy₀, θ_phy₀)
     end
 
+    suff_ss = (_sufficient_stat && !has_phy_block && !do_profile_beta) ? _gaussian_suff(y, X_fit, q) : nothing
     nll = params -> gaussian_profile_nll(params, y;
                                           spec = spec, X = X_fit,
                                           Σ_phy = Σ_phy,
-                                          profile_beta = do_profile_beta)
+                                          profile_beta = do_profile_beta,
+                                          suff = suff_ss)
 
     opts = Optim.Options(
         x_abstol = x_tol,

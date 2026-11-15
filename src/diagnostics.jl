@@ -714,7 +714,7 @@ two-fit bridge.
 **Gap vs R**: R's "two-ψ" alternative is a specific named
 reparameterisation (two independent latent-variable blocks) that
 GLLVModels.jl does not implement as a distinct family; this port is the
-generic bridge — Σ_y comparison via [`compare_fits_Sigma_table`](@ref) plus
+generic bridge — `Σ_y` comparison via [`compare_fits_Sigma_table`](@ref) plus
 an information-criterion delta — applicable to any two fits of the
 same `p`, not specifically the R "two-ψ" family.
 
