@@ -156,10 +156,11 @@ end
     CensoredPoissonFit
 
 Result of [`fit_censored_poisson_gllvm`](@ref). Packing is Poisson-identical:
-`θ = [β; pack(Λ)]` — no dispersion; censor limits are data, not parameters, so the fit does not
-store the censoring pattern: `getLV`, `predict` and `residuals` take it as `censored` or
-`lower`/`upper`, as the fitter does. `offset` is the p×n training offset the fit was made with
-(`nothing` when none was given); the post-fit methods use it by default.
+`θ = [β; pack(Λ)]` — no dispersion; censor limits are data, not parameters. `censored` is the
+p×n Bool pattern of right-censored cells the fit was made with (`nothing` when every cell was an
+exact count); the post-fit methods use it when `Y` has the training size and no `censored` or
+`lower`/`upper` is passed. `offset` is the p×n training offset the fit was made with (`nothing`
+when none was given); the post-fit methods use it by default.
 """
 struct CensoredPoissonFit
     β::Vector{Float64}
@@ -170,11 +171,23 @@ struct CensoredPoissonFit
     iterations::Int
     theta_packed::Vector{Float64}
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    censored::Union{Nothing,Matrix{Bool}}    # right-censored cells (p×n); `nothing` = all exact
 end
 
-# Pre-offset compat tier (7 positional args): no stored training offset.
+# Pre-pattern compat tier (8 positional args): no stored censoring pattern.
+CensoredPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed, offset) =
+    CensoredPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed, offset, nothing)
+# Pre-offset compat tier (7 positional args): no stored training offset or pattern.
 CensoredPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed) =
-    CensoredPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed, nothing)
+    CensoredPoissonFit(β, Λ, link, loglik, converged, iterations, theta_packed, nothing, nothing)
+
+# Censored cells of the fit as a Bool p×n matrix (`nothing` when every observed cell was exact);
+# cells the fit did not observe are never marked.
+function _stored_censored(Nc::AbstractMatrix{<:Integer}, msk)
+    C = Nc .!= 0
+    msk === nothing || (C .&= msk)
+    return any(C) ? Matrix{Bool}(C) : nothing
+end
 
 function Base.show(io::IO, f::CensoredPoissonFit)
     p, K = size(f.Λ)
@@ -309,5 +322,6 @@ function fit_censored_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk,
                             caller = "fit_censored_poisson_gllvm")   # #869
     return CensoredPoissonFit(β̂, Λ̂, link, ll, conv, iters, collect(Float64, θ̂),
-                              _stored_offset(offset))
+                              _stored_offset(offset),
+                              _stored_censored(Nc, msk))
 end
