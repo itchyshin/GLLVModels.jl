@@ -156,6 +156,12 @@ function fit_spde_gaussian(y::AbstractVector, nodes::AbstractMatrix,
         g_tol::Real = 1e-5, iterations::Integer = 500)
 
     yv = collect(float.(y))
+    # NaN or Inf in y gave loglik = -Inf, converged = false and no error. No missing-data
+    # route here: refuse, as the other Gaussian-field fitters do.
+    if !all(isfinite, yv)
+        throw(ArgumentError("fit_spde_gaussian: y contains non-finite values at indices " *
+                            "$(findall(!isfinite, yv)); this fitter takes complete finite responses"))
+    end
 
     # Precompute the mesh-dependent pieces once.
     Cdiag, G = spde_fem(nodes, tris)
