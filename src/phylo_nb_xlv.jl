@@ -145,9 +145,36 @@ function _phylo_nb_xlv_mode(Y, beta, Lambda, alpha_lv, r, mean_eta, Q, leaf_pos;
         end
         delta = cholH \ grad
         all(isfinite, delta) || return nothing, nothing, nothing
-
         q0 = _phylo_nb_xlv_logpost(Y, beta, Lambda, alpha_lv, r, mean_eta, Q,
                                    leaf_pos, eps, u)
+        # g'delta below rounding is the mode when no trial step strictly raises
+        # the log-posterior. Decide that before the line search: `q1 >= q0` holds
+        # with equality on a zero-gain step, so accept-versus-reject must not
+        # choose convergence (#1129). A strict ascent is left to the search and
+        # to `tol`. The rejected-step floor below stays.
+        if abs(dot(grad, delta)) < 1e-12
+            ascends = false
+            step_try = 1.0
+            n_try = n * K
+            for _try in 1:30
+                eps_try = copy(eps)
+                u_try = copy(u)
+                @inbounds for s in 1:n, k in 1:K
+                    eps_try[s, k] += step_try * delta[(s - 1) * K + k]
+                end
+                @inbounds for j in eachindex(u_try)
+                    u_try[j] += step_try * delta[n_try + j]
+                end
+                q_try = _phylo_nb_xlv_logpost(Y, beta, Lambda, alpha_lv, r,
+                                              mean_eta, Q, leaf_pos, eps_try, u_try)
+                if isfinite(q_try) && q_try > q0
+                    ascends = true
+                    break
+                end
+                step_try *= 0.5
+            end
+            ascends || (mode_found = true; break)
+        end
         accepted = false
         step = 1.0
         n_z = n * K
