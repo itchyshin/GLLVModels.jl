@@ -230,6 +230,8 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
     @test prof.lower[1] <= prof.target[1] <= prof.upper[1]
     @test isfinite(prof.lr_deviance[1])
     @test prof.lr_deviance[1] <= prof.lr_cutoff[1]
+    # a profile LR cannot be negative: the constrained refit is a restriction of the free fit
+    @test prof.lr_deviance[1] >= -1e-6
     @test prof.constrained_error[1] < 1e-3
     @test prof.covered == [true]
     @test prof.pd_hessian
