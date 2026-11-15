@@ -321,6 +321,7 @@ precision `φ`. `Y` is the `p×n` matrix of responses in `[0,1]`; `rotate=true`
 applies the canonical [`rotation`](@ref).
 """
 function getLV(fit::OrderedBetaFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Z = Matrix{Float64}(undef, K, n)

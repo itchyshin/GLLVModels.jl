@@ -125,6 +125,8 @@ log-likelihood. This is the fastest and most accurate path. The response matrix
 `Y` is `p × n` (responses × sites). The closed-form fitter needs at least as many
 sites as responses (`n_sites ≥ p`) and throws an `ArgumentError` otherwise; the
 Laplace-fitted families below do not (see [Common pitfalls](pitfalls.md)).
+`missing` entries in `Y` derive an observation mask, the same rule as Poisson,
+and one `@info` records that the mask was derived.
 
 ### Binomial — `Binomial()`
 
@@ -957,8 +959,11 @@ fit = fit_gaussian_pervar_gllvm(Y; K = 2)   # heteroscedastic Gaussian
 
 A heteroscedastic Gaussian GLLVM with a **separate residual variance per species**
 (gllvm's heteroscedastic default), in contrast to the single shared `σ_eps` of
-`fit_gaussian_gllvm`. With `X=nothing`, trait intercepts are profiled as row means of the `p × n`
-response matrix. Supply `X` of shape `(p, n, q)` to fit a complete fixed-effect
+`fit_gaussian_gllvm`. With `X=nothing` and complete data, trait intercepts are
+profiled as row means of the `p × n` response matrix. `missing` entries derive
+an observation mask (one `@info`) and are dropped from the marginal; intercepts
+are then the profiled GLS means of the observed cells, and the fit uses L-BFGS
+rather than EM. Supply `X` of shape `(p, n, q)` to fit a complete fixed-effect
 design; no intercept is added automatically. Its `q` coefficients are profiled
 by generalized least squares at each covariance trial and returned in `fit.β`.
 Explicit designs use L-BFGS with direct covariance Cholesky (O(p³) factorization)

@@ -732,7 +732,9 @@ Match the family to the response support and its mean–variance behaviour:
 
 When a Laplace fit looks unstable (a degenerate Hessian, implausible dispersion),
 the variational (`fit_*_gllvm_va`) drivers optimise an ELBO instead — slower but
-steadier; see [Response families](response-families.md).
+steadier; see [Response families](response-families.md). A `missing` cell is
+handled as on the Laplace fitters: the observation mask is derived, the cell is
+dropped from the ELBO, and the fitter reports that once.
 
 See also: [Get started](quickstart.md) · [Working with a fit](working-with-a-fit.md) ·
 [Response families](response-families.md) · [Structured dependence](structured-dependence.md) ·
