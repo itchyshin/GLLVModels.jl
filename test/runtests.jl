@@ -234,7 +234,7 @@ for (_k, _files) in enumerate((
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
         "test_phylo_gamma_xlv.jl", "test_phylo_ordinal_xlv.jl", "test_binomial_case_contract.jl",
-        "test_xlv_canary_boundary.jl",
+        "test_xlv_canary_boundary.jl", "test_phylo_nb_xlv_early_stop.jl",
     ),
 ))
     for _f in _files
@@ -454,6 +454,8 @@ println(_SHARD === nothing ?
     # #1048: gate logic of the boundary-stop acceptance used by the NB and binomial canaries (always runs;
     # the canaries themselves stay behind GLLVM_XLV_CANARY=1 until the P57 reading of condition (iv) is decided).
     _shard_include("test_xlv_canary_boundary.jl")
+    # #1129: NB xLV fit must not stop short of the nested plain model (fails on main at seeds 743, 744, 746).
+    _shard_include("test_phylo_nb_xlv_early_stop.jl")
     _shard_include("test_xlv_nb_binomial_wired.jl")
     # #1048: Gamma xlv mode-search rounding-floor regression (the full test_phylo_gamma_xlv.jl stays unwired).
     _shard_include("test_phylo_gamma_xlv_mode_floor.jl")
