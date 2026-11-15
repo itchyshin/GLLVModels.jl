@@ -1208,7 +1208,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
             alpha = fit.β, dispersion = fill(NaN, p), df = p + _bridge_rr_df(p, K),
             scores = scores, ci = ci, mask = M)
     elseif key == "lognormal"
-        # No-X only. LognormalFit has no getLV / link-residual / confint adapter
+        # No-X only. LognormalFit has getLV since #788 but this route does not call it
+        # yet, and it has no link-residual / confint adapter
         # on this engine, so assemble the shared block ΛΛᵀ directly (the same
         # honest fallback `_bridge_assemble_ng` uses) and fence CI / X / X_lv /
         # masks via the existing list membership plus a loud CI guard.
@@ -1234,7 +1235,7 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
                    "shared scalar σ; y-scale loglik includes −Σ log y; " *
                    "no-X only; Sigma/correlation use the shared block " *
                    "Lambda*Lambda' only (communality 1); scores empty " *
-                   "(no getLV(::LognormalFit)); CI, X, X_lv, and masks " *
+                   "(the bridge does not call getLV(::LognormalFit) yet); CI, X, X_lv, and masks " *
                    "remain follow-ups; light no-X RCall logLik Δ PAID " *
                    "(test/parity/test_lognormal_parity.jl @ GLLVM_PARITY_TESTS=1; " *
                    "receipt abs≈2.24e-8 @ rtol 1e-6, seed=52, p=5, K=2, n=60)",
