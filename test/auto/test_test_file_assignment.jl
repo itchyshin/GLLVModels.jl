@@ -6,11 +6,9 @@ include(joinpath(@__DIR__, "..", "shard_util.jl"))
 # test_quality.jl, test_readme_quickstart.jl and test_quality_jet.jl are run by
 # runtests.jl through a plain `include` or by test_quality.jl.
 const _TESTDIR = joinpath(@__DIR__, "..")
-const _UNWIRED_ON_PURPOSE = Set([
-    "test_binomial_case_contract.jl",     # stale SHA pins
-    "test_phylo_gamma_xlv.jl",            # optimiser-sensitive canary
-    "test_phylo_ordinal_xlv.jl",          # optimiser-sensitive canary
-])
+# Empty: the three files that used to be listed here (the binomial case contract and the
+# Gamma and ordinal xLV canaries) are now wired into the suite (refs #1048).
+const _UNWIRED_ON_PURPOSE = Set{String}()
 const _RUN_BY_OTHER_FILE = Set([
     "test_quality.jl", "test_quality_jet.jl", "test_readme_quickstart.jl",
 ])
