@@ -439,11 +439,12 @@ covariates are not wired for [`ZiFit`](@ref). Missing responses (`missing` in a
 `eigmin_floor` sets the Laplace breakdown guard ([`ZI_LAPLACE_EIGMIN_FLOOR`](@ref));
 an optimum at the guard is reported with `converged = false`.
 """
-function fit_zi_gllvm(Y::AbstractMatrix{<:Union{Missing, Real}}; family::_ZiTwinFamily, K::Integer,
+function fit_zi_gllvm(Y::AbstractMatrix{<:Union{Missing, Real}}; mask = nothing, family::_ZiTwinFamily, K::Integer,
         trials = nothing, link = nothing, hessian = nothing,
         eigmin_floor::Real = ZI_LAPLACE_EIGMIN_FLOOR,
         g_tol::Real = 1e-6, iterations::Integer = 1000,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_zi_gllvm", mask)
     link === nothing || _zi_check_link(family, link)
     (hessian === nothing || hessian === :observed) || throw(ArgumentError(
         "$(_zi_rname(family)): this route always uses the observed curvature in the " *

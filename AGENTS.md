@@ -93,6 +93,7 @@ Full responsibility detail lives in §2 of the reference plan.
 
 ## Phase state snapshot
 
+- **Gaussian missing-mask derivation (#1107), 2026-11-11.** Shinichi's decision (10 Nov 2026): derive the observation mask from `missing` in `Y` rather than refusing, and emit one `@info` (`maxlog=1`). `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and `fit_gaussian_pervar_gllvm` do that. `_resolve_obs_mask` / `observed_mask` in `src/families/laplace.jl` are called and not modified (shared with the parallel #1108 lane). `Project.toml` stays **`0.3.0`**. After-task: `docs/dev-log/after-task/2026-11-11-fix-1107-gaussian-missing-mask.md`.
 - **VA missing mask (#1108), 2026-11-11.** The seven VA fitters derive an observation mask from `missing` in `Y`, drop those cells from the ELBO, and emit one `@info` (`maxlog = 1`). Complete matrices are unchanged. `Project.toml` stays **`0.3.0`**.
 - **bootstrap_Sigma_r lane handed to Codex (2026-11-03).** `bootstrap_Sigma_r` merged for GllvmFit, TwoLevelFit and the two phy tiers (#1054 to #1093); N1b paired R-vs-Julia run: Inconclusive (3 of 4 Agree, no Disagree). #1046 blocked by a Julia-less `negative-controls` job. No row status moved. Other lanes: see the coordination board's Active-Lane-Split. **START HERE:** `docs/dev-log/handover/2026-11-03-codex-handover.md`.
 - **P1 first-seven local checkpoint (2026-10-19, not landed).** Candidate

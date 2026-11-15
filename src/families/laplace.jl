@@ -602,7 +602,12 @@ end
 # first offending cell (row, column) and the count. A mask that marks extra cells unobserved is fine.
 function _resolve_obs_mask(mask, Y)
     mask === nothing && return any(ismissing, Y) ? observed_mask(Y) : nothing
-    (size(mask) == size(Y) && any(ismissing, Y)) || return mask
+    # A mask of another size was accepted by the Laplace fitters (larger than Y: ignored
+    # entries or a -Inf objective; smaller or transposed: a raw BoundsError).
+    size(mask) == size(Y) || throw(DimensionMismatch(
+        "mask is $(size(mask)); Y is $(size(Y)). `mask` must have the shape of Y " *
+        "(traits × units, true = observed)."))
+    any(ismissing, Y) || return mask
     bad = [I for I in CartesianIndices(Y) if ismissing(Y[I]) && mask[I]]
     isempty(bad) && return mask
     throw(ArgumentError("`mask` marks $(length(bad)) cell(s) as observed where `Y` is `missing`; " *
