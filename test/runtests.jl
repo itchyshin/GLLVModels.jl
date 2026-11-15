@@ -248,6 +248,7 @@ _register_shard_table!(4, (
         "test_gaussian_nonfinite_y.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
+        "parity/test_core070_pin.jl",
         "test_na_input_maskless_gaussian.jl",
     ),
 ))
@@ -1213,6 +1214,10 @@ println(_SHARD === nothing ?
     _shard_include("test_mask_size_check.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
+    # Core070 oracle-pin resolver (plain unit test, no R / RCall; spawns small Julia
+    # subprocesses). Lives under test/parity/ but needs none of the R runner, so it
+    # was orphaned: runparity.jl never included it. 69/69 on Julia 1.13.3, 35 s.
+    _shard_include("parity/test_core070_pin.jl")
     # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
     _shard_include("test_zero_column_warning.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
