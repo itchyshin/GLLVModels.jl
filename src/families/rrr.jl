@@ -183,6 +183,9 @@ dispersion, where present, is jointly estimated). `X` is the n×q site-covariate
 matrix (row `s` is `x_s'`); `Y` is p×n; `N` supplies Binomial trial counts
 (default all-ones). Finite-difference gradient.
 
+This fitter takes no `mask` and no `missing` responses: either one throws an `ArgumentError`
+(every cell enters the likelihood).
+
 ```julia
 # Poisson community constrained by two site covariates onto K = 2 axes:
 fit = fit_rrr_gllvm(Y; family = Poisson(), X = X, K = 2)
@@ -191,10 +194,11 @@ fit.Λ               # p×2 species loadings on those axes
 getLV(fit, X)       # n×2 deterministic site scores z_s = B' x_s
 ```
 """
-function fit_rrr_gllvm(Y::AbstractMatrix{<:Real}; family = Poisson(),
+function fit_rrr_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family = Poisson(),
         X::AbstractMatrix{<:Real}, K::Integer, link::Union{Nothing, Link} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500)
+    _refuse_mask_route("fit_rrr_gllvm", mask)
     p, n = size(Y)
     size(X, 1) == n ||
         throw(DimensionMismatch("X must be (n, q) = ($n, q) with one row per site; got $(size(X))"))
