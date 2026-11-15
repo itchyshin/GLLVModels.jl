@@ -245,7 +245,7 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
     prof = GLLVModels._phylo_nb_xlv_profile_eta_realized(
         fit, Y, phy, X_lv, [1], eta_target;
-        level = 0.95, profile_iterations = 700,
+        level = 0.95, profile_iterations = 5000,
         newton_maxiter = 120, newton_tol = 1e-10)
     @test prof.method == :profile_eta_realized
     @test prof.term == ["B_eta_realized[1,1]"]
