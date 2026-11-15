@@ -194,6 +194,13 @@ function _fit_phylo_gaussian_lbfgs(p::Integer, yf::Vector{Float64}, build_state;
         logσ²phy0::Real = log(var(yf) / 2),
         logσ²eps0::Real = log(var(yf) / 2),
         g_tol::Real = 1e-5, iterations::Integer = 500)
+    # NaN or Inf in y made every objective evaluation non-finite: the fit came back with
+    # loglik = -Inf and converged = false and no error. This fitter has no missing-data
+    # route, so refuse like `fit_branch_re` does.
+    if !all(isfinite, yf)
+        throw(ArgumentError("fit_phylo_gaussian: y contains non-finite values at indices " *
+                            "$(findall(!isfinite, yf)); this fitter takes complete finite responses"))
+    end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
 

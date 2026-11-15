@@ -115,17 +115,21 @@ jointly estimated). `Y` is `p × n`; `N` supplies Binomial trial counts (default
 all-ones). Finite-difference gradient. Warm start: per-species empirical link-scale
 means for `β`, an SVD (PPCA-style) loadings init, and `σ_row = σ_row_init`.
 
+This fitter takes no `mask` and no `missing` responses: either one throws an `ArgumentError`
+(every cell enters the likelihood).
+
 ```julia
 fit = fit_row_random_gllvm(Y; family = Poisson(), K = 2)
 fit.σ_row                # estimated row-effect SD
 row_effects(fit, Y)      # per-site row-effect BLUPs ρ̂_s
 ```
 """
-function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; family = Poisson(),
+function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family = Poisson(),
         K::Integer, N::Union{Nothing, AbstractMatrix} = nothing,
         link::Union{Nothing, Link} = nothing, σ_row_init::Real = 1.0,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_row_random_gllvm", mask)
     p, n = size(Y)
     n >= 1 || throw(ArgumentError("Y must have at least one site (column)"))
     σ_row_init > 0 || throw(ArgumentError("σ_row_init must be positive (it is fit on the log scale)"))

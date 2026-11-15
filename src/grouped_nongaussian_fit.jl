@@ -720,7 +720,7 @@ Fisher and observed weights are identical for the fitted family/link, and
 (b) use an O(m) diagonal factor mid-loop when the precision is structurally
 diagonal. Pass `true` to opt in. Do not treat this as a public speed claim.
 """
-function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
+function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; mask = nothing, family, terms,
         unit=nothing, unit_obs=nothing, cluster=nothing, cluster2=nothing,
         N=nothing, X=nothing, coefficient_names=nothing, start=nothing,
         dispersion::Symbol=:trait,
@@ -733,6 +733,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; family, terms,
         moment_start::Bool=false,
         hessian::Symbol=(analytic_gradient ? :grad_fd : :fd),
         diag_precision_kernel::Bool=false)
+    _refuse_mask_route("fit_grouped_nongaussian", mask)
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("grouped fitting needs at least one trait and two observations"))
     all(isfinite, Y) || throw(ArgumentError("grouped fitting requires finite complete responses"))
