@@ -4,9 +4,10 @@ const GM = GLLVModels
 # #788: CensoredPoissonFit accepted `offset` at fit time but kept none and had no getLV / predict /
 # residuals. It now stores the training offset (`fit.offset`) and has the three post-fit methods.
 #
-# The fit does not store the censoring pattern (it is data, not a parameter), so the post-fit
-# methods take it the way the fitter does: `censored` (Bool p x n, `Y` holds the limit C where true)
-# or `lower` / `upper`; with neither, every cell is an exact count.
+# The fit stores the censoring pattern (`fit.censored`, P48 CENS-PATTERN): with no `censored`,
+# `lower` or `upper` argument and a `Y` of the training size the post-fit methods use it. A pattern
+# passed in the call (`censored`, Bool p x n, `Y` holds the limit C where true, or `lower` / `upper`)
+# overrides it; a `Y` of another size with no pattern is read as exact counts.
 #
 # Response scale: `predict(...; type = :response)` is exp(eta), the mean of the underlying
 # uncensored Poisson process, as gllvmTMB documents for fitted() / predict(type = "response").
@@ -37,7 +38,7 @@ f0 = fit_censored_poisson_gllvm(Y; K = K, censored = cens)
     @test maximum(abs, Z .- getLV(f, Y; censored = cens, rotate = false, offset = zeros(p, n))) > 1e-3
     @test size(getLV(f, Y; censored = cens)) == (n, K)
     # the censoring pattern matters: treating the limits as exact counts moves the modes
-    @test maximum(abs, Z .- getLV(f, Y; rotate = false)) > 1e-4
+    @test maximum(abs, Z .- getLV(f, Y; censored = falses(p, n), rotate = false)) > 1e-4
     # lower / upper encoding gives the same scores as the Bool indicator
     L = copy(Y); U = copy(Y); U[cens] .= typemax(Int)
     @test getLV(f, Y; lower = L, upper = U, rotate = false) ≈ Z atol = 1e-12
@@ -131,4 +132,36 @@ end
 @testset "CensoredPoissonFit positional constructor without offset still works (#788)" begin
     g = CensoredPoissonFit(f.β, f.Λ, f.link, f.loglik, f.converged, f.iterations, f.theta_packed)
     @test g.offset === nothing
+end
+
+@testset "CensoredPoissonFit stores the censoring pattern (#788, P48 CENS-PATTERN)" begin
+    @test f.censored == cens && f.censored isa Matrix{Bool}
+    @test f0.censored == cens
+    # omitting censored / lower / upper reproduces the stored pattern
+    @test getLV(f, Y; rotate = false) == getLV(f, Y; censored = cens, rotate = false)
+    @test getLV(f, Y) == getLV(f, Y; censored = cens)
+    @test predict(f, Y; type = :link) == predict(f, Y; censored = cens, type = :link)
+    @test predict(f, Y) == predict(f, Y; censored = cens)
+    @test residuals(f, Y; rng = MersenneTwister(5)) == residuals(f, Y; censored = cens, rng = MersenneTwister(5))
+    # a passed pattern still wins over the stored one
+    @test maximum(abs, getLV(f, Y; rotate = false) .- getLV(f, Y; censored = falses(p, n), rotate = false)) > 1e-4
+    # the lower / upper route stores the same pattern
+    L = copy(Y); U = copy(Y); U[cens] .= typemax(Int)
+    fb = fit_censored_poisson_gllvm(Y; K = K, lower = L, upper = U, offset = O)
+    @test fb.censored == cens
+    @test getLV(fb, Y; rotate = false) == getLV(fb, Y; lower = L, upper = U, rotate = false)
+    # all-exact fit stores nothing and reads every cell as exact (as before)
+    fe = fit_censored_poisson_gllvm(Ytrue; K = K, offset = O)
+    @test fe.censored === nothing
+    @test getLV(fe, Ytrue; rotate = false) == getLV(fe, Ytrue; censored = falses(p, n), rotate = false)
+    # a cell the fit did not observe is never marked as censored, even if its bounds say so
+    mk = trues(p, n); mk[1, 1:3] .= false
+    Lm = copy(L); Um = copy(U); Lm[1, 1] = 2; Um[1, 1] = typemax(Int)
+    fm = fit_censored_poisson_gllvm(Y; K = K, lower = Lm, upper = Um, mask = mk, offset = O)
+    @test !any(fm.censored[.!mk]) && fm.censored[mk] == cens[mk]
+    # a Y of another size is not given the training pattern
+    @test size(predict(f, Y[:, 1:10]; offset = O[:, 1:10], type = :link)) == (p, 10)
+    # positional constructors without the new field still work
+    g8 = CensoredPoissonFit(f.β, f.Λ, f.link, f.loglik, f.converged, f.iterations, f.theta_packed, O)
+    @test g8.offset == O && g8.censored === nothing
 end
