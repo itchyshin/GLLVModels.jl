@@ -2286,9 +2286,10 @@ function residuals(fit::_ZTCountFit, Y::AbstractMatrix{<:Real}; type::Symbol = :
 end
 
 # --- Right-censored Poisson post-fit (CensoredPoissonFit; #788) ---
-# The fit keeps its training offset (`fit.offset`) but not the censoring pattern (data, not a
-# parameter). The methods take it the way `fit_censored_poisson_gllvm` does: `censored` (Bool p×n,
-# `Y` holds the limit C where true), or `lower` / `upper`; with neither, every cell is an exact count.
+# The fit keeps its training offset (`fit.offset`) and the censoring pattern (`fit.censored`). A
+# pattern passed to a method (`censored`, Bool p×n with `Y` holding the limit C where true, or
+# `lower` / `upper`, as in `fit_censored_poisson_gllvm`) wins; with none passed, a `Y` of the
+# training size gets the stored pattern, and a `Y` of any other size is read as exact counts.
 
 # (Y, N) slot encoding of `censored_bounds_to_YN` for the post-fit methods, with unobserved cells
 # replaced by a harmless count (the mode search never reads them).
@@ -2325,6 +2326,13 @@ function _censored_post_YN(Y::AbstractMatrix, mask, censored, lower, upper, call
     return censored_bounds_to_YN(L, U)
 end
 
+# The pattern the post-fit methods use: what the caller passes (`censored` or `lower`/`upper`)
+# wins; otherwise the pattern stored on the fit when `Y` has the training size; otherwise every
+# cell is read as an exact count.
+_censored_post_default(fit::CensoredPoissonFit, Y, censored, lower, upper) =
+    (censored === nothing && lower === nothing && upper === nothing &&
+     fit.censored !== nothing && size(fit.censored) == size(Y)) ? fit.censored : censored
+
 # Dunn-Smyth z for a right-censored cell (Y >= C): u uniform on [F(C-1), 1].
 _ds_z_censored(d, C, v) = _ds_z(cdf(d, C - 1), 1.0, ccdf(d, C - 1), 0.0, v; lmass = Distributions.logccdf(d, C - 1))
 
@@ -2335,11 +2343,13 @@ _ds_z_censored(d, C, v) = _ds_z(cdf(d, C - 1), 1.0, ccdf(d, C - 1), 0.0, v; lmas
 Conditional latent-variable scores for a right-censored Poisson fit: the per-site Laplace mode `ẑₛ`
 under the censored likelihood the fit was made with. `Y` is the p×n count matrix.
 
-The fit does not store which cells were censored, so pass the pattern as in
-[`fit_censored_poisson_gllvm`](@ref): `censored` (a p×n Bool matrix; `Y` holds the limit `C ≥ 1`
-where `true`), or interval bounds `lower` / `upper` (`upper == typemax(Int)` for a right-censored
-cell). With neither, every cell is read as an exact count, which gives different scores when
-the fit was made with censored cells. `rotate=true` applies the canonical [`rotation`](@ref).
+The fit stores which cells were censored (`fit.censored`, `nothing` when none were). With no
+`censored`, `lower` or `upper` given and a `Y` of the training size, that stored pattern is used
+(`Y` holds the limit `C ≥ 1` in those cells, as at fit time). To override it, or for new units,
+pass the pattern as in [`fit_censored_poisson_gllvm`](@ref): `censored` (a p×n Bool matrix;
+`Y` holds the limit `C ≥ 1` where `true`), or interval bounds `lower` / `upper`
+(`upper == typemax(Int)` for a right-censored cell). A `Y` of another size with no pattern is
+read as exact counts. `rotate=true` applies the canonical [`rotation`](@ref).
 
 Offset rules are those of the other Laplace fits: the stored training offset (`fit.offset`) is used
 when `Y` has the training size, otherwise the `offset` you pass (p×n matrix, scalar or length-p
@@ -2352,6 +2362,7 @@ function getLV(fit::CensoredPoissonFit, Y::AbstractMatrix{<:Real}; censored = no
     p, n = size(Y); K = size(fit.Λ, 2)
     size(fit.Λ, 1) == p || throw(ArgumentError(
         "getLV: Y has $p rows but the fit has $(size(fit.Λ, 1)) traits"))
+    censored = _censored_post_default(fit, Y, censored, lower, upper)
     Yc, Nc = _censored_post_YN(Y, mask, censored, lower, upper, "getLV")
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Z = Matrix{Float64}(undef, K, n)
@@ -2377,7 +2388,7 @@ In-sample fitted values at the Laplace mode, for a right-censored Poisson fit. W
   process, not a censoring-adjusted expectation. This is what gllvmTMB documents for
   `fitted()` / `predict(type = "response")` of `censored_poisson()`.
 
-`censored` / `lower` / `upper` give the censoring pattern used to find the modes (see [`getLV`](@ref));
+`censored` / `lower` / `upper` give the censoring pattern used to find the modes (default: the pattern stored on the fit; see [`getLV`](@ref));
 the values themselves do not depend on it except through `ẑ`. Offset rules and `modes` are those of
 the other Laplace fits (see the `PoissonFit` method): the stored training offset is used when `Y` has
 the training size, an explicit `offset` overrides it, `modes = :training` keeps the training units'
@@ -2390,6 +2401,7 @@ function predict(fit::CensoredPoissonFit, Y::AbstractMatrix{<:Real}; type::Symbo
         throw(ArgumentError("type must be :link or :response; got :$type"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "predict")
     Omode = _prediction_mode_offset(fit, Y, O, modes)
+    censored = _censored_post_default(fit, Y, censored, lower, upper)
     Z = getLV(fit, Y; censored = censored, lower = lower, upper = upper, rotate = false,
               mask = mask, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
@@ -2405,8 +2417,8 @@ end
 Dunn-Smyth randomized quantile residuals `Φ⁻¹(u)` at the fitted mode, with `μ = exp(η)` and
 `F` the Poisson(`μ`) CDF. An exact cell with count `y` has `u` uniform on `[F(y−1), F(y)]`; a
 right-censored cell (`Y ≥ C`) has `u` uniform on `[F(C−1), 1]`. They are approximately N(0, 1) under
-a correct model (pass a fixed `rng` to reproduce). The censoring pattern is passed as for
-[`getLV`](@ref); without it every cell is treated as exact. `mask` and `offset` follow the rules in
+a correct model (pass a fixed `rng` to reproduce). The censoring pattern is the one stored on
+the fit unless passed, as for [`getLV`](@ref). `mask` and `offset` follow the rules in
 [`predict`](@ref); unobserved cells come back as `NaN`. Only `type = :dunnsmyth` is available: a
 Pearson residual is not defined for a censored cell.
 """
@@ -2417,6 +2429,7 @@ function residuals(fit::CensoredPoissonFit, Y::AbstractMatrix{<:Real}; type::Sym
         throw(ArgumentError("type must be :dunnsmyth; got :$type (Pearson residuals are not " *
                             "defined for censored cells)"))
     p, n = size(Y)
+    censored = _censored_post_default(fit, Y, censored, lower, upper)
     μ = predict(fit, Y; type = :response, censored = censored, lower = lower, upper = upper,
                 mask = mask, offset = offset)
     Yc, Nc = _censored_post_YN(Y, mask, censored, lower, upper, "residuals")
