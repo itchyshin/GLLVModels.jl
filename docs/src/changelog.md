@@ -17,6 +17,8 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   naming the trait on the Laplace fitters, the `fit_*_gllvm_va` fitters and the
   Gaussian derived-mask route. The Laplace and VA fitters used to return `beta = 0`
   with `converged = true`. A site with no observed cell is not checked.
+  The ordinal fitters (a fully masked row of `mask`) and `fit_mixed_gllvm` (a trait
+  `missing` at every site) refuse it the same way.
 - **Development:** ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
   and the default per-trait NB2 formula route accept direct outer-optimizer
   selection with `:lbfgs`, `:bfgs`, or configured Optim methods. The default

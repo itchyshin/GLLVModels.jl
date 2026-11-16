@@ -185,6 +185,7 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer
     c=_aghq_controls(merge(c,(mode_maxiter=get(kwargs,:newton_maxiter,c.mode_maxiter),mode_tol=get(kwargs,:newton_tol,c.mode_tol))))
     base_controls=deepcopy((;kwargs...))
     p,n=size(Y);k=request===:auto ? 9 : request
+    _check_every_trait_observed(get(kwargs,:mask,nothing),Y)
     link=get(kwargs,:link,LogitLink())
     get(kwargs,:hessian,:observed)===:observed || throw(ArgumentError("AGHQ uses observed curvature; omit hessian or set hessian=:observed"))
     kw=Base.structdiff((;kwargs...),(hessian=nothing,))

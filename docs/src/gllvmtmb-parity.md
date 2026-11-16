@@ -343,6 +343,13 @@ CI/profile/bootstrap refits remain rejected with explicit CI-status messages.
 Combining `X` with a mask, ordinal covariate fits, structured covariance terms,
 and user-selectable Julia optimizer controls remain unsupported through the bridge.
 
+`fit_mixed_gllvm` (the Julia mixed-family fitter, which the bridge calls for
+mixed-family models) accepts missing values only on `Normal()` traits. A missing
+value on a count, binomial, Gamma or Beta trait currently stops with a raw
+`MethodError` from the warm start rather than a clear message, and the bridge
+refuses a missing-response `mask` for mixed-family fits. A trait with
+every cell missing is refused with a clear error.
+
 ### Different response families in one model
 
 The mixed-family R bridge supports point estimates for complete, balanced,
