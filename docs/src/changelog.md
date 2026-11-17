@@ -15,8 +15,10 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   text is unchanged byte for byte, and the same inputs are refused. Message
   only. Still naming `temporal_latent()`: the rank-one check (only
   `temporal_latent()` reaches it), the `predict(newdata)` and iid-inference
-  refusals in `src/temporal_methods.jl`. Differs from gllvmTMB until its issue 1812
-  lands.
+  refusals in `src/temporal_methods.jl`, and the default closing line of the
+  post-fit helper refusals there (`forecast_temporal`, `bootstrap_temporal`,
+  `profile_temporal`, `compare_temporal`). Differs from gllvmTMB until its
+  issue 1812 lands.
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
   and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`
