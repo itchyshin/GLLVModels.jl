@@ -692,7 +692,6 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_nb_xlv.jl")
     _shard_include("test_phylo_nb_xlv_mode_1125.jl")
     _shard_include("test_xlv_nb_binomial_wired.jl")
-    _shard_include("test_phylo_gamma_xlv_mode_step_1125.jl")
 
     #   test_sparse_phy_grad.jl is now opt-in: GLLVM_SPARSE_PHY_GRAD_TESTS=1 (end of the list).
 
@@ -903,7 +902,6 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_poisson_xlv.jl")
     _shard_include("test_phylo_binomial_xlv_mode.jl")
     _shard_include("test_phylo_beta_xlv_mode.jl")
-    _shard_include("test_phylo_beta_xlv_mode_step_1125.jl")
     _shard_include("test_phylo_ordinal_xlv_mode.jl")
     _shard_include("test_xlv_refit_converged.jl")
     _shard_include("test_phylo_xlv_verdict.jl")
@@ -1228,8 +1226,14 @@ println(_SHARD === nothing ?
     # N=8 position fallback of files that are not in the duration table does not move.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
-    # #1048 / #1129: outside both duration tables, so each file runs in exactly one
-    # shard by the position rule. Placed after every include main already had.
+    # #1125: Gamma and Beta xLV step-weight regressions. Placed after every include main
+    # already had, so no file that main places by position moves to another shard.
+    _shard_include("test_phylo_gamma_xlv_mode_step_1125.jl")
+    _shard_include("test_phylo_beta_xlv_mode_step_1125.jl")
+    # #1048 / #1129: placed after every include main already had. The two mode-floor
+    # files below are in the 4-way duration table, so under N = 4 they run in the shard
+    # that table names; every other file in this block is outside both tables. Each
+    # file runs in exactly one shard.
     # #1048: gate logic of the boundary-stop acceptance used by the NB and binomial
     # canaries (shard 4 by position for N = 4 and 8, the shard of both canaries).
     _shard_include("test_xlv_canary_boundary.jl")
