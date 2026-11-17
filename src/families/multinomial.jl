@@ -96,6 +96,8 @@ function _multinomial_int_y(y::AbstractVector, n_categories)
     yi = Vector{Int}(undef, n)
     ymax = 0
     @inbounds for i in 1:n
+        (y[i] isa Real && isfinite(y[i]) && y[i] == round(y[i])) || throw(ArgumentError(
+            "multinomial requires y ∈ {1, …, K}, integer category codes; found y=$(y[i])"))
         v = Int(y[i])
         v < 1 && throw(ArgumentError(
             "multinomial requires y ∈ {1, …, K}; found y=$v"))

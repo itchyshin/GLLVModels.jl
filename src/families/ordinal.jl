@@ -88,6 +88,16 @@ function _ordinal_float_to_int(Y::AbstractMatrix{<:AbstractFloat}, mask; caller:
                for t in axes(Y, 1), i in axes(Y, 2)]
 end
 
+function _check_ordinal_trait_observed(obs::AbstractMatrix{Bool}, caller::AbstractString)
+    p = size(obs, 1)
+    @inbounds for t in 1:p
+        any(@view obs[t, :]) || throw(ArgumentError(
+            "$caller: trait $t has no observed responses; drop it from `Y` or mark at " *
+            "least one cell observed."))
+    end
+    return nothing
+end
+
 """
     OrdinalLogit
 
@@ -578,6 +588,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm")
     # Category count and warm starts use OBSERVED cells only, so a masked cell's
     # (arbitrary) value never leaks into the fit.
@@ -721,6 +732,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm_pertrait")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait")
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
@@ -833,6 +845,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm_pertrait_cov")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait_cov")
     _check_finite_covariates(X, "fit_ordinal_gllvm_pertrait_cov"; obs = obs)
     C = zeros(Int, p)

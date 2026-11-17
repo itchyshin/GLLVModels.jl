@@ -208,6 +208,7 @@ function fit_rrr_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family = Poiss
     lk = link === nothing ? _cov_default_link(family) : link
     Nm = N === nothing ? fill(1, p, n) : N
     has_disp = _cov_has_disp(family)
+    _check_family_response_support(family, Y, nothing; caller = "fit_rrr_gllvm", N = N)
 
     # Warm start: link-scale row means for β, SVD loadings, zero RRR coefficients
     # (B = 0 gives the intercept-only GLM) — the same machinery as the concurrent
@@ -230,8 +231,9 @@ function fit_rrr_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family = Poiss
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         B = reshape(θ[(p + rr + 1):(p + rr + qK)], q, K)
         disp = has_disp ? exp(θ[p + rr + qK + 1]) : NaN
-        fam = _cov_family(family, disp)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(family, disp)
             -rrr_marginal_loglik(fam, Y, Nm, Λ, B, β, X, lk)
         catch
             return 1e12

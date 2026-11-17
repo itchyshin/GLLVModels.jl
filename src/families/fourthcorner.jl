@@ -182,6 +182,7 @@ function fit_fourthcorner_gllvm(Y::AbstractMatrix; family,
     msk = _resolve_obs_mask(mask, Y)
     _check_finite_covariates(Xenv, "fit_fourthcorner_gllvm"; obs = msk, unit = :site, name = "Xenv")
     _check_finite_covariates(TR, "fit_fourthcorner_gllvm"; obs = msk, unit = :trait, name = "TR")
+    _check_family_response_support(family, Y, msk; caller = "fit_fourthcorner_gllvm", N = N)
     Yc = _sanitize_missing(Y, _cov_placeholder(family))
 
     # Warm start: link-scale row means for β, zero fourth-corner coefficients, SVD
