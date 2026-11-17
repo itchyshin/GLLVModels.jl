@@ -721,7 +721,8 @@ function _fit_nb_gllvm_grouped_start(Y::AbstractMatrix; K::Integer, group::Abstr
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -989,7 +990,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped_cov")
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -2490,7 +2491,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped")
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -2643,7 +2644,8 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped_cov")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -2742,9 +2744,10 @@ function _tweedie_grouped_laplace_weight(hessian::Symbol, f::TweedieED, μ, me, 
 end
 
 # Per-site mode search for the Tweedie grouped kernel (#503, the #479 / NB1 pattern).
-# Returns `(z, converged)`. The step is Fisher-scored always: expected information is
-# >= 0, so `Λ'WΛ + I` is SPD and every Newton direction ascends; the converged mode is
-# the fixed point of `Λ's − z = 0`, which does not involve W.
+# Returns `(z, converged)`. The step weight is Fisher, or max(observed, Fisher) on the
+# log link (#1042): either is >= 0, so `Λ'WΛ + I` is SPD and every Newton direction
+# ascends; the converged mode is the fixed point of `Λ's − z = 0`, which does not
+# involve W.
 #
 # Before this change the kernel ran undamped Fisher scoring (`z .+ Δ`) and returned
 # whatever `z` it held when the loop stopped, converged or not, so a site that
@@ -2765,7 +2768,17 @@ function _tweedie_grouped_mode(fams::AbstractVector, y::AbstractVector, n::Abstr
         μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(fams, μ, n, me, y)
-        W  = _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        # Step weight max(observed, Fisher) on the log link, as the scalar search
+        # does (`_laplace_mode_step_weight(::TweedieED)`, #623): pure Fisher
+        # under-states the curvature when y >> μ and the unchecked small-step
+        # branch below then limit-cycles (#1042). The mode (fixed point of
+        # `Λ's − z = 0`) does not involve W.
+        W  = if link isa LogLink
+            max.(_tweedie_grouped_laplace_weight.(Ref(:observed), fams, μ, me, y, Ref(link), η),
+                 _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η))
+        else
+            _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        end
         if mask !== nothing
             s = ifelse.(mask, s, 0.0)
             W = ifelse.(mask, W, 0.0)
@@ -2809,8 +2822,8 @@ function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    # Role separation (mirrors NB2/Beta/NB1 above): the MODE SEARCH is Fisher-scored,
-    # always; `hessian` governs only the post-search log-det below.
+    # Role separation (mirrors NB2/Beta/NB1 above): the MODE SEARCH picks its own step
+    # weight; `hessian` governs only the post-search log-det below.
     z, ok = _tweedie_grouped_mode(fams, y, n, Λ, β, link;
                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # Larger-budget retry from z = 0 (mirrors #507's NB1 retry), only where the default
