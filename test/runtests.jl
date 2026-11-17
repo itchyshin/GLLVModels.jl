@@ -1223,6 +1223,10 @@ println(_SHARD === nothing ?
     _shard_include("parity/test_core070_pin.jl")
     # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
     _shard_include("test_zero_column_warning.jl")
+    # Formula covariate columns typed Union{Missing,T} (refs #1190).
+    _shard_include("test_formula_missing_covariate.jl")
+    # Temporal-fit covariate columns holding missing (refs #1283).
+    _shard_include("test_temporal_missing_covariate.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
