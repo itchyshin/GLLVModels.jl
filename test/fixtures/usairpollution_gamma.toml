@@ -1,8 +1,9 @@
 # USairpollution (HSAUR2 1.1-21, 41 US cities x 7 variables), literal data for #864.
 # Rows of Y are the traits in the order of `traits`; columns are the cities in the
 # order of `cities`. Per-trait Gamma (group = 1:7), K = 1, no covariates: the `manu`
-# shape (trait 3) stops at about 3.7e5 on Julia 1.12 / Linux x86_64 with loglik
-# -1297.33495, against gllvmTMB's 2.8e8 and -1297.334874 (issue #864).
+# shape (trait 3) stopped at about 3.7e5 on Julia 1.12 / Linux x86_64 with loglik
+# -1297.33495 under the cancelling density (near 1e10 with the stable density, #1175),
+# against gllvmTMB's 2.8e8 and -1297.334874 (issue #864).
 p = 7
 n = 41
 K = 1
