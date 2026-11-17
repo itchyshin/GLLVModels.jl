@@ -6,11 +6,18 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
-- **IN (#1286):** `temporal_indep()` and `temporal_dep()` parser refusals (complete
-  Gaussian response, `0 + trait | series` form, trait-intercept block, three-trait
-  rule) name the marker the user called instead of `temporal_latent()`. The
-  `temporal_latent()` text is unchanged byte for byte, and the same inputs are
-  refused. Message only.
+- **IN (#1286):** every refusal in the temporal parser and the three marker
+  constructors names the marker the user called (`temporal_indep()`,
+  `temporal_dep()` or `temporal_latent()`) instead of `temporal_latent()`:
+  the four messages that named it directly (complete Gaussian response,
+  `0 + trait | series` form, trait-intercept block, three-trait rule) and the
+  default closing "See ..." line of all the others. The `temporal_latent()`
+  text is unchanged byte for byte, and the same inputs are refused. Message
+  only. Still naming `temporal_latent()`: the rank-one check (only
+  `temporal_latent()` reaches it), the `predict(newdata)` and iid-inference
+  refusals in `src/temporal_methods.jl`, and the ordinary-term helper
+  refusals outside the parser. Differs from gllvmTMB until its issue 1812
+  lands.
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
   and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`
