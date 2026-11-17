@@ -168,7 +168,7 @@ _register_shard_table!(4, (
         "test_betabinomial_x_identity.jl", "test_zinb_x_identity.jl", "test_beta_fit.jl",
         "test_link_honoured.jl", "test_issue_725_extractor_docs.jl", "test_studentt_disp_group.jl",
         "test_studentt_normalizer_precision.jl", "test_studentt_retained_precision.jl", "test_studentt_grouped_mode_search.jl",
-        "test_ordinal_pertrait.jl", "test_ordinal_level_check.jl", "test_ordinal_float_y.jl", "test_ordinal_rowcheck.jl", "test_getlv_rowcheck.jl", "test_fit_gllvm.jl",
+        "test_ordinal_pertrait.jl", "test_ordinal_gradient_gate.jl", "test_ordinal_level_check.jl", "test_ordinal_float_y.jl", "test_ordinal_rowcheck.jl", "test_getlv_rowcheck.jl", "test_fit_gllvm.jl",
         "test_truncated_formula.jl", "test_gaussian_pervar.jl", "test_ledermann_pervar_k.jl",
         "test_postfit.jl", "test_issue_737_omega_doc.jl", "test_model_selection.jl",
         "test_select_lv_print.jl", "test_binomial_ridge.jl", "test_c1_behaviour_p1.jl",
@@ -794,6 +794,7 @@ println(_SHARD === nothing ?
     _shard_include("test_zib_x_identity.jl")
     _shard_include("test_ordinal_fit.jl")
     _shard_include("test_ordinal_pertrait.jl")
+    _shard_include("test_ordinal_gradient_gate.jl")
     _shard_include("test_ordinal_probit.jl")
     _shard_include("test_ordinal_logit_twin.jl")
     _shard_include("test_ordinal_level_check.jl")
@@ -1040,6 +1041,7 @@ println(_SHARD === nothing ?
     _shard_include("test_random_slopes_poisson.jl")
     _shard_include("test_bridge_ci.jl")
     _shard_include("test_bridge_ci_nan_note_1157.jl")
+    _shard_include("test_bridge_ci_nboot.jl")
     _shard_include("test_bridge_grouped_dispersion.jl")
     _shard_include("test_bridge_capabilities.jl")
     _shard_include("test_mixed_mode_search.jl")
