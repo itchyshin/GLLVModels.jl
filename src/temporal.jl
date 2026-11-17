@@ -244,18 +244,23 @@ function _parse_temporal_term(term::TemporalTerm, cols::NamedTuple; trait::Symbo
             info="Found source provider(s): " * join(string.(source_terms, "()"), ", ") * ".",
             action="Use ordinary unit/unit_obs terms, or one of the admitted replicated AR1 `temporal_indep() + kernel_indep()`, `temporal_indep() + phylo_indep()`, `temporal_indep() + animal_indep()`, or `temporal_indep() + spatial_indep()` cells. Other temporal source pairs remain deferred.")
     end
+    # Name the marker the user called (`temporal_indep()`, `temporal_dep()` or
+    # `temporal_latent()`); the `temporal_latent()` text is unchanged.
+    marker = "temporal_" * String(term.mode)
+    marker_action = "See `$(marker)()` for the admitted temporal workflow."
     if !haskey(cols, response) || any(_temporal_isna, cols[response])
-        _temporal_abort("`temporal_latent()` requires complete Gaussian response values.";
+        _temporal_abort("`$(marker)()` requires complete Gaussian response values.";
             info="Temporal panels are validated before ordinary missing-response handling.",
             action="Remove or impute missing responses before fitting this version.")
     end
     bar = term.formula
-    bar.args[3] isa Symbol || _temporal_abort("`temporal_latent()` requires `0 + trait | series`.")
+    bar.args[3] isa Symbol ||
+        _temporal_abort("`$(marker)()` requires `0 + trait | series`."; action=marker_action)
     lhs = replace(string(bar.args[2]), r"\s+" => "")
     if lhs != "0+" * String(trait)
-        _temporal_abort("`temporal_latent()` requires one trait-intercept block `0 + $(trait) | series`.";
+        _temporal_abort("`$(marker)()` requires one trait-intercept block `0 + $(trait) | series`.";
             info="The wide `traits(...)` interface is expanded to this form before temporal parsing.",
-            action="For long data, use `temporal_latent(0 + trait | series, time = occasion)`.")
+            action="For long data, use `$(marker)(0 + trait | series, time = occasion)`.")
     end
     series = bar.args[3]::Symbol
     time = term.time
@@ -277,7 +282,8 @@ function _parse_temporal_term(term::TemporalTerm, cols::NamedTuple; trait::Symbo
     row_series = string.(cols[series])
     row_trait = string.(cols[trait])
     traits = sort(unique(row_trait))
-    length(traits) >= 3 || _temporal_abort("`temporal_latent()` requires at least three traits.")
+    length(traits) >= 3 ||
+        _temporal_abort("`$(marker)()` requires at least three traits."; action=marker_action)
     series_levels = sort(unique(row_series))
     for s in series_levels
         occ = sort(unique(times[row_series .== s]))
