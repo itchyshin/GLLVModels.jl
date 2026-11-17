@@ -9,8 +9,10 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 - **IN (#1190):** a formula covariate holding `missing` is an `ArgumentError` naming the column and
   the first site (it was `KeyError: key missing not found`); a column used only inside a function,
   such as `coalesce(x, 0.0)`, is left to that function.
-- **IN (#1283):** a `fit_temporal_gllvm` covariate holding `missing` is the same `ArgumentError`
-  naming the column and the first row (it was `KeyError: key missing not found`).
+- **IN (#1283):** a `fit_temporal_gllvm` covariate holding `missing` is an `ArgumentError` naming
+  the fitter, the column and the first row (it was `KeyError: key missing not found`); a function
+  of such a column, such as `coalesce(x, 0.0)`, is left to that function. A `Union{Missing,T}`
+  column with no `missing` is still read as categorical (a saturated fit), pending #1247.
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
   and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`
