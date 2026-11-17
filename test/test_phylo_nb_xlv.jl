@@ -213,7 +213,8 @@ end
         fit, Y, phy, X_lv, [1], eta_target; r_bounds = (1.0, 0.5))
 end
 
-if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
+# The canary runs in CI (shard 4 of both duration tables). It was gated behind GLLVM_XLV_CANARY=1 until the
+# profile budget and the boundary-stop acceptance below were settled (refs #1048).
 @testset "Phylo x NB2 B_eta_realized selected-entry canary" begin
     Random.seed!(743)
     phy = GLLVModels.augmented_phy("(((A:0.3,B:0.3):0.2,(C:0.3,D:0.3):0.2):0.2,(E:0.4,F:0.4):0.2);")
@@ -273,5 +274,4 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
     @test prof.covered == [true]
     @test prof.r_ok
     @test prof.pd_hessian
-end
 end

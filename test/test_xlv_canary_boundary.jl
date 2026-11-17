@@ -41,6 +41,6 @@ include(joinpath(@__DIR__, "xlv_canary_boundary.jl"))
     @test !ok(mkfit(ll = NaN))                                       # (iii) not finite
     @test !ok(mkfit(ll = -5.0))                                      # (iii) below the start value
     @test !ok(mkfit(theta = vcat([0.25, NaN, 0.25], log(1e-307))))   # (iv) non-finite parameter
-    @test !ok(mkfit(theta = vcat(fill(3.0, 3), log(1e-307)), ll = 0.0))  # (iv) large gradient
+    @test !ok(mkfit(theta = vcat(fill(3.0, 3), log(1e-307)), ll = 0.0))  # (iv) large Newton decrement (11.3)
     @test !ok(mkfit(ll = 0.1))                                       # (v) differs from the reference fit
 end

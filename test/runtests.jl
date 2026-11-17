@@ -107,7 +107,7 @@ _register_shard_table!(4, (
         "test_aghq_delta_gamma.jl", "test_aghq_public_binomial.jl", "test_truncated_poisson.jl",
         "test_truncated_nbinom2.jl", "test_truncnb2_precision.jl", "test_truncnb2_mode_search.jl",
         "test_poisson_n_init.jl", "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl",
-        "test_laplace_dual_safety.jl", "test_phylo_nb_xlv.jl", "test_phylo_nb_xlv_mode_1125.jl", "test_destination_b_joint_identification.jl",
+        "test_laplace_dual_safety.jl", "test_phylo_nb_xlv_mode_1125.jl", "test_destination_b_joint_identification.jl",
         "test_destination_b_joint_poisson.jl", "test_gp1_laplace.jl", "test_gp1_verdict.jl",
         "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_nb_grouped_upper_warn.jl",
         "test_gamma_shape_upper_warn.jl", "test_nb_cov_two_starts.jl", "test_fit_verdict_gradient.jl",
@@ -158,7 +158,7 @@ _register_shard_table!(4, (
         "test_node_gradient.jl", "test_families.jl", "test_binomial_laplace.jl",
         "test_aghq_adapt.jl", "test_aghq_poisson.jl", "test_aghq_binomial.jl",
         "test_censored_poisson.jl", "test_truncnb2_laplace_breakdown.jl", "test_gamma_laplace.jl",
-        "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl", "test_phylo_binomial_xlv.jl",
+        "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl",
         "test_boundary_inference.jl", "test_grouped_laplace_identity.jl", "test_grouped_identification_diagnostics.jl",
         "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl", "test_nb1_fisher_large_counts.jl",
         "test_nb2_grouped_mode_search.jl", "test_grouped_getlv_mode.jl", "test_gamma_grouped_mode_search.jl",
@@ -250,7 +250,7 @@ _register_shard_table!(4, (
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
         "parity/test_core070_pin.jl",
-        "test_na_input_maskless_gaussian.jl",
+        "test_na_input_maskless_gaussian.jl", "test_phylo_nb_xlv.jl", "test_phylo_binomial_xlv.jl",
     ),
 ))
 
@@ -357,13 +357,13 @@ _register_shard_table!(8, (
         "test_core070_interface_registry.jl", "test_core070_shape_boundaries.jl", "test_derived_ci_surfaces.jl",
         "test_cross_lineage_extract_internals.jl", "test_off_all_count_twin_p1.jl", "test_temporal_api.jl",
         "test_temporal_likelihood_internals.jl", "test_nb_grouped_postfit.jl", "test_extractors_invariants.jl",
-        "test_changelog_structure.jl",
+        "test_changelog_structure.jl", "test_phylo_nb_xlv.jl", "test_phylo_binomial_xlv.jl",
     ),
     (
         "test_likelihood.jl", "test_animal_latent.jl", "test_spatial_dep.jl",
         "test_destination_b_grouping_interval_matrix.jl", "test_grouped_profile_public.jl", "test_profile_sigma_phy_identity.jl",
         "test_aghq_public_poisson.jl", "test_aghq_ordinal.jl", "test_gamma_laplace.jl",
-        "test_binomial_fit.jl", "test_poisson_n_init.jl", "test_phylo_binomial_xlv.jl",
+        "test_binomial_fit.jl", "test_poisson_n_init.jl",
         "test_poisson_grad_perf.jl", "test_grouped_laplace.jl", "test_grouped_laplace_identity.jl",
         "test_destination_b_joint_other_families.jl", "test_gamma_beta_upper_boundary.jl", "test_nb_grouped_poisson_ridge.jl",
         "test_nb1_scalar_gradient_gate.jl", "test_nb1_grouped_mode_search.jl", "test_ordinal_x_identity.jl",
@@ -390,7 +390,7 @@ _register_shard_table!(8, (
         "test_joint_covariance_identification.jl", "test_joint_phylo_grouped_fit.jl", "test_extract_phylo_signal_joint.jl",
         "test_profile_rootfind.jl", "test_em_louis.jl", "test_binomial_laplace.jl",
         "test_aghq_tweedie.jl", "test_poisson_laplace.jl", "test_truncated_poisson.jl",
-        "test_phylo_nb_xlv.jl", "test_latte_kernel_identity.jl", "test_laplace_grad_identity.jl",
+        "test_latte_kernel_identity.jl", "test_laplace_grad_identity.jl",
         "test_nb_fit.jl", "test_nb1.jl", "test_nb_cov_ridge_polish_grad.jl",
         "test_zinb_x_identity.jl", "test_link_honoured.jl", "test_issue_721_link_docs.jl",
         "test_tweedie_power_contract.jl", "test_studentt_boundary_honesty.jl", "test_ordinal_fit.jl",
@@ -678,10 +678,12 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_xlv.jl")
     _shard_include("test_phylo_beta_xlv.jl")
 
-    # #948: wire NB and binomial xlv. Profile-CI canaries stay behind
-    # GLLVM_XLV_CANARY=1 (pd_hessian / endpoint_status / NaN bounds are
-    # optimiser-path and BLAS sensitive; they failed on this 1.10.12
-    # snapshot too). Likelihood identities, likelihood ArgumentError
+    # #948: wire NB and binomial xlv. The profile-CI canaries ran only with
+    # GLLVM_XLV_CANARY=1; they now run in CI (shard 4 of both duration tables, with the
+    # gate test) with profile_iterations = 5000, a boundary-stop acceptance for the
+    # unidentified sigma2_phy (test/xlv_canary_boundary.jl, five conditions, (iv) read as
+    # the Newton decrement, no source clamp) and a non-negative LR check (refs #1048).
+    # Likelihood identities, likelihood ArgumentError
     # guards, and the cheap profile ArgumentError guards run in CI.
     # The NB sparse-vs-dense-leaf identity is `@test_broken` (1.3e-2
     # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv.jl
@@ -1229,7 +1231,7 @@ println(_SHARD === nothing ?
     # #1048 / #1129: outside both duration tables, so each file runs in exactly one
     # shard by the position rule. Placed after every include main already had.
     # #1048: gate logic of the boundary-stop acceptance used by the NB and binomial
-    # canaries (always runs; the canaries themselves stay behind GLLVM_XLV_CANARY=1).
+    # canaries (shard 4 by position for N = 4 and 8, the shard of both canaries).
     _shard_include("test_xlv_canary_boundary.jl")
     # #1129: NB xLV fit must not stop short of the nested plain model.
     _shard_include("test_phylo_nb_xlv_early_stop.jl")
