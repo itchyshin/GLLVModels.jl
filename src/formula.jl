@@ -54,13 +54,22 @@ function _extract_formula_symbols(term)
     return syms
 end
 
-# Covariate columns named in the formula RHS. A column holding a `missing` stopped with
-# `KeyError: key missing not found` inside `StatsModels.schema`; `gllvm` does not drop or
-# impute sites, so it refuses such a column with a message that names it. A column whose type
-# allows `Missing` but holds none is passed through unchanged (how it is read is a separate,
-# undecided question), and columns the formula does not use are not looked at.
+# Columns that enter the formula RHS as bare terms, alone or in an interaction. Arguments of a
+# function term are not included: the function sees the raw column and owns its `missing`.
+function _formula_bare_symbols(term)
+    term isa Term && return Symbol[term.sym]
+    parts = term isa InteractionTerm ? term.terms : term isa Tuple ? term : ()
+    return Symbol[s for t in parts for s in _formula_bare_symbols(t)]
+end
+
+# Covariate columns used as bare terms in the formula RHS. A bare column holding a `missing`
+# stopped with `KeyError: key missing not found` inside StatsModels; `gllvm` does not drop or
+# impute sites, so it refuses such a column with a message that names it. A column used only
+# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. A column whose
+# type allows `Missing` but holds none is passed through unchanged (how it is read is a
+# separate, undecided question), and columns the formula does not use are not looked at.
 function _formula_covariate_columns(rhs, cols::NamedTuple)
-    for s in unique(_extract_formula_symbols(rhs))
+    for s in unique(_formula_bare_symbols(rhs))
         haskey(cols, s) || continue
         v = cols[s]
         Missing <: eltype(v) || continue
