@@ -74,7 +74,7 @@ function _tp_pieces(f::BetaHurdle, y, ηz, ηc)
         sc    = φ * (ystar - μstar) * me        # ∂logf/∂η^c
         ν     = trigamma(μ * φ) + trigamma((one(μ) - μ) * φ)
         Wc    = φ^2 * ν * me^2                  # expected Fisher info wrt η^c
-        logf  = log(π) + logpdf(Beta(μ * φ, (one(μ) - μ) * φ), yc)
+        logf  = log(π) + _beta_logpdf(μ * φ, (one(μ) - μ) * φ, yc)
         return (one(π) - π, sc, Wz, Wc, logf)
     else
         return (-π, zero(ηc), Wz, zero(ηc), log1p(-π))
