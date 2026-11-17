@@ -250,7 +250,7 @@ _register_shard_table!(4, (
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
         "parity/test_core070_pin.jl",
-        "test_na_input_maskless_gaussian.jl", "test_phylo_nb_xlv.jl", "test_phylo_binomial_xlv.jl",
+        "test_na_input_maskless_gaussian.jl", "test_phylo_nb_xlv.jl", "test_phylo_binomial_xlv.jl", "test_xlv_canary_boundary.jl",
     ),
 ))
 
@@ -357,7 +357,7 @@ _register_shard_table!(8, (
         "test_core070_interface_registry.jl", "test_core070_shape_boundaries.jl", "test_derived_ci_surfaces.jl",
         "test_cross_lineage_extract_internals.jl", "test_off_all_count_twin_p1.jl", "test_temporal_api.jl",
         "test_temporal_likelihood_internals.jl", "test_nb_grouped_postfit.jl", "test_extractors_invariants.jl",
-        "test_changelog_structure.jl", "test_phylo_nb_xlv.jl", "test_phylo_binomial_xlv.jl",
+        "test_changelog_structure.jl", "test_phylo_nb_xlv.jl", "test_phylo_binomial_xlv.jl", "test_xlv_canary_boundary.jl",
     ),
     (
         "test_likelihood.jl", "test_animal_latent.jl", "test_spatial_dep.jl",
@@ -1241,12 +1241,12 @@ println(_SHARD === nothing ?
     # already had, so no file that main places by position moves to another shard.
     _shard_include("test_phylo_gamma_xlv_mode_step_1125.jl")
     _shard_include("test_phylo_beta_xlv_mode_step_1125.jl")
-    # #1048 / #1129: placed after every include main already had. The two mode-floor
-    # files below are in the 4-way duration table, so under N = 4 they run in the shard
-    # that table names; every other file in this block is outside both tables. Each
-    # file runs in exactly one shard.
+    # #1048 / #1129: placed after every include main already had. The gate test below
+    # is in the shard-4 row of both duration tables, and the two mode-floor files are in
+    # the 4-way table, so those run in the shard a table names; every other file in this
+    # block is outside both tables and runs by position. Each file runs in exactly one shard.
     # #1048: gate logic of the boundary-stop acceptance used by the NB and binomial
-    # canaries (shard 4 by position for N = 4 and 8, the shard of both canaries).
+    # canaries (listed in the shard-4 row of both duration tables, with both canaries).
     _shard_include("test_xlv_canary_boundary.jl")
     # #1129: NB xLV fit must not stop short of the nested plain model.
     _shard_include("test_phylo_nb_xlv_early_stop.jl")
