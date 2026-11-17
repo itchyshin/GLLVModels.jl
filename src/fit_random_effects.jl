@@ -185,6 +185,7 @@ honestly near the boundary.
 function fit_gaussian_random_slope(y::AbstractMatrix, grouping::AbstractVector,
         Z::AbstractMatrix; K::Integer, σ_b_init::Real = 0.3,
         g_tol::Real = 1e-6, iterations::Integer = 500)
+    _refuse_na_response("fit_gaussian_random_slope", y)
     p, n = size(y); q = size(Z, 2)
     (length(grouping) == n && size(Z, 1) == n) ||
         throw(DimensionMismatch("grouping and Z rows must be n=$n"))
