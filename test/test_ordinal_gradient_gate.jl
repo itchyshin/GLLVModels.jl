@@ -221,3 +221,48 @@ end
     @test gmax <= 10 * max(1e-5, 1e-5 * abs(nll))
     @test fit.converged == true
 end
+
+# Same gate for `fit_ordinal_gllvm_pertrait_cov` (fixed per-trait-by-covariate effects γ).
+# The covariate is a deterministic function of the indices so the data are reproducible.
+_ord_cov_X(Y) = [sin(0.7t + 1.3i) for t in 1:size(Y, 1), i in 1:size(Y, 2), _ in 1:1]
+
+# max |central-difference gradient| of the negative log-likelihood at the cov fit
+function _ord_pertrait_cov_gmax(fit, Y, X, K)
+    p = size(Y, 1)
+    q = size(X, 3)
+    rr = GM.rr_theta_len(p, K)
+    ncut = sum(fit.C .- 2)
+    θ = vcat(fit.β, fit.γ, GM.pack_lambda(fit.Λ), GM._ord_psi_from_tau(fit.τ, fit.C))
+    function f(θ)
+        Λ = GM.unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
+        τ = GM._unpack_cutpoints_pertrait(θ[(p + q + rr + 1):(p + q + rr + ncut)], fit.C)
+        O = GM._build_offset(X, θ[(p + 1):(p + q)])
+        return -GM.ordinal_marginal_loglik_laplace_pertrait(Y, Λ, θ[1:p], τ, fit.C;
+                                                            link = fit.link, offset = O)
+    end
+    h = 1e-5
+    g = map(eachindex(θ)) do i
+        e = zeros(length(θ)); e[i] = h
+        (f(θ .+ e) - f(θ .- e)) / 2h
+    end
+    return maximum(abs, g), f(θ)
+end
+
+@testset "fit_ordinal_gllvm_pertrait_cov: converged requires a small gradient" begin
+    # Real short stop: zero-length step with gradient about 0.5 against a test scale of
+    # about 0.008; before the gate this reported converged = true.
+    Y = _ORD_SHORT_60x10
+    X = _ord_cov_X(Y)
+    fit = GM.fit_ordinal_gllvm_pertrait_cov(Y; X = X, K = 1)
+    @test isfinite(fit.loglik)
+    gmax, nll = _ord_pertrait_cov_gmax(fit, Y, X, 1)
+    @test gmax > max(1e-5, 1e-5 * abs(nll))
+    @test fit.converged == false
+    # An ordinary well-converged fit is still reported converged.
+    Yc = _ORD_CONTROL_60x10
+    Xc = _ord_cov_X(Yc)
+    fitc = GM.fit_ordinal_gllvm_pertrait_cov(Yc; X = Xc, K = 1)
+    gmaxc, nllc = _ord_pertrait_cov_gmax(fitc, Yc, Xc, 1)
+    @test gmaxc <= 10 * max(1e-5, 1e-5 * abs(nllc))
+    @test fitc.converged == true
+end
