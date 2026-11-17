@@ -16,8 +16,9 @@
 #         this reading of (iv) was approved by the maintainer on 17 Nov 2026. The raw gradient is not
 #         informative on a flat ridge: both canary fits end with Lambda near 1e-3 and alpha near 1e2, so
 #         the derivative with respect to the tiny Lambda is large (0.44 NB, 1.70 binomial) while the
-#         log-likelihood is within 5e-4 of the reference optimum (measured 13 Nov 2026).The decrement measures the gain still
-#         available from a Newton step, in log-likelihood units, which is what "small gradient" means here;
+#         log-likelihood is within 5e-4 of the reference optimum (measured 13 Nov 2026). The decrement
+#         measures the gain still available from a Newton step, in log-likelihood units, which is
+#         what "small gradient" means here;
 #   (v)   the log-likelihood matches a reference fit of the model with sigma2_phy fixed at 0 (the plain
 #         predictor-informed LV model), within `tol_ref`.
 # The reference fit and the gradient are only computed once (i) and (ii) hold, so the branch costs
