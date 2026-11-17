@@ -244,10 +244,12 @@ _register_shard_table!(4, (
         "test_zip_zinb_stall.jl", "test_robustness_sweep.jl", "test_convergence_553_554.jl",
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
+        "test_response_support_730_structure.jl", "test_response_support_730_rest.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
         "test_gaussian_nonfinite_y.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
+        "parity/test_core070_pin.jl",
         "test_na_input_maskless_gaussian.jl",
     ),
 ))
@@ -1175,6 +1177,8 @@ println(_SHARD === nothing ?
     # Unit tests for the branch-RE statistics / tree helpers (welch_t, rank_sum_z, clade_edges, ...).
     _shard_include("test_branch_re_helpers.jl")
     _shard_include("test_response_support_730_siblings.jl")
+    _shard_include("test_response_support_730_structure.jl")
+    _shard_include("test_response_support_730_rest.jl")
     _shard_include("test_interrupt_rethrow.jl")
     # NaN or Inf at an observed Gaussian response cell is an ArgumentError (K == p gave loglik = NaN).
     _shard_include("test_gaussian_nonfinite_y.jl")
@@ -1212,6 +1216,10 @@ println(_SHARD === nothing ?
     _shard_include("test_mask_size_check.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
+    # Core070 oracle-pin resolver (plain unit test, no R / RCall; spawns small Julia
+    # subprocesses). Lives under test/parity/ but needs none of the R runner, so it
+    # was orphaned: runparity.jl never included it. 69/69 on Julia 1.13.3, 35 s.
+    _shard_include("parity/test_core070_pin.jl")
     # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
     _shard_include("test_zero_column_warning.jl")
     # Gated (see `_shard_include_if`). Kept at the same positions as on main so the
