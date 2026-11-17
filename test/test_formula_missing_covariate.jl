@@ -40,6 +40,24 @@ using GLLVModels, Test, Random, Distributions, StatsModels
         @test loglikelihood(fb) == loglikelihood(fa)
     end
 
+    @testset "a column used only inside a function is left to that function ($(nameof(typeof(fam))))" for
+            (fam, Y) in ((Normal(), Yg), (Poisson(), Yp))
+        xm = copy(xu); xm[4] = missing
+        fa = gllvm(@formula(y ~ 1 + coalesce(x, 0.0)), Y, (x = xm,); family = fam, K = 1)
+        fb = gllvm(@formula(y ~ 1 + x), Y, (x = coalesce.(xm, 0.0),); family = fam, K = 1)
+        @test loglikelihood(fa) == loglikelihood(fb)
+        @test dof(fa) == dof(fb)
+    end
+
+    @testset "a column used both bare and inside a function is still refused" begin
+        xm = copy(xu); xm[4] = missing
+        err = try gllvm(@formula(y ~ 1 + x + abs(coalesce(x, 0.0))), Yg, (x = xm,); K = 1); nothing catch e; e end
+        @test err isa ArgumentError
+        @test err.msg == "covariate `x` in the formula has 1 `missing` value(s) (first at site 4); " *
+            "`gllvm` does not drop or impute sites. Remove those sites from `Y` and `data`, or fill " *
+            "the covariate, before fitting"
+    end
+
     @testset "other column types are unchanged" begin
         fa = gllvm(@formula(y ~ 1 + g), Yg, (g = g,); K = 1)
         fb = gllvm(@formula(y ~ 1 + g), Yg, (g = Vector{Union{Missing, String}}(g),); K = 1)
