@@ -18,12 +18,23 @@ using GLLVModels, Test, Random, StatsModels
         xm = Vector{Union{Missing, Float64}}(xv); xm[5] = missing
         err = try fit_temporal_gllvm(merge(base, (x = xm,)); formula = f, temporal = tt); nothing catch e; e end
         @test err isa ArgumentError
-        @test occursin("`x`", err.msg) && occursin("site 5", err.msg)
+        @test err.msg == "covariate `x` in the formula has 1 `missing` value(s) (first at row 5); " *
+            "`fit_temporal_gllvm` does not drop or impute rows. Remove those rows from the data, or " *
+            "fill the covariate, before fitting"
         g = Vector{Union{Missing, String}}(rand(rng, ["a", "b"], N)); g[9] = missing
         err = try fit_temporal_gllvm(merge(base, (x = xv, g = g)); formula = @formula(value ~ 0 + trait + x + g),
                                      temporal = tt); nothing catch e; e end
         @test err isa ArgumentError
-        @test occursin("`g`", err.msg) && occursin("site 9", err.msg)
+        @test occursin("`g`", err.msg) && occursin("row 9", err.msg)
+    end
+
+    @testset "the `gllvm` route keeps its own wording" begin
+        xm = Vector{Union{Missing, Float64}}(randn(rng, 10)); xm[3] = missing
+        err = try gllvm(@formula(y ~ 1 + x), randn(rng, 3, 10), (x = xm,); K = 1); nothing catch e; e end
+        @test err isa ArgumentError
+        @test err.msg == "covariate `x` in the formula has 1 `missing` value(s) (first at site 3); " *
+            "`gllvm` does not drop or impute sites. Remove those sites from `Y` and `data`, or fill " *
+            "the covariate, before fitting"
     end
 
     @testset "a column used only inside a function is left to that function" begin
