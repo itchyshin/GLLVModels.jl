@@ -1148,6 +1148,8 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_likelihood_internals.jl")
     _shard_include("test_temporal_fit_receipts.jl")
     _shard_include("test_temporal_helpers.jl")
+    # Post-fit temporal helpers name the marker the user called (refs #1286).
+    _shard_include("test_temporal_helper_marker_name_1286.jl")
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
