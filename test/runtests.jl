@@ -107,7 +107,7 @@ _register_shard_table!(4, (
         "test_aghq_delta_gamma.jl", "test_aghq_public_binomial.jl", "test_truncated_poisson.jl",
         "test_truncated_nbinom2.jl", "test_truncnb2_precision.jl", "test_truncnb2_mode_search.jl",
         "test_poisson_n_init.jl", "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl",
-        "test_laplace_dual_safety.jl", "test_phylo_nb_xlv.jl", "test_phylo_nb_xlv_mode_1125.jl", "test_destination_b_joint_identification.jl",
+        "test_laplace_dual_safety.jl", "test_phylo_nb_xlv_mode_1125.jl", "test_destination_b_joint_identification.jl",
         "test_destination_b_joint_poisson.jl", "test_gp1_laplace.jl", "test_gp1_verdict.jl",
         "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_nb_grouped_upper_warn.jl",
         "test_gamma_shape_upper_warn.jl", "test_gamma_logpdf_large_shape.jl", "test_beta_logpdf_large_phi.jl", "test_gamma_logpdf_siblings.jl", "test_nb_cov_two_starts.jl", "test_fit_verdict_gradient.jl",
@@ -124,7 +124,7 @@ _register_shard_table!(4, (
         "test_precision_shared_residual.jl", "test_phylo_latent_rounding_floor.jl", "test_destination_b_dense_uncertainty.jl",
         "test_bridge_precision_shared_residual.jl", "test_bridge_precision_multivariate.jl", "test_bridge_gradient_payload.jl",
         "test_bridge_phylo_precision.jl", "test_coevolution_glm.jl", "test_coevolution_glm_765.jl",
-        "test_phylo_glm_families.jl", "test_phylo_beta_xlv_mode.jl", "test_phylo_ordinal_xlv_mode.jl",
+        "test_phylo_glm_families.jl", "test_phylo_beta_xlv_mode.jl", "test_phylo_beta_xlv_mode_step_1125.jl", "test_phylo_ordinal_xlv_mode.jl",
         "test_xlv_refit_converged.jl", "test_twopart_mode_search.jl", "test_delta_disp_group.jl",
         "test_twopart_hessian_kwarg.jl", "test_zero_inflated.jl", "test_weights.jl",
         "test_weights_byte_identity.jl", "test_confint_bootstrap_verdict_tweedie.jl", "test_confint_bootstrap_verdict_ordinal.jl",
@@ -158,7 +158,7 @@ _register_shard_table!(4, (
         "test_node_gradient.jl", "test_families.jl", "test_binomial_laplace.jl",
         "test_aghq_adapt.jl", "test_aghq_poisson.jl", "test_aghq_binomial.jl",
         "test_censored_poisson.jl", "test_truncnb2_laplace_breakdown.jl", "test_gamma_laplace.jl",
-        "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl", "test_phylo_binomial_xlv.jl",
+        "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl",
         "test_boundary_inference.jl", "test_grouped_laplace_identity.jl", "test_grouped_identification_diagnostics.jl",
         "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl", "test_nb1_fisher_large_counts.jl",
         "test_nb2_grouped_mode_search.jl", "test_grouped_getlv_mode.jl", "test_gamma_grouped_mode_search.jl",
@@ -175,7 +175,7 @@ _register_shard_table!(4, (
         "test_precision_objective_failures.jl", "test_grouped_nongaussian_postfit.jl", "test_formula_sources.jl",
         "test_formula_structured_terms.jl", "test_gaussian_source_bindings.jl", "test_phylo_precision_animal.jl",
         "test_coevolution_kronecker.jl", "test_spde_delaunay.jl", "test_spde_fit.jl",
-        "test_spde_latent_postfit.jl", "test_spde_converged_at_start_1220.jl", "test_phylo_binomial_xlv_mode.jl", "test_delta_fit.jl",
+        "test_spde_latent_postfit.jl", "test_spde_converged_at_start_1220.jl", "test_phylo_binomial_xlv_mode.jl", "test_phylo_gamma_xlv_mode_floor.jl", "test_phylo_gamma_xlv_mode_step_1125.jl", "test_phylo_nb_xlv_mode_floor.jl", "test_delta_fit.jl",
         "test_delta_postfit.jl", "test_hurdle_poisson.jl", "test_hurdle_nb.jl",
         "test_delta_gamma.jl", "test_missing_data.jl", "test_missing_response_extra.jl",
         "test_missing_predictor_poisson.jl", "test_missing_predictor_multi.jl", "test_nb_grouped_wald_speed_552.jl",
@@ -250,7 +250,7 @@ _register_shard_table!(4, (
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
         "parity/test_core070_pin.jl",
-        "test_na_input_maskless_gaussian.jl",
+        "test_na_input_maskless_gaussian.jl", "test_phylo_nb_xlv.jl", "test_phylo_binomial_xlv.jl", "test_xlv_canary_boundary.jl",
     ),
 ))
 
@@ -357,13 +357,13 @@ _register_shard_table!(8, (
         "test_core070_interface_registry.jl", "test_core070_shape_boundaries.jl", "test_derived_ci_surfaces.jl",
         "test_cross_lineage_extract_internals.jl", "test_off_all_count_twin_p1.jl", "test_temporal_api.jl",
         "test_temporal_likelihood_internals.jl", "test_nb_grouped_postfit.jl", "test_extractors_invariants.jl",
-        "test_changelog_structure.jl",
+        "test_changelog_structure.jl", "test_phylo_nb_xlv.jl", "test_phylo_binomial_xlv.jl", "test_xlv_canary_boundary.jl",
     ),
     (
         "test_likelihood.jl", "test_animal_latent.jl", "test_spatial_dep.jl",
         "test_destination_b_grouping_interval_matrix.jl", "test_grouped_profile_public.jl", "test_profile_sigma_phy_identity.jl",
         "test_aghq_public_poisson.jl", "test_aghq_ordinal.jl", "test_gamma_laplace.jl",
-        "test_binomial_fit.jl", "test_poisson_n_init.jl", "test_phylo_binomial_xlv.jl",
+        "test_binomial_fit.jl", "test_poisson_n_init.jl",
         "test_poisson_grad_perf.jl", "test_grouped_laplace.jl", "test_grouped_laplace_identity.jl",
         "test_destination_b_joint_other_families.jl", "test_gamma_beta_upper_boundary.jl", "test_nb_grouped_poisson_ridge.jl",
         "test_nb1_scalar_gradient_gate.jl", "test_nb1_grouped_mode_search.jl", "test_ordinal_x_identity.jl",
@@ -390,7 +390,7 @@ _register_shard_table!(8, (
         "test_joint_covariance_identification.jl", "test_joint_phylo_grouped_fit.jl", "test_extract_phylo_signal_joint.jl",
         "test_profile_rootfind.jl", "test_em_louis.jl", "test_binomial_laplace.jl",
         "test_aghq_tweedie.jl", "test_poisson_laplace.jl", "test_truncated_poisson.jl",
-        "test_phylo_nb_xlv.jl", "test_latte_kernel_identity.jl", "test_laplace_grad_identity.jl",
+        "test_latte_kernel_identity.jl", "test_laplace_grad_identity.jl",
         "test_nb_fit.jl", "test_nb1.jl", "test_nb_cov_ridge_polish_grad.jl",
         "test_zinb_x_identity.jl", "test_link_honoured.jl", "test_issue_721_link_docs.jl",
         "test_tweedie_power_contract.jl", "test_studentt_boundary_honesty.jl", "test_ordinal_fit.jl",
@@ -672,27 +672,27 @@ println(_SHARD === nothing ?
     # (src/phylo_*_xlv.jl) ARE shipped, included at src/GLLVModels.jl:103-107. That
     # is untested shipped code. All five pass; each was run individually first.
     #
-    # test_phylo_gamma_xlv.jl is deliberately NOT wired in yet: its :123
-    # assertion compares against a reference implementation inside the test file
-    # that still computes the Fisher log-det, and updating that oracle should
-    # not be done by whoever changed the code it judges.
+    # test_phylo_gamma_xlv.jl, test_phylo_ordinal_xlv.jl and
+    # test_binomial_case_contract.jl are included once, after the gated files
+    # at the end of this list (refs #1048). They are not in the duration tables.
     _shard_include("test_phylo_xlv.jl")
     _shard_include("test_phylo_beta_xlv.jl")
 
-    # #948: wire NB and binomial xlv. Profile-CI canaries stay behind
-    # GLLVM_XLV_CANARY=1 (pd_hessian / endpoint_status / NaN bounds are
-    # optimiser-path and BLAS sensitive; they failed on this 1.10.12
-    # snapshot too). Likelihood identities, likelihood ArgumentError
+    # #948: wire NB and binomial xlv. The profile-CI canaries ran only with
+    # GLLVM_XLV_CANARY=1; they now run in CI (shard 4 of both duration tables, with the
+    # gate test) with profile_iterations = 5000, a boundary-stop acceptance for the
+    # unidentified sigma2_phy (test/xlv_canary_boundary.jl, five conditions, (iv) read as
+    # the Newton decrement, no source clamp) and a non-negative LR check (refs #1048).
+    # Likelihood identities, likelihood ArgumentError
     # guards, and the cheap profile ArgumentError guards run in CI.
     # The NB sparse-vs-dense-leaf identity is `@test_broken` (1.3e-2
-    # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv
-    # stays unwired (same flake class; not in #948).
+    # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv.jl
+    # is included once at the end of this list (refs #1048).
     _shard_include("test_phylo_binomial_xlv.jl")
     _shard_include("test_phylo_nb_xlv.jl")
     _shard_include("test_phylo_nb_xlv_mode_1125.jl")
     _shard_include("test_xlv_nb_binomial_wired.jl")
 
-    #   include("test_phylo_ordinal_xlv.jl")
     #   test_sparse_phy_grad.jl is now opt-in: GLLVM_SPARSE_PHY_GRAD_TESTS=1 (end of the list).
 
 
@@ -1214,11 +1214,10 @@ println(_SHARD === nothing ?
     # Previously unwired, green on Julia 1.10.12 and 1.13.3 (ci-speed-report-20261109):
     # core070 covariance registries (self-contained modules), A4/S4 receipts,
     # kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
-    # Gated at the end of this list (see _shard_include_if): test_sparse_phy_grad
+    # Gated at the end of the duration-table list (see _shard_include_if): test_sparse_phy_grad
     # (912 s, opt-in) and test_destination_b_a4_s4_fixed_coordinate_evaluator (Julia 1.10.x only).
-    # Still unwired on purpose: test_phylo_ordinal_xlv and
-    # test_phylo_gamma_xlv (optimiser-sensitive canaries), test_binomial_case_contract
-    # (stale SHA pins).
+    # The Gamma and ordinal xLV canaries and the binomial case contract are wired
+    # after those gated includes (refs #1048).
     _shard_include("test_core070_covariance_registry.jl")
     _shard_include("test_core070_covariance_formula_registry.jl")
     _shard_include("test_destination_b_a4_s4_receipts.jl")
@@ -1236,9 +1235,31 @@ println(_SHARD === nothing ?
     _shard_include("parity/test_core070_pin.jl")
     # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
     _shard_include("test_zero_column_warning.jl")
-    # Gated (see `_shard_include_if`); keep last so no other position shifts.
+    # Gated (see `_shard_include_if`). Kept at the same positions as on main so the
+    # N=8 position fallback of files that are not in the duration table does not move.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
+    # #1125: Gamma and Beta xLV step-weight regressions. Placed after every include main
+    # already had, so no file that main places by position moves to another shard.
+    _shard_include("test_phylo_gamma_xlv_mode_step_1125.jl")
+    _shard_include("test_phylo_beta_xlv_mode_step_1125.jl")
+    # #1048 / #1129: placed after every include main already had. The gate test below
+    # is in the shard-4 row of both duration tables, and the two mode-floor files are in
+    # the 4-way table, so those run in the shard a table names; every other file in this
+    # block is outside both tables and runs by position. Each file runs in exactly one shard.
+    # #1048: gate logic of the boundary-stop acceptance used by the NB and binomial
+    # canaries (listed in the shard-4 row of both duration tables, with both canaries).
+    _shard_include("test_xlv_canary_boundary.jl")
+    # #1129: NB xLV fit must not stop short of the nested plain model.
+    _shard_include("test_phylo_nb_xlv_early_stop.jl")
+    # #1048: Gamma and NB xLV mode-search rounding-floor regressions.
+    _shard_include("test_phylo_gamma_xlv_mode_floor.jl")
+    _shard_include("test_phylo_nb_xlv_mode_floor.jl")
+    # #1048: Gamma and ordinal canaries (phylogenetic effect drawn, profile budget
+    # 5000; Gamma seed 754) and the binomial case contract.
+    _shard_include("test_phylo_gamma_xlv.jl")
+    _shard_include("test_phylo_ordinal_xlv.jl")
+    _shard_include("test_binomial_case_contract.jl")
     # New test files go in test/auto/ and are picked up here; no line to add.
     for _f in _AUTO_FILES
         _auto_in_shard(_f) && include(joinpath("auto", _f))

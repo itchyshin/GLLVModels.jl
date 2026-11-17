@@ -1,5 +1,6 @@
 using GLLVModels, Test, Random, LinearAlgebra
 using Distributions: NegativeBinomial
+include(joinpath(@__DIR__, "xlv_canary_boundary.jl"))
 
 function _dense_leaf_phylo_nb_xlv_loglik(Y, beta, Lambda, alpha_lv, r,
         sigma2_phy, phy, X_lv; maxiter = 120, tol = 1e-10)
@@ -212,7 +213,8 @@ end
         fit, Y, phy, X_lv, [1], eta_target; r_bounds = (1.0, 0.5))
 end
 
-if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
+# The canary runs in CI (shard 4 of both duration tables). It was gated behind GLLVM_XLV_CANARY=1 until the
+# profile budget and the boundary-stop acceptance below were settled (refs #1048).
 @testset "Phylo x NB2 B_eta_realized selected-entry canary" begin
     Random.seed!(743)
     phy = GLLVModels.augmented_phy("(((A:0.3,B:0.3):0.2,(C:0.3,D:0.3):0.2):0.2,(E:0.4,F:0.4):0.2);")
@@ -237,7 +239,14 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
         r_init = r, sigma2_phy_init = sigma2,
         iterations = 600, g_tol = 1e-5,
         newton_maxiter = 120, newton_tol = 1e-10)
-    @test fit.converged
+    # sigma2_phy is not identified here (the documented non-identification of the phylogenetic variance with
+    # free species intercepts, refs #1048, P53 GAMMA-PHY; no phylogenetic effect is drawn). The fit may
+    # therefore end at sigma2_phy = 0 with the failure-value stop; that is accepted only under the five
+    # conditions in xlv_canary_boundary.jl, and the sentinel is not clamped in the source.
+    theta_truth_plain = vcat(beta, vec(alpha_lv), GLLVModels.pack_lambda(Lambda), log(r))
+    nll_plain = th -> GLLVModels.nb_lv_nll_packed(th, Y, p, K, LogLink(); X_lv = X_lv, q_lv = q_lv,
+                                                  maxiter = 120, tol = 1e-10)
+    @test _xlv_converged_or_boundary(fit; nll_plain = nll_plain, theta_start_plain = theta_truth_plain)
     @test isfinite(fit.loglik)
     @test fit.sigma2_phy > 0
     @test 0.2 < fit.r < 50.0
@@ -245,7 +254,7 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
     prof = GLLVModels._phylo_nb_xlv_profile_eta_realized(
         fit, Y, phy, X_lv, [1], eta_target;
-        level = 0.95, profile_iterations = 700,
+        level = 0.95, profile_iterations = 5000,
         newton_maxiter = 120, newton_tol = 1e-10)
     @test prof.method == :profile_eta_realized
     @test prof.term == ["B_eta_realized[1,1]"]
@@ -257,9 +266,12 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
     @test prof.lower[1] <= prof.target[1] <= prof.upper[1]
     @test isfinite(prof.lr_deviance[1])
     @test prof.lr_deviance[1] <= prof.lr_cutoff[1]
+    # a profile LR cannot be negative: the constrained refit is a restriction of the free fit; a negative
+    # value means the free fit stopped short of its optimum (before the rounding-floor rule the NB fit
+    # stopped after 3 iterations and reported LR -14.7 as covered)
+    @test prof.lr_deviance[1] >= -1e-6
     @test prof.constrained_error[1] < 1e-3
     @test prof.covered == [true]
     @test prof.r_ok
     @test prof.pd_hessian
-end
 end
