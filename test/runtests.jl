@@ -110,7 +110,7 @@ _register_shard_table!(4, (
         "test_laplace_dual_safety.jl", "test_phylo_nb_xlv.jl", "test_phylo_nb_xlv_mode_1125.jl", "test_destination_b_joint_identification.jl",
         "test_destination_b_joint_poisson.jl", "test_gp1_laplace.jl", "test_gp1_verdict.jl",
         "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_nb_grouped_upper_warn.jl",
-        "test_gamma_shape_upper_warn.jl", "test_nb_cov_two_starts.jl", "test_fit_verdict_gradient.jl",
+        "test_gamma_shape_upper_warn.jl", "test_gamma_logpdf_large_shape.jl", "test_beta_logpdf_large_phi.jl", "test_gamma_logpdf_siblings.jl", "test_nb_cov_two_starts.jl", "test_fit_verdict_gradient.jl",
         "test_nb_beta_x_identity.jl", "test_beta_grouped_mode_search.jl", "test_nb1_x_identity.jl",
         "test_zip_x_identity.jl", "test_issue_719_docs_deploy_guard.jl", "test_tweedie.jl",
         "test_tweedie_grouped_mode_search_503.jl", "test_tweedie_grouped_k1_mode_1042.jl", "test_studentt_core070.jl", "test_lognormal.jl",
@@ -175,7 +175,7 @@ _register_shard_table!(4, (
         "test_precision_objective_failures.jl", "test_grouped_nongaussian_postfit.jl", "test_formula_sources.jl",
         "test_formula_structured_terms.jl", "test_gaussian_source_bindings.jl", "test_phylo_precision_animal.jl",
         "test_coevolution_kronecker.jl", "test_spde_delaunay.jl", "test_spde_fit.jl",
-        "test_spde_latent_postfit.jl", "test_phylo_binomial_xlv_mode.jl", "test_delta_fit.jl",
+        "test_spde_latent_postfit.jl", "test_spde_converged_at_start_1220.jl", "test_phylo_binomial_xlv_mode.jl", "test_delta_fit.jl",
         "test_delta_postfit.jl", "test_hurdle_poisson.jl", "test_hurdle_nb.jl",
         "test_delta_gamma.jl", "test_missing_data.jl", "test_missing_response_extra.jl",
         "test_missing_predictor_poisson.jl", "test_missing_predictor_multi.jl", "test_nb_grouped_wald_speed_552.jl",
@@ -190,7 +190,7 @@ _register_shard_table!(4, (
         "test_bridge_integer_counts.jl", "test_lv_ci.jl", "test_lv_profile_pd_hessian.jl",
         "test_bridge_gaussian_offset.jl", "test_confint_hessian_consistency.jl", "test_curvature_census.jl",
         "test_phylo_contrasts_struct.jl", "test_parity_trial_inputs.jl", "test_em_phylo_sigma_eps_floor.jl",
-        "test_nparams_em_branch_re.jl", "test_spatial_cov.jl", "test_cv.jl",
+        "test_nparams_em_branch_re.jl", "test_spatial_cov.jl", "test_cv.jl", "test_cv_species_binomial_trials.jl",
         "test_namespace_numeric_p1_twin.jl", "test_mc_simulate_p1.jl", "test_variance_decomp_p1.jl",
         "test_off_all_count_twin_p1.jl", "test_weights_twins_p1.jl", "test_temporal_lowrank.jl",
         "test_temporal_composed.jl", "test_isdm.jl", "test_zip_observed_laplace.jl",
@@ -242,7 +242,7 @@ _register_shard_table!(4, (
         "test_cov_ord_latent_p1.jl", "test_cov_phylo_twins_p1.jl", "test_totoro_323_track_a_harness.jl",
         "test_temporal_oracles.jl", "test_temporal_fit_receipts.jl", "test_temporal_composed_receipts.jl",
         "test_zip_zinb_stall.jl", "test_robustness_sweep.jl", "test_convergence_553_554.jl",
-        "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl",
+        "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl", "test_truncated_confint_masked_nan_730.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
         "test_response_support_730_structure.jl", "test_response_support_730_rest.jl",
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
@@ -732,6 +732,9 @@ println(_SHARD === nothing ?
     _shard_include("test_gamma_beta_upper_boundary.jl")
     _shard_include("test_nb_grouped_upper_warn.jl")
     _shard_include("test_gamma_shape_upper_warn.jl")
+    _shard_include("test_gamma_logpdf_large_shape.jl")
+    _shard_include("test_beta_logpdf_large_phi.jl")
+    _shard_include("test_gamma_logpdf_siblings.jl")
     _shard_include("test_nb_grouped_poisson_ridge.jl")
     _shard_include("test_nb_cov_ridge_polish_grad.jl")
     _shard_include("test_nb_cov_two_starts.jl")
@@ -897,6 +900,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_latent_postfit.jl")
     _shard_include("test_spde_latent_binomial_trials.jl")
     _shard_include("test_spde_latent_mode_flag_747.jl")
+    _shard_include("test_spde_converged_at_start_1220.jl")
     _shard_include("test_phylo_glm.jl")
     _shard_include("test_phylo_glm_families.jl")
     _shard_include("test_phylo_poisson_xlv.jl")
@@ -987,9 +991,11 @@ println(_SHARD === nothing ?
     _shard_include("test_diagnostics.jl")
     _shard_include("test_se_machinery.jl")
     _shard_include("test_nobs_pn_convention.jl")
+    _shard_include("test_beta_grouped_ci_y_clamp_1155.jl")
     _shard_include("test_summary_table.jl")
     _shard_include("test_covariates.jl")
     _shard_include("test_cov_mode_search_gamma.jl")
+    _shard_include("test_gamma_grouped_ci_y_floor.jl")
     _shard_include("test_cov_analytic_grad.jl")
     _shard_include("test_formula_input.jl")
     _shard_include("test_formula.jl")
@@ -1003,6 +1009,8 @@ println(_SHARD === nothing ?
     _shard_include("test_constrained_ordination.jl")
     _shard_include("test_rrr.jl")
     _shard_include("test_quadratic.jl")
+    _shard_include("test_rrr_dispersion_underflow.jl")
+    _shard_include("test_quadratic_dispersion_underflow.jl")
     _shard_include("test_ordination_uncertainty.jl")
     _shard_include("test_structural_confint.jl")
     _shard_include("test_structural_confint_edge.jl")
@@ -1073,6 +1081,8 @@ println(_SHARD === nothing ?
     _shard_include("test_spatial_cov.jl")
     _shard_include("test_cv.jl")
     _shard_include("test_cv_unsupported_773.jl")
+    _shard_include("test_cv_species_binomial_trials.jl")
+    _shard_include("test_cv_grouped_dispersion_1211.jl")
     _shard_include("test_gaussian_intercept.jl")
     _shard_include("test_gaussian_formula_covariates.jl")
     _RUN_QUALITY && include("test_quality.jl")
@@ -1167,6 +1177,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bootstrap_decisions.jl")
     _shard_include("test_clamp_and_replicate_retention_docs.jl")
     _shard_include("test_truncpois_boot_782.jl")
+    _shard_include("test_truncated_confint_masked_nan_730.jl")
     _shard_include("test_derived_decisions.jl")
     _shard_include("test_n_lt_p.jl")
     _shard_include("test_wtier_crosscov.jl")
