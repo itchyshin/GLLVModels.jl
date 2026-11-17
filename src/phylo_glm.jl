@@ -215,6 +215,7 @@ function fit_phylo_glm(Y::AbstractMatrix, phy::AugmentedPhy; mask = nothing,
     p, n = size(Y)
     p == phy.n_leaves || throw(ArgumentError("size(Y,1)=$p must equal phy.n_leaves=$(phy.n_leaves)"))
     Ntr = N === nothing ? ones(eltype(Y), p, n) : N
+    _check_family_response_support(family, Y, nothing; caller = "fit_phylo_glm", N = Ntr)
     nd = _spde_disp_len(family)
 
     β0 = [sum(linkfun(link, _ws_mean(family, Y[t, s], Ntr[t, s])) for s in 1:n) / n for t in 1:p]
