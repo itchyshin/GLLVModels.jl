@@ -26,6 +26,15 @@ using GLLVModels, Test, Random, StatsModels
         @test occursin("`g`", err.msg) && occursin("site 9", err.msg)
     end
 
+    @testset "a column used only inside a function is left to that function" begin
+        xm = Vector{Union{Missing, Float64}}(xv); xm[5] = missing
+        fa = fit_temporal_gllvm(merge(base, (x = xm,)); formula = @formula(value ~ 0 + trait + coalesce(x, 0.0)),
+                                temporal = tt)
+        fb = fit_temporal_gllvm(merge(base, (x = coalesce.(xm, 0.0),)); formula = f, temporal = tt)
+        @test loglikelihood(fa) == loglikelihood(fb)
+        @test length(coef(fa)) == length(coef(fb)) == 4
+    end
+
     @testset "a column outside the formula may hold missing" begin
         other = Vector{Union{Missing, Float64}}(randn(rng, N)); other[2] = missing
         fa = fit_temporal_gllvm(merge(base, (x = xv,)); formula = f, temporal = tt)
