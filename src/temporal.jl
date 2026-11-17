@@ -68,20 +68,24 @@ end
 
 function _temporal_marker(formula, time, mode::Symbol; d=nothing, unique=false,
         structure=:ar1, replicate=nothing)
+    # Name the marker the user called in the closing action line; for
+    # `temporal_latent()` this is the default `_TEMPORAL_ACTION`, byte for byte.
+    action = "See `temporal_$(mode)()` for the admitted temporal workflow."
     if !(formula isa Expr && formula.head === :call && length(formula.args) == 3 &&
          formula.args[1] === :|)
-        _temporal_abort("A temporal covariance term requires a formula of the form `0 + trait | series`.")
+        _temporal_abort("A temporal covariance term requires a formula of the form `0 + trait | series`.";
+            action=action)
     end
-    time isa Symbol || _temporal_abort("`time` must be a bare column name.")
+    time isa Symbol || _temporal_abort("`time` must be a bare column name."; action=action)
     replicate === nothing || replicate isa Symbol ||
-        _temporal_abort("`replicate` must be NULL or a bare column name.")
+        _temporal_abort("`replicate` must be NULL or a bare column name."; action=action)
     if mode === :latent && !(d isa Real && !(d isa Bool) && isfinite(d) && d == 1)
         _temporal_abort("`temporal_latent()` currently supports rank one only (`d = 1`).")
     end
     s = structure isa AbstractString ? Symbol(structure) : structure
     s isa Symbol && s in (:ar1, :ou) ||
-        _temporal_abort("`structure` must be either \"ar1\" or \"ou\".")
-    unique isa Bool || _temporal_abort("`unique` must be TRUE or FALSE.")
+        _temporal_abort("`structure` must be either \"ar1\" or \"ou\"."; action=action)
+    unique isa Bool || _temporal_abort("`unique` must be TRUE or FALSE."; action=action)
     return TemporalTerm(formula, time, mode, mode === :latent ? 1 : nothing,
         mode === :latent ? unique : mode === :indep, s, replicate)
 end
@@ -232,33 +236,35 @@ end
 
 function _parse_temporal_term(term::TemporalTerm, cols::NamedTuple; trait::Symbol,
         response::Symbol, structure=Expr[])
+    # Name the marker the user called (`temporal_indep()`, `temporal_dep()` or
+    # `temporal_latent()`) in every refusal that uses the default action line;
+    # for `temporal_latent()` the text is the unchanged `_TEMPORAL_ACTION`.
+    marker = "temporal_" * String(term.mode)
+    marker_action = "See `$(marker)()` for the admitted temporal workflow."
+    abort(message; action=marker_action, kw...) =
+        _temporal_abort(message; action=action, kw...)
     heads = _temporal_structure_heads(structure)
     n_marker = 1 + count(h -> h in ("temporal_indep", "temporal_dep", "temporal_latent"), heads)
-    n_marker == 1 || _temporal_abort("Only one temporal covariance term is supported in a model.")
+    n_marker == 1 || abort("Only one temporal covariance term is supported in a model.")
     providers = unique(filter(h -> occursin(_TEMPORAL_PROVIDER_HEADS, h), heads))
     source_terms = filter(h -> occursin(_TEMPORAL_SOURCE_HEADS, h), providers)
     allowed_pair = term.mode === :indep && length(source_terms) == 1 &&
         source_terms[1] in ("kernel_indep", "phylo_indep", "animal_indep", "spatial_indep")
     if !allowed_pair && !isempty(source_terms)
-        _temporal_abort("A temporal covariance term cannot be combined with another covariance source in this version.";
+        abort("A temporal covariance term cannot be combined with another covariance source in this version.";
             info="Found source provider(s): " * join(string.(source_terms, "()"), ", ") * ".",
             action="Use ordinary unit/unit_obs terms, or one of the admitted replicated AR1 `temporal_indep() + kernel_indep()`, `temporal_indep() + phylo_indep()`, `temporal_indep() + animal_indep()`, or `temporal_indep() + spatial_indep()` cells. Other temporal source pairs remain deferred.")
     end
-    # Name the marker the user called (`temporal_indep()`, `temporal_dep()` or
-    # `temporal_latent()`); the `temporal_latent()` text is unchanged.
-    marker = "temporal_" * String(term.mode)
-    marker_action = "See `$(marker)()` for the admitted temporal workflow."
     if !haskey(cols, response) || any(_temporal_isna, cols[response])
-        _temporal_abort("`$(marker)()` requires complete Gaussian response values.";
+        abort("`$(marker)()` requires complete Gaussian response values.";
             info="Temporal panels are validated before ordinary missing-response handling.",
             action="Remove or impute missing responses before fitting this version.")
     end
     bar = term.formula
-    bar.args[3] isa Symbol ||
-        _temporal_abort("`$(marker)()` requires `0 + trait | series`."; action=marker_action)
+    bar.args[3] isa Symbol || abort("`$(marker)()` requires `0 + trait | series`.")
     lhs = replace(string(bar.args[2]), r"\s+" => "")
     if lhs != "0+" * String(trait)
-        _temporal_abort("`$(marker)()` requires one trait-intercept block `0 + $(trait) | series`.";
+        abort("`$(marker)()` requires one trait-intercept block `0 + $(trait) | series`.";
             info="The wide `traits(...)` interface is expanded to this form before temporal parsing.",
             action="For long data, use `$(marker)(0 + trait | series, time = occasion)`.")
     end
@@ -267,28 +273,27 @@ function _parse_temporal_term(term::TemporalTerm, cols::NamedTuple; trait::Symbo
     needed = [series, time, trait]
     missing_cols = filter(c -> !haskey(cols, c), needed)
     isempty(missing_cols) ||
-        _temporal_abort("Temporal data are missing column(s): " * join(String.(missing_cols), ", ") * ".")
+        abort("Temporal data are missing column(s): " * join(String.(missing_cols), ", ") * ".")
     tcol = cols[time]
     if !all(x -> x isa Real && !(x isa Bool) && isfinite(x), tcol)
-        _temporal_abort("`time` must contain finite numeric occasions.")
+        abort("`time` must contain finite numeric occasions.")
     end
     times = Float64.(tcol)
     if term.structure === :ar1 && any(t -> t != floor(t), times)
-        _temporal_abort("AR1 `time` must contain finite integer-valued occasions.")
+        abort("AR1 `time` must contain finite integer-valued occasions.")
     end
     if any(_temporal_isna, cols[series]) || any(_temporal_isna, cols[trait])
-        _temporal_abort("Temporal series and trait identifiers must be complete.")
+        abort("Temporal series and trait identifiers must be complete.")
     end
     row_series = string.(cols[series])
     row_trait = string.(cols[trait])
     traits = sort(unique(row_trait))
-    length(traits) >= 3 ||
-        _temporal_abort("`$(marker)()` requires at least three traits."; action=marker_action)
+    length(traits) >= 3 || abort("`$(marker)()` requires at least three traits.")
     series_levels = sort(unique(row_series))
     for s in series_levels
         occ = sort(unique(times[row_series .== s]))
         if length(occ) < 3 || any(diff(occ) .<= 0)
-            _temporal_abort("Each temporal series needs at least three strictly ordered occasions.")
+            abort("Each temporal series needs at least three strictly ordered occasions.")
         end
     end
     pairs = sort(unique(collect(zip(row_series, times))); by=x -> (x[1], x[2]))
@@ -304,35 +309,35 @@ function _parse_temporal_term(term::TemporalTerm, cols::NamedTuple; trait::Symbo
     workflow = :unreplicated
     rep = term.replicate
     if rep !== nothing
-        haskey(cols, rep) || _temporal_abort("`replicate` must name a column in `data`.")
-        any(_temporal_isna, cols[rep]) && _temporal_abort("`replicate` must be complete.")
+        haskey(cols, rep) || abort("`replicate` must name a column in `data`.")
+        any(_temporal_isna, cols[rep]) && abort("`replicate` must be complete.")
         workflow = :replicated
         rlab = string.(cols[rep])
         keys = collect(zip(state_id, rlab, trait_id))
         length(unique(keys)) == n ||
-            _temporal_abort("Temporal data contain duplicate series--occasion--replicate--trait rows.")
+            abort("Temporal data contain duplicate series--occasion--replicate--trait rows.")
         panel = Dict{Tuple{Int,String},Int}()
         for o in 1:n
             k = (state_id[o], rlab[o]); panel[k] = get(panel, k, 0) + 1
         end
         all(==(length(traits)), values(panel)) ||
-            _temporal_abort("Each temporal replicate must contain one complete trait panel.")
+            abort("Each temporal replicate must contain one complete trait panel.")
         per_state = zeros(Int, length(pairs))
         for o in 1:n; per_state[state_id[o]] += 1; end
         all(>=(2 * length(traits)), per_state) ||
-            _temporal_abort("Replicated temporal data require at least two measurements at every occasion.")
+            abort("Replicated temporal data require at least two measurements at every occasion.")
     else
         keys = collect(zip(state_id, trait_id))
         length(unique(keys)) == n ||
-            _temporal_abort("Repeated temporal observations require `replicate =` to distinguish measurements.")
+            abort("Repeated temporal observations require `replicate =` to distinguish measurements.")
         per_state = zeros(Int, length(pairs))
         for o in 1:n; per_state[state_id[o]] += 1; end
         all(==(length(traits)), per_state) ||
-            _temporal_abort("Unreplicated temporal data require one complete trait panel at every occasion.")
+            abort("Unreplicated temporal data require one complete trait panel at every occasion.")
     end
     if allowed_pair
         if workflow !== :replicated || term.structure !== :ar1
-            _temporal_abort("The temporal cross-source cell requires replicated AR1 observations.";
+            abort("The temporal cross-source cell requires replicated AR1 observations.";
                 info="At zero persistence, unreplicated temporal diagonal variation cannot be separated from observation-level noise.",
                 action="Supply `replicate = measurement` with at least two complete measurements at every series--occasion, and use `structure = :ar1`.")
         end
