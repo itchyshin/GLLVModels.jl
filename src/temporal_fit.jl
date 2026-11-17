@@ -169,7 +169,7 @@ function fit_temporal_gllvm(long_data; formula, temporal, trait::Symbol=:trait,
         _temporal_composition(spec, structure, cols, y; unit=unit, unit_obs=unit_obs))
     _formula_covariate_columns(formula.rhs, cols)  # a `missing` covariate is a named ArgumentError (refs #1283)
     response, X, coef_names = _temporal_design(formula, cols)
-    L =TemporalLayout(size(X, 2), spec)
+    L = TemporalLayout(size(X, 2), spec)
     theta0 = if start === nothing
         _temporal_start(y, X, L)
     else
