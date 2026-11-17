@@ -15,8 +15,7 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   text is unchanged byte for byte, and the same inputs are refused. Message
   only. Still naming `temporal_latent()`: the rank-one check (only
   `temporal_latent()` reaches it), the `predict(newdata)` and iid-inference
-  refusals in `src/temporal_methods.jl`, and the ordinary-term helper
-  refusals outside the parser. Differs from gllvmTMB until its issue 1812
+  refusals in `src/temporal_methods.jl`. Differs from gllvmTMB until its issue 1812
   lands.
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
