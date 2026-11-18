@@ -311,7 +311,7 @@ function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
-    _va_check_mask(mask, Y)
+    _va_check_fit_mask(mask, Y)
     _check_response_support(:binomial, Y, mask; caller = "fit_binomial_gllvm_va", N = Nm)
     rr = rr_theta_len(p, K)
 

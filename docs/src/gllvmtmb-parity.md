@@ -403,6 +403,17 @@ Check these restrictions when translating an R analysis:
   value. The Julia counterparts are `fit_kernel_indep_gllvm` for a standalone
   `phylo_indep()` and `fit_phylo_latent_gllvm(...; unique = true)` for the
   paired form (the latter a documented extra, not yet a verified twin).
+- **Species-split cross-validation (`cv_gllvm(...; split = :species)`) is a
+  known gap, not a checked match.** For the non-Normal families each fold
+  fits the training species only, and the held-out species are scored with
+  the training species' mean intercept. Held-out scores can therefore differ
+  from what gllvmTMB gives for a comparable split. In the gllvmTMB source read
+  for this page (read, not run), cross-validation is built cell by cell
+  (`.cv_make_folds` in `R/cv-internal.R` holds out individual observed cells
+  and refits with them masked); we found no species-level split there, so
+  there is no like-for-like R reference for `:species`. Compare cross-validation
+  scores with R only when both sides use the same train/test split, which in
+  practice means the cell-wise `:random` split with the same held-out cells.
 
 ## Why likelihood approximations can differ
 
