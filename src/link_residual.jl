@@ -121,6 +121,13 @@ _link_residual_one(::Ordinal, ::LogitLink, μ̂::Real, dispersion) = π^2 / 3
 # matches gllvmTMB's ordinal-probit `fid`, whose latent residual is exactly 1.
 _link_residual_one(::Ordinal, ::ProbitLink, μ̂::Real, dispersion) = 1.0
 
+function _link_residual_one(family, link::Link, μ̂::Real, dispersion)
+    throw(ArgumentError(
+        "link-residual variance is not defined for $(nameof(typeof(family))) with " *
+        "$(nameof(typeof(link))); see the `link_residual` docstring for supported " *
+        "family/link pairs"))
+end
+
 # ---------------------------------------------------------------------------
 # Per-trait mean fitted mean μ̂ (response scale), one entry per trait.
 #
