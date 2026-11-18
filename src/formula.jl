@@ -96,6 +96,27 @@ function _default_route_no_intercept_error(formula::FormulaTerm, family)
     return nothing
 end
 
+# StatsModels reads `x - 1` as a shifted covariate, not as R's no-intercept spelling (#1248).
+function _refuse_formula_constant_shift_no_intercept(rhs)
+    terms = rhs isa Tuple ? rhs : (rhs,)
+    for t in terms
+        t isa FunctionTerm || continue
+        t.f === (-) || continue
+        length(t.args) == 2 || continue
+        shift = nothing
+        for a in t.args
+            a isa ConstantTerm || continue
+            shift = a.n
+        end
+        shift in (0, 1) || continue
+        throw(ArgumentError(
+            "cannot fit a formula containing `$t`: in Julia/StatsModels this is a shifted covariate, " *
+            "not R's no-intercept spelling; use `0 + x` or `-1 + x` to remove intercepts, or `1 + x` " *
+            "to keep per-species intercepts"))
+    end
+    return nothing
+end
+
 function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false,
                                 common_intercept::Bool=false)
     intercept = !StatsModels.omitsintercept(rhs)
@@ -304,6 +325,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
         _refuse_optimizer(kwargs[:optimizer], "gllvm", "non-Gaussian covariate formula fits")
     end
 
+    _refuse_formula_constant_shift_no_intercept(formula.rhs)
     _default_route_no_intercept_error(formula, family)
 
     if q == 0

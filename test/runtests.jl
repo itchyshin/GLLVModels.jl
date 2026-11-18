@@ -1002,6 +1002,7 @@ println(_SHARD === nothing ?
     _shard_include("test_formula.jl")
     _shard_include("test_optimizer_selection.jl")
     _shard_include("test_formula_no_intercept_default.jl")
+    _shard_include("test_formula_x_minus_one_1248.jl")
     _shard_include("test_simulate.jl")
     _shard_include("test_species_covariates.jl")
     _shard_include("test_fourthcorner.jl")
