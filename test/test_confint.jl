@@ -90,3 +90,14 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
         end
     end
 end
+
+@testset "confint: fit with beta requires X (no silent NaN)" begin
+    Random.seed!(7)
+    p, n = 5, 150
+    Y = 0.6 * randn(1, n) .* [0.7, -0.5, 0.4, 0.7, -0.3] .+ 0.5 * randn(p, n) .+ (1:p)
+    X = zeros(p, n, p); for i in 1:p; X[i, :, i] .= 1; end
+    fit = fit_gaussian_gllvm(Y; K = 1, X = X)
+    @test_throws ArgumentError GLLVModels.confint(fit, Y; method = :wald)
+    ci = GLLVModels.confint(fit, Y; method = :wald, X = X)
+    @test all(isfinite, ci.lower) && ci.pd_hessian
+end

@@ -278,6 +278,16 @@ function _confint_gaussian_wald_covariance(fit::GllvmFit, y,
         "Internal: term-name vector length ($(length(terms))) does not match θ_packed length ($n_par). " *
         "This is a packing layout bug.")
 
+    # A fit with free fixed-effect coefficients β needs the design `X` to rebuild
+    # its likelihood. Without it the β block has no effect on the NLL, the
+    # Hessian is singular, and every interval silently comes back NaN.
+    if X === nothing && fit.pars.β !== nothing &&
+       any(!, _pars_fixed_mask(fit.pars, :β_fixed, length(fit.pars.β)))
+        throw(ArgumentError(
+            "confint: this fit has fixed-effect coefficients β, so the design array " *
+            "`X` (p × n × q, the same one passed to fit_gaussian_gllvm) is required; " *
+            "without it the β block is unidentified and every interval is NaN"))
+    end
     nll = _confint_reconstruct_nll(fit, y, X, Σ_phy)
 
     H = nothing
