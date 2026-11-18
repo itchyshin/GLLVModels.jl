@@ -40,8 +40,10 @@
 #     Bowyer–Watson: the incircle test's epsilon guard forces one of the two
 #     possible diagonals, so the result is a valid Delaunay triangulation (one
 #     of the two possible ones) with non-negative areas.
-#   - Duplicate input points will produce a zero-area triangle and then cause
-#     `spde_fem` to throw; the caller must deduplicate beforehand.
+#   - Duplicate input points (exact, or nearly so) leave a point
+#     as a vertex that belongs to no triangle, not a zero-area triangle; the mesh
+#     then has a zero-mass node and `spde_fem` throws; the caller must deduplicate
+#     beforehand.
 #   - Performance: O(N²) worst-case (repeated incircle tests); adequate for the
 #     hundreds-to-low-thousands range typical of SPDE meshes.  For large N use
 #     a spatial index or QHull-based routine.
@@ -97,8 +99,8 @@ Returns:
 The triangulation satisfies the **empty-circumcircle** (Delaunay) property: no
 input point lies strictly inside the circumcircle of any output triangle.
 
-`points` must have `size(points, 2) == 2`. Duplicate points will produce
-degenerate (zero-area) triangles and cause downstream `spde_fem` to throw; the
+`points` must have `size(points, 2) == 2`. Duplicate points (exact, or nearly so) leave
+a point that belongs to no triangle, and cause downstream `spde_fem` to throw; the
 caller must deduplicate beforehand. Collinear inputs are handled via a small
 epsilon guard but may produce very thin (yet positive-area) boundary triangles.
 
