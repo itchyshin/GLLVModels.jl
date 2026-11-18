@@ -134,7 +134,8 @@ _register_shard_table!(4, (
         "test_formula_no_intercept_default.jl", "test_constrained_ordination.jl", "test_quadratic.jl",
         "test_variational_binomial.jl", "test_variational_beta.jl", "test_variational_exponential.jl",
         "test_random_slopes.jl", "test_twolevel.jl", "test_random_slopes_poisson.jl",
-        "test_mixed_mode_search.jl", "test_mixed_contract.jl", "test_mixed_missing_1124.jl", "test_bridge_zib.jl",
+        "test_mixed_mode_search.jl", "test_mixed_contract.jl", "test_mixed_unsupported_family.jl"
+        "test_bridge_zib.jl", "test_mixed_missing_1124.jl"
         "test_bridge_zip_nox.jl", "test_bridge_truncated_poisson.jl", "test_bridge_lv_predictor.jl",
         "test_confint_hessian_twopart_truncnb2.jl", "test_grouped_hessian_consistency.jl", "test_saturation_health.jl",
         "test_phylo_branch_re.jl", "test_branch_re_marginal_fallback.jl", "test_core070_interface_registry.jl",
@@ -1230,12 +1231,7 @@ println(_SHARD === nothing ?
     _shard_include("test_mask_size_check.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
-    # Core070 oracle-pin resolver (plain unit test, no R / RCall; spawns small Julia
-    # subprocesses). Lives under test/parity/ but needs none of the R runner, so it
-    # was orphaned: runparity.jl never included it. 69/69 on Julia 1.13.3, 35 s.
-    _shard_include("parity/test_core070_pin.jl")
-    # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
-    _shard_include("test_zero_column_warning.jl")
+        "test_mixed_unsupported_family.jl", "parity/test_core070_pin.jl", "test_zero_column_warning.jl"
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
