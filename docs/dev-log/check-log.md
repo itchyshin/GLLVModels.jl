@@ -1,3 +1,13 @@
+2026-11-18: #947 Poisson phylo-xlv objective guard. Julia 1.10.13, 1 thread.
+`julia --project=. --startup-file=no -e 'using Test; include("test/test_phylo_xlv_verdict.jl")'`.
+Before the guard, the new testset was 1 passed, 1 failed, 1 errored
+(`UndefVarError: _phylo_poisson_xlv_nll_guarded`). After: the file is
+91 passed, 0 failed, 0 errored (new testset 3/3). The unguarded packed
+objective still throws `ArgumentError` on a cell error; the guarded
+objective returns `1e12` and rethrows `InterruptException`. Full
+`Pkg.test` not run.
+See after-task/2026-11-18-poisson-xlv-guard-947.md.
+
 2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
 `julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
 Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).

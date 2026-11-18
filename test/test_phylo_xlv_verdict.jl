@@ -168,6 +168,14 @@ end
 Base.size(m::_XlvInterruptY) = m.sz
 Base.getindex(::_XlvInterruptY, ::Int, ::Int) = throw(InterruptException())
 
+# A matrix whose element access throws a non-interrupt error, so the objective
+# guard must turn it into the 1e12 sentinel rather than abort the line search.
+struct _XlvThrowY <: AbstractMatrix{Int}
+    sz::Tuple{Int,Int}
+end
+Base.size(m::_XlvThrowY) = m.sz
+Base.getindex(::_XlvThrowY, ::Int, ::Int) = throw(ArgumentError("xlv cell"))
+
 @testset "phylo xlv NB2, binomial and Gamma guards rethrow InterruptException (#947)" begin
     phy = GLLVModels.augmented_phy(_XLV_V_TREE)
     p, n, K, q = 6, 30, 1, 1
@@ -185,6 +193,24 @@ Base.getindex(::_XlvInterruptY, ::Int, ::Int) = throw(InterruptException())
     Yg = [1.0 + 0.1 * ((t + s) % 6) for t in 1:p, s in 1:n]
     th = zeros(p + q * K + rr + 2); th[end] = 1000.0
     @test GLLVModels._phylo_gamma_xlv_nll_guarded(th, Yg, p, K, phy, X; q_lv = q) == 1e12
+end
+
+@testset "phylo Poisson xlv objective guard returns the sentinel and rethrows InterruptException (#947)" begin
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    p, n, K, q = 6, 30, 1, 1
+    X = reshape(collect(range(-1.0, 1.0; length = n)), n, 1)
+    rr = GLLVModels.rr_theta_len(p, K)
+    th = zeros(p + q * K + rr + 1)
+    Yi = _XlvInterruptY((p, n))
+    Ybad = _XlvThrowY((p, n))
+    @test_throws InterruptException GLLVModels._phylo_poisson_xlv_nll_guarded(
+        th, Yi, p, K, phy, X; q_lv = q)
+    # The unguarded packed objective lets the cell error escape. The guard the
+    # fitter hands to Optim must swallow it.
+    @test_throws ArgumentError GLLVModels._phylo_poisson_xlv_nll_packed(
+        th, Ybad, p, K, phy, X; q_lv = q)
+    @test GLLVModels._phylo_poisson_xlv_nll_guarded(
+        th, Ybad, p, K, phy, X; q_lv = q) == 1e12
 end
 
 @testset "phylo binomial xlv: default start works without beta_init (#943)" begin
