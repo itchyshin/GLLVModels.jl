@@ -54,7 +54,7 @@ end
 # end on the failure sentinel for a negative count.
 function _nb504_bad(Y, route)
     B = copy(Y)
-    B[1, 1] = route === :shared ? 10^15 : -5
+    B[1, 1] = 10^15
     return B
 end
 

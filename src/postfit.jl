@@ -822,7 +822,10 @@ StatsAPI.nobs(fit::GaussianRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::PoissonRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::RowEffectFit) = size(fit.Λ, 1) * length(fit.ρ)
 StatsAPI.nobs(fit::SPDEGaussianFit) = size(fit.nodes, 1)   # univariate spatial GP (p = 1); unchanged
-StatsAPI.nobs(fit::SPDELatentFit) = size(fit.Λ, 1) * size(fit.nodes, 1)
+# p·M observed cells: the fitter stores the p×M trial matrix `N`, so M is its column count.
+# A fit built without `N` (the hand-built dummy constructor) falls back to the mesh-node count.
+StatsAPI.nobs(fit::SPDELatentFit) =
+    size(fit.N, 2) > 0 ? size(fit.N, 1) * size(fit.N, 2) : size(fit.Λ, 1) * size(fit.nodes, 1)
 function StatsAPI.nobs(fit::AnyGllvmFit)
     if hasfield(typeof(fit), :nindiv)
         return fit.nindiv
@@ -1724,6 +1727,15 @@ function _nparams(fit::OrdinalPerTraitCovFit)
     return p + count(!, fit.γ_fixed) + (p * K - div(K * (K - 1), 2)) + sum(fit.C .- 2)
 end
 
+# A Y whose row count differs from the fit's trait count used to reach an `@inbounds`
+# per-site mode search and read past the end of the column (garbage indices, then a
+# BoundsError with a meaningless index). Refuse it up front, as a DimensionMismatch.
+function _check_trait_rows(fit, Y::AbstractMatrix, who::AbstractString)
+    size(Y, 1) == size(fit.Λ, 1) || throw(DimensionMismatch(
+        "$who: Y has $(size(Y, 1)) rows but the fit has $(size(fit.Λ, 1)) traits"))
+    return nothing
+end
+
 """
     getLV(fit::OrdinalFit, Y; rotate=true) -> n×K matrix
 
@@ -1737,6 +1749,7 @@ function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
                rotate::Bool = true, mask = nothing)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Zmean = _lv_score_mean_for_fit(fit, Y, X_lv)
@@ -1757,6 +1770,7 @@ function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
 end
 function getLV(fit::OrdinalPerTraitFit, Y::AbstractMatrix{<:Integer};
                rotate::Bool = true, mask = nothing)
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Z = Matrix{Float64}(undef, K, n)
@@ -1777,6 +1791,7 @@ Conditional latent scores at `η = β + Xγ + Λz` with per-trait ordinal cutpoi
 function getLV(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix{<:Integer},
                X::AbstractArray{<:Real, 3};
                rotate::Bool = true, mask = nothing)
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     O = _build_offset(X, fit.γ)
@@ -3089,6 +3104,14 @@ continuous positive part, so the `:dunnsmyth` randomized quantile residual draws
 `u` uniform on `[0, F(0)]` at `y=0` and is the deterministic PIT `Φ⁻¹(F(y))` for
 `y>0` — ≈ N(0,1) under a correct model (pass a fixed `rng` to reproduce). `:pearson`
 returns `(Y − μ) / √(φ μ^p)`.
+
+!!! note "Dunn–Smyth values are capped at ±7.034"
+    Unlike the other families (#767), the Tweedie `:dunnsmyth` residual is clamped:
+    `u` is limited to `[1e-12, 1 − 1e-12]` before `Φ⁻¹`, so `|z| ≤ Φ⁻¹(1 − 1e-12) ≈ 7.034`.
+    The Tweedie CDF is a 200-point Simpson quadrature with no upper-tail CDF, so a tail
+    probability below about `1e-12` is under its resolution; two gross outliers can
+    therefore both show exactly `±7.034`. Use `|z| ≳ 7` as an outlier flag, not as a measure
+    of how extreme the observation is.
 """
 function residuals(fit::TweedieFit, Y::AbstractMatrix{<:Real};
                    type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng())

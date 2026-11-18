@@ -349,14 +349,17 @@ function _binomial_runaway_loadings(Λ::AbstractMatrix)
              m[t] >= _BINOMIAL_LOADING_ABSOLUTE_THRESH)]
 end
 
-function _warn_runaway_loadings(Λ::AbstractMatrix)
+function _warn_runaway_loadings(Λ::AbstractMatrix, family_label::AbstractString = "Binomial")
     idx = _binomial_runaway_loadings(Λ)
     isempty(idx) && return idx
-    @warn string("Binomial fit has runaway loadings on trait(s) ", join(idx, ", "),
+    @warn string(family_label, " fit has runaway loadings on trait(s) ", join(idx, ", "),
         " (max |Λ| = ", round(maximum(abs, Λ); sigdigits = 3), "): a loading this far above ",
         "the rest, or this large on the link scale, is an improper solution (Heywood case); ",
         "quasi-complete separation produces this at ordinary prevalence. Treat the fit as ",
-        "unusable rather than interpreting it; try loading_ridge or a lower K.")
+        "unusable rather than interpreting it; ",
+        family_label == "Binomial" ? "try loading_ridge or a lower K." :
+            "try a lower K, merging sparse categories, or dropping the affected trait(s) " *
+            "(these fitters have no loading_ridge option).")
     return idx
 end
 
