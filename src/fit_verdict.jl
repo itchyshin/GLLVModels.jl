@@ -54,6 +54,11 @@ function _fit_verdict(res)
     return _fit_verdict(Optim.minimum(res), Optim.converged(res), Optim.iterations(res))
 end
 
+# Max-abs gradient of the optimiser's objective at the returned optimum (`Optim.g_residual`),
+# stored as `gradient_norm` on fit types. `Inf` when the gradient is not finite; the fit
+# types use `NaN` for "not recorded". Informational only: it never feeds `converged`.
+_fit_gradient_norm(res) = (g = Float64(Optim.g_residual(res)); isfinite(g) ? g : Inf)
+
 function _fit_verdict(nll::Real, converged::Bool, iterations::Integer)
     _nll_failed(nll) && return (-Inf, false, Int(iterations))
     return (-Float64(nll), converged, Int(iterations))

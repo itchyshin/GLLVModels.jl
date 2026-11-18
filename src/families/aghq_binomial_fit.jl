@@ -90,10 +90,10 @@ function fit_binomial_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         result,deepcopy(selected.adaptation),data,_aghq_data_digest(data),mode_gradient)
     selected.parameter_shift==0 && @warn "AGHQ returned its warm start without parameter movement" reason=selected.stop_reason
     return BinomialFit(copy(t[1:p]),unpack_lambda(t[p+1:end],p,K),link,-selected.objective,
-        selected.converged,selected.passes,nothing,copy(t),:observed,nothing,info)
+        selected.converged,selected.passes,nothing,copy(t),:observed,nothing,info,Inf,nothing,NaN)
 end
 _binomial_with_integration(f::BinomialFit,i)=BinomialFit(f.β,f.Λ,f.link,f.loglik,f.converged,
-    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,f.saturation,i,f.loading_ridge,f.offset)
+    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,f.saturation,i,f.loading_ridge,f.offset,f.gradient_norm)
 _is_binomial_aghq(f)=f isa BinomialFit && f.integration!==nothing && f.integration.actual===:aghq
 
 
