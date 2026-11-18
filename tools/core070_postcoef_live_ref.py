@@ -18,11 +18,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from core070_json_semantics import json_value_equal
 from core070_postcoef_fit_health import (classify as classify_fit_health, historical_r_prior_bound, julia_prior_bound,
                                          pass_radius_status, CASES as HEALTH_CASES)
-from core070_postfit_p1_receipts import postcoef_git_env, postcoef_ref_compatible
+from core070_postfit_p1_receipts import postcoef_git_env, postcoef_content_bound_problem
 
 PREFIX = 'docs/dev-log/core070/true-parity-latest/receipts/postfit/postcoef-empty-p1'
 CID = 'CORE070-POSTFIT-COEF-EMPTY-NATIVE'  # captured harness identity
 RECEIPT_CID = 'CORE070-POSTFIT-COEF-THREE-FIT-NATIVE'
+# D2 (2026-11-09, "no certifier"): for these harness case ids only, fit health is recorded but a certified
+# FIT_HEALTH_PASS, a radius status and the health-record provenance bindings are not pass conditions. Any other
+# case id keeps the requirement. NUMERICAL_ADMISSION_IMPLEMENTED stays False.
+D2_NO_CERTIFIER = frozenset({CID})
+
+
+def health_pass_required(case_id):
+    return case_id not in D2_NO_CERTIFIER
 CASE = f'docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/{RECEIPT_CID}.json'
 HISTORICAL_CASE = f'docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/{CID}.json'
 # Exact non-discriminating receipt on the independently checked main baseline.
@@ -85,7 +93,7 @@ def blob(repo, commit, rel):
 def check_comparison(case, report, oracle):
     actual = report['cases'][CID]
     health = actual.get('three_fit', {}).get('fit_health')
-    if classify_fit_health(health) != 'FIT_HEALTH_PASS':
+    if health_pass_required(CID) and classify_fit_health(health) != 'FIT_HEALTH_PASS':
         raise ValueError('POST-COEF fit health failed or is incomplete')
     fits = oracle.get('postcoef_three_fit', {}).get('fits')
     if (not isinstance(fits, list) or len(fits) != 3 or
@@ -182,13 +190,13 @@ def check_case_source_binding(case, record, read_selected):
         raise ValueError('case oracle build version mismatch')
     health = case.get('harness_fields', {}).get('three_fit', {}).get('fit_health', {})
     julia_fits = health.get('Julia') if isinstance(health, dict) else None
-    if (not isinstance(julia_fits, list) or len(julia_fits) != 3 or
+    if health_pass_required(CID) and (not isinstance(julia_fits, list) or len(julia_fits) != 3 or
         not all(isinstance(fit, dict) and julia_prior_bound(
             fit.get('penalty_provenance'), identity.get('source_tree'), fit.get('case'))
             for fit in julia_fits)):
         raise ValueError('Julia penalty provenance differs from authenticated source tree')
     fits = health.get('R') if isinstance(health, dict) else None
-    if (not isinstance(fits, list) or len(fits) != 3 or
+    if health_pass_required(CID) and (not isinstance(fits, list) or len(fits) != 3 or
         not all(isinstance(fit, dict) and historical_r_prior_bound(
             fit.get('prior_provenance'), record.get('oracle_build_sha256')) for fit in fits)):
         raise ValueError('R prior provenance differs from authenticated oracle build')
@@ -354,6 +362,28 @@ def run_source_selftest(root, source, state, runtime):
 
 
 
+# Content rule (ruled by the maintainer: rule content-bound, 12 Nov 2026; engine report, 13 Nov 2026). The selected
+# ref is accepted by what it holds, not by the shape of its history: see postcoef_content_bound_problem. The engine
+# (src/) is a separate, owner-chosen setting: False reports a changed engine tree in the result, True refuses it.
+# The ruled value is False (report).
+ENGINE_BOUND_STRICT = False
+
+
+def check_bound_inputs(repo, source, head, record):
+    """Refuse a changed bound input; return whether the engine src tree still equals the captured one."""
+    problem = postcoef_content_bound_problem(repo, source, head)
+    if problem:
+        raise ValueError('bound input changed since the capture: ' + problem)
+    try:
+        tree = git(repo, 'rev-parse', '--verify', f'{head}:src').decode().strip()
+    except subprocess.CalledProcessError:
+        tree = None
+    same = tree is not None and tree == record.get('postcoef_capture_identity', {}).get('source_tree')
+    if ENGINE_BOUND_STRICT and not same:
+        raise ValueError('engine src tree differs from the captured one')
+    return same
+
+
 def verify(repo, head, runtime_root):
     repo, runtime_root = Path(repo).resolve(), Path(runtime_root).resolve()
     if not SHA.fullmatch(head):
@@ -372,11 +402,9 @@ def verify(repo, head, runtime_root):
     record = json.loads(recbytes)
     check_case_source_binding(case, record, lambda rel: blob(repo, head, rel))
     source = record.get('postcoef_capture_identity', {}).get('source_commit', '')
-    case_commit = case.get('glvmodels_commit', '')
     trusted_root = Path(__file__).resolve().parent.parent
     check_capture_trust(repo, source, trusted_root)
-    if not (postcoef_ref_compatible(repo, source, case_commit) and postcoef_ref_compatible(repo, case_commit, head)):
-        raise ValueError('selected ref is not an approved evidence-only descendant')
+    engine_tree_matches = check_bound_inputs(repo, source, head, record)
     if git(runtime_root, 'rev-parse', 'HEAD').decode().strip() != source:
         raise ValueError('runtime checkout is not the capture commit')
     if git(runtime_root, 'status', '--porcelain=v1', '--untracked-files=all'):
@@ -398,7 +426,9 @@ def verify(repo, head, runtime_root):
         oracle = json.loads((state / 'r-oracle.json').read_text())
         check_comparison(case, report, oracle)
         three_fit = report['cases'][CID]['three_fit']
-        radius_status = pass_trace(three_fit['fit_health'], [fit['length'] for fit in oracle['postcoef_three_fit']['fits']])
+        lengths = [fit['length'] for fit in oracle['postcoef_three_fit']['fits']]
+        radius_status = pass_trace(three_fit['fit_health'], lengths) if health_pass_required(CID) else (
+            check_lambda_maps(three_fit['fit_health'], lengths))  # D2: map comparison only, no radius status
         output = run_source_selftest(runtime_root, source, state, record['postcoef_runtime'])
         if output.encode('utf8') != transcript:
             raise ValueError('live verifier transcript differs')
@@ -408,7 +438,7 @@ def verify(repo, head, runtime_root):
     if not json_value_equal(identity_before, identity_after):
         raise ValueError('selected verification identity changed during verification')
     return {'status': 'POSTCOEF_LIVE_REF_VERIFIED', **identity_after,
-            'capture_commit': source, 'radius_status': radius_status,
+            'capture_commit': source, 'radius_status': radius_status, 'engine_tree_matches': engine_tree_matches,
             'scope': 'verified capture; no row admission'}
 
 

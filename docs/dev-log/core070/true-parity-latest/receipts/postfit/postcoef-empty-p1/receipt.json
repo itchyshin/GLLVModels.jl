@@ -1,0 +1,604 @@
+{
+  "status": "PASS",
+  "scope": "CORE070_POSTFIT_POLICY_BATCH",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract_sha256": "ebfdb3fc041c22a35026b4f7d189312c2b47750050d83a9e9ddc3f32cad37876",
+  "source_pins": {
+    "R/vcov-coef.R": "7092603b1d86e5fcaf030e2e0d2c39a27febb08ffea9f46a5390954f116b4a04",
+    "R/methods-gllvmTMB.R": "6c32924b415646697ab4e471fda8b83108e416d662ba6e607bbeba335dd21616",
+    "R/z-confint-gllvmTMB.R": "0e995245ce1f0b5c9c5d1676bec982709728e20c980b274d9f4499ea6c6c7a53",
+    "R/predictive-diagnostics.R": "2a6775ab9e21b036c994864316b8addf6e97957d8a3961b841f6bc519862c029"
+  },
+  "source_unchanged": true,
+  "case_count": 15,
+  "negative_control_count": 2,
+  "expected_case_ids": ["CORE070-POSTFIT-COEF-EMPTY-NATIVE", "CORE070-POSTFIT-COEF-NAMED-NATIVE", "CORE070-POSTFIT-CONFINT-METHODS-WALD-NATIVE", "CORE070-POSTFIT-FITTED-DEFAULT-NATIVE", "CORE070-POSTFIT-LOGLIK-DF-NATIVE", "CORE070-POSTFIT-LOGLIK-NOBS-NATIVE", "CORE070-POSTFIT-LOGLIK-VALUE-NATIVE", "CORE070-POSTFIT-NOBS-COUNT-NATIVE", "CORE070-POSTFIT-NOBS-FALLBACK-NATIVE", "CORE070-POSTFIT-PREDICT-DEFAULT-NATIVE", "CORE070-POSTFIT-RE-FORM-FULL-NATIVE", "CORE070-POSTFIT-RESIDUAL-CONDITIONAL-NATIVE", "CORE070-POSTFIT-RESIDUAL-SCALES-NATIVE", "CORE070-POSTFIT-RESIDUAL-TYPES-NATIVE", "CORE070-POSTFIT-SIMULATE-DEFAULT-NATIVE"],
+  "negative_control_case_ids": ["NEG-COEF-SHIFTED", "NEG-LOGLIK-SHIFTED"],
+  "julia_exit_code": 0,
+  "julia_elapsed_seconds": 61.3857,
+  "julia_results_sha256": "976250cfa6a4295385c0e192acdb03a7502b25dfbfa4de6283e7bbaf7d730a28",
+  "raw_sha256": "e38b7b81ff3438f5c1d0c725ae6f7e94371c149271e9f70d385d3bf4785fbedc",
+  "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "r_version": "R version 4.6.1 (2026-06-24)",
+  "gllvmTMB_version": "0.7.1",
+  "frozen_library": "/home/snakagaw/hsq_work/codex-p1-postcoef-current-20261104/totoro-build/library",
+  "source_pin": {
+    "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+    "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+    "installed_tree_sha256": "c7a21d29b958e3ebc5778e07fec988366d8f17918a77059701cd50e2db23bb48",
+    "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+    "namespace_sha256": "c1e91cd75bf29966932bcaec4a2b15234b23c7f60e1e39b3ce0917c6537f0f0c",
+    "version": "0.7.1",
+    "marker_path": "/home/snakagaw/hsq_work/codex-p1-postcoef-current-20261104/totoro-build/library/gllvmTMB/CORE070_SOURCE_PIN.toml",
+    "marker_sha256": "7ea067df756087a1f863c0f8355c89b7f702fd152030c220d344e6d7ea15c355"
+  },
+  "postcoef_capture_identity": {
+    "source_commit": "3abb2a429893d5355ef940a2bc31c0142b1a386e",
+    "source_tree": "d240d8f6ea2e936c5716dfbe83124a82d49c0f4c",
+    "r_oracle_sha256": "5a346dbdaf4c0c75742ed559b7fed21a87971fb1f73c74bb8a4016cec16b4acb",
+    "julia_runner_sha256": "7f3f9339905a9b89118cf535f299747e90ae507523fe5bcb71ab2614664e0c0c"
+  },
+  "postcoef_runtime": {
+    "stdlib_root": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10",
+    "project_sha256": "f184cd03258c6e5367f6df73cda39cce514fbc53096805f2937090bf5e12deb7",
+    "preferences_sha256": "absent",
+    "load_path": "@:@stdlib",
+    "julia_version": "1.10.12",
+    "python_executable_path": "/usr/bin/python3.12",
+    "python_executable_sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "depot_inventory": [
+      {
+        "name": "OpenLibm_jll",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/OpenLibm_jll",
+        "uuid": "05823500-19ac-5b8b-9628-191a04bc5112",
+        "tree_hash": null
+      },
+      {
+        "name": "Statistics",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Statistics",
+        "uuid": "10745b16-79ce-11e8-11f9-7d13ad32a3b2",
+        "tree_hash": null
+      },
+      {
+        "name": "ShiftedArrays",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/ShiftedArrays/5twHM",
+        "uuid": "1277b4bf-5013-50f5-be3d-901d8477a67a",
+        "tree_hash": "503688b59397b3307443af35cd953a13e8005c16"
+      },
+      {
+        "name": "DiffResults",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/DiffResults/YLo25",
+        "uuid": "163ba53b-c6d8-5494-b064-1a9d43ac40c5",
+        "tree_hash": "782dd5f4561f5d267313f23853baaaa4c52ea621"
+      },
+      {
+        "name": "ConstructionBase",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/ConstructionBase/Q7t1Q",
+        "uuid": "187b0558-2788-49d3-abe0-74a17ed4e7c9",
+        "tree_hash": "b1bc10667320dd5367aff450a992c951ea38fbbc"
+      },
+      {
+        "name": "Reexport",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Reexport/OxbHO",
+        "uuid": "189a3867-3050-52da-a836-e630ba90ab69",
+        "tree_hash": "45e428421666073eab6f2da5c9d310d99bb12f9b"
+      },
+      {
+        "name": "MacroTools",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/MacroTools/Ar0jT",
+        "uuid": "1914dd2f-81c6-5fcd-8719-6d5c9610ff09",
+        "tree_hash": "1e0228a030642014fe5cfe68c2c0a818f9e3f522"
+      },
+      {
+        "name": "FillArrays",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/FillArrays/fZfJg",
+        "uuid": "1a297f60-69ca-5386-bcde-b61e274b549b",
+        "tree_hash": "889174c6aef868dc0e5f083dd6d94b4d3b786d7f"
+      },
+      {
+        "name": "StaticArraysCore",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/StaticArraysCore/Tb65J",
+        "uuid": "1e83bf80-4336-4d27-bf5d-d5a4f845583c",
+        "tree_hash": "bf7e2d0d9ed9ac2a652fd598c0f784910cc759f2"
+      },
+      {
+        "name": "QuadGK",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/QuadGK/5mgi5",
+        "uuid": "1fd47b50-473d-5c70-9696-f719f8f3bcdc",
+        "tree_hash": "5e8e8b0ab68215d7a2b14b9921a946fee794749e"
+      },
+      {
+        "name": "Preferences",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Preferences/Q68Ah",
+        "uuid": "21216c6a-2e73-6563-6e65-726566657250",
+        "tree_hash": "aef1987d90dcc2e2cbd919ad10b2d25bcce4f418"
+      },
+      {
+        "name": "SpecialFunctions",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/SpecialFunctions/K500j",
+        "uuid": "276daf66-3868-5448-9aa4-cd146d93841b",
+        "tree_hash": "d1a08b3cb5d1470a2b6dc98ba644f1436d5a740f"
+      },
+      {
+        "name": "StatsBase",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/StatsBase/TkBxP",
+        "uuid": "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91",
+        "tree_hash": "adb9da019510162e67a4493fc235c23203d8b09e"
+      },
+      {
+        "name": "Base64",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Base64",
+        "uuid": "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f",
+        "tree_hash": null
+      },
+      {
+        "name": "LogExpFunctions",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/LogExpFunctions/iNqo2",
+        "uuid": "2ab3a3ac-af41-5b50-aa03-7779005ae688",
+        "tree_hash": "13ca9e2586b89836fd20cccf56e57e2b9ae7f38f"
+      },
+      {
+        "name": "SparseArrays",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/SparseArrays",
+        "uuid": "2f01184e-e22b-5df5-ae63-d93ebab69eaf",
+        "tree_hash": null
+      },
+      {
+        "name": "Distributions",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Distributions/muVOJ",
+        "uuid": "31c24e10-a181-5473-b8eb-7969acd0382f",
+        "tree_hash": "478d3450b1cc56521d1d99ad923acf43f8813c6d"
+      },
+      {
+        "name": "HypergeometricFunctions",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/HypergeometricFunctions/Znvj4",
+        "uuid": "34004b35-14d8-5ef3-9330-4cdb6864b03a",
+        "tree_hash": "c28dceeadc1c9c699656a3ac9d63f79cfaa17472"
+      },
+      {
+        "name": "Compat",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Compat/FiBO2",
+        "uuid": "34da2185-b29b-5c13-b0c7-acf172513d20",
+        "tree_hash": "9d8a54ce4b17aa5bdce0ea5c34bc5e7c340d16ad"
+      },
+      {
+        "name": "InverseFunctions",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/InverseFunctions/RGR1r",
+        "uuid": "3587e190-3f89-42d0-90ee-14403ec27112",
+        "tree_hash": "5cc6ad3e2bfc75a11eed92632ee341d37f4a4536"
+      },
+      {
+        "name": "TableTraits",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/TableTraits/o8VMV",
+        "uuid": "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c",
+        "tree_hash": "c06b2f539df1c6efa794486abfb6ed2022561a39"
+      },
+      {
+        "name": "LinearAlgebra",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/LinearAlgebra",
+        "uuid": "37e2e46d-f89d-539d-b4ee-838fcccc9c8e",
+        "tree_hash": null
+      },
+      {
+        "name": "CommonSolve",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/CommonSolve/zocpq",
+        "uuid": "38540f10-b2f7-11e9-35d8-d573e4eb0ff2",
+        "tree_hash": "6c389fa857f6ca5a95474b52a52023fd77f24cb7"
+      },
+      {
+        "name": "StatsModels",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/StatsModels/OasXV",
+        "uuid": "3eaba693-59b7-5ba5-a881-562e759f1c8d",
+        "tree_hash": "0db41c4e0d9f3fa195395a6401a8290752c9cd3d"
+      },
+      {
+        "name": "REPL",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/REPL",
+        "uuid": "3fa0cd96-eef1-5676-8a61-b3b8758bbffb",
+        "tree_hash": null
+      },
+      {
+        "name": "Optim",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Optim/gmigl",
+        "uuid": "429524aa-4258-5aef-a3af-852621145aeb",
+        "tree_hash": "48968edaf014f67e58fe4c8a4ce72d392aed3294"
+      },
+      {
+        "name": "PtrArrays",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/PtrArrays/m7fuD",
+        "uuid": "43287f4e-b6f4-7ad1-bb20-aadabca52c3d",
+        "tree_hash": "4fbbafbc6251b883f4d2705356f3641f3652a7fe"
+      },
+      {
+        "name": "OpenBLAS_jll",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/OpenBLAS_jll",
+        "uuid": "4536629a-c528-5b80-bd46-f80d51c5b363",
+        "tree_hash": null
+      },
+      {
+        "name": "SuiteSparse",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/SuiteSparse",
+        "uuid": "4607b0f0-06f3-5cda-b6b1-a6196a1729e9",
+        "tree_hash": null
+      },
+      {
+        "name": "ADTypes",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/ADTypes/0z2Sm",
+        "uuid": "47edcb42-4c32-4615-8424-f2b9edc5f35b",
+        "tree_hash": "629de23e1c16911b439dabd2303c08af9575b226"
+      },
+      {
+        "name": "StatsFuns",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/StatsFuns/Qq3vY",
+        "uuid": "4c63d2b9-4356-54db-8cca-17b64c39e42c",
+        "tree_hash": "91a5737baed20ee31f3faea0e51f57461f6a689e"
+      },
+      {
+        "name": "EnumX",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/EnumX/CGSQY",
+        "uuid": "4e289a0a-7415-4d19-859d-a7e5c4648b56",
+        "tree_hash": "c49898e8438c828577f04b92fc9368c388ac783c"
+      },
+      {
+        "name": "Unicode",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Unicode",
+        "uuid": "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5",
+        "tree_hash": null
+      },
+      {
+        "name": "ArrayInterface",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/ArrayInterface/TT5ip",
+        "uuid": "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9",
+        "tree_hash": "1aec1ff0dcaa83a484e7f72097562fa3102c6722"
+      },
+      {
+        "name": "Artifacts",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Artifacts",
+        "uuid": "56f22d72-fd6d-98f1-02f0-08ddc0907c33",
+        "tree_hash": null
+      },
+      {
+        "name": "Sockets",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Sockets",
+        "uuid": "6462fe0b-24de-5631-8697-dd941f90decc",
+        "tree_hash": null
+      },
+      {
+        "name": "AliasTables",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/AliasTables/N6kwW",
+        "uuid": "66dad0bd-aa9a-41b7-9441-69ab47430ed8",
+        "tree_hash": "9876e1e164b144ca45e9e3198d0b689cadfed9ff"
+      },
+      {
+        "name": "JLLWrappers",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/JLLWrappers/Kp7TC",
+        "uuid": "692b3bcd-3c85-4b1f-b108-f13ce0eb3210",
+        "tree_hash": "7204148362dafe5fe6a273f855b8ccbe4df8173e"
+      },
+      {
+        "name": "FiniteDiff",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/FiniteDiff/Z4dvL",
+        "uuid": "6a86dc24-6348-571c-b903-95158fe2bd41",
+        "tree_hash": "5031f23e040bf17082e5b52422d77b5e844eefb1"
+      },
+      {
+        "name": "NaNMath",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/NaNMath/p7gxa",
+        "uuid": "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3",
+        "tree_hash": "676c0f1c1c34224d6869675047a54b42fdc7b8c5"
+      },
+      {
+        "name": "Rmath",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Rmath/SBB4Z",
+        "uuid": "79098fc4-a85e-5d69-aa6a-4863f24498fa",
+        "tree_hash": "5b3d50eb374cea306873b371d3f8d3915a018f0b"
+      },
+      {
+        "name": "Adapt",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Adapt/xsQQk",
+        "uuid": "79e6a3ab-5dfb-504d-930d-738a2a938a0e",
+        "tree_hash": "eec8a0ad4e4b673afba213931504c360fffb8f97"
+      },
+      {
+        "name": "Accessors",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Accessors/785gB",
+        "uuid": "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697",
+        "tree_hash": "8c0bc12397dabf5d2dfc4b5763ec463854cc44d3"
+      },
+      {
+        "name": "IteratorInterfaceExtensions",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/IteratorInterfaceExtensions/NZdaj",
+        "uuid": "82899510-4779-5014-852e-03e436cf321d",
+        "tree_hash": "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
+      },
+      {
+        "name": "StatsAPI",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/StatsAPI/b8dYo",
+        "uuid": "82ae8749-77ed-4fe6-ae5f-f523153014b0",
+        "tree_hash": "178ed29fd5b2a2cfc3bd31c13375ae925623ff36"
+      },
+      {
+        "name": "PositiveFactorizations",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/PositiveFactorizations/BN7VB",
+        "uuid": "85a6dd25-e78a-55b7-8502-1745935b8125",
+        "tree_hash": "17275485f373e6673f7e7f97051f703ed5b15b20"
+      },
+      {
+        "name": "DataStructures",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/DataStructures/IwRP2",
+        "uuid": "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8",
+        "tree_hash": "b0bc6d2cad1fed8b7fd59a1551a991cb3d2809e6"
+      },
+      {
+        "name": "Distributed",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Distributed",
+        "uuid": "8ba89e20-285c-5b6f-9357-94700520ee1b",
+        "tree_hash": null
+      },
+      {
+        "name": "libblastrampoline_jll",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/libblastrampoline_jll",
+        "uuid": "8e850b90-86db-534c-a0d3-1478176c7d93",
+        "tree_hash": null
+      },
+      {
+        "name": "Libdl",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Libdl",
+        "uuid": "8f399da3-3557-5675-b5ff-fb832c97cbdb",
+        "tree_hash": null
+      },
+      {
+        "name": "PDMats",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/PDMats/ZCpqF",
+        "uuid": "90014a1f-27ba-587c-ab20-58faa44d9150",
+        "tree_hash": "123266c25174ef6c8d4718920abc206452cf8de6"
+      },
+      {
+        "name": "IrrationalConstants",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/IrrationalConstants/sUNmT",
+        "uuid": "92d709cd-6900-40b7-9082-c6be49f344b6",
+        "tree_hash": "d22e8bdb3f03c300a103ff23c0dd5a654c6701de"
+      },
+      {
+        "name": "Random",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Random",
+        "uuid": "9a3f8284-a2c9-5f02-9a11-845980a1fd5c",
+        "tree_hash": null
+      },
+      {
+        "name": "DataAPI",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/DataAPI/atdEM",
+        "uuid": "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a",
+        "tree_hash": "abe83f3a2f1b857aac70ef8b269080af17764bbe"
+      },
+      {
+        "name": "Serialization",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Serialization",
+        "uuid": "9e88b42a-f829-5b0c-bbe9-9e923198166b",
+        "tree_hash": null
+      },
+      {
+        "name": "Future",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Future",
+        "uuid": "9fa8497b-333b-5362-9e8d-4d0656e87820",
+        "tree_hash": null
+      },
+      {
+        "name": "Gamma",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Gamma/GjRkn",
+        "uuid": "a0844989-3bd2-4988-8bea-c9407ab0941b",
+        "tree_hash": "86f86b6168a016ed88e4ae4e64577b98c3b59e8e"
+      },
+      {
+        "name": "DifferentiationInterface",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/DifferentiationInterface/sdmMR",
+        "uuid": "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63",
+        "tree_hash": "4b6690f3770daf596a0a092203a2e6130d34c53b"
+      },
+      {
+        "name": "SortingAlgorithms",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/SortingAlgorithms/ZonD6",
+        "uuid": "a2af1166-a08f-5f64-846c-94a0d3cef48c",
+        "tree_hash": "13cd91cc9be159e3f4d95b857fa2aa383b53772a"
+      },
+      {
+        "name": "CompositionsBase",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/CompositionsBase/IN0VV",
+        "uuid": "a33af91c-f02d-484b-be07-31d278c5ca2b",
+        "tree_hash": "802bb88cd69dfd1509f6670416bd4434015693ad"
+      },
+      {
+        "name": "Dates",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Dates",
+        "uuid": "ade2ca70-3891-5945-98fb-dc099432e06a",
+        "tree_hash": null
+      },
+      {
+        "name": "PrecompileTools",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/PrecompileTools/L8A3n",
+        "uuid": "aea7be01-6a6a-4083-8856-8a6e6704d82a",
+        "tree_hash": "5aa36f7049a63a1528fe8f7c3f2113413ffd4e1f"
+      },
+      {
+        "name": "DiffRules",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/DiffRules/8qWhQ",
+        "uuid": "b552c78f-8df3-52c6-915a-8e097449b14b",
+        "tree_hash": "3d20476f68b524304f3fde071c3f34a559965c84"
+      },
+      {
+        "name": "InteractiveUtils",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/InteractiveUtils",
+        "uuid": "b77e0a4c-d291-57a0-90e8-8db25a27a240",
+        "tree_hash": null
+      },
+      {
+        "name": "OrderedCollections",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/OrderedCollections/sd1va",
+        "uuid": "bac558e1-5e72-5ebc-8fee-abe8a469f55d",
+        "tree_hash": "b079a6affebde167dad8ffe0d670b53917fbcb68"
+      },
+      {
+        "name": "CommonSubexpressions",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/CommonSubexpressions/nws5L",
+        "uuid": "bbf7d656-a473-5ed7-a52c-81e309532950",
+        "tree_hash": "cda2cfaebb4be89c9084adaca7dd7333369715c5"
+      },
+      {
+        "name": "Tables",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Tables/qGyu7",
+        "uuid": "bd369af6-aec1-5ad0-b16a-f7cc5008161c",
+        "tree_hash": "a94d9bdda1b7bed0046cea645639ab3f62196fac"
+      },
+      {
+        "name": "SuiteSparse_jll",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/SuiteSparse_jll",
+        "uuid": "bea87d4a-7f5b-5778-9afe-8cc45184846c",
+        "tree_hash": null
+      },
+      {
+        "name": "UUIDs",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/UUIDs",
+        "uuid": "cf7118a7-6976-5b1a-9a39-7adc72f591a4",
+        "tree_hash": null
+      },
+      {
+        "name": "LineSearches",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/LineSearches/2BCHN",
+        "uuid": "d3d80556-e9d4-5f37-9878-2ab0fcc64255",
+        "tree_hash": "9ea3422d03222c6de679934d1c08f0a99405aa03"
+      },
+      {
+        "name": "NLSolversBase",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/NLSolversBase/n7XXO",
+        "uuid": "d41bc354-129a-5804-8e4c-c37616107c6c",
+        "tree_hash": "25a6638571a902ecfb1ae2a18fc1575f86b1d4df"
+      },
+      {
+        "name": "Markdown",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Markdown",
+        "uuid": "d6f4376e-aef5-505a-96c1-9c027394607a",
+        "tree_hash": null
+      },
+      {
+        "name": "Printf",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/Printf",
+        "uuid": "de0858da-6303-5e67-8744-51eddeeeb8d7",
+        "tree_hash": null
+      },
+      {
+        "name": "Missings",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Missings/k2ZMQ",
+        "uuid": "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28",
+        "tree_hash": "d9d20d6eb2a3290ba5c70a1c013b45305cc39c9e"
+      },
+      {
+        "name": "DataValueInterfaces",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/DataValueInterfaces/0j6Kp",
+        "uuid": "e2d170a0-9d28-54be-80f0-106bbe20a464",
+        "tree_hash": "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
+      },
+      {
+        "name": "CompilerSupportLibraries_jll",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/CompilerSupportLibraries_jll",
+        "uuid": "e66e0078-7015-5450-92f7-15fbd957f2ae",
+        "tree_hash": null
+      },
+      {
+        "name": "SHA",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/SHA",
+        "uuid": "ea8e919c-243c-51af-8825-aaa63cd721ce",
+        "tree_hash": null
+      },
+      {
+        "name": "Setfield",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Setfield/ZbR7D",
+        "uuid": "efcf1570-3423-57d1-acb7-fd33fddbac46",
+        "tree_hash": "89880a2cca5cabc68c9023f58e544beda1d2fc1f"
+      },
+      {
+        "name": "OpenSpecFun_jll",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/OpenSpecFun_jll/4QIOW",
+        "uuid": "efe28fd5-8261-553b-a9e1-b2916fc3738e",
+        "tree_hash": "1346c9208249809840c91b26703912dff463d335"
+      },
+      {
+        "name": "Roots",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Roots/L6NpJ",
+        "uuid": "f2b01f46-fcfa-551c-844a-d8ac1e96c665",
+        "tree_hash": "15f266d7b3039ca0608d2c53bb32225b96932310"
+      },
+      {
+        "name": "Rmath_jll",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/Rmath_jll/Ad6Tb",
+        "uuid": "f50d1b31-88e8-58de-be2c-1cc44531875f",
+        "tree_hash": "6d40b2fe70437b01397d2a4d5b020008da4e7019"
+      },
+      {
+        "name": "ForwardDiff",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/ForwardDiff/X74OO",
+        "uuid": "f6369f11-7733-5829-9624-2563aa707210",
+        "tree_hash": "afb7c51ac63e40708a3071f80f5e84a752299d4f"
+      },
+      {
+        "name": "TOML",
+        "source": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/share/julia/stdlib/v1.10/TOML",
+        "uuid": "fa267f1f-6049-4f14-aa54-33bafae1ed76",
+        "tree_hash": null
+      },
+      {
+        "name": "DocStringExtensions",
+        "source": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot/packages/DocStringExtensions/zNis6",
+        "uuid": "ffbed154-4ef7-542d-bbb7-c09d3a79fcae",
+        "tree_hash": "7442a5dfe1ebb773c29cc2962a8980f47221d76c"
+      }
+    ],
+    "depot_checker_sha256": "ac2d86b8f11d9882d0692d44e6265a29eceedb43eba5580deaf9ec9ea87a4fa7",
+    "depot_path": "/home/snakagaw/hsq_work/parity-gllvm-1110-w25-postcoef/depot",
+    "depot_check": "{\"checked\": 58, \"excluded_coverage_files\": 0, \"exclusions\": [], \"status\": \"PACKAGE_SOURCE_TREES_MATCH\", \"stdlib_checked\": 26}",
+    "manifest_sha256": "4af2c2b2aa710b4cae2cb051e702b4afb07a710ef7d67695e87acb915a79d203",
+    "preloads": [
+      {
+        "sha256": "a88a96958909da84881a565c8ea219535425db20a184b09d25968e45212ced94",
+        "path": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/lib/julia/libunwind.so.8.0.1"
+      }
+    ],
+    "executable_sha256": "1c7ea3ba2e49e6c4a96ca8b80e34f984f65c1dbcdc1423f33a63f2bc14a69a5b",
+    "executable_path": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/bin/julia"
+  },
+  "julia_launcher_path": "/home/snakagaw/.julia/juliaup/julia-1.10.12+0.x64.linux.gnu/bin/julia",
+  "julia_launcher_sha256": "1c7ea3ba2e49e6c4a96ca8b80e34f984f65c1dbcdc1423f33a63f2bc14a69a5b",
+  "r_runner_sha256": "862f0ed818f60753334d99e4ea0d8e49cf36b552bc1ad4d7ab79ef0e656f160e",
+  "r_library_sha256": "33579a54ace18f5f0f5369c1263b85afc22c4fde5383f5e6ee0a274f51ac58b5",
+  "r_library_path": "/home/snakagaw/hsq_work/codex-p1-postcoef-current-20261104/totoro-build/library/gllvmTMB/libs/gllvmTMB.so",
+  "r_executable_path": "/usr/lib/R/bin/exec/R",
+  "r_executable_sha256": "48bf81f619b0bc65edbdee3a714415017e854cd0b6bcee97b6829076a4e95fca",
+  "r_platform": "x86_64-pc-linux-gnu",
+  "r_full_version": "R version 4.6.1 (2026-06-24) -- \"Happy Hop\"",
+  "oracle_build_sha256": "33af3b5b91c03db4cb8a1251d844a0f77fbae2a41d0f18f47390e34d06fa84de",
+  "oracle_builder_sha256": "f5ec8c101190ab1a27a4237755acec86100a820e78a0e33174934a3050238119",
+  "oracle_verify_preload_sha256": "f97d64793699248715d8ab2e5d78ac8de2d85d2ba9c07b05491cd4788aff12f5",
+  "oracle_verify_before_sha256": "f97d64793699248715d8ab2e5d78ac8de2d85d2ba9c07b05491cd4788aff12f5",
+  "oracle_verify_after_sha256": "f97d64793699248715d8ab2e5d78ac8de2d85d2ba9c07b05491cd4788aff12f5",
+  "julia_stdout_sha256": "0f9410a34eba833430b872e4f8653779a3f08f32e46d6d629e3ee31b17b0015f",
+  "julia_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "postcoef_controls": {
+    "always_empty": {
+      "mode": "always_empty",
+      "exit_code": 1,
+      "passed": true,
+      "report_sha256": "39b5d19fe95f7e90b09f3fb242557ee18b30936b2bf95c62757e6c4bea20629a",
+      "stdout_sha256": "4c92484dbd24d91e4f46ce188027e6d2b0500d1d162caa6a1146afbdbe7f748b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    "spurious_coefficient": {
+      "mode": "spurious_coefficient",
+      "exit_code": 1,
+      "passed": true,
+      "report_sha256": "c5168318fa0764da1ce3d5fad98be92b3ffb51647bac4da17fcbb80048b4688f",
+      "stdout_sha256": "4c92484dbd24d91e4f46ce188027e6d2b0500d1d162caa6a1146afbdbe7f748b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exit_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    }
+  }
+}

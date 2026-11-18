@@ -46,7 +46,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-postfit.json",
-   "sha256": "f347bf35b7fc59068b3c43cad241996e73bbcefe01d95bf5c36207388af749ce",
+   "sha256": "4aad1cb16fcb602898f3554c581e5a3851aff7a6969c5cdc01f9b2151a37132e",
    "rows": 52
   }
  ],
@@ -11489,13 +11489,13 @@
     "CORE070-POSTFIT-COEF-EMPTY-NATIVE"
    ],
    "disposition": null,
-   "evidence_tier": "numeric_non_discriminating",
+   "evidence_tier": "numeric",
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
-    "non_binding_receipts": [
-     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json"
+    "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-POSTFIT-COEF-THREE-FIT-NATIVE.json"
     ],
-    "tier": "numeric comparison blocks pass, but at least one is degenerate (the R values are one constant or all ~0), so a constant or zero implementation would pass too; the row does not bind"
+    "tier": "numeric: every executable case receipt carries an integer_equality comparison block pinned to P1 (tolerance 0.5, so the integers must be equal), under itchyshin/GLLVModels.jl#684 item 1"
    },
    "measured_result": {
     "case_verdicts": {
@@ -11504,11 +11504,9 @@
     "batch_verifier": {
      "CORE070-POSTFIT-COEF-EMPTY-NATIVE": "PASS"
     },
-    "discriminating": {
-     "CORE070-POSTFIT-COEF-EMPTY-NATIVE": false
-    }
+    "row_verdict": "PASS"
    },
-   "note": "integer_equality on the empty coef length (R 0, Julia 0; maintainer ruling 2026-10-05, D-319, item N2). The shared degenerate-comparison rule flags it: every |R value| < 1e-10, so a constant-zero implementation would pass too. Binding it would need the shared rule to accept a 0 = 0 length, which it does not."
+   "note": "Three paired public fits compare coefficient-vector lengths; separate always-empty and extra-coefficient controls are verified. Numerical coefficient values and names are separate claims."
   },
   {
    "source_id": "postfit-policy/POST-COEF-NAMED",

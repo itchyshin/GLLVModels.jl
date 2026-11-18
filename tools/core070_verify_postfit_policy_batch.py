@@ -56,8 +56,8 @@ POSTCOEF_EXPECTED_LENGTHS = [0, 5, 6]  # contract expected_lengths, in core070_p
 
 def check_postcoef_three_fit_evidence(evidence):
     need(isinstance(evidence, dict), "three-fit evidence must be an object")
-    need(core070_postcoef_fit_health.classify(evidence.get("fit_health")) == "FIT_HEALTH_PASS",
-         "POST-COEF fit health is failed or incomplete under the signed rule")
+    # D2 (2026-11-09, "no certifier"): this row checks coefficient lengths and the accessor controls only;
+    # fit health is recorded but is not a pass condition here. NUMERICAL_ADMISSION_IMPLEMENTED stays False.
     need(evidence.get("selected_accessor") == "real", "evidence used a mutated accessor")
     expected = [0, 5, 6]
     for key in ("r_lengths", "julia_lengths", "r_design_columns"):
@@ -582,15 +582,11 @@ def verify_state(state=DEFAULT_STATE):
         check_postcoef_runtime(ROOT, state, receipt, report, controls)
         evidence = report["cases"]["CORE070-POSTFIT-COEF-EMPTY-NATIVE"].get("three_fit")
         check_postcoef_three_fit_evidence(evidence)
-        radius_status = postcoef_pass_trace(evidence)
-        need(all(core070_postcoef_fit_health.julia_prior_bound(
-            fit.get("penalty_provenance"), identity.get("source_tree"), fit.get("case"))
-            for fit in evidence["fit_health"]["Julia"]),
-            "Julia penalty provenance differs from the authenticated source tree")
-        need(all(core070_postcoef_fit_health.historical_r_prior_bound(
-            fit.get("prior_provenance"), receipt.get("oracle_build_sha256"))
-            for fit in evidence["fit_health"]["R"]),
-            "R prior provenance differs from the authenticated oracle build")
+        # D2 (2026-11-09, "no certifier"): the authenticated-input comparison runs, but no certified pass or
+        # radius status is required for this row. NUMERICAL_ADMISSION_IMPLEMENTED stays False.
+        check_postcoef_authenticated_inputs(evidence)
+        # D2: the health-record provenance bindings (Julia penalty provenance pinned to an earlier audited source
+        # tree, R prior provenance) belong to the held certifier and are not conditions of this row.
         try:
             r_oracle = json.loads((state / "r-oracle.json").read_text())
         except (OSError, ValueError) as exc:

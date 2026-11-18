@@ -37,3 +37,33 @@ function _shard_indices(n::Integer, k::Integer, N::Integer)
     1 <= k <= N || throw(ArgumentError("k must satisfy 1 <= k <= N, got k=$k, N=$N"))
     return [i for i in 1:n if (i - 1) % N == k - 1]
 end
+
+"""
+    _auto_test_files(testdir::AbstractString) -> Vector{String}
+
+Sorted file names of every `test_*.jl` directly inside `testdir/auto`
+(empty when the directory does not exist). These files are included by
+`runtests.jl` without any entry in its include list or shard table.
+"""
+function _auto_test_files(testdir::AbstractString)
+    dir = joinpath(testdir, "auto")
+    isdir(dir) || return String[]
+    return sort!([f for f in readdir(dir) if startswith(f, "test_") && endswith(f, ".jl")])
+end
+
+"""
+    _auto_shard_of(name::AbstractString, N::Integer) -> Int
+
+Shard (1-based, of `N`) of an auto-discovered test file, from a stable FNV-1a
+hash of its file name. It depends on the name alone: adding or removing another
+file never moves it, and it does not change between Julia versions (unlike
+`Base.hash`). Used for every `N`.
+"""
+function _auto_shard_of(name::AbstractString, N::Integer)
+    N >= 1 || throw(ArgumentError("N must be >= 1, got N=$N"))
+    h = 0x811c9dc5
+    for b in codeunits(name)
+        h = (h ⊻ b) * 0x01000193
+    end
+    return Int(h % UInt32(N)) + 1
+end

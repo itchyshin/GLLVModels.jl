@@ -804,8 +804,8 @@ def declares_polished_point(j):
     return any(isinstance(o, dict) and o.get("compared_point") == "newton_polished" for o in (j, j.get("comparison")))
 
 
-POSTCOEF_LAUNCHER_SHA256 = '57ad42a6e5b5ba29c705bf79397efbde6ebdcdc53e0833245849daca8cfbe6c2'
-POSTCOEF_GATE_COMMIT = 'b53f8221a6fa78a3efaf57667b51b5acb32aff0d'
+POSTCOEF_LAUNCHER_SHA256 = '15bc3d54ec2ec4d994ac35796a8c2c6556fcc78d5842dc0b24a8b64bd33c55cc'
+POSTCOEF_GATE_COMMIT = '3abb2a429893d5355ef940a2bc31c0142b1a386e'
 POSTCOEF_OFFLINE_TIMEOUT_SECONDS = 180
 POSTCOEF_OFFLINE_OUTER_TIMEOUT_SECONDS = 330
 

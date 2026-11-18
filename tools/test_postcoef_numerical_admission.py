@@ -1940,7 +1940,8 @@ class FourthReviewTests(unittest.TestCase):
         # the emitted outputs name the status (source-level: the full verify paths need a retained capture)
         self.assertIn('"postcoef_radius_status": radius_status', inspect.getsource(verifier.verify_state))
         self.assertIn("'radius_status': radius_status", inspect.getsource(live.verify))
-        self.assertIn('radius_status = postcoef_pass_trace(evidence)', inspect.getsource(verifier.verify_state))
+        # D2: verify_state no longer requires a certified pass for POST-COEF-EMPTY; it still runs the authenticated-input comparison.
+        self.assertIn('check_postcoef_authenticated_inputs(evidence)', inspect.getsource(verifier.verify_state))
         self.assertIn('radius_status = pass_trace(', inspect.getsource(live.verify))
 
     def test_c_a_a_pass_leaves_a_visible_radius_status_trace(self):

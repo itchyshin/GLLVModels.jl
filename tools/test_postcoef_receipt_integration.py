@@ -775,11 +775,9 @@ class EvidenceDescendantTests(unittest.TestCase):
 
     def test_scoreboard_cannot_forge_signature_in_unchanged_status(self):
         rel = "docs/dev-log/core070/true-parity-latest/scoreboard.md"
-        old = (Path(receipt.ROOT) / rel).read_text()
-        lines = old.splitlines()
-        target = next(i for i, line in enumerate(lines) if line.startswith("| postfit-policy-POST-COEF-EMPTY "))
-        lines[target] = lines[target].replace("not bound; cited:", "Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; cited:")
-        changed = "\n".join(lines) + "\n"
+        # Synthetic row: the tracked board has no "not bound" POST-COEF row any more (the row is bound).
+        old = "| postfit-policy-POST-COEF-EMPTY `postfit-policy/POST-COEF-EMPTY` | required_core; cases: example | NON-DISCRIMINATING | not bound; cited: x | family postfit |\n"
+        changed = old.replace("not bound; cited:", "Disposition: DISPOSITION-SIGNED; signed_by: Shinichi Nakagawa; cited:")
         self.assertNotEqual(old, changed)
         self.assertFalse(receipt.postcoef_shared_evidence_safe(rel, old.encode(), changed.encode()))
 
@@ -791,7 +789,7 @@ class EvidenceDescendantTests(unittest.TestCase):
 
     def test_scoreboard_unknown_target_status_rejected(self):
         rel = "docs/dev-log/core070/true-parity-latest/scoreboard.md"
-        old = (Path(receipt.ROOT) / rel).read_bytes()
+        old = b"| postfit-policy-POST-COEF-EMPTY `postfit-policy/POST-COEF-EMPTY` | required_core; cases: example | NON-DISCRIMINATING | none | family postfit |\n"
         changed = old.replace(b"NON-DISCRIMINATING", b"INVENTED-STATUS")
         self.assertFalse(receipt.postcoef_shared_evidence_safe(rel, old, changed))
 

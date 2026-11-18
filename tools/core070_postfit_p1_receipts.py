@@ -71,6 +71,8 @@ Usage (inputs are the raw run directories under local-scratch):
   python3 tools/core070_postfit_p1_receipts.py --apply-twins
   python3 tools/core070_postfit_p1_receipts.py --apply-integer-equality
   python3 tools/core070_postfit_p1_receipts.py --check-twins
+  python3 tools/core070_postfit_p1_receipts.py --ingest-postcoef STATE --expected-source SHA
+  python3 tools/core070_postfit_p1_receipts.py --flip-postcoef-row
 where DIR holds surface-conversion-p1/, wave6-conversion-p1/, wave7-conversion-p1/,
 wave8-conversion-p1/, estimand-rebind-p1/, postfit-policy-p1/, postfit-1-r-p1/,
 postfit-1-julia-p1/, each with its run-commit.json.
@@ -657,8 +659,10 @@ def run_private_capture_selftest(repo, source, state, runtime):
         return proc.stdout
 
 
-def prepare_separate_postcoef_case(state):
-    """Request capture checks and return an unqualified draft, not an attestation."""
+def prepare_separate_postcoef_case(state, transcript_sink=None):
+    """Request capture checks and return an unqualified draft, not an attestation.
+
+    transcript_sink, if a list, receives the private self-test transcript text (the draft keeps only its hash)."""
     state = Path(state)
     if state.is_symlink() or not state.is_dir():
         raise ValueError("capture state must be a directory")
@@ -693,6 +697,8 @@ def prepare_separate_postcoef_case(state):
     if not postcoef_source_compatible(ROOT, identity["source_commit"], head):
         raise ValueError("capture source is not compatible with selected checkout")
     transcript = run_private_capture_selftest(ROOT, identity["source_commit"], state, record.get("postcoef_runtime"))
+    if transcript_sink is not None:
+        transcript_sink.append(transcript)
     harness = report["cases"][COEF_EMPTY_CID]
     r = [fit["length"] for fit in oracle["postcoef_three_fit"]["fits"]]
     j = harness["three_fit"]["julia_lengths"]
@@ -718,6 +724,116 @@ def prepare_separate_postcoef_case(state):
             not postcoef_source_compatible(ROOT, identity["source_commit"], head)):
         raise ValueError("selected source changed during draft preparation")
     return draft
+
+
+# receipt.json field (or postcoef_capture_identity / postcoef_runtime field) -> capture file it must hash.
+POSTCOEF_CAPTURE_HASHES = (("julia_results_sha256", "julia-results.json"), ("raw_sha256", "results.tsv"),
+                           ("diagnostics_sha256", "diagnostics.log"), ("julia_stdout_sha256", "julia-stdout.log"),
+                           ("julia_stderr_sha256", "julia-stderr.log"), ("julia_launcher_sha256", "runner-snapshots/julia-launcher"),
+                           ("r_runner_sha256", "runner-snapshots/core070_postfit_policy_batch.R"),
+                           ("oracle_verify_preload_sha256", "oracle-verify-preload.log"),
+                           ("oracle_verify_before_sha256", "oracle-verify-before.log"),
+                           ("oracle_verify_after_sha256", "oracle-verify-after.log"))
+
+
+def finalize_separate_postcoef_case(draft, record, transcript):
+    """Turn the unqualified draft into the case receipt, from the verified capture; no field is asserted by hand."""
+    case = copy.deepcopy(draft)
+    verifier = case["batch_verifier"]
+    case.update({"schema": "core070-postfit-p1-case-receipt/v2", "verdict": "PASS", "evidence_kind": "numeric_r_vs_julia",
+                 "batch": "tools/core070_postfit_policy_batch.R + .jl, GLLVM_PARITY_PIN=P1", "harness_pass": True,
+                 **integer_text(COEF_EMPTY_CID, case["harness_fields"]), "pin": "P1", "reference_commit": P1_SHA,
+                 "p0_reference_commit": P0_SHA, "gllvmtmb_version": record["source_pin"]["version"],
+                 "oracle_source_receipt": ORACLE_SOURCE, "glvmodels_worktree_dirty": [],
+                 "host": "capture host recorded in receipt.json (postcoef_runtime)"})
+    verifier.update({"tool": VERIFIERS["postfit-policy-p1"][0][0], "argv": " ".join(VERIFIERS["postfit-policy-p1"][0]),
+                     "status": "PASS", "exit_code": 0, "accept_marker": VERIFIERS["postfit-policy-p1"][1]})
+    return case
+
+
+def ingest_postcoef(state, expected_source):
+    """Write the three-fit case receipt and capture prefix (with verify.txt) from a verified capture; write-once.
+
+    Every check runs before the first byte is written. The case-map row is NOT touched here."""
+    import core070_postcoef_live_ref as live  # imports this module, so not at the top
+    state = Path(state)
+    if not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", expected_source or ""):
+        raise SystemExit("--expected-source must be a full commit id")
+    if git("status", "--porcelain", "--untracked-files=all").strip():
+        raise SystemExit("refusing a dirty tree (tracked or untracked changes)")
+    prefix_rel = f"{REC_REL}/postcoef-empty-p1"
+    case_rel = f"{REC_REL}/cases/{COEF_THREE_FIT_CID}.json"
+    for rel in (prefix_rel, case_rel):
+        if os.path.lexists(ROOT / rel):
+            raise SystemExit("refusing to overwrite existing evidence: " + rel)
+    files = postcoef_capture_file_snapshot(state)
+    if not {"receipt.json", "julia-results.json", "r-oracle.json"} <= set(files) or "verify.txt" in files:
+        raise SystemExit("capture lacks receipt.json, julia-results.json or r-oracle.json, or already holds verify.txt")
+    record, report, oracle = (json.loads(files[n]) for n in ("receipt.json", "julia-results.json", "r-oracle.json"))
+    identity = record.get("postcoef_capture_identity", {})
+    if identity.get("source_commit") != expected_source:
+        raise SystemExit("capture source commit is not the expected one")
+    if identity.get("source_tree") != git("rev-parse", f"{expected_source}:src").strip():
+        raise SystemExit("capture source tree differs from the expected commit's src tree")
+    hashes = [(record.get(key), name) for key, name in POSTCOEF_CAPTURE_HASHES]
+    hashes += [(identity.get("r_oracle_sha256"), "r-oracle.json"), (identity.get("julia_runner_sha256"), "runner-snapshots/core070_postfit_policy_batch.jl"),
+               (record.get("postcoef_runtime", {}).get("manifest_sha256"), "julia-Manifest.toml")]
+    if any(name not in files or want != hashlib.sha256(files[name]).hexdigest() for want, name in hashes):
+        raise SystemExit("capture file hash differs from receipt.json")
+    if files["diagnostics.log"] or "three_fit" not in report["cases"][COEF_EMPTY_CID]:
+        raise SystemExit("capture has diagnostics or is not a three-fit capture")
+    writes = {f"{prefix_rel}/{name}": data for name, data in files.items()}
+    if not set(writes) <= postcoef_evidence_paths():
+        raise SystemExit("capture holds files outside the POST-COEF evidence allow-list")
+    sink = []
+    draft = prepare_separate_postcoef_case(state, transcript_sink=sink)
+    head = git("rev-parse", "HEAD").strip()
+    case = finalize_separate_postcoef_case(draft, record, sink[0])
+    read_selected = lambda rel: live.blob(ROOT, head, rel)
+    live.check_comparison(case, report, oracle)
+    live.check_case_source_binding(case, record, read_selected)
+    live.check_verifier_transcript(case, sink[0].encode())
+    writes[f"{prefix_rel}/verify.txt"] = sink[0].encode()
+    writes[case_rel] = (json.dumps(case, indent=2) + "\n").encode()
+    made = []
+    try:
+        for rel, data in sorted(writes.items()):
+            (ROOT / rel).parent.mkdir(parents=True, exist_ok=True)
+            with (ROOT / rel).open("xb") as handle:
+                made.append(ROOT / rel)
+                handle.write(data)
+    except BaseException:
+        for path in made:
+            path.unlink(missing_ok=True)
+        raise
+    print(f"wrote {len(writes)} files under {prefix_rel} and {case_rel}; row not bound; commit nothing yet")
+
+
+def flip_postcoef_row():
+    """Bind the POST-COEF-EMPTY row in case-map-postfit.json to the ingested three-fit case; touches that file only.
+
+    Refuses unless the row is in the exact pre-flip state and the case receipt exists and passes. The scoreboard and
+    the assembled map are regenerated afterwards by tools/true_parity_assemble.py, never by hand."""
+    import core070_postcoef_transition as guard
+    case_path = REC / "cases" / f"{COEF_THREE_FIT_CID}.json"
+    if str(case_path.relative_to(ROOT)) != guard.NEW or not case_path.is_file():
+        raise SystemExit("three-fit case receipt is missing; run --ingest-postcoef first")
+    case = load(case_path)
+    if (case.get("case_id") != COEF_THREE_FIT_CID or case.get("harness_case_id") != COEF_EMPTY_CID or
+            case.get("verdict") != "PASS" or case.get("batch_verifier", {}).get("status") != "PASS"):
+        raise SystemExit("three-fit case receipt is not a passing POST-COEF case")
+    cm = load(OUT / "case-map-postfit.json")
+    rows = [row for row in cm["rows"] if row["source_id"] == guard.TARGET]
+    if len(rows) != 1:
+        raise SystemExit("case-map-postfit.json must hold exactly one POST-COEF-EMPTY row")
+    row = rows[0]
+    if (row.get("evidence_tier") != "numeric_non_discriminating" or
+            row.get("evidence", {}).get("non_binding_receipts") != [guard.OLD]):
+        raise SystemExit("POST-COEF-EMPTY row is not in the pre-flip state; nothing written")
+    bind_numeric(row, [guard.NEW], {COEF_EMPTY_CID: "PASS"}, {COEF_EMPTY_CID: "PASS"}, guard.TIER)
+    cm["counts"] = recount(cm)
+    write_json(OUT / "case-map-postfit.json", cm)
+    print(json.dumps(cm["counts"]) + "\nrow bound; now run tools/true_parity_assemble.py, then commit the map first and the board after")
 
 
 def postcoef_capture_binding(cid, jc, state):
@@ -1066,6 +1182,11 @@ def postcoef_bind_commit_ok(run, source, commit):
             return False
     if set(changed) != POSTCOEF_BIND_FILES or any(status != b"M" for status in changed.values()):
         return False
+    return postcoef_bind_pins_ok(run, source, commit)
+
+
+def postcoef_bind_pins_ok(run, source, commit):
+    """The four bind files at `commit` equal those at `source` except the five pins, which name `source`."""
     texts = {}
     for path in POSTCOEF_BIND_FILES:
         modes = []
@@ -1180,6 +1301,53 @@ def postcoef_ref_compatible(repo, source, head):
                     return False
         previous = commit
     return previous == head
+
+
+# Content rule (alternative to the linear-history rule above; used by the live gate only).
+# What the checked ref must still hold, byte for byte, because the caller reads it from the checked tree:
+# the four bind files (pins masked, as in a bind commit) and the JSON comparison helper the assembler imports.
+# The gate code itself runs from the pinned capture source, so it is not listed.
+POSTCOEF_BOUND_TOOL = "tools/core070_json_semantics.py"
+POSTCOEF_BOUND_FILES = tuple(sorted(POSTCOEF_BIND_FILES)) + (POSTCOEF_BOUND_TOOL,)
+POSTCOEF_CAPTURE_PREFIX_REL = f"{REC_REL}/postcoef-empty-p1"
+
+
+def postcoef_content_bound_problem(repo, source, head):
+    """None when the bound inputs at `head` equal those the capture at `source` was judged with; else why not.
+
+    No ancestry, parent count or path-allow-list is required, so later unrelated commits, merge commits and
+    squash or rebase shapes pass, provided the `source` commit object is still in `repo`.
+    """
+    if not all(isinstance(x, str) and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", x) for x in (source, head)):
+        return "source or head is not a full commit id"
+    def run(*args):
+        return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, env=postcoef_git_env())
+    for rev in (source, head):
+        kind = run("cat-file", "-t", rev)
+        if kind.returncode or kind.stdout.strip() != b"commit":
+            return "commit object is not in the repository: " + rev
+    if not postcoef_bind_pins_ok(run, source, head):
+        return "bind files differ from the capture source beyond the five pins, or the pins do not name it"
+    entries = []
+    for rev in (source, head):
+        entry = run("ls-tree", "-z", rev, "--", POSTCOEF_BOUND_TOOL)
+        found = re.fullmatch(rb"(100644|100755) blob ([0-9a-f]+)\t" + re.escape(POSTCOEF_BOUND_TOOL.encode()) + rb"\0",
+                             entry.stdout) if not entry.returncode else None
+        if not found:
+            return "bound tool is not a regular tracked file: " + POSTCOEF_BOUND_TOOL
+        entries.append(found.groups())
+    if entries[0] != entries[1]:
+        return "bound tool differs from the capture source: " + POSTCOEF_BOUND_TOOL
+    listing = run("ls-tree", "-r", "-z", head, "--", POSTCOEF_CAPTURE_PREFIX_REL)
+    if listing.returncode:
+        return "capture prefix cannot be listed"
+    allowed = postcoef_evidence_paths()
+    for item in filter(None, listing.stdout.split(b"\0")):
+        meta, raw = item.split(b"\t", 1)
+        path = raw.decode("utf-8", "replace")
+        if not meta.startswith((b"100644 blob ", b"100755 blob ")) or path not in allowed:
+            return "capture prefix holds a file outside the allow-list or a non-regular entry: " + path
+    return None
 
 
 def integer_entry(cid, jc, po, state=None):
@@ -1818,9 +1986,20 @@ def main():
                     help="re-ingest one rerun of the wave6 batch (needs --runtimes; D-319 item N2)")
     ap.add_argument("--apply-rulings", action="store_true",
                     help="write the 2026-10-05 signed dispositions (D-319) onto the tracked case map (idempotent)")
+    ap.add_argument("--ingest-postcoef", type=Path, metavar="STATE",
+                    help="write the POST-COEF three-fit case receipt and capture prefix from a verified capture (write-once; needs --expected-source)")
+    ap.add_argument("--flip-postcoef-row", action="store_true",
+                    help="bind the POST-COEF-EMPTY row to the ingested three-fit case (case-map-postfit.json only)")
+    ap.add_argument("--expected-source", metavar="SHA", help="commit the POST-COEF capture must have been taken from")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     args = ap.parse_args()
+    if args.ingest_postcoef is not None:
+        ingest_postcoef(args.ingest_postcoef, args.expected_source)
+        return
+    if args.flip_postcoef_row:
+        flip_postcoef_row()
+        return
     if args.check_twins or args.check:
         check_twins()
         return

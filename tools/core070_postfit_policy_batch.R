@@ -287,8 +287,8 @@ if (identical(parity_pin, "P0")) {
     list(length = length(value), names = names(value), values = as.numeric(value),
          fixed_columns = length(fit$X_fix_names), type = typeof(value), fit_health = fit_health)
   }
-  coef_fits <- Map(fit_coef, c("0", "0 + trait", "0 + trait + x"),
-                   c("no_fixed_effects", "trait_intercepts", "trait_intercepts_plus_covariate"))
+  coef_fits <- unname(Map(fit_coef, c("0", "0 + trait", "0 + trait + x"),
+                   c("no_fixed_effects", "trait_intercepts", "trait_intercepts_plus_covariate")))
   stopifnot(identical(vapply(coef_fits, `[[`, integer(1), "length"), c(0L, 5L, 6L)))
   stopifnot(identical(vapply(coef_fits, `[[`, integer(1), "fixed_columns"), c(0L, 5L, 6L)))
   empty_coef <- coef_fits[[1L]]$values

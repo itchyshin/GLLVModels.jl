@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline controls for the POST-COEF selected-ref live-verifier boundary."""
 import copy
+import functools
 import hashlib
 import json
 import os
@@ -853,6 +854,25 @@ class LiveRefTests(unittest.TestCase):
             for commit, path in ((head, 'data/link'), (head, '../escape'), ('HEAD', 'data/x')):
                 with self.subTest(commit=commit, path=path), self.assertRaises(ValueError):
                     live.blob(root, commit, path)
+
+
+# D2 (2026-11-09, "no certifier"): live.D2_NO_CERTIFIER holds only the POST-COEF-EMPTY harness id. The five tests below
+# exercise the fit-health requirement, so their fixtures run with the fixture's row outside that set. Test bodies and
+# assertions are unchanged; the narrowed row itself is covered in test_postcoef_d2_live_gate.py.
+def _fixture_row_outside_d2(test):
+    @functools.wraps(test)
+    def wrapper(self):
+        with patch.object(live, 'D2_NO_CERTIFIER', frozenset({'CORE070-OTHER-ROW-NOT-IN-D2'})):
+            return test(self)
+    return wrapper
+
+
+for _name in ('test_live_comparison_rejects_failed_or_unbound_fit_health',
+              'test_live_comparison_rejects_float64_cholesky_counterexample',
+              'test_separate_receipt_identity_requires_exact_harness_mapping',
+              'test_exact_comparison_and_mutations',
+              'test_case_must_reference_exact_capture_build'):
+    setattr(LiveRefTests, _name, _fixture_row_outside_d2(getattr(LiveRefTests, _name)))
 
 
 class SourceSelftestTests(unittest.TestCase):
