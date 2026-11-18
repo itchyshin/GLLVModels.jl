@@ -200,7 +200,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
-        optimizer = nothing)
+        optimizer = nothing, _warn_zero_columns::Bool = true)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "_fit_poisson_gllvm_laplace")
@@ -250,6 +250,8 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     # A zero weight drops the cell exactly like `mask`, so the support check skips it too.
     _check_response_support(:count, Y, weights === nothing ? msk : weights .> 0;
                             caller = "fit_poisson_gllvm")
+    _warn_zero_columns && _warn_all_zero_count_columns(
+        Y, weights === nothing ? msk : weights .> 0; caller = "fit_poisson_gllvm")
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical log-scale intercepts + SVD (PPCA-like) loadings.
