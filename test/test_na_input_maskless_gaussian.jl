@@ -28,14 +28,16 @@ using Test, GLLVModels, Random, LinearAlgebra
     U(M) = Matrix{Union{Missing,eltype(M)}}(M)
     function M1(M); Z = U(M); Z[1, 2] = missing; Z; end
     thrown(f) = try; f(); nothing; catch e; e; end
-    typed(e, name) = e isa ArgumentError && occursin(name, e.msg) &&
-        occursin("(row, column) = (1, 2)", e.msg) && occursin("`missing`", e.msg)
-    function objective(f)                       # log-likelihood where the fit has one, else the loadings
+    typed(e, name) = e isa ArgumentError && occursin(name, e.msg) && (
+        (occursin("(row, column) = (1, 2)", e.msg) && occursin("`missing`", e.msg)) ||
+        occursin("Y is missing at trait 1, unit 2", e.msg))
+    function objective(f)                       # the log-likelihood field, whatever the fit type calls it
         f isa Tuple && return f[3]
-        for nm in (:logLik, :loglik, :ll)
-            hasproperty(f, nm) && return getproperty(f, nm)
+        for nm in propertynames(f)
+            (lowercase(String(nm)) in ("ll", "llik") || endswith(lowercase(String(nm)), "loglik")) &&
+                return getproperty(f, nm)
         end
-        return f.Λ
+        error("no log-likelihood field on $(typeof(f))")
     end
     quiet(f) = redirect_stderr(devnull) do; f(); end
 
