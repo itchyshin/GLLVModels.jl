@@ -214,7 +214,7 @@ _register_shard_table!(4, (
         "test_grouped_init_kwargs.jl", "test_grouped_getlv_offset.jl", "test_ordinal_x_identity.jl",
         "test_zinb_cov_iterations.jl", "test_issue_721_link_docs.jl", "test_tweedie_power_contract.jl",
         "test_studentt_boundary.jl", "test_multinomial.jl", "test_multinomial_separation.jl",
-        "test_com_poisson.jl", "test_com_poisson_mode_search.jl", "test_gaussian_pervar_fallback.jl",
+        "test_compoisson_link_refuse_1231.jl", "test_com_poisson.jl", "test_com_poisson_mode_search.jl", "test_gaussian_pervar_fallback.jl",
         "test_aicbic_newfits.jl", "test_vcov_full_covariance.jl", "test_model_comparison.jl",
         "test_extract_gamma.jl", "test_cross_kernel_fit.jl", "test_gaussian_sources.jl",
         "test_grouped_fit.jl", "test_destination_b_b1_cluster_paired_fit.jl", "test_b1_fixed_coordinate_curvature_protocol.jl",
@@ -369,7 +369,7 @@ _register_shard_table!(8, (
         "test_nb1_scalar_gradient_gate.jl", "test_nb1_grouped_mode_search.jl", "test_ordinal_x_identity.jl",
         "test_gamma_fit.jl", "test_tweedie_engine_health.jl", "test_tweedie_cdf.jl",
         "test_lognormal.jl", "test_multinomial_separation.jl", "test_zib_x_identity.jl",
-        "test_ordinal_logit_twin.jl", "test_truncated_formula.jl", "test_com_poisson.jl",
+        "test_ordinal_logit_twin.jl", "test_truncated_formula.jl", "test_compoisson_link_refuse_1231.jl", "test_com_poisson.jl",
         "test_gaussian_pervar_design.jl", "test_formula_default_x_guard.jl", "test_postfit_zib_tweedie.jl",
         "test_extract_gamma.jl", "test_grouped_gaussian.jl", "test_precision_shared_residual.jl",
         "test_destination_b_tree_precision.jl", "test_destination_b_postfit.jl", "test_source_fit_optimizer_health.jl",
@@ -799,6 +799,7 @@ println(_SHARD === nothing ?
     _shard_include("test_issue_749_fit_gllvm_doc.jl")
     _shard_include("test_truncated_formula.jl")
     _shard_include("test_unified_api.jl")
+    _shard_include("test_compoisson_link_refuse_1231.jl")
     _shard_include("test_com_poisson.jl")
     _shard_include("test_com_poisson_mode_search.jl")
     _shard_include("test_gaussian_pervar.jl")

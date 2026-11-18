@@ -310,6 +310,8 @@ not meaningful in the rate form.
 function compoisson_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, ν::Real; mask = nothing, link::Link = LogLink(),
         maxiter::Integer = 100, tol::Real = 1e-9)
+    link isa LogLink || throw(ArgumentError(
+        "compoisson_marginal_loglik_laplace: only LogLink is supported on the rate (λ = exp(η))"))
     acc = 0.0
     @inbounds for i in axes(Y, 2)
         mi = mask === nothing ? nothing : view(mask, :, i)
@@ -432,6 +434,8 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    link isa LogLink || throw(ArgumentError(
+        "fit_compoisson_gllvm: only LogLink is supported on the rate (λ = exp(η))"))
     _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_compoisson_gllvm")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
