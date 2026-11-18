@@ -3726,6 +3726,7 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                  profile_g_tol::Real = 1e-4,
                  profile_max_expand::Integer = 20,
                  profile_max_bisect::Integer = 30)
+    _confint_reject_missing_response_cells(Y, "confint"; mask = mask)
     method in (:profile, :bootstrap) &&
         _check_optimizer_refit(fit, "confint(method=:$method)")
     ad, is_aghq = _family_confint_setup(fit, Y; method = method, level = level, N = N, X = X,
