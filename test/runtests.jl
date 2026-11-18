@@ -244,7 +244,8 @@ _register_shard_table!(4, (
         "test_zip_zinb_stall.jl", "test_robustness_sweep.jl", "test_convergence_553_554.jl",
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl", "test_truncated_confint_masked_nan_730.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
-        "test_response_support_730_structure.jl", "test_response_support_730_rest.jl",
+        "test_covariate_nonfinite.jl", "test_response_support_730_structure.jl"
+        "test_response_support_730_rest.jl"
         "test_phylo_sparse_solvers.jl", "test_changelog_structure.jl",
         "test_gaussian_nonfinite_y.jl",
         "test_predictive_check_binomial.jl", "test_kernel_latent_unique_bridge.jl", "test_destination_b_a4_s4_receipts.jl",
@@ -1190,8 +1191,8 @@ println(_SHARD === nothing ?
     # Unit tests for the branch-RE statistics / tree helpers (welch_t, rank_sum_z, clade_edges, ...).
     _shard_include("test_branch_re_helpers.jl")
     _shard_include("test_response_support_730_siblings.jl")
-    _shard_include("test_response_support_730_structure.jl")
-    _shard_include("test_response_support_730_rest.jl")
+        "test_covariate_nonfinite.jl", "test_response_support_730_structure.jl"
+        "test_response_support_730_rest.jl"
     _shard_include("test_interrupt_rethrow.jl")
     # NaN or Inf at an observed Gaussian response cell is an ArgumentError (K == p gave loglik = NaN).
     _shard_include("test_gaussian_nonfinite_y.jl")
