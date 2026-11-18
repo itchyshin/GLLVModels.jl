@@ -32,7 +32,7 @@
 # Returns ELBO_s = Σ_t E_q[log p(y_t|η_t,r)] − KL_s, with E_q by GH quadrature.
 function _va_site_negbin_elbo(ψ::AbstractVector, y::AbstractVector,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector,
-        r::Real, x::AbstractVector, w::AbstractVector)
+        r::Real, x::AbstractVector, w::AbstractVector; obs = nothing)
     p, K = size(Λ)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -43,6 +43,7 @@ function _va_site_negbin_elbo(ψ::AbstractVector, y::AbstractVector,
     invsqrtpi = 1.0 / sqrt(pi)
     ℓ = zero(eltype(ψ))
     @inbounds for t in 1:p
+        (obs !== nothing && !obs[t]) && continue
         sd = sqrt(2.0 * σ2[t])
         et = zero(eltype(ψ))
         for j in 1:G
@@ -69,7 +70,7 @@ end
 # The objective is −ELBO, so G holds the negation. (_clamp_eta's derivative ≈ 1.)
 function _va_site_negbin_grad!(G::AbstractVector, ψ::AbstractVector, y::AbstractVector,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector,
-        r::Real, x::AbstractVector, w::AbstractVector)
+        r::Real, x::AbstractVector, w::AbstractVector; obs = nothing)
     p, K = size(Λ)
     m  = @view ψ[1:K]
     lv = @view ψ[(K + 1):(2K)]
@@ -80,6 +81,7 @@ function _va_site_negbin_grad!(G::AbstractVector, ψ::AbstractVector, y::Abstrac
     a = zeros(eltype(ψ), p)
     b = zeros(eltype(ψ), p)
     @inbounds for t in 1:p
+        (obs !== nothing && !obs[t]) && continue
         sd = sqrt(2.0 * max(σ2[t], 0.0))
         at = zero(eltype(ψ)); bt = zero(eltype(ψ))
         for j in eachindex(x)
@@ -112,10 +114,10 @@ end
 # [m (K); logv (K)] with L-BFGS (analytic gradient), from m=0, logv=0.
 function _va_site_negbin(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
         β::AbstractVector, r::Real, x::AbstractVector, w::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     K = size(Λ, 2)
-    negelbo(ψ) = -_va_site_negbin_elbo(ψ, y, Λ, Λ2, β, r, x, w)
-    g!(G, ψ) = _va_site_negbin_grad!(G, ψ, y, Λ, Λ2, β, r, x, w)
+    negelbo(ψ) = -_va_site_negbin_elbo(ψ, y, Λ, Λ2, β, r, x, w; obs = obs)
+    g!(G, ψ) = _va_site_negbin_grad!(G, ψ, y, Λ, Λ2, β, r, x, w; obs = obs)
     ψ0 = zeros(2K)
     res = Optim.optimize(negelbo, g!, ψ0, Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
@@ -128,10 +130,10 @@ end
 # optimum ∂ELBO/∂(m,v)=0, so dELBO/dθ = ∂ELBO/∂θ holding (m*,v*) fixed.
 function _va_site_negbin_mv(y::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
         β::AbstractVector, r::Real, x::AbstractVector, w::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     K = size(Λ, 2)
-    negelbo(ψ) = -_va_site_negbin_elbo(ψ, y, Λ, Λ2, β, r, x, w)
-    g!(G, ψ) = _va_site_negbin_grad!(G, ψ, y, Λ, Λ2, β, r, x, w)
+    negelbo(ψ) = -_va_site_negbin_elbo(ψ, y, Λ, Λ2, β, r, x, w; obs = obs)
+    g!(G, ψ) = _va_site_negbin_grad!(G, ψ, y, Λ, Λ2, β, r, x, w; obs = obs)
     ψ0 = zeros(2K)
     res = Optim.optimize(negelbo, g!, ψ0, Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
@@ -147,15 +149,17 @@ end
 # outer gradient consumes — both objective and gradient come out of one solve.
 function _va_negbin_solve_all(Y::AbstractMatrix, Λ::AbstractMatrix, Λ2::AbstractMatrix,
         β::AbstractVector, r::Real, x::AbstractVector, w::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     K = size(Λ, 2)
     n = size(Y, 2)
     M = Matrix{Float64}(undef, K, n)
     V = Matrix{Float64}(undef, K, n)
     acc = 0.0
     @inbounds for s in 1:n
+        obs = mask === nothing ? nothing : view(mask, :, s)
         elbo_s, m_s, v_s = _va_site_negbin_mv(view(Y, :, s), Λ, Λ2, β, float(r),
-                                              x, w; maxiter = maxiter, tol = tol)
+                                              x, w; maxiter = maxiter, tol = tol,
+                                              obs = obs)
         acc += elbo_s
         M[:, s] = m_s
         V[:, s] = v_s
@@ -178,7 +182,8 @@ end
 #   ∂ELBO/∂r    = Σ_s Σ_t c_ts,   ∂ELBO/∂(log r) = r·∂ELBO/∂r
 function _va_negbin_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector, r::Real,
-        M::AbstractMatrix, V::AbstractMatrix, x::AbstractVector, w::AbstractVector)
+        M::AbstractMatrix, V::AbstractMatrix, x::AbstractVector, w::AbstractVector;
+        mask = nothing)
     p, K = size(Λ)
     n = size(Y, 2)
     invsqrtpi = 1.0 / sqrt(pi)
@@ -191,6 +196,7 @@ function _va_negbin_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
         σ2 = Λ2 * v_s
         μη = β .+ Λ * m_s
         for t in 1:p
+            (mask !== nothing && !mask[t, s]) && continue
             σ2t = σ2[t]
             sd = sqrt(2.0 * max(σ2t, 0.0))
             at = 0.0; bt = 0.0; ct = 0.0
@@ -233,7 +239,7 @@ function _va_negbin_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
 end
 
 """
-    nb_marginal_loglik_va(Y, Λ, β, r; maxiter=100, tol=1e-9, gh=20) -> Float64
+    nb_marginal_loglik_va(Y, Λ, β, r; maxiter=100, tol=1e-9, gh=20, mask=nothing) -> Float64
 
 Gaussian-variational (VA) log-marginal lower bound (ELBO) over the `n` sites
 (columns) of a negative-binomial (NB2) GLLVM with log link — `Y` the p×n integer
@@ -245,19 +251,22 @@ bound** on the true log-marginal (≤ it for any `q`). As `Λ→0` it equals the
 independent-NB loglik exactly; as `r→∞` it tends to the Poisson VA marginal
 ([`poisson_marginal_loglik_va`](@ref)). Companion to
 [`nb_marginal_loglik_laplace`](@ref).
+`mask` drops cells (`nothing` keeps every cell); unobserved entries of `Y` are ignored.
 """
 function nb_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, r::Real; maxiter::Integer = 100, tol::Real = 1e-9,
-        gh::Integer = 20)
+        gh::Integer = 20, mask = nothing)
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
+    _va_check_mask(mask, Y)
     r > 0 || throw(ArgumentError("dispersion r must be > 0"))
     Λ2 = Λ .^ 2
     x, w = _gauss_hermite(gh)
     acc = 0.0
     @inbounds for s in axes(Y, 2)
+        obs = mask === nothing ? nothing : view(mask, :, s)
         acc += _va_site_negbin(view(Y, :, s), Λ, Λ2, β, float(r), x, w;
-                               maxiter = maxiter, tol = tol)
+                               maxiter = maxiter, tol = tol, obs = obs)
     end
     return acc
 end
@@ -275,17 +284,23 @@ returned `NBFit`'s `loglik` field holds the maximised ELBO (a lower bound on the
 true log-marginal), so it is directly comparable across VA fits but sits slightly
 below the Laplace `loglik` for the same data. The ELBO is derived for the log link
 only: any other `link` throws `ArgumentError`.
+
+A `Y` that contains `missing` is fitted, not rejected: the observation mask is
+derived from those cells (a one-time `@info`) and unobserved cells are dropped
+from the ELBO. Pass `mask` to drop additional cells.
 """
 function fit_nb_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         link::Link = LogLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_nb_gllvm_va", link, LogLink())
-    _check_response_support(:count, Y, nothing; caller = "fit_nb_gllvm_va")
+    _va_check_mask(mask, Y)
+    _check_response_support(:count, Y, mask; caller = "fit_nb_gllvm_va")
     p, n = size(Y)
     rr = rr_theta_len(p, K)
 
     Zemp = [linkfun(link, max(Y[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
+    mask === nothing || _mask_warmstart!(Zemp, mask)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
     Zc = Zemp .- β0
     F = svd(Zc)
@@ -307,9 +322,9 @@ function fit_nb_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         Λ2 = Λ .^ 2
         r = exp(θ[p + rr + 1])
         elbo, M, V = _va_negbin_solve_all(Y, Λ, Λ2, β, r, x, w;
-                                          maxiter = maxiter, tol = tol)
+                                          maxiter = maxiter, tol = tol, mask = mask)
         if G !== nothing
-            _va_negbin_outer_grad!(G, Y, Λ, Λ2, β, r, M, V, x, w)
+            _va_negbin_outer_grad!(G, Y, Λ, Λ2, β, r, M, V, x, w; mask = mask)
         end
         if F !== nothing
             return isfinite(elbo) ? -elbo : 1e12
@@ -324,4 +339,14 @@ function fit_nb_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     r̂ = exp(θ̂[p + rr + 1])
     return NBFit(β̂, Λ̂, r̂, link, _fit_verdict(res)...)
+end
+
+function fit_nb_gllvm_va(Y::AbstractMatrix{<:Union{Missing,Integer}};
+        mask = nothing, kwargs...)
+    if mask === nothing
+        Yc, msk = _va_materialize_derived(Y, 0, "fit_nb_gllvm_va")
+    else
+        Yc, msk = _va_materialize_explicit(Y, 0, mask)
+    end
+    return fit_nb_gllvm_va(Yc; mask = msk, kwargs...)
 end

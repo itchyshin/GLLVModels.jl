@@ -55,7 +55,7 @@ fit = fit_gaussian_pervar_gllvm(y; K = K)
 fit.Λ                                 # estimated loadings (p × K)
 fit.ψ²                                # residual variance of each response
 fit.loglik                            # log-likelihood
-fit.converged                         # check this before reading results
+fit.converged                         # necessary, not sufficient: for non-Gaussian K ≥ 2, also refit from several starts
 ```
 
 This is the matrix-first companion to the ordinary R
@@ -82,6 +82,15 @@ yet, so this block fits the simpler shared-residual model to the same data and
 passes the data matrix `y` to each call:
 
 ```julia
+using GLLVModels, Random
+
+Random.seed!(0)
+p, K, n = 20, 2, 200
+Λ_true = randn(p, K); for i in 1:K, k in 1:K; if i < k; Λ_true[i, k] = 0; end; end
+for k in 1:K; Λ_true[k, k] = abs(Λ_true[k, k]) + 0.5; end
+ψ_true = 0.15 .+ 0.10 .* rand(p)
+y = Λ_true * randn(K, n) .+ sqrt.(ψ_true) .* randn(p, n)
+
 fit_shared = fit_gaussian_gllvm(y; K = K)
 GLLVModels.confint(fit_shared; y = y)                                 # Wald (default)
 GLLVModels.profile_ci(fit_shared, "sigma_eps"; y = y)                 # profile likelihood
@@ -107,6 +116,9 @@ select either supported solver explicitly and inspect the recorded method:
 ```julia
 using GLLVModels
 
+Y = [1 0 3 2 0 1 4 0 2 1 0 3;
+     0 2 1 0 3 1 0 4 1 0 2 1;
+     2 1 0 3 1 0 2 1 4 0 1 2]
 fit_bfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :bfgs)
 fit_lbfgs = fit_poisson_gllvm(Y; K = 1, optimizer = :lbfgs)
 optimizer_info(fit_bfgs)
@@ -117,6 +129,8 @@ See the [tutorial](docs/src/tutorial.md) for a matched-start comparison and
 convergence and likelihood checks.
 
 ```julia
+using GLLVModels, Distributions
+
 Y_count = [1 0 3 2 0 1 4 0 2 1 0 3;
            0 2 1 0 3 1 0 4 1 0 2 1;
            2 1 0 3 1 0 2 1 4 0 1 2]
@@ -212,8 +226,11 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
   fallback provenance; bridge and interval parity remain unverified.
 - Per-species / grouped dispersion (`disp.group`) for NB2, NB1, Beta, beta-binomial,
   Gamma, and Tweedie via the `_grouped` drivers — per-species is the `fit_gllvm`
-  default for NB2, NB1, Beta, and beta-binomial (`family = NB1()`,
-  `family = BetaBinom()`), matching gllvmTMB. Delta-lognormal and Delta-Gamma
+  default for NB1, Beta, and beta-binomial (`family = NB1()`,
+  `family = BetaBinom()`), matching gllvmTMB. For NB2, per-species `r` is the
+  default through `gllvm(@formula(...))` and the R bridge, while bare
+  `fit_gllvm(Y; family = NegativeBinomial())` fits one shared `r`; pass
+  `disp_group = :species` for per-species `r`. Delta-lognormal and Delta-Gamma
   likewise default to per-species dispersion (`disp_group = :species`); shared
   dispersion remains available via `disp_group = :shared`
 - Two-part / mixture families: Delta-lognormal, Delta-Gamma, Hurdle-Poisson,
@@ -233,7 +250,9 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
   GLM fit (`fit_phylo_glm`) for non-Gaussian families via an augmented-state
   joint Laplace
 - SPDE / Matérn spatial latent field, with kriging prediction
-- Offsets, response-missing masks for GLM Laplace rows, Dunn–Smyth residuals, AIC / BIC,
+- Offsets, response-missing masks for GLM Laplace rows and for the ordinary
+  and per-species Gaussian fitters (a `missing` entry in `Y` derives the mask),
+  Dunn–Smyth residuals, AIC / BIC,
   `predict` / `getLV` / `ordination`, and an `@formula` front-end
   (wide formula tables require one row per site, including intercept-only fits;
   an empty table is allowed when there are no covariates)
