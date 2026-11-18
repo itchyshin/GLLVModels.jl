@@ -203,7 +203,7 @@ not establish agreement for its uncertainty or for other family combinations.
 | Structured dependence × non-Gaussian | ✅ phylo · 🔨 spatial-latent / animal | phylogenetic GLM (`fit_phylo_glm`, augmented-state joint Laplace); SPDE / Matérn spatial latent field (`fit_spde_latent_gllvm`) for the non-Gaussian GLLVM; broader spatial and animal-model support remains incomplete |
 | Random slopes `(1 + x \| g)` | 🔨 | this formula syntax is not yet supported |
 | Per-species / grouped dispersion (`disp.group`) | ✅ all 5 dispersion families | `fit_{nb,beta,gamma,nb1,tweedie}_gllvm_grouped(Y; K, group)` give each species (or group) its own dispersion; reduces exactly to the shared fit at `G=1`. **gllvm's default is per-species** dispersion, so for parity route Julia through a grouped fitter with `group = 1:p` (or set gllvm `disp.formula = ~1` for the shared model) |
-| Row effects (fixed **and random**) | ✅ | fixed per-site intercepts (`fit_roweffect_gllvm`) **and** random `ρ_s ~ N(0, σ_row²)` (`fit_row_random_gllvm`, gllvmTMB `row.eff="random"`); `σ_row→0` reduces exactly to no-row-effect |
+| Row effects (fixed **and random**) | ✅ | fixed per-site intercepts (`fit_roweffect_gllvm`) **and** random `ρ_s ~ N(0, σ_row²)` (`fit_row_random_gllvm`, CRAN `gllvm` `row.eff = "random"`; gllvmTMB has no row-effect argument); `σ_row→0` reduces exactly to no-row-effect |
 
 ## Post-fit & inference
 
@@ -269,10 +269,11 @@ not bugs on either side.
 | NB1 dispersion | `φ`, `Var = μ + μφ` | `φ`, `Var = μ(1+φ)` | identity (maps 1:1) |
 | Gamma dispersion | `φ` = **shape**, `Var = μ²/φ` | `α` = **shape**, `Var = μ²/α` | relabel `α ↔ φ` (no inversion) |
 | Beta precision | `φ`, `Var = μ(1-μ)/(1+φ)` | `φ` (same) | identity |
-| Tweedie | power `ν`, `Var = φ·μ^ν`, default start `ν = 1.1` | power `p`, `Var = φ·μ^p`, default start `p_init = 1.5` | identity; set `p_init = 1.1` to reproduce gllvm's optimiser path |
+| Tweedie | power `ν`, `Var = φ·μ^ν`; the default `Power = 1.1` is **fixed**, not estimated (`Power = NULL` estimates it) | power `p`, `Var = φ·μ^p`, estimated; start `p_init = 1.5` | pass `Power = NULL` to `gllvm` to compare like with like. `p_init` only moves Julia's start and does not reproduce gllvm's fixed power (see the defaults table below) |
 | Gaussian dispersion | per-species SD `φ_j` | single shared `σ` (profiled) | needs a per-species-variance Gaussian fit for exact parity |
 | Dispersion **structure** | per-species by default (`disp.formula = NULL`) | shared scalar by default; per-species via the grouped fitters | route Julia through `fit_*_gllvm_grouped(Y; K, group = 1:p)`, **or** set gllvm `disp.formula = ~1` |
-| Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples |
+| Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples. The Julia VA posterior covariance is diagonal and gllvm's default is `Lambda.struc = "unstructured"`, so for `K ≥ 2` match it with `control.va = list(Lambda.struc = "diagonal")` |
+| `select_lv` default criterion | `criterion = "bic"`: penalty `log` of the number of observed cells (`p·n` with no missing values) | `criterion = :bic_sites`: penalty `log(n)`, `n` the number of sites | keep the default; pass `criterion = :bic` to reproduce R's choice. The two rules can pick different `K` on the same data |
 
 ### Families, dispersion, and measured covariates
 
@@ -343,6 +344,17 @@ CI/profile/bootstrap refits remain rejected with explicit CI-status messages.
 Combining `X` with a mask, ordinal covariate fits, structured covariance terms,
 and user-selectable Julia optimizer controls remain unsupported through the bridge.
 
+`NaN` in the response is treated differently by the two packages. gllvmTMB
+(0.7.1) reads `NaN` and `NA` alike as a missing response and drops those rows from
+the fit with a message (a 4-trait, 40-site long table with 3 cells set to `NaN`:
+`nobs` 157 of 160, and the same log-likelihood as with `NA`). GLLVModels.jl does not
+treat `NaN` as missing: a `NaN` at an observed cell of `Y` is an `ArgumentError` that names
+the fitter and the first offending cell. This holds for the Gaussian, Poisson,
+NB2, Binomial, Gamma and Beta routes of `fit_gllvm`; the note does not claim it for every
+fitter. Mark unobserved cells `missing` or pass `mask` with `false` there; both fit, and a
+cell hidden by `mask` may hold `NaN`. So a response table moved from gllvmTMB that
+carries `NaN` needs `NaN` replaced by `missing` before the Julia fit.
+
 ### Different response families in one model
 
 The mixed-family R bridge supports point estimates for complete, balanced,
@@ -403,6 +415,39 @@ Check these restrictions when translating an R analysis:
   value. The Julia counterparts are `fit_kernel_indep_gllvm` for a standalone
   `phylo_indep()` and `fit_phylo_latent_gllvm(...; unique = true)` for the
   paired form (the latter a documented extra, not yet a verified twin).
+
+## Reproducing a CRAN `gllvm` fit
+
+For model structures that the R package `gllvm` (CRAN) fits and `gllvmTMB` does not, `gllvm` with `method = "LA"` is the R reference: reduced-rank terms (`num.RR`), concurrent ordination (`num.lv.c`), fixed and random row effects, species-specific slopes (`formula = ~ x1 + x2` with `X`), the fourth-corner model, and offsets. The map and defaults below were checked against `gllvm` 2.0.15 (R 4.6.1, `method = "LA"`, `n.init = 1`). Compare log-likelihoods first. Loadings and latent scores are identified only up to rotation and sign, so compare `ΛΛᵀ`.
+
+| Quantity | `gllvm` 2.0.15 | GLLVModels.jl | Note |
+|---|---|---|---|
+| species intercepts | `params$beta0` | `fit.β` | equal |
+| loadings | `params$theta %*% diag(params$sigma.lv)` | `fit.Λ` | compare `ΛΛᵀ` |
+| fixed row effects | `row.eff = "fixed"`, `params$row.params` (length `n - 1`) | `fit_roweffect_gllvm`, `ρ[2:n]` | site 1 is the reference (0) on both sides |
+| random row effect | `row.eff = "random"`, `params$sigma` | `fit_row_random_gllvm`, `σ_row` | standard deviation on both sides |
+| species-specific slopes | `X` with `formula = ~ x1 + x2`, `params$Xcoef` (`p × q`) | `fit_gllvm_speciescov`, `fit.B` (`p × q`) | |
+| shared covariate slope | `row.eff = ~ x1` with `studyDesign`, `params$row.params.fixed` | `fit_gllvm_cov`, `fit.γ` | `X` with `formula` in `gllvm` gives species-specific slopes, not a shared one |
+| fourth-corner | `TR`, `formula = ~ x1:z1 + ...`, `params$B` ordered `x1:z1, x2:z1, x1:z2, x2:z2` | `fit_fourthcorner_gllvm`, `fit.C[k, l]` (`k` covariate, `l` trait) | reorder before comparing |
+| offset | `n × p` matrix | `p × n` matrix | transpose |
+| reduced rank | `num.RR`, `params$LvXcoef` (`q × K`) with `theta` | `fit_rrr_gllvm`, `B` (`q × K`) with `Λ` | compare the products `theta %*% t(LvXcoef)` and `Λ B'`. In the one cell run here (Poisson, `K = 1`) `gllvm`'s single start stopped 2.16 log-likelihood units below Julia's, so the products differ, and Julia's `dof` is 23 against `gllvm`'s 22 (the parameter count is an open question, #1199) |
+| concurrent ordination | `num.lv.c`, `LvXcoef` with `theta` | `fit_constrained_gllvm`, `B` with `Λ` | compare the same products; in the one cell run here the log-likelihoods agree to 3e-6, the products to 1e-4, and the parameter counts (23) are equal |
+
+Defaults of `gllvm` 2.0.15 that change the model (set them explicitly before comparing):
+
+| `gllvm` default | Effect | In GLLVModels.jl |
+|---|---|---|
+| `link = "probit"` for binomial and beta with `method = "LA"` | a default binomial fit is a probit model | binomial default is `LogitLink()`; pass `link = ProbitLink()` to match |
+| `scale.X = TRUE` (the help page says covariates are scaled when a fourth-corner model is fitted) | fourth-corner coefficients are on the standardised scale | covariates are used as given; pass `scale.X = FALSE` to `gllvm` |
+| fourth-corner traits `TR` are centred and scaled, also with `scale.X = FALSE` | with no covariate main effects, centring adds a per-site term, so `gllvm` fits a different model from Julia on raw traits | standardise the traits yourself before `fit_fourthcorner_gllvm` |
+| `Power = 1.1` in the Tweedie family: the power is fixed; `Power = NULL` estimates it | in a default `gllvm` Tweedie fit the power is not a free parameter | Julia estimates the power; pass `Power = NULL` to `gllvm` |
+| `disp.formula = NULL`: one dispersion per species | see the dispersion rows of the table above | shared by default; use the grouped fitters |
+| `control.va = list(Lambda.struc = "unstructured")` for `method = "VA"` | see the variational note in the estimation-method row above | diagonal posterior |
+| ordinal with `method = "LA"` is refused | there is no Laplace reference for ordinal responses | compare with `gllvm` VA or EVA only as an approximation |
+
+The fourth-corner default is the one that is easy to miss. In a Poisson example (8 species, 60 sites, two covariates, two traits, `K = 1`) `gllvm` gives a log-likelihood of -1045.151403 for raw traits and for standardised traits alike, while `fit_fourthcorner_gllvm` gives -812.378075 on the raw traits and -1045.151403 on the standardised ones.
+
+Checked by running, on a Poisson example (6 species, 40 sites, `K = 1`) with one cell per structure (none, fixed row effect, random row effect, species slopes, fixed row effect plus species slopes, fourth-corner, offset): the log-likelihoods agree to 3e-8 or better and the parameter counts are equal. The shared-slope row (`fit_gllvm_cov` against `row.eff = ~ x1`) was checked on one further cell: log-likelihoods -463.9574057172 and -463.9574057 with `dof` 13 against `df` 13, slopes 0.235496 and 0.235495. The maps for species slopes, fixed row effects and the fourth-corner coefficients (after reordering) agree to 1e-4 or better, and the random row-effect standard deviations to about 1e-6 (relative). Not checked here for any family other than Poisson, and `num.RR` and `num.lv.c` on one cell each only.
 
 ## Why likelihood approximations can differ
 
