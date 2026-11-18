@@ -228,6 +228,26 @@ function _parse_node!(c::_NewickCursor,
     end
 end
 
+# Duplicate tip names are an error (P61 DUP-TIP-NAMES, issue #1165 item 3): the
+# sparse and edge-incidence parsers used to accept them, and a name-keyed lookup then
+# silently merged two tips. Unnamed tips (empty label) are not checked. Same
+# condition `fit_phylo_latent_gllvm` already refuses.
+function _check_unique_tip_names(leaf_names::AbstractVector{<:AbstractString})
+    seen = Set{String}()
+    dups = String[]
+    for nm in leaf_names
+        isempty(nm) && continue
+        if nm in seen
+            nm in dups || push!(dups, nm)
+        else
+            push!(seen, nm)
+        end
+    end
+    isempty(dups) ||
+        error("tree tip names must be unique; duplicated: " * join(dups, ", "))
+    return nothing
+end
+
 """
     augmented_phy(newick::AbstractString; correlation::Bool = false) :: AugmentedPhy{Float64}
 
@@ -285,6 +305,7 @@ function augmented_phy(newick::AbstractString; correlation::Bool = false)
 
     c.i <= lastindex(c.s) &&
         error("extra characters after end of tree at position $(c.i)")
+    _check_unique_tip_names(leaf_names)
 
     # Reindex: place leaves first (1:p) in the order they were encountered,
     # then internal nodes in the order they were added (post-order, so the
