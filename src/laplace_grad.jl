@@ -388,7 +388,11 @@ end
 # --- Gamma (log link, shape α) — dispersion family, non-canonical ----------
 # AD-friendly Gamma(shape α, mean μ) log-density kernel (Var = μ²/α). Score
 # s = α(y−μ)/μ; Fisher weight = α (constant); observed weight −∂s/∂η = αy/μ.
-_gamma_logker(μ, α, y) = (α - 1) * log(y) - y * α / μ - α * log(μ) + α * log(α) - loggamma(α)
+# Stable `_gamma_logpdf` (src/families/gamma.jl) from shape 1e3: the expanded form cancels `α log α`
+# against `loggamma(α)`, and its derivative in log α cancels `α (log α - digamma(α))` (refs #1175);
+# below 1e3 the expanded form is kept, so ordinary fits are bit-identical.
+_gamma_logker(μ, α, y) = α >= _GAMMA_STIRLING_FROM ? _gamma_logpdf(α, μ, y) :
+                         (α - 1) * log(y) - y * α / μ - α * log(μ) + α * log(α) - loggamma(α)
 
 function _gamma_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, logα;
                               mask = nothing)
@@ -467,7 +471,10 @@ _beta_score_scalar(η, φ, y) = begin
     μstar = digamma(μ * φ) - digamma((1 - μ) * φ)
     return φ * (ystar - μstar) * me
 end
-_beta_logker(μ, φ, y) = (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
+# Stable `_beta_logpdf` once both shapes are large (the expanded form cancels, #1143); below that the
+# expanded form is kept, so ordinary fits are bit-identical.
+_beta_logker(μ, φ, y) = _beta_stirling_applies(μ * φ, (1 - μ) * φ) ? _beta_logpdf(μ * φ, (1 - μ) * φ, y) :
+                        (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
                         (loggamma(μ * φ) + loggamma((1 - μ) * φ) - loggamma(φ))
 
 function _beta_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, logφ;

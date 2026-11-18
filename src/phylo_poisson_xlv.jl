@@ -290,6 +290,7 @@ function _fit_phylo_poisson_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
     size(X_lv, 1) == n ||
         throw(ArgumentError("X_lv rows ($(size(X_lv, 1))) must equal size(Y,2)=$n"))
     q_lv = size(X_lv, 2)
+    _check_response_support(:count, Y, nothing; caller = "_fit_phylo_poisson_xlv")
     theta0 = _phylo_poisson_xlv_theta0(Y, K, X_lv;
                                        beta_init = beta_init,
                                        Lambda_init = Lambda_init,

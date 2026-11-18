@@ -95,8 +95,14 @@ _binom_logpmf_full(μ, n, y) = y * log(μ) + (n - y) * log1p(-μ) +
 # NB2 goes through the stable `_nb2_logpdf_mean` (src/families/negbin.jl): the
 # expanded loggamma(r+y) − loggamma(r) + r log r − (r+y) log(r+μ) cancels at large r (#871).
 _nb_logpmf_full(μ, r, y) = _nb2_logpdf_mean(μ, r, Int(y))
-_gamma_logpdf_full(μ, α, y) = (α - 1) * log(y) - y * α / μ - α * log(μ) + α * log(α) - loggamma(α)
-_beta_logpdf_full(μ, φ, y) = (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
+# Gamma goes through the stable `_gamma_logpdf` (src/families/gamma.jl) from shape 1e3, where the
+# expanded form cancels (refs #1175); below that the expanded form is kept.
+_gamma_logpdf_full(μ, α, y) = α >= _GAMMA_STIRLING_FROM ? _gamma_logpdf(α, μ, y) :
+                              (α - 1) * log(y) - y * α / μ - α * log(μ) + α * log(α) - loggamma(α)
+# Beta goes through the stable `_beta_logpdf` (src/families/beta.jl) once both shape parameters
+# are large, where the expanded loggamma form cancels (#1143); below that the expanded form is kept.
+_beta_logpdf_full(μ, φ, y) = _beta_stirling_applies(μ * φ, (1 - μ) * φ) ? _beta_logpdf(μ * φ, (1 - μ) * φ, y) :
+                             (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
                              (loggamma(μ * φ) + loggamma((1 - μ) * φ) - loggamma(φ))
 _xs_logker_sum(::Poisson, μ, n, y) = sum(_pois_logpmf(μ[t], y[t]) for t in eachindex(y))
 _xs_logker_sum(::Binomial, μ, n, y) = sum(_binom_logpmf_full(μ[t], n[t], y[t]) for t in eachindex(y))
@@ -332,6 +338,7 @@ function fit_gllvm_mi(family, Y::AbstractMatrix, x::AbstractVector; K::Integer,
         "fit_gllvm_mi: supports Poisson()/NegativeBinomial()/Gamma() + LogLink and " *
         "Binomial()/Beta() + LogitLink."))
     Nm = N === nothing ? ones(Int, p, n) : N
+    _check_family_response_support(family, Y, nothing; caller = "fit_gllvm_mi", N = Nm)
 
     isobs = [!(ismissing(xi) || (xi isa Real && isnan(xi))) for xi in x]
     any(isobs) || throw(ArgumentError("x has no observed values."))
