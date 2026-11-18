@@ -1,3 +1,9 @@
+2026-11-18: #1181 weights docstring. Julia 1.10.13, 1 thread.
+`julia --project=. --startup-file=no -e 'using Test; include("test/test_weights_doc_1181.jl")'`.
+Before: 0 passed, 3 failed (the latent-term sentences were absent).
+After: 3 passed, 0 failed. Full `Pkg.test` not run.
+See after-task/2026-11-18-weights-doc-1181.md.
+
 2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
 `julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
 Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).

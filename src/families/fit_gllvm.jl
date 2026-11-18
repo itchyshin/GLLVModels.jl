@@ -466,7 +466,10 @@ only `Normal()` takes one.
 
 `weights` multiplies each observed cell's conditional log-density by its weight, as
 gllvmTMB's `weights` argument does (a weight of 0 drops the cell; fractional weights are
-allowed). The fit then maximises a weighted objective; the fit's `loglik` field holds it,
+allowed). The weight multiplies that conditional log-density inside the latent integral,
+so for `K ≥ 1` an integer weight `w` is not the same as repeating the unit `w` times, and
+a constant weight `c` is not a `c`-fold log-likelihood; at `K = 0` both of those hold.
+The fit then maximises a weighted objective; the fit's `loglik` field holds it,
 and `loglikelihood` / `aic` / `bic` / `confint` refuse a weighted fit, as gllvmTMB's
 `logLik()` does for non-unit weights. Accepted:
 
