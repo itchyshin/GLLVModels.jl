@@ -1,3 +1,10 @@
+2026-11-18: #1151 masked Laplace residuals. Julia 1.10.13, 1 thread.
+`julia --project=. --startup-file=no -e 'using Test; include("test/test_masked_residuals_1151.jl")'`.
+Before: 8 passed, 8 failed (masked Poisson and Binomial Laplace cells were
+finite for Pearson and Dunn–Smyth). After: 16 passed, 0 failed. Observed
+cells still match across two placeholders. Full `Pkg.test` not run.
+See after-task/2026-11-18-masked-residuals-1151.md.
+
 2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
 `julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
 Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).
