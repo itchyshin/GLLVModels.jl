@@ -470,6 +470,7 @@ mode `ẑₛ` (`_beta_binomial_mode`) at the fitted `(Λ, β)`, link, and precis
 """
 function getLV(fit::BetaBinomialFit, Y::AbstractMatrix{<:Real};
         N::Union{Nothing, AbstractMatrix{<:Real}} = nothing, rotate::Bool = true)
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Nm = N === nothing ? fill(1, p, n) : N
@@ -650,6 +651,7 @@ equations as `betabinomial_grouped_marginal_loglik_laplace`.
 """
 function getLV(fit::BetaBinomialGroupedFit, Y::AbstractMatrix{<:Real};
         N::Union{Nothing, AbstractMatrix{<:Real}} = nothing, rotate::Bool = true, mask = nothing)
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Nm = N === nothing ? fill(1, p, n) : N
