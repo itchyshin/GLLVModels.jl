@@ -82,7 +82,7 @@ end
 function _misc504_bad(route::Symbol, Y)
     B = copy(Y)
     if route === :exponential
-        B[1, 1] = -1.0
+        B[1, 1] = 1e300   # in support (y > 0); a -1 is refused up front (#730)
     elseif route === :studentt || route === :studentt_species
         B[1, 1] = 1e300
     else
@@ -91,7 +91,8 @@ function _misc504_bad(route::Symbol, Y)
     return B
 end
 
-_misc504_real_bad(route::Symbol) = route !== :lognormal
+# gp1 refuses a negative count up front (#730) and no in-support draw fails, so it is stubbed.
+_misc504_real_bad(route::Symbol) = route !== :lognormal && route !== :gp1
 
 # STUB (not a real fit): what a refit ending on the fitter's failure verdict
 # reports, a finite θ with `converged = false` and `loglik = -Inf`.

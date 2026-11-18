@@ -10,10 +10,11 @@
 #   log p(y_t|η_t) = logbinom(N_t,y_t) + y_t η_t − N_t log(1+e^{η_t}),
 # so under q
 #   E_q[log p(y_t|η_t)] = logbinom(N_t,y_t) + y_t μ_t − N_t S(μ_t, σ²_t),
-# with the softplus expectation
-#   S(μ,σ²) = E_q[log(1+e^η)] ≈ Σ_{j=1}^G (w_j/√π) log1p(exp(μ + √(2σ²) x_j)),
-# (x_j,w_j) the G-point Gauss–Hermite nodes/weights (Σ w_j = √π). The η argument
-# is clamped via `_clamp_eta` for numerical safety.
+# evaluated by G-point Gauss–Hermite quadrature (x_j,w_j), Σ w_j = √π, at the nodes
+#   η_j = clamp(μ + √(2σ²) x_j, ±30)   (`_clamp_eta`, for numerical safety),
+#   E_q[y η − N log(1+e^η)] ≈ Σ_j (w_j/√π) (y η_j − N log1p(exp(η_j))).
+# The SAME clamped η_j enters the linear and the softplus term, so the per-cell value
+# is ≤ 0 (a genuine log-pmf) and the ELBO cannot run away past |η| = 30.
 #
 # Per site,
 #   ELBO_s = Σ_t E_q[log p(y_t|η_t)] − KL_s,
@@ -27,16 +28,18 @@
 # `_gauss_hermite(G)` is shared with the other VA families (defined in
 # families/variational.jl, included first).
 
-# E_q[log(1+e^η)] for η ~ N(μ,σ²) by Gauss–Hermite quadrature with precomputed
-# nodes/weights (xs,ws) where Σ ws = √π. The √π normaliser turns the GH weights
-# into the N(μ,σ²) expectation.
-@inline function _softplus_expect(μ::Real, σ2::Real, xs::AbstractVector,
-        ws::AbstractVector)
+# E_q[y·η − N·log(1+e^η)] for η ~ N(μ,σ²) by Gauss–Hermite quadrature with
+# precomputed nodes/weights (xs,ws) where Σ ws = √π. The √π normaliser turns the GH
+# weights into the N(μ,σ²) expectation. BOTH the linear and the softplus term use the
+# same clamped η at each node, so the per-node value is log P(y|η) − logbinom ≤ 0 for
+# y ≤ N and the ELBO stays a lower bound (and bounded above) for |η| > 30.
+@inline function _cond_loglik_expect(y::Real, N::Real, μ::Real, σ2::Real,
+        xs::AbstractVector, ws::AbstractVector)
     sd = sqrt(2 * max(σ2, 0.0))
     acc = 0.0
     @inbounds for j in eachindex(xs)
         η = _clamp_eta(μ + sd * xs[j])
-        acc += ws[j] * log1p(exp(η))
+        acc += ws[j] * (y * η - N * log1p(exp(η)))
     end
     return acc / sqrt(π)
 end
@@ -49,7 +52,7 @@ end
 # (xs,ws) the GH rule. Used as the inner objective for the per-site L-BFGS solve.
 function _neg_elbo_site_binomial(φ::AbstractVector, y::AbstractVector,
         N::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector,
-        xs::AbstractVector, ws::AbstractVector)
+        xs::AbstractVector, ws::AbstractVector; obs = nothing)
     p, K = size(Λ)
     m  = φ[1:K]
     lv = φ[(K + 1):(2K)]
@@ -58,8 +61,8 @@ function _neg_elbo_site_binomial(φ::AbstractVector, y::AbstractVector,
     μ  = β .+ Λ * m
     ℓ = zero(eltype(φ))
     @inbounds for t in 1:p
-        S = _softplus_expect(μ[t], σ2[t], xs, ws)
-        ℓ += _logbinom(N[t], y[t]) + y[t] * μ[t] - N[t] * S
+        (obs !== nothing && !obs[t]) && continue
+        ℓ += _logbinom(N[t], y[t]) + _cond_loglik_expect(y[t], N[t], μ[t], σ2[t], xs, ws)
     end
     # KL(q‖prior) = ½ Σ_k (v_k + m_k² − 1 − log v_k); log v_k = lv_k.
     kl = zero(eltype(φ))
@@ -72,7 +75,7 @@ end
 
 # In-place gradient of the negative per-site Binomial ELBO at φ = [m (K); logv (K)].
 # Recomputes the GH nodes η_{tj} EXACTLY as _neg_elbo_site_binomial does (same
-# (xs,ws), same _clamp_eta). With ℓ(y,η) = y·η − N·log(1+e^η) the conditional-density
+# (xs,ws), same _clamp_eta; the clamp derivative is applied). With ℓ(y,η) = y·η − N·log(1+e^η) the conditional-density
 # η-derivative is ℓ'(y,η) = y − N·logistic(η), and the generic GH chain rule gives
 #   a_t = Σ_j (w_j/√π)·ℓ'(y_t,η_{tj}),  b_t = Σ_j (w_j/√π)·ℓ'(y_t,η_{tj})·x_j,
 #   ∂E_q_t/∂m_k  = Λ_tk·a_t,
@@ -80,11 +83,11 @@ end
 # so with KL = ½ Σ_k (v_k + m_k² − 1 − lv_k),
 #   ∂ELBO/∂m_k  = Σ_t Λ_tk·a_t − m_k,
 #   ∂ELBO/∂lv_k = Σ_t (Λ_tk²·v_k/√(2σ²_t))·b_t − ½(v_k − 1).
-# The objective is −ELBO, so G holds the negation. (_clamp_eta's derivative is treated
-# as 1; the clamp is inactive for benign data.)
+# The objective is −ELBO, so G holds the negation. (_clamp_eta's derivative is 1 inside
+# ±30 and 0 outside, matching the value path.)
 function _va_site_binomial_grad!(G::AbstractVector, φ::AbstractVector,
         y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix, Λ2::AbstractMatrix,
-        β::AbstractVector, xs::AbstractVector, ws::AbstractVector)
+        β::AbstractVector, xs::AbstractVector, ws::AbstractVector; obs = nothing)
     p, K = size(Λ)
     m  = @view φ[1:K]
     lv = @view φ[(K + 1):(2K)]
@@ -95,11 +98,14 @@ function _va_site_binomial_grad!(G::AbstractVector, φ::AbstractVector,
     a = zeros(eltype(φ), p)
     b = zeros(eltype(φ), p)
     @inbounds for t in 1:p
+        (obs !== nothing && !obs[t]) && continue
         sd = sqrt(2.0 * max(σ2[t], 0.0))
         at = zero(eltype(φ)); bt = zero(eltype(φ))
         for j in eachindex(xs)
-            η = _clamp_eta(μ[t] + sd * xs[j])
+            ηu = μ[t] + sd * xs[j]
+            η = _clamp_eta(ηu)
             ℓp = y[t] - N[t] / (1.0 + exp(-η))     # ℓ'(y,η) = y − N·logistic(η)
+            abs(ηu) < _ETA_CLAMP || (ℓp = 0.0)     # d clamp/dη = 0 outside ±30
             at += ws[j] * ℓp
             bt += ws[j] * ℓp * xs[j]
         end
@@ -126,11 +132,11 @@ end
 # jointly minimising the negative ELBO over [m; logv] with L-BFGS (analytic gradient).
 function _va_site_binomial(y::AbstractVector, N::AbstractVector, Λ::AbstractMatrix,
         Λ2::AbstractMatrix, β::AbstractVector, xs::AbstractVector, ws::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     K = size(Λ, 2)
     φ0 = zeros(2K)   # m = 0, logv = 0 ⇒ v = 1 (the prior)
-    f(φ) = _neg_elbo_site_binomial(φ, y, N, Λ, Λ2, β, xs, ws)
-    g!(G, φ) = _va_site_binomial_grad!(G, φ, y, N, Λ, Λ2, β, xs, ws)
+    f(φ) = _neg_elbo_site_binomial(φ, y, N, Λ, Λ2, β, xs, ws; obs = obs)
+    g!(G, φ) = _va_site_binomial_grad!(G, φ, y, N, Λ, Λ2, β, xs, ws; obs = obs)
     res = Optim.optimize(f, g!, φ0, Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
     return -Optim.minimum(res)
@@ -143,11 +149,11 @@ end
 function _va_site_binomial_mv(y::AbstractVector, N::AbstractVector,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector,
         xs::AbstractVector, ws::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, obs = nothing)
     K = size(Λ, 2)
     φ0 = zeros(2K)   # m = 0, logv = 0 ⇒ v = 1 (the prior)
-    f(φ) = _neg_elbo_site_binomial(φ, y, N, Λ, Λ2, β, xs, ws)
-    g!(G, φ) = _va_site_binomial_grad!(G, φ, y, N, Λ, Λ2, β, xs, ws)
+    f(φ) = _neg_elbo_site_binomial(φ, y, N, Λ, Λ2, β, xs, ws; obs = obs)
+    g!(G, φ) = _va_site_binomial_grad!(G, φ, y, N, Λ, Λ2, β, xs, ws; obs = obs)
     res = Optim.optimize(f, g!, φ0, Optim.LBFGS(),
                          Optim.Options(g_tol = tol, iterations = maxiter))
     φ̂ = Optim.minimizer(res)
@@ -163,16 +169,17 @@ end
 function _va_binomial_solve_all(Y::AbstractMatrix, N::AbstractMatrix,
         Λ::AbstractMatrix, Λ2::AbstractMatrix, β::AbstractVector,
         xs::AbstractVector, ws::AbstractVector;
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     K = size(Λ, 2)
     n = size(Y, 2)
     M = Matrix{Float64}(undef, K, n)
     V = Matrix{Float64}(undef, K, n)
     acc = 0.0
     @inbounds for s in 1:n
+        obs = mask === nothing ? nothing : view(mask, :, s)
         elbo_s, m_s, v_s = _va_site_binomial_mv(view(Y, :, s), view(N, :, s), Λ,
                                                 Λ2, β, xs, ws;
-                                                maxiter = maxiter, tol = tol)
+                                                maxiter = maxiter, tol = tol, obs = obs)
         acc += elbo_s
         M[:, s] = m_s
         V[:, s] = v_s
@@ -195,7 +202,7 @@ end
 function _va_binomial_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
         N::AbstractMatrix, Λ::AbstractMatrix, Λ2::AbstractMatrix,
         β::AbstractVector, M::AbstractMatrix, V::AbstractMatrix,
-        xs::AbstractVector, ws::AbstractVector)
+        xs::AbstractVector, ws::AbstractVector; mask = nothing)
     p, K = size(Λ)
     n = size(Y, 2)
     invsqrtpi = 1.0 / sqrt(π)
@@ -207,12 +214,15 @@ function _va_binomial_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
         σ2 = Λ2 * v_s
         μ = β .+ Λ * m_s
         for t in 1:p
+            (mask !== nothing && !mask[t, s]) && continue
             σ2t = σ2[t]
             sd = sqrt(2.0 * max(σ2t, 0.0))
             at = 0.0; bt = 0.0
             for j in eachindex(xs)
-                η = _clamp_eta(μ[t] + sd * xs[j])
+                ηu = μ[t] + sd * xs[j]
+                η = _clamp_eta(ηu)
                 ℓη = Y[t, s] - N[t, s] / (1.0 + exp(-η))   # y − N·logistic(η)
+                abs(ηu) < _ETA_CLAMP || (ℓη = 0.0)         # d clamp/dη = 0 outside ±30
                 wj = ws[j]
                 at += wj * ℓη
                 bt += wj * ℓη * xs[j]
@@ -241,7 +251,7 @@ function _va_binomial_outer_grad!(G::AbstractVector, Y::AbstractMatrix,
 end
 
 """
-    binomial_marginal_loglik_va(Y, N, Λ, β; maxiter=100, tol=1e-9, gh=20) -> Float64
+    binomial_marginal_loglik_va(Y, N, Λ, β; maxiter=100, tol=1e-9, gh=20, mask=nothing) -> Float64
 
 Gaussian-variational (VA) log-marginal lower bound (ELBO) over the `n` sites
 (columns) of a Binomial GLLVM with logit link — `Y` the p×n integer response
@@ -252,20 +262,23 @@ evaluated by `gh`-point Gauss–Hermite quadrature. The returned value is a **lo
 bound** on the true log-marginal (≤ it for any `q`); as `Λ→0` it equals the
 independent-Binomial loglik exactly. Companion to
 [`poisson_marginal_loglik_va`](@ref) and [`binomial_marginal_loglik_laplace`](@ref).
+`mask` drops cells (`nothing` keeps every cell); unobserved entries of `Y` are ignored.
 """
 function binomial_marginal_loglik_va(Y::AbstractMatrix, N::AbstractMatrix,
         Λ::AbstractMatrix, β::AbstractVector; maxiter::Integer = 100,
-        tol::Real = 1e-9, gh::Integer = 20)
+        tol::Real = 1e-9, gh::Integer = 20, mask = nothing)
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
     size(N) == size(Y) ||
         throw(DimensionMismatch("N must match Y size $(size(Y))"))
+    _va_check_mask(mask, Y)
     Λ2 = Λ .^ 2
     xs, ws = _gauss_hermite(gh)
     acc = 0.0
     @inbounds for s in axes(Y, 2)
+        obs = mask === nothing ? nothing : view(mask, :, s)
         acc += _va_site_binomial(view(Y, :, s), view(N, :, s), Λ, Λ2, β, xs, ws;
-                                 maxiter = maxiter, tol = tol)
+                                 maxiter = maxiter, tol = tol, obs = obs)
     end
     return acc
 end
@@ -284,21 +297,28 @@ evaluation). The returned `BinomialFit`'s `loglik` field holds the maximised ELB
 lower bound on the true log-marginal), so it is directly comparable across VA fits
 but sits slightly below the Laplace `loglik` for the same data. The ELBO is derived
 for the logit link only: any other `link` throws `ArgumentError`.
+
+A `Y` that contains `missing` is fitted, not rejected: the observation mask is
+derived from those cells (a one-time `@info`) and unobserved cells are dropped
+from the ELBO. Pass `mask` to drop additional cells.
 """
 function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
         N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing, K::Integer,
         link::Link = LogitLink(),
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        maxiter::Integer = 100, tol::Real = 1e-9)
+        maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_binomial_gllvm_va", link, LogitLink())
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
+    _va_check_mask(mask, Y)
+    _check_response_support(:binomial, Y, mask; caller = "fit_binomial_gllvm_va", N = Nm)
     rr = rr_theta_len(p, K)
 
     # warm start: empirical link-scale intercepts + SVD (PPCA-like) loadings
     Zemp = [linkfun(link, clamp((Y[t, i] + 0.5) / (Nm[t, i] + 1), 1e-4, 1 - 1e-4))
             for t in 1:p, i in 1:n]
+    mask === nothing || _mask_warmstart!(Zemp, mask)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
     Zc = Zemp .- β0
     F = svd(Zc)
@@ -318,9 +338,9 @@ function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         Λ2 = Λ .^ 2
         elbo, M, V = _va_binomial_solve_all(Y, Nm, Λ, Λ2, β, xs, ws;
-                                            maxiter = maxiter, tol = tol)
+                                            maxiter = maxiter, tol = tol, mask = mask)
         if G !== nothing
-            _va_binomial_outer_grad!(G, Y, Nm, Λ, Λ2, β, M, V, xs, ws)
+            _va_binomial_outer_grad!(G, Y, Nm, Λ, Λ2, β, M, V, xs, ws; mask = mask)
         end
         if F !== nothing
             return isfinite(elbo) ? -elbo : 1e12
@@ -334,4 +354,14 @@ function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     return BinomialFit(β̂, Λ̂, link, _fit_verdict(res)...)
+end
+
+function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Union{Missing,Integer}};
+        mask = nothing, kwargs...)
+    if mask === nothing
+        Yc, msk = _va_materialize_derived(Y, 0, "fit_binomial_gllvm_va")
+    else
+        Yc, msk = _va_materialize_explicit(Y, 0, mask)
+    end
+    return fit_binomial_gllvm_va(Yc; mask = msk, kwargs...)
 end

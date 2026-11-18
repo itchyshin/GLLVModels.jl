@@ -122,6 +122,24 @@ using StableRNGs
         @test abs(cv_bin.residual_mean) < 0.5
     end
 
+    @testset "Binomial with trial counts: predictions and MSE are on the count scale (#769)" begin
+        Random.seed!(11)
+        p, n = 6, 60
+        Ntr = fill(20, p, n)
+        Y = [rand(Binomial(20, 0.4)) for _ in 1:p, _ in 1:n]
+        r = cv_gllvm(Y; k_folds = 3, split = :random, family = Binomial(), K = 1, N = Ntr,
+                     rng = Random.MersenneTwister(2))
+        pred = filter(!isnan, vec(r.predictions))
+        # Predictions are expected counts out of 20, not probabilities.
+        @test all(0.0 .<= pred .<= 20.0)
+        @test abs(mean(pred) - mean(Y)) < 1.0
+        # A model that fits should score near the data variance, not ~13x it.
+        @test r.mse < 2 * var(vec(Y))
+        # mse is the mean squared error of the stored predictions against Y.
+        ok = .!isnan.(r.predictions)
+        @test isapprox(r.mse, mean(abs2, (Y .- r.predictions)[ok]); rtol = 1e-8)
+    end
+
     @testset "Negative Binomial Family CV" begin
         Random.seed!(404)
         p, n = 4, 30
@@ -289,6 +307,23 @@ end
         @test_throws ArgumentError cv_gllvm(Yc; k_folds = 3, split = :site,
                                             family = Poisson(), K = K, X = X)
     end
+end
+
+@testset "_cv_cell_eval Dunn-Smyth residual keeps its tail (#767)" begin
+    # Regression: the cell residual was `quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))`, so every
+    # observation with an upper tail below 1e-12 returned exactly 7.034 (a count of 40 and a count
+    # of 100000 under a mean near 1 looked alike). It now goes through the tail-safe `_ds_z`.
+    cell(fam, y) = GLLVModels._cv_cell_eval(nothing, fam, y, 1.0, 1, 1, nothing,
+                                            MersenneTwister(1))[2]
+    cap = quantile(Normal(), 1 - 1e-12)
+    @testset "$(nameof(typeof(fam)))" for fam in (Poisson(), Gamma(), Exponential())
+        rs = [cell(fam, y) for y in (40, 1000, 100000)]
+        @test all(isfinite, rs)
+        @test all(rs .> cap + 1e-6)
+        @test issorted(rs; lt = <=)
+    end
+    # A central cell is unchanged by the fix.
+    @test cell(Poisson(), 1) < 1.5 && cell(Poisson(), 1) > -3
 end
 
 @testset "loading GLLVModels raises no identifier-conflict warning" begin

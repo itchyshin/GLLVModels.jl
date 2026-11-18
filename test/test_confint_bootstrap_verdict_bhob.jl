@@ -76,7 +76,9 @@ end
 # 1e-300 all fit with `converged = true` and a finite log-likelihood.
 _bhob504_bad(Y) = (B = copy(Y); B[1, 1] = -1.0; B)
 
-_bhob504_real_bad(route::Symbol) = route === :ordered_beta
+# fit_ordered_beta_gllvm refuses out-of-support draws up front (#730) and no in-support draw fails,
+# so every route here uses a stubbed failed refit.
+_bhob504_real_bad(route::Symbol) = false
 
 # STUB (not a real fit): what a refit ending on the fitter's failure verdict
 # reports, a finite θ with `converged = false` and `loglik = -Inf`.

@@ -26,19 +26,19 @@ using Printf
 Summary container holding out-of-sample cross-validation evaluation results.
 
 Fields:
-- `k_folds::Int` — number of folds ($K$)
-- `split::Symbol` — split strategy (`:random`, `:site`, or `:species`)
-- `loglik::Float64` — total out-of-sample log-likelihood summed across all test cells
-- `mse::Float64` — overall out-of-sample Mean Squared Error
-- `residual_mean::Float64` — sample mean of out-of-sample Dunn–Smyth randomized quantile residuals (target ≈ 0)
-- `residual_std::Float64` — sample standard deviation of out-of-sample randomized quantile residuals (target ≈ 1)
-- `fold_logliks::Vector{Float64}` — out-of-sample log-likelihood for each fold
-- `fold_mses::Vector{Float64}` — out-of-sample MSE for each fold
-- `fold_residual_means::Vector{Float64}` — mean of quantile residuals per fold
-- `fold_residual_stds::Vector{Float64}` — standard deviation of quantile residuals per fold
-- `predictions::Matrix{Float64}` — $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$
-- `residuals::Matrix{Float64}` — $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
-- `fits::Vector{Any}` — fitted model objects from each training fold
+- `k_folds::Int`: number of folds ($K$)
+- `split::Symbol`: split strategy (`:random`, `:site`, or `:species`)
+- `loglik::Float64`: total out-of-sample log-likelihood summed across all test cells
+- `mse::Float64`: overall out-of-sample Mean Squared Error
+- `residual_mean::Float64`: sample mean of out-of-sample Dunn–Smyth randomized quantile residuals (target ≈ 0)
+- `residual_std::Float64`: sample standard deviation of out-of-sample randomized quantile residuals (target ≈ 1)
+- `fold_logliks::Vector{Float64}`: out-of-sample log-likelihood for each fold
+- `fold_mses::Vector{Float64}`: out-of-sample MSE for each fold
+- `fold_residual_means::Vector{Float64}`: mean of quantile residuals per fold
+- `fold_residual_stds::Vector{Float64}`: standard deviation of quantile residuals per fold
+- `predictions::Matrix{Float64}`: $p \times n$ matrix of out-of-sample predicted response values $\hat{\mu}$ (for `Binomial` with trial counts `N`, the expected count $N\hat{\mu}$, on the scale of `Y`)
+- `residuals::Matrix{Float64}`: $p \times n$ matrix of out-of-sample Dunn–Smyth randomized quantile residuals
+- `fits::Vector{Any}`: fitted model objects from each training fold
 """
 struct CVResult
     k_folds::Int
@@ -165,7 +165,37 @@ end
 # Out-of-sample cell-level evaluation (log-likelihood + Dunn–Smyth residual)
 # -----------------------------------------------------------------------------
 
-function _cv_cell_eval(fit, family::Normal, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+# Continuous cell: u = F(y), no jitter (lo = hi). The log tail goes to `_ds_z` so an upper (or lower)
+# tail below floatmin, where `ccdf` underflows to 0, still gives a finite residual that keeps growing
+# with y (#767). `v` is 1 on the lower side and 0 on the upper side so that `lmass` is used unscaled.
+function _cv_ds_z_continuous(d, y)
+    F = cdf(d, y)
+    S = ccdf(d, y)
+    lower = F <= 0.5
+    return _ds_z(F, F, S, S, lower ? 1.0 : 0.0;
+                 lmass = lower ? logcdf(d, y) : Distributions.logccdf(d, y))
+end
+
+# Fitted dispersion of species `t` for the cell density. Grouped fits (`disp_group`) store one
+# value per group plus `group` (species -> group index), so the value is `raw[group[t]]`; other
+# vector fits are per species. `heldout = true` (a species the training fit never saw, so it has
+# no dispersion of its own) keeps the earlier lookup unchanged: `t` is `1` there, the grouped
+# NB2 field is not read and its constant default applies. Which dispersion a held-out species
+# should get is an open design question.
+function _cv_disp(fit, names::Tuple, default::Float64, t::Int, heldout::Bool)
+    raw = default
+    for nm in names
+        if hasfield(typeof(fit), nm)
+            raw = getfield(fit, nm)
+            break
+        end
+    end
+    raw isa AbstractVector || return Float64(raw)
+    i = (!heldout && hasfield(typeof(fit), :group)) ? fit.group[t] : min(t, length(raw))
+    return Float64(raw[i])
+end
+
+function _cv_cell_eval(fit, family::Normal, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     σ = if fit isa GllvmFit
         fit.pars.σ_eps
     elseif hasfield(typeof(fit), :σ_eps)
@@ -181,104 +211,63 @@ function _cv_cell_eval(fit, family::Normal, y::Real, μ::Real, t::Int, s::Int, N
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Poisson, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Poisson, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = max(Float64(μ), 1e-12)
     d = Poisson(μ_c)
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Binomial, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Binomial, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = clamp(Float64(μ), 1e-12, 1.0 - 1e-12)
     N = N_mat === nothing ? 1 : Int(N_mat[t, s])
     d = Binomial(N, μ_c)
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::NegativeBinomial, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::NegativeBinomial, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = max(Float64(μ), 1e-12)
-    r_raw = if hasfield(typeof(fit), :r)
-        fit.r
-    elseif hasfield(typeof(fit), :rvec)
-        fit.rvec
-    else
-        1.0
-    end
-    r_disp = (r_raw isa AbstractVector) ? Float64(r_raw[min(t, length(r_raw))]) : Float64(r_raw)
+    r_disp = _cv_disp(fit, heldout ? (:r, :rvec) : (:r, :rvec, :r_group), 1.0, t, heldout)
     prob = r_disp / (r_disp + μ_c)
     d = NegativeBinomial(r_disp, clamp(prob, 1e-12, 1.0 - 1e-12))
     yi = round(Int, y)
     ll = logpdf(d, yi)
-    Flo = cdf(d, yi - 1)
-    Fhi = cdf(d, yi)
-    u = Flo + (Fhi - Flo) * rand(rng)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    r = _ds_z_discrete(d, yi, rand(rng))
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Beta, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Beta, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = clamp(Float64(μ), 1e-6, 1.0 - 1e-6)
-    φ_raw = if hasfield(typeof(fit), :φ)
-        fit.φ
-    elseif hasfield(typeof(fit), :φvec)
-        fit.φvec
-    else
-        10.0
-    end
-    φ = (φ_raw isa AbstractVector) ? Float64(φ_raw[min(t, length(φ_raw))]) : Float64(φ_raw)
+    φ = _cv_disp(fit, (:φ, :φvec), 10.0, t, heldout)
     d = Beta(μ_c * φ, (1.0 - μ_c) * φ)
     yc = clamp(Float64(y), 1e-6, 1.0 - 1e-6)
-    ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    ll = _beta_logpdf(μ_c * φ, (1.0 - μ_c) * φ, yc)
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Gamma, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Gamma, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = max(Float64(μ), 1e-12)
-    α_raw = if hasfield(typeof(fit), :α)
-        fit.α
-    elseif hasfield(typeof(fit), :αvec)
-        fit.αvec
-    else
-        1.0
-    end
-    α = (α_raw isa AbstractVector) ? Float64(α_raw[min(t, length(α_raw))]) : Float64(α_raw)
+    α = _cv_disp(fit, (:α, :αvec), 1.0, t, heldout)
     θ = μ_c / α
     d = Gamma(α, θ)
     yc = max(Float64(y), 1e-12)
-    ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
+    ll = _gamma_logpdf(α, μ_c, yc)
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
-function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
+function _cv_cell_eval(fit, family::Exponential, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG; heldout::Bool = false)
     μ_c = max(Float64(μ), 1e-12)
     d = Exponential(μ_c)
     yc = max(Float64(y), 1e-12)
     ll = logpdf(d, yc)
-    u = cdf(d, yc)
-    r = quantile(Normal(), clamp(u, 1e-12, 1.0 - 1e-12))
-    return (ll, r)
-end
-
-# Fallback for other families
-function _cv_cell_eval(fit, family, y::Real, μ::Real, t::Int, s::Int, N_mat, rng::AbstractRNG)
-    d = Normal(μ, 1.0)
-    ll = logpdf(d, y)
-    r = y - μ
+    r = _cv_ds_z_continuous(d, yc)
     return (ll, r)
 end
 
@@ -302,14 +291,17 @@ Run $K$-fold cross-validation on community response matrix `Y` ($p \times n$,
 species/traits $\times$ sites/observations).
 
 Supported `split` strategies:
-- `:random` (or `:cell`, `:entry`) — Random entry-wise split across all observed cells.
-- `:site` (or `:site_block`, `:site_level`, `:column`) — Site-level block cross-validation holding out entire site columns.
-- `:species` (or `:species_block`, `:species_level`, `:row`) — Species-level block cross-validation holding out entire species rows.
+- `:random` (or `:cell`, `:entry`): random entry-wise split across all observed cells.
+- `:site` (or `:site_block`, `:site_level`, `:column`): site-level block cross-validation holding out entire site columns.
+- `:species` (or `:species_block`, `:species_level`, `:row`): species-level block cross-validation holding out entire species rows.
 
 For the Gaussian family, a fixed-effect design `X` (a `p×n×q` array, as for
 [`fit_gaussian_gllvm`](@ref)) may be passed as `X = X`; it is subset with each
 fold's training data, and held-out cells are predicted at `X[t, s, :] ⋅ β̂`.
-Other families reject `X`.
+Other families reject `X`. `offset` is not supported and is rejected.
+
+Only `Normal`, `Poisson`, `Binomial`, `NegativeBinomial`, `Beta`, `Gamma` and
+`Exponential` can be scored; any other `family` throws an `ArgumentError`.
 
 Returns a [`CVResult`](@ref) containing out-of-sample log-likelihood, MSE,
 Dunn–Smyth randomized quantile residuals, predictions, and per-fold metrics.
@@ -317,6 +309,7 @@ Dunn–Smyth randomized quantile residuals, predictions, and per-fold metrics.
 # Examples
 ```julia
 using GLLVModels, Random
+using Distributions: Poisson
 
 # 5-fold random cell-level CV on count data
 Y = rand(0:10, 6, 40)
@@ -352,6 +345,17 @@ function cv_gllvm(Y::AbstractMatrix;
     else
         throw(ArgumentError("Unknown split :$split. Supported: :random, :site, :species"))
     end
+
+    # Only families with a `_cv_cell_eval` method have an out-of-sample density and
+    # Dunn–Smyth residual; refuse the rest before any fit (#773).
+    family isa Union{Normal, Poisson, Binomial, NegativeBinomial, Beta, Gamma, Exponential} ||
+        throw(ArgumentError(
+            "cv_gllvm cannot score family $(family): it has no out-of-sample log-density " *
+            "or Dunn–Smyth residual. Supported families: Normal, Poisson, Binomial, " *
+            "NegativeBinomial, Beta, Gamma, Exponential."))
+    haskey(kwargs, :offset) && throw(ArgumentError(
+        "cv_gllvm does not support `offset`: the fold fits would use it but the held-out " *
+        "predictions would not, which inflates CV error (#772)."))
 
     # A Gaussian fixed-effect design X (p×n×q) is subset alongside each fold's data.
     X = get(kwargs, :X, nothing)
@@ -527,12 +531,21 @@ function cv_gllvm(Y::AbstractMatrix;
             η = β_t + Λ_t_dot_z
             μ = linkinv(link, η)
 
-            predictions[t, s] = μ
-            sq_err = (Float64(y_val) - Float64(μ))^2
+            # Binomial with trial counts: `y` is a count out of N[t, s], so the
+            # prediction is the expected count N * μ, not the probability (#769).
+            # `_cv_cell_eval` below keeps μ: its log-density takes (N, μ).
+            pred = (family isa Binomial && N !== nothing) ? Float64(N[t, s]) * Float64(μ) : Float64(μ)
+            predictions[t, s] = pred
+            sq_err = (Float64(y_val) - pred)^2
             push!(fold_errs, sq_err)
             push!(all_sq_errs, sq_err)
 
-            cell_ll, cell_res = _cv_cell_eval(fit_k, family, y_val, μ, t_idx !== nothing ? t_idx : 1, s, N, rng)
+            # The Binomial density reads the trial count N[t, s], so it needs the original
+            # species row `t`. `t_idx` is a position among the training species (and `1` for a
+            # held-out species), which picked the wrong trial count under `split = :species`.
+            t_eval = family isa Binomial ? t : (t_idx !== nothing ? t_idx : 1)
+            cell_ll, cell_res = _cv_cell_eval(fit_k, family, y_val, μ, t_eval, s, N, rng;
+                                              heldout = t_idx === nothing)
             residuals_mat[t, s] = cell_res
             fold_ll += cell_ll
             push!(fold_rvec, cell_res)

@@ -101,12 +101,15 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     link isa LogLink || throw(ArgumentError(
         "fit_truncated_poisson_gllvm: only LogLink is supported (twin truncated_poisson)"))
+    # y = 0 is rejected by the dedicated zero check below (its message names the cell); this one
+    # catches negative, non-integer and non-finite cells before the Integer conversion.
+    _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_truncated_poisson_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_truncated_poisson_gllvm")
     rr = rr_theta_len(p, K)
-    msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
-    Yc = Integer.(_sanitize_missing(Y, 1))   # placeholder 1 for masked (never enters ℓ)
+    msk = _resolve_obs_mask(mask, Y)
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 1))   # placeholder 1 for masked (never enters ℓ)
     # Reject zeros in observed cells.
     @inbounds for t in 1:p, s in 1:n
         (msk !== nothing && !msk[t, s]) && continue
@@ -126,7 +129,9 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_truncated_poisson_gllvm")   # #874
     Zc = Zemp .- β0
     Λ0 = if Λ_init === nothing
         F = svd(Zc)
@@ -145,6 +150,7 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -marginal_loglik_laplace(TruncatedPoisson(), Yc, N1, Λ, β, link;
                                      mask = msk, offset = offset,
@@ -160,6 +166,9 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
-    return TruncatedPoissonFit(β̂, Λ̂, link, _fit_verdict(res)...,
+    loglik, conv, iters = _fit_verdict(res)
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk,
+                            caller = "fit_truncated_poisson_gllvm")
+    return TruncatedPoissonFit(β̂, Λ̂, link, loglik, conv, iters,
                                collect(Float64, θ̂))
 end

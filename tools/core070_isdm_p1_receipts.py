@@ -12,7 +12,9 @@ batch pays all 20, run at gllvmTMB pin P1 (GLLVM_PARITY_PIN=P1):
                           Julia: none in this batch. At the run commit GLLVModels' src/ has
                           no iSDM code (recorded from `git grep -il isdm <commit> -- src`).
 
-So no isdm row can bind here: R SIDE ONLY, NOTHING NUMERIC TO COMPARE. Draft PRs
+That batch alone cannot bind a row: R SIDE ONLY, NOTHING NUMERIC TO COMPARE.
+The five signed public-door rows can separately bind through raw-backed paired
+behaviour receipts checked by core070_behaviour_receipts.py. Draft PRs
 #546 / #558 build the iSDM surface and a Julia-native twin of 19 of these
 predicates on another branch; whether they should pay these rows is a proposal
 for the maintainer, recorded in the PR body, not a rebinding made here.
@@ -90,7 +92,7 @@ TIER_TEXT = {
 }
 COUNT_KEYS = ("numeric_pass", "numeric_fail", "numeric_held_batch_verifier_failed", "numeric_non_discriminating",
               "needs_surface_r_side_measured", "measured_held_batch_verifier_failed", "measured_fail",
-              "not_measured")
+              "not_measured", "behavioural")
 LEGACY_NOTE = ("ISDM-LEGACY replays R's legacy two-source route (family_var = \"isdm_family\", fixed names gbif / "
                "survey_pa). Packet 1b item 2 (signed 2026-09-27, vault decision D-296) records it as an R-only "
                "backward-compatibility disposition that GLLVModels will not twin. That disposition is not written "
@@ -328,6 +330,45 @@ def foreign_rows(cm):
     return [r for r in cm["rows"] if "clause" in r]
 
 
+FIRST_SEVEN_ISDM = frozenset("isdm/" + name for name in (
+    "ISDM-COUNT", "ISDM-EXTRA-SOURCE", "ISDM-MISSING-IN-TRAIT",
+    "ISDM-MISSING-SOURCE", "ISDM-WRAPPER-LAW"))
+
+
+def behavioural_overlay(row, counts):
+    """Apply the public-call behaviour overlay only to the five admitted P1 rows.
+
+    Check identity and the original R-only tier before delegation; B.overlay_row
+    then verifies the receipt's source-scoped labels against the equivalence map.
+    """
+    sid = row.get("source_id")
+    if sid not in FIRST_SEVEN_ISDM:
+        return False
+    if row.get("evidence_tier") != "needs_surface_r_side_measured":
+        return False
+    if row.get("measured_against") != P1_SHA:
+        return False
+    p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
+    expected = p0[sid]["executable_case_ids"]
+    if row.get("executable_case_ids") != expected:
+        return False
+    import core070_behaviour_receipts as B
+    return B.overlay_row(row, counts)
+
+
+def rederive_map():
+    """Regenerate rows from retained receipts without overwriting measured evidence."""
+    cm = load(ROOT / CASEMAP_REL)
+    tracked = {p.stem: (str(p.relative_to(ROOT)), load(p))
+               for p in sorted((ROOT / REC_REL / "cases").glob("*.json"))}
+    receipts = {cid: receipt_info(path, rec) for cid, (path, rec) in tracked.items()}
+    mine = own_rows(cm)
+    rows, counts = build_rows([r["source_id"] for r in mine], receipts, mine)
+    cm.update(rows=rows + foreign_rows(cm), counts=counts, scope=SCOPE, note=NOTE)
+    write_json(ROOT / CASEMAP_REL, cm)
+    print("CORE070_ISDM_MAP_REDERIVED", json.dumps(counts))
+
+
 def build_rows(in_scope, receipts, committed_rows=None):
     committed_by_id = {r["source_id"]: r for r in (committed_rows or [])}
     p0 = {r["source_id"]: r for r in load(P0_CASEMAP)["rows"]}
@@ -371,6 +412,7 @@ def build_rows(in_scope, receipts, committed_rows=None):
         if notes and sid not in SIGNED_DISPOSITIONS:
             row["note"] = " ".join(dict.fromkeys(notes))
         apply_signed_disposition(row)
+        behavioural_overlay(row, counts)
         out_rows.append(row)
     return out_rows, counts
 
@@ -430,7 +472,10 @@ def check():
         rec = tracked[cid][1]
         if (rec["evidence_kind"], rec["verdict"]) != (kind, verdict):
             problems.append(f"{cid}: kind/verdict {rec['evidence_kind']}/{rec['verdict']} != re-derived {kind}/{verdict}")
-        if {k: v for k, v in rec.items() if k not in PROVENANCE_KEYS} != body:
+        # Behaviour blocks are derived by core070_behaviour_receipts.py from
+        # the public-door sidecars (D-319 N6); this admission-batch verifier
+        # owns the remaining receipt body only.
+        if {k: v for k, v in rec.items() if k not in PROVENANCE_KEYS | {"behaviour", "behaviour_not_bound"}} != body:
             problems.append(f"{cid}: receipt body differs from the re-derivation")
         if rec.get("reference_commit") != P1_SHA or rec.get("pin") != "P1":
             problems.append(f"{cid}: receipt not pinned at P1")
@@ -465,17 +510,14 @@ def check():
 # ---------------------------------------------------------------------------
 # write
 # ---------------------------------------------------------------------------
-SCOPE = ("isdm family: the 20 required rows the P1 carry scan lists as DANGLING, all paid by the wave1 isdm "
+SCOPE = ("isdm family: the 20 required rows the P1 carry scan lists as DANGLING, initially measured by the wave1 isdm "
          "admission batch (R admission-predicate replay against the pinned P1 source; no fit, no Julia side). The 17 "
          "rejected isdm rows and the two NOT_BOUND_AT_P0 namespace exports (isdm_source, isdm_sources) are out of "
          "scope.")
-NOTE = ("Separate from case-map.json so none of its rows are touched; read by tools/true_parity_check.mjs with "
-        "PARITY_CASEMAP pointing at this file. Classification and disposition are carried from "
-        "docs/dev-log/core070/required-source-case-map.json unchanged, except the four signed dispositions of "
-        "SIGNED_DISPOSITIONS (maintainer ruling 2026-10-05, D-319, item N6; no agent signs). The R side of "
-        "every isdm row is a boolean predicate replay with no fit number and there is no Julia side at the run "
-        "commit, so every row cites evidence.non_binding_receipts and is free. Draft PR #546's P1 iSDM twins are "
-        "not used here; mapping them onto these rows is a proposal for the maintainer (PR body).")
+NOTE = ("Classification and signed dispositions remain unchanged. "
+        "The wave1 admission replay remains non-binding by itself. Five approved first-seven rows also cite "
+        "raw-backed paired public-door behaviour receipts at P1; the canonical behavioural predicate determines "
+        "whether these bind. Other rows retain their existing evidence and dispositions.")
 
 
 def main():
@@ -486,7 +528,12 @@ def main():
                     help="write receipts from a checkout with modified tracked files (recorded, not hidden)")
     ap.add_argument("--check", action="store_true",
                     help="verify the tracked receipts against the files they read; write nothing")
+    ap.add_argument("--rederive-map", action="store_true",
+                    help="regenerate only the case map from retained receipts")
     args = ap.parse_args()
+    if args.rederive_map:
+        rederive_map()
+        return
     if args.check:
         check()
         return

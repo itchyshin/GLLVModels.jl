@@ -85,7 +85,7 @@ function quadratic_loglik_site(family, y::AbstractVector, n::AbstractVector,
     @inbounds for t in 1:p
         ℓ += _glm_logpdf(family, μ[t], n[t], y[t])
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 """
@@ -225,16 +225,18 @@ fit = fit_quadratic_gllvm(Y; family = Poisson(), K = 2)
 fit.D            # estimated quadratic (optimum/tolerance) coefficients, p×K
 ```
 """
-function fit_quadratic_gllvm(Y::AbstractMatrix{<:Real}; family = Poisson(),
+function fit_quadratic_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family = Poisson(),
         K::Integer, link::Union{Nothing, Link} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_quadratic_gllvm", mask)
     p, n = size(Y)
     rr = rr_theta_len(p, K)
     lk = link === nothing ? _cov_default_link(family) : link
     Nm = N === nothing ? fill(1, p, n) : N
     has_disp = _cov_has_disp(family)
+    _check_family_response_support(family, Y, nothing; caller = "fit_quadratic_gllvm", N = N)
     pK = p * K
 
     # warm start: link-scale empirical intercepts + SVD loadings, D0 = 0 (linear model)
@@ -255,8 +257,9 @@ function fit_quadratic_gllvm(Y::AbstractMatrix{<:Real}; family = Poisson(),
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         D = reshape(θ[(p + rr + 1):(p + rr + pK)], p, K)
         disp = has_disp ? exp(θ[p + rr + pK + 1]) : NaN
-        fam = _cov_family(family, disp)
         v = try
+            # Inside the `try`: exp(log-dispersion) can underflow to 0.0 (see fit_gllvm_cov).
+            fam = _cov_family(family, disp)
             -quadratic_marginal_loglik_laplace(fam, Y, Nm, Λ, D, β, lk;
                                                maxiter = newton_maxiter, tol = newton_tol)
         catch

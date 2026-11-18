@@ -38,17 +38,13 @@
 # element (sibling twins' Lambda Lambda' bar). The sign of a loading column is not identified, so
 # loadings are compared through Sigma_phy.
 #
-# Stationarity, asserted instead of the optimiser's flag (recorded, not hidden): Julia's LBFGS stops
-# these fits at the objective's rounding floor, and whether its converged flag (Optim's own test plus
-# max |FD gradient| <= g_tol = 1e-5) is set there depends on the platform and BLAS. On the DEP fit
-# the remaining FD gradient is about 4e-5 on the log residual-SD coordinate (a ForwardDiff gradient
-# of a dense AD-capable copy of the likelihood agrees, so it is not finite-difference noise); the
-# curvature there is about 1.6e3, so the Newton decrement is about 3e-12 and no descent step is
-# resolvable. Julia's optimiser flag can report not converged at the rounding floor on some
-# platforms, so each twin asserts stationarity at the returned parameters instead, computed here
-# from the fitter's own objective and FD stencils: a positive-definite Hessian, Newton decrement
-# g' H^-1 g / 2 <= 1e-9, and max |gradient| <= 1e-4. Measured (Julia 1.10, 2026-10-05), as
-# converged flag / max |gradient| / Newton decrement:
+# Stationarity at the returned parameters (recorded, not hidden). Julia's LBFGS can stop these
+# fits at the objective's rounding floor: on the DEP fit the remaining FD gradient is about 4e-5
+# on the log residual-SD coordinate; the Newton decrement is about 3e-12. `fit_phylo_latent_gllvm`
+# never reports `converged = true` when `gradient_norm > g_tol` (refs #822). Each twin asserts
+# that invariant and stationarity from the fitter's own objective and FD stencils (positive-definite
+# Hessian, decrement g' H^-1 g / 2 <= 1e-9, max |gradient| <= 1e-4). Measured (Julia 1.10,
+# 2026-10-05), as then-current flag / max |gradient| / Newton decrement:
 #   macOS arm64 (OpenBLAS64): DEP false 4.0e-5 2.8e-12; A-ALIAS true 5.3e-6 3.5e-13;
 #                             FOLDED-UNIQUE true 6.1e-6 1.9e-12.
 #   Linux x86_64 (OpenBLAS64, 1 and default threads): DEP false 1.8e-5 4.4e-12;
@@ -135,7 +131,8 @@ end
             r = fx["dep"]
             fit = _cpt_fit_dep(d)
             @test fit.rank == T && fit.mode === :barelowrank
-            st = _cpt_stationarity(fit)                  # stationarity, not the flag; see the header
+            @test !(fit.converged && fit.gradient_norm > 1e-5)
+            st = _cpt_stationarity(fit)
             @test st.pd && fit.hessian_positive_definite
             @test st.decrement <= 1e-9
             @test st.gmax <= 1e-4
@@ -151,7 +148,8 @@ end
             @test Float64(r["objective_vcv_spelling"]) == Float64(r["objective"])   # R: alias, same objective
             fit = _cpt_fit_alias(d)
             fitv = _cpt_fit_vcv(d)
-            st = _cpt_stationarity(fit)                  # stationarity, not the flag; see the header
+            @test !(fit.converged && fit.gradient_norm > 1e-5)
+            st = _cpt_stationarity(fit)
             @test st.pd && fit.hessian_positive_definite
             @test st.decrement <= 1e-9
             @test st.gmax <= 1e-4
@@ -170,7 +168,8 @@ end
             r = fx["unique"]
             fit = _cpt_fit_unique(d)
             @test fit.mode === :explicitunique && fit.rank == 1
-            st = _cpt_stationarity(fit)                  # stationarity, not the flag; see the header
+            @test !(fit.converged && fit.gradient_norm > 1e-5)
+            st = _cpt_stationarity(fit)
             @test st.pd && fit.hessian_positive_definite
             @test st.decrement <= 1e-9
             @test st.gmax <= 1e-4

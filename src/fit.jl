@@ -59,9 +59,32 @@ struct GllvmFit
     optim_result
     cputime::Float64
     integration::Union{Nothing,AbstractIntegrationInfo}
+    optimizer_info::Union{Nothing,OptimizerRecord}
 end
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
-    GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing)
+    GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing,nothing)
+GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration)=
+    GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration,nothing)
+
+# Warn once per Julia session per key: refits inside bootstrap and profile
+# loops call the fitter many times and must not repeat the message.
+const _UNIDENTIFIED_WARNED = Set{Symbol}()
+
+# The check-and-push is under a lock: threaded bootstrap refits (bootstrap_Sigma_r with n_cores > 1) call this
+# concurrently, and an unguarded Set both races (double warning) and is not safe to mutate from several tasks.
+const _UNIDENTIFIED_LOCK = ReentrantLock()
+
+function _warn_unidentified_once(key::Symbol, msg::AbstractString)
+    first = lock(_UNIDENTIFIED_LOCK) do
+        key in _UNIDENTIFIED_WARNED && return false
+        push!(_UNIDENTIFIED_WARNED, key)
+        return true
+    end
+    first && @warn msg
+    return nothing
+end
+
+_reset_unidentified_warnings!() = (lock(() -> empty!(_UNIDENTIFIED_WARNED), _UNIDENTIFIED_LOCK); nothing)
 
 """
     fit_gaussian_gllvm(y; K, K_W=0, has_diag=false, K_phy=0,
@@ -72,11 +95,14 @@ GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
                        σ²_B_init=0.1, σ²_W_init=0.1, σ_phy_init=0.1,
                        β_init=nothing, β_fixed=nothing, alpha_lv_init=nothing,
                        x_tol=1e-8, f_tol=0.0,
-                       g_tol=1e-6, iterations=500) -> GllvmFit
+                       g_tol=1e-6, iterations=500, optimizer=nothing) -> GllvmFit
 
 L-BFGS minimisation of the closed-form Gaussian marginal NLL via
 ForwardDiff gradients. Returns a `GllvmFit` with parameter estimates,
 convergence diagnostics, and wall-clock fit time.
+Choose an outer method with `optimizer = :lbfgs`, `:bfgs`, `Optim.LBFGS()`, or
+`Optim.BFGS()`. `nothing` retains the default L-BFGS method. The fitted object
+stores the actual outer attempts; inspect them with [`optimizer_info`](@ref).
 
 Stopping is left to the gradient test (`g_tol`) and the step size (`x_tol`);
 the relative objective-change test is off by default (`f_tol = 0.0`, Optim's
@@ -103,7 +129,9 @@ Optional extensions:
   how `Λ` and `Λ_W` share that covariance depends on the starting values, so
   tier-scoped summaries (`communality`, `proportions`, `extract_Sigma` at
   `level = :unit` / `:unit_obs`, `getLV`) and Wald SEs of single `Λ` / `Λ_W`
-  entries should not be interpreted. To separate between-unit from
+  entries should not be interpreted. `fit_gaussian_gllvm` warns once per Julia
+  session when `has_diag = true` or `K_W > 0` (a second unidentified fit in
+  the same session is silent). To separate between-unit from
   within-unit variation, use `fit_twolevel_gaussian` on repeated
   observations per unit.
 - J3 phylogenetic: `K_phy::Integer = 0` (Λ_phy rank),
@@ -192,8 +220,15 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             x_tol = 1e-8,
                             f_tol = 0.0,
                             g_tol = 1e-6,
-                            iterations = 500)
+                            iterations = 500,
+                            optimizer = nothing,
+                            _sufficient_stat::Bool = false)
     p, n = size(y)
+    default_optimizer = Optim.LBFGS()
+    outer_optimizer = _optimizer_method(optimizer, default_optimizer; route = "fit_gaussian_gllvm")
+    stages = OptimizerStage[]
+    controls = (x_abstol = x_tol, f_reltol = f_tol, g_tol = g_tol,
+                iterations = iterations, show_trace = false)
     1 <= K <= p || throw(ArgumentError("K must lie in 1:p (got K = $K, p = $p)"))
     @assert K_W ≥ 0
     @assert K_phy ≥ 0
@@ -213,6 +248,26 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             throw(ArgumentError(
                 "Σ_phy must be p × p; got $(size(Σ_phy)) for p = $p"))
     end
+
+    # Each column of `y` is one unit observed once, so the unit and within-unit
+    # tiers are not separately identified (#702, #792). Warn at the point of use.
+    has_diag && _warn_unidentified_once(:has_diag,
+        "has_diag = true with one observation per unit (each column of Y is one " *
+        "unit observed once): the unit-level variances σ²_B and the within-unit " *
+        "variances σ²_W enter the likelihood only through σ²_B + σ²_W + σ²_eps, so " *
+        "they are not identified. The fit can look converged while its Hessian is " *
+        "not positive definite; do not interpret the σ²_B / σ²_W split or their " *
+        "standard errors. The total Σ_y and the log-likelihood are unaffected. For " *
+        "a between-unit / within-unit decomposition use fit_twolevel_gaussian on " *
+        "repeated observations per unit (refs #792). Issued once per Julia session.")
+    K_W > 0 && _warn_unidentified_once(:K_W,
+        "K_W > 0: the W-tier loadings carry the full cross-trait covariance, so the " *
+        "unit (B) and within-unit (W) tiers are not separately identified and the " *
+        "split depends on the starting values. Do not interpret tier-scoped " *
+        "communality or proportions, extract_Sigma at :unit / :unit_obs, getLV, the " *
+        "kernel-separability verdict, or Wald SEs of single Λ / Λ_W entries. The " *
+        "total Σ_y and the log-likelihood are unaffected. See the W-tier note in " *
+        "?fit_gaussian_gllvm (refs #702). Issued once per Julia session.")
 
     # Validate X dims if present, then drop fixed-zero columns for the optimiser.
     q_full = 0
@@ -426,9 +481,11 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             iterations = iterations,
             show_trace = false,
         )
+        controls = merge(controls, (optim_options = opts,))
 
         t0 = time()
-        res = Optim.optimize(nll, params₀, Optim.LBFGS(), opts; autodiff = :forward)
+        res = Optim.optimize(nll, params₀, outer_optimizer, opts; autodiff = :forward)
+        _optimizer_stage!(stages, :primary, outer_optimizer, :forwarddiff, controls, res)
         t1 = time()
         params_hat = Optim.minimizer(res)
 
@@ -489,6 +546,9 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             _fit_verdict(res)[2],
             res,
             t1 - t0,
+            nothing,
+            _optimizer_record(optimizer, stages; controls = controls, derivative = :forwarddiff,
+                              actual = outer_optimizer),
         )
     end
 
@@ -518,10 +578,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         vcat(log_τ_B₀, log_τ_W₀, θ_B₀, θ_W₀, ρ_phy₀, θ_phy₀)
     end
 
+    suff_ss = (_sufficient_stat && !has_phy_block && !do_profile_beta) ? _gaussian_suff(y, X_fit, q) : nothing
     nll = params -> gaussian_profile_nll(params, y;
                                           spec = spec, X = X_fit,
                                           Σ_phy = Σ_phy,
-                                          profile_beta = do_profile_beta)
+                                          profile_beta = do_profile_beta,
+                                          suff = suff_ss)
 
     opts = Optim.Options(
         x_abstol = x_tol,
@@ -530,9 +592,11 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         iterations = iterations,
         show_trace = false,
     )
+    controls = merge(controls, (optim_options = opts,))
 
     t0 = time()
-    res = Optim.optimize(nll, params₀, Optim.LBFGS(), opts; autodiff = :forward)
+    res = Optim.optimize(nll, params₀, outer_optimizer, opts; autodiff = :forward)
+    _optimizer_stage!(stages, :primary, outer_optimizer, :forwarddiff, controls, res)
     t1 = time()
 
     params_hat = Optim.minimizer(res)
@@ -573,9 +637,12 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             # Restart LBFGS from the best single-flipped point.
             params_seed = copy(params_hat)
             params_seed[ρ_range[best_idx]] = -params_seed[ρ_range[best_idx]]
-            res_flip = Optim.optimize(nll, params_seed, Optim.LBFGS(), opts;
+            res_flip = Optim.optimize(nll, params_seed, outer_optimizer, opts;
                                        autodiff = :forward)
-            if Optim.minimum(res_flip) < Optim.minimum(res) - 1e-8
+            accepted_flip = Optim.minimum(res_flip) < Optim.minimum(res) - 1e-8
+            _optimizer_stage!(stages, :sign_flip, outer_optimizer, :forwarddiff, controls,
+                              res_flip; accepted = accepted_flip)
+            if accepted_flip
                 res = res_flip
                 params_hat = Optim.minimizer(res)
             else
@@ -665,5 +732,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         (_fit_verdict(res)[2]),
         res,
         t1 - t0,
+        nothing,
+        _optimizer_record(optimizer, stages; controls = controls, derivative = :forwarddiff,
+                          actual = outer_optimizer),
     )
 end

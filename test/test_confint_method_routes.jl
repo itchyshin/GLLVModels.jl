@@ -289,18 +289,7 @@ end
         @test isequal(confint(fitP; y = YP, parm = "rho[1,2]").lower, rP.lower)
     end
 
-    @testset "profile routes to the existing derived profile functions" begin
-        f_i = GLLVModels._make_icc_closure(spec, 1)
-        r = confint(fitS, YS; parm = "icc[1]", method = :profile, penalty_weight = 1e4, kw...)
-        @test _route_tag(r) == :profile && r.method === :profile && r.term == ["icc[1]"]
-        d = GLLVModels.profile_ci_derived(fitS, f_i; y = YS, Σ_phy = Σ_phy, penalty_weight = 1e4)
-        @test r.estimate[1] == d.estimate
-        # an interior profile interval is the direct function's, unchanged
-        if all(isfinite, (d.lower, d.upper)) && 0 < d.lower && d.upper < 1
-            @test isequal((r.lower[1], r.upper[1]), (d.lower, d.upper))
-        end
-        @test r.lower[1] <= r.estimate[1] <= r.upper[1] || isnan(r.lower[1]) || isnan(r.upper[1])
-
+    @testset "profile routes to the existing derived profile function (phylo_signal)" begin
         ps = confint(fitS, YS; parm = "phylo_signal[1]", method = :profile, penalty_weight = 1e4, kw...)
         dps = profile_ci_phylo_signal(fitS, 1; y = YS, Σ_phy = Σ_phy, penalty_weight = 1e4)
         @test isequal((ps.lower[1], ps.upper[1], ps.estimate[1], ps.boundary[1]),
@@ -308,10 +297,14 @@ end
         @test ps.status == [dps.method]
     end
 
-    @testset "profile is withdrawn for communality, rho and proportion, as in gllvmTMB" begin
+    @testset "profile is withdrawn for communality, icc, rho and proportion, as in gllvmTMB" begin
         # gllvmTMB 9539352f6 raises gllvmTMB_nonlinear_profile_withdrawn for these three;
         # the refusal names the withdrawal, so it is not the bad-method message.
+        # icc (#827) follows gllvmTMB's repeatability withdrawal, CI-ROUTE-009 (the
+        # two-level repeatability_ci refuses :profile the same way).
         for (parm, what) in (("communality[1]", "communality"), ("rho[1,2]", "correlations"),
+                             ("icc[1]", "icc (repeatability)"), ("repeatability[2]", "icc (repeatability)"),
+                             ("icc", "icc (repeatability)"),
                              ("proportion:shared[1]", "variance proportions"),
                              ("correlation[1,2]", "correlations"), ("communality", "communality"))
             msg = _argument_error_message(() -> confint(fitS, YS; parm = parm, method = :profile, kw...))
@@ -328,7 +321,10 @@ end
         # a vector that includes a withdrawn kind is refused as a whole
         @test occursin("withdrawn", _argument_error_message(
             () -> confint(fitS, YS; parm = ["phylo_signal[1]", "rho[1,2]"], method = :profile, kw...)))
+        @test occursin("withdrawn", _argument_error_message(
+            () -> confint(fitA, YA; X = XA, parm = "icc[1]", method = :profile)))
         # the other methods of the same quantities still run
+        @test _route_tag(confint(fitS, YS; parm = "icc[1]", method = :wald, kw...)) == :wald_derived
         @test _route_tag(confint(fitS, YS; parm = "proportion:shared[1]", method = :wald, kw...)) == :wald_derived
     end
 
@@ -374,7 +370,8 @@ end
             () -> confint(fitS, YS; parm = "communality[1]", method = :bogus, kw...)))
         @test occursin("available: :wald, :fisher_z, :bootstrap", _argument_error_message(
             () -> confint(fitS, YS; parm = "rho[1,2]", method = :bogus, kw...)))
-        @test _refuses_listing_methods(() -> confint(fitS, YS; parm = "icc[1]", method = :bogus, kw...))
+        @test occursin("available: :wald, :bootstrap", _argument_error_message(
+            () -> confint(fitS, YS; parm = "icc[1]", method = :bogus, kw...)))
         @test _refuses_listing_methods(() -> confint(fitS, YS; parm = "phylo_signal", method = :fisher_z, kw...))
         # parse and range errors name the offending token
         @test_throws ArgumentError confint(fitS, YS; parm = "communality[9]", kw...)

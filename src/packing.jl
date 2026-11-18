@@ -35,6 +35,13 @@ end
     return K + (k - 1) * p - k * (k - 1) ÷ 2 + i - k
 end
 
+# Λ[k, k] exists only for k ≤ p, so K > p would make the `@inbounds` loops below
+# write out of bounds (segfault, #1025). K = 0 (a GLM fit) is valid.
+@inline function _check_lambda_rank(p::Integer, K::Integer)
+    0 <= K <= p || throw(ArgumentError("K must lie in 0:p (got K = $K, p = $p)"))
+    return nothing
+end
+
 """
     unpack_lambda(θ::AbstractVector, p::Integer, K::Integer) -> AbstractMatrix
 
@@ -45,6 +52,7 @@ AD-friendly: `eltype(θ)` is preserved, so `θ::Vector{<:ForwardDiff.Dual}`
 returns a matrix of `Dual`s.
 """
 function unpack_lambda(θ::AbstractVector, p::Integer, K::Integer)
+    _check_lambda_rank(p, K)
     n = rr_theta_len(p, K)
     length(θ) == n || throw(ArgumentError(
         "unpack_lambda: θ has length $(length(θ)); expected $n for p=$p, K=$K"))
@@ -71,6 +79,7 @@ the flat θ vector of length rr_theta_len(p, K).
 """
 function pack_lambda(Λ::AbstractMatrix)
     p, K = size(Λ)
+    _check_lambda_rank(p, K)
     T = eltype(Λ)
     θ = Vector{T}(undef, rr_theta_len(p, K))
     @inbounds for k in 1:K
@@ -85,6 +94,26 @@ function pack_lambda(Λ::AbstractMatrix)
 end
 
 """
+    _lower_triangular_loadings(Λ::AbstractMatrix) -> Matrix
+
+Rotate a p × K loading matrix (e.g. SVD loadings used as a start) to the
+lower-triangular form that [`pack_lambda`](@ref) stores, leaving `ΛΛ'`
+unchanged. `pack_lambda` drops the strict upper triangle, so packing raw SVD
+loadings for K ≥ 2 silently changes `ΛΛ'`. Uses `Λ' = QR`, so `Λ Λ' = R'R`
+and `R'` is lower-trapezoidal; columns are sign-flipped so the diagonal is
+non-negative (#865). K < 2 is returned unchanged.
+"""
+function _lower_triangular_loadings(Λ::AbstractMatrix)
+    p, K = size(Λ)
+    K < 2 && return Matrix(Λ)               # K = 0, 1: already lower-triangular
+    L = Matrix(qr(Matrix(Λ')).R')          # p × K, strict upper = 0
+    @inbounds for k in 1:min(p, K)
+        L[k, k] < 0 && (L[:, k] .*= -1)
+    end
+    return L
+end
+
+"""
     init_theta_rr(p::Integer, K::Integer) -> Vector{Float64}
 
 Default initial values matching gllvmTMB::init_rr_theta (R/fit-multi.R:1291-1295):
@@ -92,6 +121,7 @@ Default initial values matching gllvmTMB::init_rr_theta (R/fit-multi.R:1291-1295
   - strict-lower entries initialized to 0
 """
 function init_theta_rr(p::Integer, K::Integer)
+    _check_lambda_rank(p, K)
     n = rr_theta_len(p, K)
     θ = zeros(Float64, n)
     @inbounds for k in 1:K

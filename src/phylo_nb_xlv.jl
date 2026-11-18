@@ -93,9 +93,18 @@ function _phylo_nb_xlv_grad_hessian(Y, beta, Lambda, alpha_lv, r, mean_eta, Q,
         # was — the mode search wants expected information (W ≥ 0, so the step is
         # always well-defined). Only the FINAL assembly, at the converged mode,
         # asks for `:observed`, which is what the log-det needs to match TMB.
-        weight_ts = hessian === :fisher ?
-            _glm_weight(fam, mu_ts, 1, me_ts) :
+        # `:step` (mode search only) is max(observed, Fisher), as in the grouped
+        # Tweedie search (#1122): pure Fisher under-states the curvature when
+        # y >> mu and the Newton loop crawls (refs #1125). Both are >= 0, so the
+        # step still ascends, and the mode (grad = 0) does not involve the weight.
+        weight_ts = if hessian === :fisher
+            _glm_weight(fam, mu_ts, 1, me_ts)
+        elseif hessian === :step
+            max(_glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s], LogLink(), eta_c),
+                _glm_weight(fam, mu_ts, 1, me_ts))
+        else
             _glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s], LogLink(), eta_c)
+        end
         uidx = n_z + leaf_pos[t]
 
         grad[uidx] += score_ts
@@ -123,10 +132,12 @@ function _phylo_nb_xlv_mode(Y, beta, Lambda, alpha_lv, r, mean_eta, Q, leaf_pos;
     eps = zeros(Float64, n, K)
     u = zeros(Float64, size(Q, 1))
     local H
+    mode_found = false
 
     for _ in 1:maxiter
         grad, H = _phylo_nb_xlv_grad_hessian(Y, beta, Lambda, alpha_lv, r,
-                                             mean_eta, Q, leaf_pos, eps, u)
+                                             mean_eta, Q, leaf_pos, eps, u;
+                                             hessian = :step)
         cholH = try
             cholesky(Symmetric(H))
         catch
@@ -161,8 +172,15 @@ function _phylo_nb_xlv_mode(Y, beta, Lambda, alpha_lv, r, mean_eta, Q, leaf_pos;
             step *= 0.5
         end
         accepted || return nothing, nothing, nothing
-        step * max_delta < tol && break
+        if step * max_delta < tol
+            mode_found = true
+            break
+        end
     end
+
+    # `maxiter` exhausted: (eps, u) is not the mode, so a Laplace value built from it
+    # would depend on `maxiter`. Report it as a failed search, like a non-SPD Hessian.
+    mode_found || return nothing, nothing, nothing
 
     _, H = _phylo_nb_xlv_grad_hessian(Y, beta, Lambda, alpha_lv, r, mean_eta,
                                       Q, leaf_pos, eps, u;
@@ -254,6 +272,21 @@ function _phylo_nb_xlv_nll_packed(theta::AbstractVector, Y::AbstractMatrix,
     return isfinite(ll) ? -ll : 1e12
 end
 
+# The objective `_fit_phylo_nb_xlv` hands to Optim. A line-search step that overflows
+# r = exp(log_r) throws in `_phylo_nb_xlv_validate`; return the sentinel instead (#944).
+function _phylo_nb_xlv_nll_guarded(theta::AbstractVector, Y::AbstractMatrix,
+        p::Integer, K::Integer, phy::AugmentedPhy, X_lv::AbstractMatrix;
+        q_lv::Integer, maxiter::Integer = 80, tol::Real = 1e-9)
+    v = try
+        _phylo_nb_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
+                                 q_lv = q_lv, maxiter = maxiter, tol = tol)
+    catch e
+        e isa InterruptException && rethrow()
+        return 1e12
+    end
+    return isfinite(v) ? v : 1e12
+end
+
 function _phylo_nb_xlv_theta0(Y::AbstractMatrix, K::Integer,
         X_lv::AbstractMatrix; beta_init = nothing, Lambda_init = nothing,
         alpha_lv_init = nothing, r_init::Real = 2.0,
@@ -307,16 +340,17 @@ function _fit_phylo_nb_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
     size(X_lv, 1) == n ||
         throw(ArgumentError("X_lv rows ($(size(X_lv, 1))) must equal size(Y,2)=$n"))
     q_lv = size(X_lv, 2)
+    _check_response_support(:count, Y, nothing; caller = "_fit_phylo_nb_xlv")
     theta0 = _phylo_nb_xlv_theta0(Y, K, X_lv;
                                   beta_init = beta_init,
                                   Lambda_init = Lambda_init,
                                   alpha_lv_init = alpha_lv_init,
                                   r_init = r_init,
                                   sigma2_phy_init = sigma2_phy_init)
-    nll = theta -> _phylo_nb_xlv_nll_packed(theta, Y, p, K, phy, X_lv;
-                                            q_lv = q_lv,
-                                            maxiter = newton_maxiter,
-                                            tol = newton_tol)
+    nll = theta -> _phylo_nb_xlv_nll_guarded(theta, Y, p, K, phy, X_lv;
+                                             q_lv = q_lv,
+                                             maxiter = newton_maxiter,
+                                             tol = newton_tol)
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(nll, theta0, ls,
                          Optim.Options(g_tol = g_tol, iterations = iterations);
@@ -324,10 +358,12 @@ function _fit_phylo_nb_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
     theta_hat = Optim.minimizer(res)
     beta_hat, Lambda_hat, alpha_hat, r_hat, sigma2_hat =
         _phylo_nb_xlv_unpack_packed(theta_hat, p, K, q_lv)
+    verdict = _phylo_xlv_verdict(res, g_tol)
     return (beta = collect(beta_hat), Lambda = Matrix(Lambda_hat),
             alpha_lv = Matrix(alpha_hat), r = r_hat, sigma2_phy = sigma2_hat,
-            loglik = _fit_verdict(res)[1], converged = _fit_verdict(res)[2],
-            iterations = Optim.iterations(res), theta_packed = collect(theta_hat))
+            loglik = verdict.loglik, converged = verdict.converged,
+            iterations = Optim.iterations(res), theta_packed = collect(theta_hat),
+            stop_reason = verdict.reason)
 end
 
 function _phylo_nb_xlv_profile_indices(indices, nb::Integer)

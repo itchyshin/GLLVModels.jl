@@ -74,7 +74,7 @@ function _tp_pieces(f::BetaHurdle, y, ηz, ηc)
         sc    = φ * (ystar - μstar) * me        # ∂logf/∂η^c
         ν     = trigamma(μ * φ) + trigamma((one(μ) - μ) * φ)
         Wc    = φ^2 * ν * me^2                  # expected Fisher info wrt η^c
-        logf  = log(π) + logpdf(Beta(μ * φ, (one(μ) - μ) * φ), yc)
+        logf  = log(π) + _beta_logpdf(μ * φ, (one(μ) - μ) * φ, yc)
         return (one(π) - π, sc, Wz, Wc, logf)
     else
         return (-π, zero(ηc), Wz, zero(ηc), log1p(-π))
@@ -213,10 +213,11 @@ function residuals(fit::BetaHurdleFit, Y::AbstractMatrix{<:Real};
             d = Beta(μ * φ, (1 - μ) * φ)
             yc = clamp(float(Y[t, s]), 1e-6, 1 - 1e-6)
             u  = (1 - πt) + πt * cdf(d, yc)
+            cu = πt * ccdf(d, yc)
+            R[t, s] = _ds_z(u, u, cu, cu, 1.0)
         else
-            u = (1 - πt) * rand(rng)
+            R[t, s] = _ds_z(0.0, 1 - πt, 1.0, πt, rand(rng); lmass = log1p(-πt))
         end
-        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
     end
     return R
 end
@@ -254,10 +255,11 @@ currently produce the identical objective (the `TWOPART_KNOWN_OPEN` census gap;
 DeltaGamma is the only two-part family whose observed weight is implemented).
 Exposing the kwarg is the measurement prerequisite for closing that gap.
 """
-function fit_beta_hurdle_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_beta_hurdle_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_beta_hurdle_gllvm", mask)
     p, n = size(Y)
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_beta_hurdle_gllvm: hessian must be :observed or :fisher; got :$hessian"))

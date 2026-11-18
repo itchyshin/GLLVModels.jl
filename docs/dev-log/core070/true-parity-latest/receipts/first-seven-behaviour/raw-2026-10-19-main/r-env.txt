@@ -1,0 +1,11 @@
+2026-10-17T15:55:09Z
+Rscript (R) version 4.6.1 (2026-06-24)
+.libPaths= /home/snakagaw/hsq_work/gllvm-w2-3/oracle-build/library;/tmp/gllvm-p1-first-seven-v3/Rlib;/home/snakagaw/hsq_work/gllvm-w2-3/rdeps;/home/snakagaw/R/lib;/home/snakagaw/R/x86_64-pc-linux-gnu-library/4.5;/usr/local/lib/R/site-library;/usr/lib/R/site-library;/usr/lib/R/library 
+gllvmTMB 0.7.1 /home/snakagaw/hsq_work/gllvm-w2-3/oracle-build/library/gllvmTMB 
+assertthat 0.2.1 /tmp/gllvm-p1-first-seven-v3/Rlib/assertthat 
+TMB 1.9.21 /home/snakagaw/hsq_work/gllvm-w2-3/rdeps/TMB 
+Matrix 1.7.5 /home/snakagaw/hsq_work/gllvm-w2-3/rdeps/Matrix 
+RcppEigen 0.3.4.0.2 /home/snakagaw/R/lib/RcppEigen 
+85cf7fcc4753a8c86da9a6f454e46c2a58ffc70c4f47cac4d3e3bcefda2a9e9f  /tmp/gllvm-p1-first-seven-v3/src/assertthat_0.2.1.tar.gz
+aa1fc44f481294678c2d1eb5505eaf182f976236f3b3f50373465c68330b2941  /home/snakagaw/hsq_work/gllvm-w2-3/oracle-build/library/gllvmTMB/CORE070_SOURCE_PIN.toml
+no-accidental-/tmp/none

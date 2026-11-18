@@ -375,7 +375,7 @@ function _studentt_grouped_loglik_site(fams::AbstractVector{<:StudentTFamily}, y
         F = cholesky(A; check = false)
         issuccess(F) || return oftype(ℓ, -Inf)
     end
-    return ℓ - 0.5 * dot(z, z) - 0.5 * logdet(A)
+    return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
 end
 
 # ---------------------------------------------------------------------------
@@ -479,7 +479,7 @@ Initial values: `σ₀ = 1.0`, `ν₀ = 3.0` (`log(ν₀ - 1) = log(2.0)`), matc
 `hessian` selects the Laplace log-det curvature (`:observed` default / `:fisher`).
 `disp_group` selects `:species` (per-trait dispersion) or `:shared`.
 """
-function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
+function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
         nu::Union{Nothing, Real, AbstractVector{<:Real}} = nothing,
         link::Link = IdentityLink(),
         hessian::Symbol = _default_hessian(StudentTFamily(4.0, 1.0), link),
@@ -487,6 +487,7 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         β_init = nothing, Λ_init = nothing, σ_init = nothing, nu_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_studentt_gllvm", mask)
     p, n = size(Y)
     if nu !== nothing
         if nu isa Real
@@ -500,6 +501,7 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; K::Integer,
         "fit_studentt_gllvm: hessian must be :fisher or :observed; got :$hessian"))
     disp_group in (:shared, :species) || throw(ArgumentError(
         "fit_studentt_gllvm: disp_group must be :shared or :species; got :$disp_group"))
+    _check_response_support(:finite, Y, nothing; caller = "fit_studentt_gllvm")
     rr = rr_theta_len(p, K)
 
     Zemp = float.(Y)                                   # identity link ⇒ Z = Y

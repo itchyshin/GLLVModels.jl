@@ -52,8 +52,9 @@ function _beta504_routes(Y)
     )
 end
 
-# A draw no Beta fit can evaluate: one value outside (0, 1) (log-density -Inf),
-# so each fitter ends on its failure sentinel. Data-driven, not RNG-driven.
+# A draw outside the Beta support: one value outside (0, 1). Before #730 each fitter
+# ended on its failure sentinel (log-density -Inf); every route now refuses it up front
+# with an ArgumentError. Data-driven, not RNG-driven.
 function _beta504_bad(Y)
     B = copy(Y)
     B[1, 1] = 1.5
@@ -78,11 +79,17 @@ end
 
     @testset "a failed refit is rejected ($route)" for (route, fit, ad, direct, pack) in routes
         Y_bad = _beta504_bad(Y)
-        fb_bad = direct(Y_bad)
-        @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
-        raw_bad = ad.refit(Y_bad)
         m = length(ad.θ)
-        @test raw_bad isa NamedTuple && raw_bad.converged == false
+        # #730: the out-of-support draw is refused before fitting; the adapter's own
+        # try/catch turns that into `nothing`, which the bootstrap screen rejects.
+        @test_throws ArgumentError direct(Y_bad)
+        @test ad.refit(Y_bad) === nothing
+        @test !GM._bootstrap_refit_ok(ad.refit(Y_bad), m)[2]
+        # A refit that reports a failed verdict is still screened out. No draw in (0, 1)
+        # makes these fitters fail, so take a real refit and mark it failed the way
+        # `_fit_verdict` does (`converged = false`, `loglik = -Inf`). The adapter's own
+        # forwarding of a false verdict is therefore not exercised for Beta.
+        raw_bad = merge(ad.refit(Y), (converged = false, loglik = -Inf))
         @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]    # the old contract accepts it
         @test !GM._bootstrap_refit_ok(raw_bad, m)[2]     # the migrated one does not
     end

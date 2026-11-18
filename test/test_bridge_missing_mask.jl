@@ -156,12 +156,70 @@ using Random
         @test isapprox(br.loadings, getLoadings(direct; rotate = true); atol = 1e-8, rtol = 0)
     end
 
+    @testset "Gaussian mask parity and sentinel invariance (#912)" begin
+        Random.seed!(912)
+        pg, ng, Kg = 4, 40, 1
+        Yg = randn(pg, 1) * randn(1, ng) .+ 0.5 .* randn(pg, ng) .+ [1.0, -2.0, 0.5, 3.0]
+        Mg = trues(pg, ng)
+        Mg[1, 3] = false
+        Mg[2, 11] = false
+        Mg[3, 20] = false
+        Mg[4, 31] = false
+        Mg[1, 32] = false
+        Ygarbage_g = copy(Yg)
+        Ygarbage_g[.!Mg] .= 999.0
+
+        # The bridge's no-X convention centres each trait on its mean over the
+        # OBSERVED cells, then fits the masked zero-mean model to the centred data.
+        alpha_obs = [sum(Yg[t, Mg[t, :]]) / count(Mg[t, :]) for t in 1:pg]
+        Yc = Yg .- alpha_obs
+        Yc[.!Mg] .= 0.0
+        direct = fit_gaussian_gllvm(Yc; K = Kg, mask = Mg)
+
+        br = bridge_fit(; y = Yg, family = "gaussian", d = Kg, mask = Mg)
+        @test br.family == "gaussian"
+        @test br.nobs == count(Mg)
+        @test isapprox(br.alpha, alpha_obs; atol = 1e-10, rtol = 0)
+        @test isapprox(br.loglik, direct.logLik; atol = 1e-6, rtol = 0)
+        @test br.converged == direct.converged
+        @test isapprox(br.loadings, getLoadings(direct; rotate = true); atol = 1e-6, rtol = 0)
+
+        br_garbage = bridge_fit(; y = Ygarbage_g, family = "gaussian", d = Kg, mask = Mg)
+        @test isapprox(br_garbage.loglik, br.loglik; atol = 1e-8, rtol = 0)
+        @test isapprox(br_garbage.alpha, br.alpha; atol = 1e-10, rtol = 0)
+        @test isapprox(br_garbage.loadings, br.loadings; atol = 1e-8, rtol = 0)
+
+        # An all-true mask is the complete-data path.
+        br_nomask = bridge_fit(; y = Yg, family = "gaussian", d = Kg)
+        br_alltrue = bridge_fit(; y = Yg, family = "gaussian", d = Kg, mask = trues(pg, ng))
+        @test br_alltrue.loglik == br_nomask.loglik
+        @test br_alltrue.alpha == br_nomask.alpha
+
+        # Masked CIs are not wired for Gaussian yet and are refused, not dropped.
+        @test_throws ArgumentError bridge_fit(; y = Yg, family = "gaussian", d = Kg,
+                                              mask = Mg,
+                                              options = Dict("ci_method" => "wald"))
+
+        # A trait with no observed cell cannot be centred and is refused.
+        Mbad = copy(Mg)
+        Mbad[2, :] .= false
+        @test_throws ArgumentError bridge_fit(; y = Yg, family = "gaussian", d = Kg,
+                                              mask = Mbad)
+    end
+
     @testset "unsupported masked bridge cells fail loudly" begin
         X = randn(p, n, 1)
         @test_throws ArgumentError bridge_fit(; y = Y, family = "poisson", d = K,
                                               mask = mask, X = X)
+        # Gaussian masks are wired for the plain no-X route only (#912); the
+        # REML, fixed-effect X and X_lv routes still refuse a mask loudly.
         @test_throws ArgumentError bridge_fit(; y = randn(p, n), family = "gaussian",
-                                              d = K, mask = mask)
+                                              d = K, mask = mask, X = X)
+        @test_throws ArgumentError bridge_fit(; y = randn(p, n), family = "gaussian",
+                                              d = K, mask = mask,
+                                              options = Dict("reml" => true))
+        @test_throws ArgumentError bridge_fit(; y = randn(p, n), family = "gaussian",
+                                              d = K, mask = mask, X_lv = randn(n, 1))
         @test_throws ArgumentError bridge_fit(; y = Y, family = "ordinal", d = K,
                                               mask = mask,
                                               options = Dict("ci_method" => "wald"))

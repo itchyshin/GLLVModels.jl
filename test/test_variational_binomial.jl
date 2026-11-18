@@ -147,3 +147,28 @@ logistic(x) = 1 / (1 + exp(-x))
               GLLVModels.binomial_marginal_loglik_va(Y, Nm, zeros(p, K), fit.β) - 1e-3
     end
 end
+
+@testset "Binomial VA ELBO is bounded above for |η| > 30 (#761)" begin
+    # One cell, Λ = 0 ⇒ q is the prior and the ELBO must equal log P(y | β) ≤ 0.
+    # Before the fix the softplus term clamped η at 30 but y·μ did not, so the
+    # ELBO was y·β − 30 (e.g. +10 at β = 40) and grew without bound in β.
+    for b in (0.0, 10.0, 40.0, 100.0, 1000.0)
+        e = GLLVModels.binomial_marginal_loglik_va(reshape([1], 1, 1),
+            reshape([1], 1, 1), zeros(1, 1), [b])
+        @test e ≤ 1e-9
+        @test e ≈ -log1p(exp(-b)) atol = 1e-9
+    end
+    # Trials > 1 and the negative side: log P(y = 0 | β = -100) ≈ 0 and
+    # log P(y = N | β = 100) ≈ 0, never positive.
+    for (y, N, b) in ((0, 5, -100.0), (5, 5, 100.0), (3, 5, 0.0))
+        e = GLLVModels.binomial_marginal_loglik_va(reshape([y], 1, 1),
+            reshape([N], 1, 1), zeros(1, 1), [b])
+        @test e ≤ 1e-9
+        @test e ≈ logpdf(Binomial(N, 1 / (1 + exp(-b))), y) atol = 1e-9
+    end
+    # With a non-zero loading the bound still holds at extreme intercepts.
+    Y = ones(Int, 4, 6)
+    e = GLLVModels.binomial_marginal_loglik_va(Y, ones(Int, 4, 6),
+        fill(0.5, 4, 1), fill(60.0, 4))
+    @test e ≤ 1e-9
+end

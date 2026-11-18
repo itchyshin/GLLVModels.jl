@@ -128,7 +128,7 @@ end
 
 LinearAlgebra.issuccess(F::_GroupedDiagFactor) =
     all(x -> isfinite(x) && x > 0.0, F.d)
-LinearAlgebra.logdet(F::_GroupedDiagFactor) = sum(log, F.d)
+LinearAlgebra.logdet(F::_GroupedDiagFactor) = sum(log, F.d; init = 0.0)   # 0 for an empty block
 Base.:\(F::_GroupedDiagFactor, b::AbstractVector{<:Real}) = Float64.(b) ./ F.d
 
 function _grouped_sparse_is_diagonal(S::SparseMatrixCSC{Float64, Int})

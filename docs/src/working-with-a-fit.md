@@ -95,7 +95,9 @@ bic(fit, n)         # k·log(n_sites) − 2·logLik   (n_sites passed explicitly
 
 `k` is the free-parameter count (loadings counted modulo the `K(K−1)/2` rotational
 identifiability). Lower is better — compare fits with different `K` (or different
-families) to choose a model. Displaying the fit shows family, dimensions, the
+families) to choose a model. For non-Gaussian fits with `K ≥ 2`, make sure each
+candidate is the best of several starts first; a fit stuck at a local optimum
+(still `converged = true`) distorts the comparison. Displaying the fit shows family, dimensions, the
 log-likelihood, AIC, and convergence:
 
 ```julia
@@ -106,7 +108,12 @@ fit        # rich summary in the REPL
 
 Everything above works for a binary fit — pass the integer response matrix:
 
+The family markers come from Distributions.jl, not GLLVModels.jl, and `Yb`
+here is the 0/1 matrix obtained by thresholding the `Y` simulated above:
+
 ```julia
+using Distributions                # Binomial() comes from Distributions
+Yb = Int.(Y .> 0)                  # p×n 0/1 response
 fitb = fit_gllvm(Yb; family = Binomial(), K = 2)
 getLV(fitb, Yb)                 # Laplace-mode scores
 predict(fitb, Yb)               # fitted probabilities

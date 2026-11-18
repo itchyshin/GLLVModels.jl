@@ -84,6 +84,16 @@ have no Julia counterpart and 91 Julia exports have no R counterpart; three
 matches remain ambiguous. These counts describe the comparison, not a promise
 to implement every unmatched function here.
 
+**Profile intervals for derived quantities.** `confint(fit, y; method = :profile)`
+is refused for `communality`, `rho`, `proportion` and `icc` (also spelled
+`repeatability`), as gllvmTMB withdraws all four at its P1 reference. The `icc`
+refusal was added under the maintainer ruling on
+[issue 827](https://github.com/itchyshin/GLLVModels.jl/issues/827) (25 Oct 2026).
+The reasons differ in R: the former `icc` profile estimated only a
+diagonal-companion ratio, while the other three await an exact constraint solver. The
+Julia refusal matches R's outcome, not its mechanism. `:wald` and `:bootstrap`
+remain available for all four.
+
 ### A separate frozen-reference check
 
 Apart from the comparisons above, a fixed set of harder example datasets is

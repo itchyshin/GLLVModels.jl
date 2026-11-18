@@ -6,6 +6,26 @@ This page documents the public API of `GLLVModels.jl`, categorized by functional
 
 ## Model Fitting
 
+### Outer optimizer selection
+
+The ordinary Gaussian, Poisson Laplace, shared-dispersion NB2 Laplace, and
+per-trait NB2 Laplace fitters accept `optimizer = nothing` (the unchanged
+historical default), `optimizer = :lbfgs` / `:bfgs`, or a configured
+`Optim.LBFGS()` / `Optim.BFGS()` object. An explicit choice runs that method
+directly; it does not invoke the Poisson/NB2 legacy BFGS continuation. For the
+default per-trait NB2 formula route, explicit LBFGS also skips the historical
+BFGS Poisson-ridge polish, while explicit BFGS uses BFGS for each executed
+stage. Use `optimizer_info(fit)` to inspect the immutable per-fit receipt,
+including the requested and actual method, derivative path, controls, and each
+outer attempt. `select_lv` carries the request to each candidate fit.
+
+This option does not select inner latent-mode or AGHQ solvers. Explicit choices
+are refused on AGHQ/adaptive, variational, composite/grouped-covariance,
+phylogenetic, row-effect, pervar, and other family routes. Profile and bootstrap
+interval refits are also refused for fits made with an explicit optimizer,
+because those internal refits do not yet forward the selected method; use the
+historical default fit for those interval methods.
+
 ### Unified & General Fitters
 
 The explicit Gaussian `phylo=PrecisionPhy` route supports precision-only
@@ -37,6 +57,9 @@ fit_mixed_gllvm
 fit_gaussian_gllvm
 fit_gaussian_pervar_gllvm
 fit_gaussian_sources
+optimizer_info
+OptimizerRecord
+OptimizerStage
 GroupingTerm
 GroupedGaussianFit
 grouped_gaussian_intervals
@@ -76,7 +99,7 @@ fit_truncated_nbinom2_gllvm_pertrait
 Ordinal fitters accept only `LogitLink()` and `ProbitLink()`. Unsupported links
 raise `ArgumentError` before response access; the R 0.7.0 `ordinal_probit()`
 family uses `ProbitLink()`. As of gllvmTMB 0.7.1, R also has `ordinal_logit()`
-(family_id 20), the direct twin of Julia's default logit model; see
+(`family_id` 20), the direct twin of Julia's default logit model; see
 [`ordinal_logit`](@ref).
 
 ```@docs
@@ -693,7 +716,8 @@ Gaussian/Laplace fallback and retains node counts, controls, starting vectors,
 convergence, caches and observed-input identity. Default `aghq=false` leaves
 legacy fitting unchanged. `X=nothing` remains zero mean, and `β_fixed` retains
 fixed-zero coefficients. `mask`/missing responses and offsets are supported on
-the ordinary loadings-only route. See the executed Gaussian quickstart.
+the ordinary loadings-only route. Omitting `mask` when `Y` contains `missing`
+derives the mask and logs that once. See the executed Gaussian quickstart.
 
 `getLV`, `predict`, `residuals`, `simulate`, `confint`, `profile_ci` and
 `bootstrap_ci` use recorded data and estimator identity. Gaussian `vcov` for a

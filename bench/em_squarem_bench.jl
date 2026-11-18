@@ -125,7 +125,7 @@ println("=" ^ 78)
 for r in results
     yf = Matrix{Float64}(make_fixture(r.p).y)
     θs = _pack_phylo(r.sq.Λ_B, r.sq.σ_eps, r.sq.σ_phy)
-    res_sq = maximum(abs.(_em_map_phylo(θs, yf, make_fixture(r.p).Σ_phy, r.p, 1) .- θs))
+    res_sq = maximum(abs.(_em_map_phylo(θs, yf, make_fixture(r.p).Σ_phy, r.p, 1)[1] .- θs))
     # SQUAREM started AT plain EM's MLE — does it stay there?
     fx = make_fixture(r.p)
     sq_at_plain = em_fit_phylo_squarem(fx.y, 1, fx.Σ_phy;

@@ -105,6 +105,7 @@ function _phylo_poisson_xlv_mode(Y, beta, Lambda, mean_eta, Q, leaf_pos;
     eps = zeros(Float64, n, K)
     u = zeros(Float64, size(Q, 1))
     local H
+    mode_found = false
 
     for _ in 1:maxiter
         grad, H = _phylo_poisson_xlv_grad_hessian(Y, beta, Lambda, mean_eta, Q,
@@ -143,8 +144,14 @@ function _phylo_poisson_xlv_mode(Y, beta, Lambda, mean_eta, Q, leaf_pos;
             step *= 0.5
         end
         accepted || return nothing, nothing, nothing
-        step * max_delta < tol && break
+        if step * max_delta < tol
+            mode_found = true
+            break
+        end
     end
+    # `maxiter` exhausted: (eps, u) is not the mode, so a Laplace value built from it
+    # would depend on `maxiter`. Report it as a failed search, like a non-SPD Hessian.
+    mode_found || return nothing, nothing, nothing
 
     _, H = _phylo_poisson_xlv_grad_hessian(Y, beta, Lambda, mean_eta, Q,
                                            leaf_pos, eps, u)
@@ -283,6 +290,7 @@ function _fit_phylo_poisson_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
     size(X_lv, 1) == n ||
         throw(ArgumentError("X_lv rows ($(size(X_lv, 1))) must equal size(Y,2)=$n"))
     q_lv = size(X_lv, 2)
+    _check_response_support(:count, Y, nothing; caller = "_fit_phylo_poisson_xlv")
     theta0 = _phylo_poisson_xlv_theta0(Y, K, X_lv;
                                        beta_init = beta_init,
                                        Lambda_init = Lambda_init,
@@ -332,7 +340,12 @@ function _phylo_poisson_xlv_constrained_refit(nll::Function, theta_start::Abstra
     last_res = nothing
     for weight in penalty_weights
         obj = function (theta)
-            val = try nll(theta) catch; return 1e12 end
+            val = try
+                nll(theta)
+            catch e
+                e isa InterruptException && rethrow()
+                return 1e12
+            end
             isfinite(val) || return 1e12
             b = _phylo_poisson_xlv_effects_from_packed(theta, p, K, q_lv)[entry]
             return val + 0.5 * weight * (b - target)^2
@@ -341,21 +354,29 @@ function _phylo_poisson_xlv_constrained_refit(nll::Function, theta_start::Abstra
             Optim.optimize(obj, theta_c, Optim.NelderMead(),
                            Optim.Options(iterations = profile_iterations,
                                          f_reltol = 1e-8, x_abstol = 1e-8))
-        catch
+        catch e
+            e isa InterruptException && rethrow()
             nothing
         end
         last_res === nothing && break
         theta_c = Optim.minimizer(last_res)
     end
-    val_c = try nll(theta_c) catch; NaN end
+    val_c = try
+        nll(theta_c)
+    catch e
+        e isa InterruptException && rethrow()
+        NaN
+    end
     b_c = try
         _phylo_poisson_xlv_effects_from_packed(theta_c, p, K, q_lv)[entry]
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         NaN
     end
     sigma2_c = try
         _phylo_poisson_xlv_unpack_packed(theta_c, p, K, q_lv)[4]
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         NaN
     end
     sigma2_boundary = isfinite(sigma2_c) && sigma2_c <= _PHYLO_POISSON_XLV_SIGMA2_BOUNDARY_TOL

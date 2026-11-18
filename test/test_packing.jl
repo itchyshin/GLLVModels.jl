@@ -8,6 +8,8 @@ using Random
 # reach in by name here. ForwardDiff is a dep of GLLVModels.jl so we get
 # it via the parent module.
 using GLLVModels: rr_theta_len, pack_lambda, unpack_lambda, init_theta_rr
+using GLLVModels: _lower_triangular_loadings
+using LinearAlgebra: svd
 const ForwardDiff = GLLVModels.ForwardDiff
 
 @testset "packing" begin
@@ -48,5 +50,35 @@ const ForwardDiff = GLLVModels.ForwardDiff
         f = θ -> sum(unpack_lambda(θ, 5, 2))
         g = ForwardDiff.gradient(f, θ)
         @test all(isfinite, g)
+    end
+
+    @testset "SVD loadings start is QR-rotated, not truncated (#865)" begin
+        Random.seed!(865)
+        for K in (2, 3)
+            p, n = 8, 40
+            Zc = randn(p, K) * randn(K, n) .+ 0.1 .* randn(p, n)
+            F = svd(Zc)
+            L = F.U[:, 1:K] .* (F.S[1:K] ./ sqrt(n))'   # SVD loadings, as in fit_gllvm_cov
+            target = L * L'
+            # The old start (pack straight away) drops the SVD's upper triangle.
+            old = unpack_lambda(pack_lambda(L), p, K)
+            @test !isapprox(old * old', target; rtol = 1e-3)
+            # Rotated start keeps LL' and is lower-triangular with positive diagonal.
+            R = _lower_triangular_loadings(L)
+            @test R * R' ≈ target
+            @test all(R[k, j] == 0 for j in 1:K for k in 1:(j - 1))
+            @test all(R[k, k] > 0 for k in 1:K)
+            new = unpack_lambda(pack_lambda(R), p, K)
+            @test new * new' ≈ target
+        end
+        # K = 0 and K = 1 pass through unchanged.
+        @test size(_lower_triangular_loadings(zeros(5, 0))) == (5, 0)
+        L1 = randn(5, 1)
+        @test _lower_triangular_loadings(L1) == L1
+        # Rank-deficient input (fewer informative columns than K) stays finite.
+        L0 = hcat(randn(6), zeros(6))
+        R0 = _lower_triangular_loadings(L0)
+        @test R0 * R0' ≈ L0 * L0'
+        @test all(isfinite, R0)
     end
 end

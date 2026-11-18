@@ -42,6 +42,49 @@ end
 
 NB1() = NB1(1.0)
 
+# Σ_{k<y} 1/(r+k)² = ψ'(r) − ψ'(r+y), without subtracting nearly equal trigammas when r is
+# large: Stirling series for the difference, every term a positive sum (u^m − v^m with
+# u = 1/r, v = 1/(r+y) is (u − v)·Σ u^j v^(m−1−j)). Used only for y > 64, r ≥ 20, where
+# the next series term is below 1e-19 of the sum.
+function _nb1_trigamma_rise(r, y::Integer)
+    y <= 64 && return _nb1_trigamma_rise_loop(r, y)
+    r < 20 && return trigamma(r) - trigamma(r + y)
+    u = inv(r); v = inv(r + y); d = y * u * v    # u − v, formed without cancellation
+    pw(m) = (s = zero(u); for j in 0:(m - 1); s += u^j * v^(m - 1 - j); end; d * s)
+    return d + pw(2) / 2 + pw(3) / 6 - pw(5) / 30 + pw(7) / 42 - pw(9) / 30 +
+           5 * pw(11) / 66 - 691 * pw(13) / 2730
+end
+
+function _nb1_trigamma_rise_loop(r, y::Integer)
+    S = zero(float(r))
+    @inbounds for k in 0:(y - 1)
+        S += inv(r + k)^2
+    end
+    return S
+end
+
+# E_y[ Σ_{k<y} 1/(r+k)² ] for y ~ NB(r, p = 1/(1+φ)), summed over ±14 standard deviations of
+# the mean (plus 40 (1+φ) on the upper side for the geometric tail of a large φ). The pmf
+# recursion starts at the lower end of that window, relative to its value there so nothing
+# underflows, and the sum is renormalised by the window's own mass. Returns `nothing` when
+# the window would be degenerate or longer than about 2e5 terms.
+function _nb1_fisher_mu_window(μ, r, q)
+    σ = sqrt(μ * (1 + μ / r))           # = sqrt(μ (1 + φ)); Inf or NaN for a degenerate trial point
+    span = 28σ + 40 * (1 + μ / r)
+    # Cost cap (about 2e5 terms): a degenerate or absurdly overdispersed point keeps the old path.
+    (isfinite(span) && span <= 2.0e5) || return nothing
+    lo = max(0, floor(Int, μ - 14σ)); hi = ceil(Int, μ + 14σ + 40 * (1 + μ / r))   # + a heavy-tail margin
+    P = 1.0                              # pmf relative to its value at `lo`; renormalised below
+    S = _nb1_trigamma_rise(r, lo)
+    tot = P; E = P * S
+    for y in (lo + 1):hi
+        S += inv(r + y - 1)^2
+        P *= q * (y - 1 + r) / y
+        tot += P; E += P * S
+    end
+    return E / tot
+end
+
 # Expected Fisher information of NB1 w.r.t. the mean μ:
 #   I_μ = (1/φ²)[ψ'(r) − E_y ψ'(y+r)],  r = μ/φ,  y ~ NB(r, p = 1/(1+φ)).
 # No closed form ⇒ summed over the NB pmf via the stable recursion
@@ -75,6 +118,13 @@ function _nb1_fisher_mu(μ::Real, φ::Real)
     # directly so no nearly equal trigamma terms are subtracted.
     r = μ / φ
     q = φ / (1 + φ)                      # 1 − p, the NB "failure" probability
+    # P(y = 0) = p^r underflows to 0 once r·log(1+φ) > ~745 (μ of a few hundred and up); the
+    # recursion below would then stay at 0, sum nothing, and fall through to the tail term,
+    # a weight too large by the factor 1 + φ. Sum around the mean in that regime instead.
+    if r * log1p(φ) > 600 || μ + 10 * sqrt(μ * (1 + φ)) > 9_000
+        w = _nb1_fisher_mu_window(μ, r, q)
+        w === nothing || return max(w / φ^2, 1e-12)
+    end
     P = exp(-r * log1p(φ))               # P(y = 0) = p^r, without rounding p = 1/(1+φ)
     cum = P
     S = zero(float(r))                   # Σ_{k<y} 1/(r+k)², zero at y = 0
@@ -197,6 +247,7 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_nb1_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_nb1_gllvm")
@@ -204,8 +255,8 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     hessian in (:fisher, :observed) || throw(ArgumentError(
         "fit_nb1_gllvm: hessian must be :fisher or :observed; got :$hessian"))
 
-    msk = mask === nothing ? (any(ismissing, Y) ? observed_mask(Y) : nothing) : mask
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    msk = _resolve_obs_mask(mask, Y)
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
@@ -218,7 +269,9 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
             end
         end
     end
-    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n : collect(float.(β_init))
+    β0 = β_init === nothing ? vec(sum(Zemp; dims = 2)) ./ n :
+         _rescue_beta_init(collect(float.(β_init)), Zemp, offset; mask = msk,
+                           guarded = _eta_cap_guarded(link), caller = "fit_nb1_gllvm")   # #874
     Λ0 = if Λ_init === nothing
         Zc = Zemp .- β0
         F = svd(Zc)
@@ -238,6 +291,7 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
         φ = exp(θ[p + rr + 1])
+        _eta_cap_guarded(link) && _eta_above_clamp(β, offset; mask = msk) && return 1e12   # #869: η-clamp plateau
         v = try
             -nb1_marginal_loglik_laplace(Yc, Λ, β, φ; link = link, mask = msk, offset = offset,
                                          hessian = hessian,
@@ -254,5 +308,10 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    return NB1Fit(β̂, Λ̂, φ̂, link, _fit_verdict(res)..., hessian, _stored_offset(offset))
+    # `Optim.converged` also fires on a zero-length step far from a stationary point; require
+    # the gradient test too (#505, as in the grouped fitters).
+    ll, conv, iters = _fit_verdict(Optim.minimum(res),
+        Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
+    conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm")
+    return NB1Fit(β̂, Λ̂, φ̂, link, ll, conv, iters, hessian, _stored_offset(offset))
 end

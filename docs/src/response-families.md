@@ -125,6 +125,8 @@ log-likelihood. This is the fastest and most accurate path. The response matrix
 `Y` is `p × n` (responses × sites). The closed-form fitter needs at least as many
 sites as responses (`n_sites ≥ p`) and throws an `ArgumentError` otherwise; the
 Laplace-fitted families below do not (see [Common pitfalls](pitfalls.md)).
+`missing` entries in `Y` derive an observation mask, the same rule as Poisson,
+and one `@info` records that the mask was derived.
 
 ### Binomial — `Binomial()`
 
@@ -250,7 +252,11 @@ really varies across species. Pass `disp_group = :species` for per-species `r`
 without covariates) and the R bridge keep per-trait `r`, matching gllvmTMB's
 length-`p` `log_phi_nbinom2`; with shared site covariates the per-trait route is
 [`fit_nb_gllvm_grouped_cov`](@ref) (per-trait `r` + shared `γ`). As `r → ∞` the
-negative binomial collapses to Poisson. For a single shared `r` with covariates,
+negative binomial collapses to Poisson. In per-trait NB fits, a species' `r` can
+be pushed out towards that Poisson boundary while the fit still reports
+`converged = true`. That species' overdispersion then goes into `Λ`, inflating
+`ΛΛᵀ`, so inspect the fitted `r` for each species before interpreting the shared
+covariance. For a single shared `r` with covariates,
 call [`fit_gllvm_cov`](@ref).
 
 The NB2 route is still experimental for demanding fits. The recorded R
@@ -682,16 +688,18 @@ Note that you must supply `η` yourself: `LognormalFit` defines no `getLV`,
 `predict`, or `link_residual` method, so latent scores and fitted linear
 predictors are not extracted from the fit object on this engine.
 
-**Surface limits.** There is no Wald confidence-interval route —
-`LognormalFit` is not in the native `confint` family union — and the R bridge
-rejects CI requests loudly, requiring `ci_method = "none"`. On the bridge,
+**Surface limits.** Natively, `confint(fit, Y; method)` covers `LognormalFit`,
+but the R bridge rejects CI requests loudly, requiring `ci_method = "none"`. On the bridge,
 lognormal is a **no-X** family: fixed-effect `X`, `X_lv`, and missing-response
 masks are all fenced as follow-ups, and bridge `scores` come back empty with
 `Sigma` / `correlation` assembled from the shared block `ΛΛᵀ` alone
 (communality `1`). `fit_lognormal_gllvm` itself declares no `X` keyword; it
 forwards remaining keywords to `fit_gaussian_gllvm`, but no test exercises an
 X-covariate route through the lognormal entry point, so treat it as
-unsupported.
+unsupported. It refuses `mask` and `lambda_constraint`: a `LognormalFit` does not
+record pins, so its intervals would treat pinned loadings as parameters. Fit a
+confirmatory model to the centred `log(Y)` with `fit_gaussian_gllvm(...;
+lambda_constraint = M)` instead.
 
 ### Tweedie — `fit_tweedie_gllvm`
 
@@ -951,8 +959,11 @@ fit = fit_gaussian_pervar_gllvm(Y; K = 2)   # heteroscedastic Gaussian
 
 A heteroscedastic Gaussian GLLVM with a **separate residual variance per species**
 (gllvm's heteroscedastic default), in contrast to the single shared `σ_eps` of
-`fit_gaussian_gllvm`. With `X=nothing`, trait intercepts are profiled as row means of the `p × n`
-response matrix. Supply `X` of shape `(p, n, q)` to fit a complete fixed-effect
+`fit_gaussian_gllvm`. With `X=nothing` and complete data, trait intercepts are
+profiled as row means of the `p × n` response matrix. `missing` entries derive
+an observation mask (one `@info`) and are dropped from the marginal; intercepts
+are then the profiled GLS means of the observed cells, and the fit uses L-BFGS
+rather than EM. Supply `X` of shape `(p, n, q)` to fit a complete fixed-effect
 design; no intercept is added automatically. Its `q` coefficients are profiled
 by generalized least squares at each covariance trial and returned in `fit.β`.
 Explicit designs use L-BFGS with direct covariance Cholesky (O(p³) factorization)
@@ -1120,6 +1131,7 @@ fit = fit_zip_gllvm(Y;             K = 2)   # counts; structural zero × Poisson
 fit = fit_zip_gllvm_cov(Y; X = X,  K = 2)   # ZIP + shared site-X (separate γz/γc; Λz=0)
 fit = fit_zinb_gllvm(Y;            K = 2)   # counts; structural zero × NB2, shared r
 fit = fit_zinb_gllvm_cov(Y; X = X, K = 2)   # ZINB + shared site-X (separate γz/γc; Λz=0; shared r)
+# iterations ≤ 0 evaluates the start only and returns converged = false
 fit = fit_zib_gllvm(Y;             K = 2, N = N)  # binomial counts; structural zero × Binomial(N, μ)
 fit = fit_gllvm(Y; family = OrderedBeta(), K = 2)          # proportions; 0/1 masses + Beta interior
 fit = fit_gllvm(Y; family = OrderedBeta(0.0, 2.0, 3.0), K = 2)  # same — marker tags never read
@@ -1258,12 +1270,15 @@ its [`ZiFit`](@ref) result yet.
 ## Extractors
 
 The same post-fit extractors (`communality`, `correlation`, `sigma_y_site`, …)
-work for all implemented families:
+work for all implemented families. Only the Gaussian fit supports the
+one-argument `communality(fit)` / `correlation(fit)` / `sigma_y_site(fit)`; the
+non-Gaussian fits take the response matrix too, as `(fit, Y)`, and `getLV` takes
+`Y` for every response family on this page:
 
 ```julia
-communality(fit)   # shared-variance fraction per response
-correlation(fit)   # cross-response correlation matrix
-getLV(fit)         # latent variable scores (sites × K)
+communality(fit, Y)   # shared-variance fraction per response
+correlation(fit, Y)   # cross-response correlation matrix
+getLV(fit, Y)         # latent variable scores (sites × K)
 ```
 
 See [Working with a fit](working-with-a-fit.md) for the full extractor reference.

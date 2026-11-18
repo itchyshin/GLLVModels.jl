@@ -27,8 +27,9 @@ function _sim_binomial_verdict(p::Integer, K::Integer, n::Integer, Ntr::Integer;
     return Y, fill(Ntr, p, n)
 end
 
-# A draw no fit can evaluate: one count above its trial number (log-pmf -Inf for
-# every θ), so the fitter ends on its failure sentinel. Data-driven, not RNG-driven.
+# A draw outside the Binomial support: one count above its trial number. Before #730
+# the fitter ended on its failure sentinel (log-pmf -Inf for every θ); it now refuses
+# the draw up front with an ArgumentError. Data-driven, not RNG-driven.
 function _binom_bad(Y, N)
     B = copy(Y)
     B[1, 1] = N[1, 1] + 3
@@ -60,10 +61,18 @@ end
         ad = GM._family_ci(fit, Y; N = N)
         m = length(ad.θ)
         Y_bad = _binom_bad(Y, N)
-        fb_bad = fit_binomial_gllvm(Y_bad; K = 1, N = N)
-        @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
-        raw_bad = ad.refit(Y_bad)
-        @test raw_bad isa NamedTuple && raw_bad.converged == false
+        # #730: the fitter refuses the out-of-support draw instead of returning a
+        # `loglik = -Inf` fit; the adapter's own try/catch turns that into `nothing`,
+        # which the bootstrap screen rejects (and end to end below).
+        @test_throws ArgumentError fit_binomial_gllvm(Y_bad; K = 1, N = N)
+        @test ad.refit(Y_bad) === nothing
+        @test !GM._bootstrap_refit_ok(ad.refit(Y_bad), m)[2]
+        # A refit that reports a failed verdict is still screened out. No in-support draw
+        # makes this fitter fail, so take a real refit and mark it failed the way
+        # `_fit_verdict` does (`converged = false`, `loglik = -Inf`); its θ stays finite,
+        # as a sentinel fit's warm start does. The adapter's own forwarding of a false
+        # verdict is therefore not exercised for Binomial.
+        raw_bad = merge(ad.refit(Y), (converged = false, loglik = -Inf))
         @test all(isfinite, raw_bad.θ)                    # why main counted it
         @test GM._bootstrap_refit_ok(raw_bad.θ, m)[2]     # the old contract accepts it
         @test !GM._bootstrap_refit_ok(raw_bad, m)[2]      # the migrated one does not

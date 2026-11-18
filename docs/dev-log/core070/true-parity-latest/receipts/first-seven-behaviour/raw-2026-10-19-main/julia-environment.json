@@ -1,0 +1,11 @@
+{
+  "Project.toml": {
+    "path": "environment-snapshot/Project.toml.txt",
+    "sha256": "f184cd03258c6e5367f6df73cda39cce514fbc53096805f2937090bf5e12deb7"
+  },
+  "Manifest.toml": {
+    "path": "environment-snapshot/Manifest.toml.txt",
+    "sha256": "f4c54d21c5bccf03354837258c45d6905e4e1b4fc80ce53a920289f403406c9a"
+  },
+  "scope": "Retained resolved dependency snapshot for this capture; canonical sidecar validates source and raw evidence but does not independently revalidate this dependency lock."
+}

@@ -77,7 +77,9 @@ using GLLVModels,Test,Random,LinearAlgebra,Distributions
         form=gllvm(@formula(y~1),Y,(site=collect(1:n),);family=Normal(),K=K,aghq=3)
         @test form.integration.actual==:aghq
         @test occursin("AGHQ",sprint(show,MIME("text/plain"),f))
-        @test_logs (:warn,r"retained exact") begin
+        # K_W > 0 also issues the once-per-session "not separately identified" warning (#702), so
+        # match the AGHQ record without depending on whether an earlier test already triggered it.
+        @test_logs (:warn,r"retained exact") match_mode=:any begin
             fallback=fit_gaussian_gllvm(Y;K=K,K_W=1,aghq=3,iterations=2)
             @test fallback.integration.actual==:laplace && fallback.integration.reason==:other_random_blocks
         end
@@ -97,7 +99,7 @@ using GLLVModels,Test,Random,LinearAlgebra,Distributions
         @test size(simulate(fx,n;rng=MersenneTwister(2)))==size(Y)
         @test_throws ArgumentError simulate(fx,n+1)
         ym=Matrix{Union{Missing,Float64}}(Yx);ym[1,2]=missing
-        mask=trues(p,n);mask[2,3]=false
+        mask=trues(p,n);mask[1,2]=false;mask[2,3]=false
         fm=fit_gaussian_gllvm(ym;K=K,aghq=3,X=X,β_fixed=[false,true],offset=off,mask=mask)
         @test fm.integration.actual==:aghq && isfinite(fm.logLik)
         @test fm.integration.data.mask[1,2]==false && fm.integration.data.mask[2,3]==false

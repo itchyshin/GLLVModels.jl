@@ -61,16 +61,19 @@ end
 # when it is no worse by 1e-6 and either converged or strictly better. A converged run,
 # or one on the failure sentinel, is returned unchanged. `run(alg, θ)` re-runs the
 # caller's objective. Returns `(θ, nll, converged, iterations)`.
-function _bfgs_continuation(run, res)
+function _bfgs_continuation(run, res; stage_callback = nothing)
     θ = Optim.minimizer(res)
     f0 = Optim.minimum(res)
     conv = Optim.converged(res)
     iters = Optim.iterations(res)
     (conv || _nll_failed(f0)) && return (θ, f0, conv, iters)
-    trial = run(_COV_BFGS(), copy(θ))
+    method = _COV_BFGS()
+    trial = run(method, copy(θ))
     f1 = Optim.minimum(trial)
     c1 = Optim.converged(trial)
-    if f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+    accepted = f1 <= f0 + 1e-6 && (c1 || f1 < f0)
+    stage_callback === nothing || stage_callback(:legacy_bfgs_continuation, method, trial; accepted = accepted)
+    if accepted
         return (Optim.minimizer(trial), f1, c1, iters + Optim.iterations(trial))
     end
     return (θ, f0, conv, iters)
@@ -303,10 +306,12 @@ end
 # --- Negative binomial (log link) — dispersion family: r enters θ as log r ---
 # AD-friendly NB2 log-pmf kernel (mean μ, dispersion r); the loggamma(y+1) constant
 # is dropped (zero gradient). r is a θ parameter (via log r), so the r-dependent
-# loggamma(r+y) − loggamma(r) terms are kept and differentiated (loggamma' = digamma,
-# which ForwardDiff supports).
-_nb_logker(μ, r, y) = loggamma(r + y) - loggamma(r) +
-                      r * log(r) - (r + y) * log(r + μ) + y * log(μ)
+# terms are kept and differentiated. Evaluated through the stable
+# `_nb2_logpdf_mean` (src/families/negbin.jl), the log-pmf the objective uses: the
+# expanded loggamma(r+y) − loggamma(r) + r log r − (r+y) log(r+μ) subtracts
+# O(r log r) terms whose difference is O(1), so near the Poisson limit its value and
+# its log-r derivative were rounding noise (#871).
+_nb_logker(μ, r, y) = _nb2_logpdf_mean(μ, r, Int(y)) + loggamma(float(y) + 1)
 
 function _nb_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, logr;
                            mask = nothing)
@@ -383,7 +388,11 @@ end
 # --- Gamma (log link, shape α) — dispersion family, non-canonical ----------
 # AD-friendly Gamma(shape α, mean μ) log-density kernel (Var = μ²/α). Score
 # s = α(y−μ)/μ; Fisher weight = α (constant); observed weight −∂s/∂η = αy/μ.
-_gamma_logker(μ, α, y) = (α - 1) * log(y) - y * α / μ - α * log(μ) + α * log(α) - loggamma(α)
+# Stable `_gamma_logpdf` (src/families/gamma.jl) from shape 1e3: the expanded form cancels `α log α`
+# against `loggamma(α)`, and its derivative in log α cancels `α (log α - digamma(α))` (refs #1175);
+# below 1e3 the expanded form is kept, so ordinary fits are bit-identical.
+_gamma_logker(μ, α, y) = α >= _GAMMA_STIRLING_FROM ? _gamma_logpdf(α, μ, y) :
+                         (α - 1) * log(y) - y * α / μ - α * log(μ) + α * log(α) - loggamma(α)
 
 function _gamma_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, logα;
                               mask = nothing)
@@ -462,7 +471,10 @@ _beta_score_scalar(η, φ, y) = begin
     μstar = digamma(μ * φ) - digamma((1 - μ) * φ)
     return φ * (ystar - μstar) * me
 end
-_beta_logker(μ, φ, y) = (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
+# Stable `_beta_logpdf` once both shapes are large (the expanded form cancels, #1143); below that the
+# expanded form is kept, so ordinary fits are bit-identical.
+_beta_logker(μ, φ, y) = _beta_stirling_applies(μ * φ, (1 - μ) * φ) ? _beta_logpdf(μ * φ, (1 - μ) * φ, y) :
+                        (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y) -
                         (loggamma(μ * φ) + loggamma((1 - μ) * φ) - loggamma(φ))
 
 function _beta_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, logφ;

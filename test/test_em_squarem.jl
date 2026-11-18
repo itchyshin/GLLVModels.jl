@@ -65,7 +65,7 @@ end
     @testset "the accelerated point is a fixed point of the plain EM map" begin
         # (sq is already fitted above with tol = 1e-10)
         θ  = GLLVModels._pack_phylo(sq.Λ_B, sq.σ_eps, sq.σ_phy)
-        θ′ = GLLVModels._em_map_phylo(θ, Matrix{Float64}(y1), Σ1, p1, 1)
+        θ′, _ = GLLVModels._em_map_phylo(θ, Matrix{Float64}(y1), Σ1, p1, 1)
         @test maximum(abs.(θ′ .- θ)) < 1e-5
     end
 

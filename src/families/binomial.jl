@@ -349,14 +349,17 @@ function _binomial_runaway_loadings(Λ::AbstractMatrix)
              m[t] >= _BINOMIAL_LOADING_ABSOLUTE_THRESH)]
 end
 
-function _warn_runaway_loadings(Λ::AbstractMatrix)
+function _warn_runaway_loadings(Λ::AbstractMatrix, family_label::AbstractString = "Binomial")
     idx = _binomial_runaway_loadings(Λ)
     isempty(idx) && return idx
-    @warn string("Binomial fit has runaway loadings on trait(s) ", join(idx, ", "),
+    @warn string(family_label, " fit has runaway loadings on trait(s) ", join(idx, ", "),
         " (max |Λ| = ", round(maximum(abs, Λ); sigdigits = 3), "): a loading this far above ",
         "the rest, or this large on the link scale, is an improper solution (Heywood case); ",
         "quasi-complete separation produces this at ordinary prevalence. Treat the fit as ",
-        "unusable rather than interpreting it; try loading_ridge or a lower K.")
+        "unusable rather than interpreting it; ",
+        family_label == "Binomial" ? "try loading_ridge or a lower K." :
+            "try a lower K, merging sparse categories, or dropping the affected trait(s) " *
+            "(these fitters have no loading_ridge option).")
     return idx
 end
 
@@ -455,7 +458,8 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     end
 
     msk = _resolve_obs_mask(mask, Y)                  # NA handling
-    Yc  = Integer.(_sanitize_missing(Y, 0))
+    _check_response_support(:binomial, Y, msk; caller = "fit_binomial_gllvm", N = Nm)
+    Yc  = Integer.(_sanitize_unobserved(Y, msk, 0))
 
     # warm start: empirical link-scale intercepts + SVD (PPCA-like) loadings
     Zemp = [linkfun(link, clamp((Yc[t, i] + 0.5) / (Nm[t, i] + 1), 1e-4, 1 - 1e-4))

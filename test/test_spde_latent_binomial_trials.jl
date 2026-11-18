@@ -63,3 +63,43 @@ end
     η_spatial = GLLVModels.predict_spatial(fit, Y, locs, locs; type = :link)
     @test η_spatial ≈ η
 end
+
+@testset "confint_spde_latent takes N for Binomial fits (#779)" begin
+    Random.seed!(779)
+    m, L = 4, 4.0
+    nodes, tris = _grid_mesh_bin(m, L)
+    site_nodes = collect(1:2:(m * m))     # 8 sites
+    locs = nodes[site_nodes, :]
+    M = size(locs, 1)
+    p, K = 3, 1
+    Ntr = fill(5, p, M)
+    Y = [rand(Binomial(5, 0.4)) for _ in 1:p, _ in 1:M]
+    @test maximum(Y) > 1
+
+    fit = fit_spde_latent_gllvm(Y, nodes, tris, locs;
+                                family = Binomial(), K = K, N = Ntr,
+                                iterations = 30, newton_maxiter = 30)
+
+    # The Y above are iid Binomial draws with no spatial signal, so the SPDE field
+    # (kappa, tau, Lambda) is not identified and its Hessian block is
+    # platform-dependent (#966: indefinite on Julia 1 / 1.10 CI, PD on others).
+    # Assert only what #779 promises: N is accepted and enters the likelihood, and
+    # the well-identified intercepts get finite, positive Wald SEs.
+    ci = confint_spde_latent(fit, Y, locs; N = Ntr)
+    rr = GLLVModels.rr_theta_len(p, K)
+    @test length(ci.se) == p + rr + 2
+    @test all(isfinite, ci.se[1:p]) && all(>(0), ci.se[1:p])
+    @test all(isfinite, ci.estimate)
+
+    # Doubling the trials changes the observed information, so N is not ignored.
+    ci2 = confint_spde_latent(fit, Y, locs; N = 2 .* Ntr)
+    @test all(isfinite, ci2.se[1:p])
+    @test !(ci2.se[1:p] ≈ ci.se[1:p])
+
+    # A fit that did not record its trials, with no N supplied, must refuse.
+    bare = GLLVModels.SPDELatentFit(fit.β, fit.Λ, fit.κ, fit.τ, fit.dispersion,
+                                    fit.link, fit.family, fit.loglik,
+                                    fit.converged, fit.iterations,
+                                    fit.nodes, fit.tris)
+    @test_throws ArgumentError confint_spde_latent(bare, Y, locs)
+end

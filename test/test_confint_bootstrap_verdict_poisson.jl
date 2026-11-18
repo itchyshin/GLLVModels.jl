@@ -63,15 +63,17 @@ end
         @test fit.converged
         ad = GLLVModels._family_ci(fit, Y)
 
-        # Deliberately pathological bootstrap draw: one wildly invalid count.
-        # Every θ the optimiser tries (including the warm start) throws inside
-        # the fitter's own try/catch and lands on the `1e12` failure sentinel,
-        # so `_fit_verdict` reports `converged = false` regardless of what
-        # `Optim.converged` claims — data-driven, not RNG-driven, so it is
-        # stable across the Julia 1.10 / 1.13 CI matrix.
+        # Deliberately pathological bootstrap draw: one count no fit can reach.
+        # (An out-of-support count such as -100_000 is now refused up front, #730.)
+        # The count 10^15 is in the support, but the η clamp (η ≤ 30, so
+        # μ ≤ e^30 ≈ 1.1e13) keeps its log-pmf below -3e15 for every θ, far past
+        # the 1e11 failure threshold, so `_fit_verdict` reports
+        # `converged = false` regardless of what `Optim.converged` claims —
+        # data-driven, not RNG-driven, so it is stable across the
+        # Julia 1.10 / 1.13 CI matrix.
         p, n = size(Y)
         Y_bad = fill(5, p, n)
-        Y_bad[1, 1] = -100_000
+        Y_bad[1, 1] = 10^15
         fb_bad = fit_poisson_gllvm(Y_bad; K = 1)
         @test !fb_bad.converged     # the fixture really is a genuine non-convergence
 

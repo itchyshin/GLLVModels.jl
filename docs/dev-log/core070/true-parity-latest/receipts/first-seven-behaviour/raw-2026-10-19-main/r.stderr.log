@@ -1,0 +1,16 @@
+The integrated multi-source route is experimental.
+ℹ It combines presence-only count streams with structured
+  detection/non-detection data under one shared ecological linear predictor.
+ℹ Everything it reports is relative intensity: presence-only data cannot
+  identify absolute abundance, occupancy, or detectability, and this fit does
+  not estimate them.
+ℹ Source-specific spatial structure is only weakly identified on small designs;
+  treat a source-only field as a nuisance adjustment unless your design is
+  large enough to support it.
+! Give every presence-only arm its own reporting-rate term (an interaction with
+  a source indicator). Without one, the arms share an absolute intercept and
+  the fit implicitly claims the absolute intensity that presence-only data
+  cannot identify.
+→ Check convergence and positive-definiteness on every fit, and expect this
+  interface to change.
+This message is displayed once per session.
