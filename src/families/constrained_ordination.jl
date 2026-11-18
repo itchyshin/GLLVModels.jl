@@ -197,11 +197,12 @@ fit.B            # q×2 constrained ordination axes (environment → latent)
 fit.Λ            # p×2 species loadings on those axes
 ```
 """
-function fit_constrained_gllvm(Y::AbstractMatrix{<:Real}; family, X::AbstractMatrix{<:Real},
+function fit_constrained_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family, X::AbstractMatrix{<:Real},
         K::Integer, link::Union{Nothing, Link} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_constrained_gllvm", mask)
     p, n = size(Y)
     size(X, 1) == n ||
         throw(DimensionMismatch("X must be (n, q) = ($n, q) with one row per site; got $(size(X))"))
@@ -210,6 +211,7 @@ function fit_constrained_gllvm(Y::AbstractMatrix{<:Real}; family, X::AbstractMat
     lk = link === nothing ? _cov_default_link(family) : link
     Nm = N === nothing ? fill(1, p, n) : N
     has_disp = _cov_has_disp(family)
+    _check_family_response_support(family, Y, nothing; caller = "fit_constrained_gllvm", N = N)
 
     # Warm start: link-scale row means for β, SVD loadings, zero RRR coefficients —
     # the same machinery as fit_gllvm_speciescov (B starts at the unconstrained
