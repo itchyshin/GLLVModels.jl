@@ -23,21 +23,26 @@ identifiability. Compare a few values of `K` by log-likelihood / information
 criteria, and prefer the smallest `K` that captures the covariance you care
 about.
 
-For the **per-species residual** Gaussian model taught in the Quick start
+For the **per-species residual** Gaussian model
 (`Σ = Λ Λᵀ + diag(ψ)`, one ψ per response via `fit_gaussian_pervar_gllvm` or
 `pervar = true`), both Λ and ψ are identified only when **(p − K)² ≥ p + K**
 (Ledermann bound): e.g. `p = 4` allows `K ≤ 1`, `p = 5` allows `K ≤ 2`,
 `p = 10` allows `K ≤ 6`. The shared-residual fitter `fit_gaussian_gllvm` (one
-`σ_eps` for all traits) uses a different condition; requiring `K < p` there is
-a warm-start limit, not this identifiability bound. `fit_gaussian_pervar_gllvm`
-rejects inadmissible `K` before fitting.
+`σ_eps` for all traits, the model fitted in the Quick start) uses a different
+condition; requiring `K < p` there is a warm-start limit, not this identifiability
+bound. `fit_gaussian_pervar_gllvm` rejects inadmissible `K` before fitting.
 
 ## Check convergence
 
 `fit_gaussian_gllvm` warm-starts from PPCA and usually converges in a step or
 two; the non-Gaussian fitters use L-BFGS over a Laplace marginal. Always check
 the `converged` flag — if it is `false`, try a different start or more
-iterations. Standardising responses to a common scale helps the Gaussian path.
+iterations. `converged = true` alone is not the go-ahead to read the results:
+it means the optimizer stopped at a stationary point, not that it found the
+global maximum. For non-Gaussian fits with `K ≥ 2`, refit from several starts
+(`n_init` is available on the Poisson and NB2 Laplace routes; check the fitter
+docstring for other families) and keep the highest log-likelihood
+before reading loadings or comparing AIC. Standardising responses to a common scale helps the Gaussian path.
 
 ## Fewer sites than species (`n < p`)
 
@@ -65,6 +70,35 @@ With binary responses, a response that is all-0 or all-1 drives its intercept
 to ±∞ (complete separation). `fit_binomial_gllvm` clamps the linear predictor
 for numerical safety, but a non-convergence flag or an extreme intercept is a
 sign to inspect that response.
+
+The Binomial Laplace path bounds `μ` to `[1e-12, 1 − 1e-12]` and `η` to `±30`. Beyond
+`|η| = 30` the objective is flat, and each saturated misfit cell contributes at
+least `log(1e-12) ≈ −27.6` to the log-likelihood instead of its true, more negative
+value. A fit that sits on these bounds therefore reports an optimistic
+log-likelihood; check `fit.saturation` and `converged`.
+
+### Quasi-separation: the two engines flag it differently
+
+Quasi-separation (a response nearly separated by the latent variables) pushes a
+loading towards infinity. GLLVModels.jl and `gllvmTMB` reach essentially the same
+degenerate solution but report it differently:
+
+| | GLLVModels.jl | `gllvmTMB` 0.7.0 |
+|---|---|---|
+| Convergence flag | `converged = false` | `convergence = 0` (converged) |
+| Diagnostic | none beyond the flag; inspect the largest row norm of `fit.Λ` | runaway-loading warning (`max_loading`, relative size) |
+
+In one measured case (seed 42, binomial traits) the log-likelihoods agree to 0.02 units
+(Julia −5292.804, R −5292.786), with a largest loading of about 42 on the Julia
+side and 44 on the R side. A Julia fit with `converged = false` and a very large
+loading is therefore a likely quasi-separation, not necessarily an optimiser
+failure, while R can report convergence for the same solution. When checking one
+engine against the other, compare log-likelihoods, not the flags.
+
+!!! note "Open"
+    A Julia runaway-loading warning matching `gllvmTMB`'s, and whether the
+    `converged` flag should match R here, are not decided. The flag is part of the
+    parity contract and is the maintainer's call (#498).
 
 See also: [Get started](quickstart.md) · [Response families](response-families.md) · [Reference](api.md).
 

@@ -1379,31 +1379,66 @@ def main():
                 shutil.rmtree(tmp)
         return f
     check("boundary_context_public_r_bridge_refusal_evidenced",
-          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "EVIDENCED"))
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "pin": "P1"}, "EVIDENCED"))
     check("boundary_context_admission_only_evidenced",
-          ctx_case({"evidence_kind": "r_only_formula_grammar", "verdict": "R_ONLY_PASS"}, "EVIDENCED",
+          ctx_case({"evidence_kind": "r_only_formula_grammar", "verdict": "R_ONLY_PASS", "pin": "P1"}, "EVIDENCED",
                    ids=("C", "C-FORMULA"), ctx_ids=("C-FORMULA",)))
     check("boundary_context_other_kind_refused",
           ctx_case({"evidence_kind": "numeric_r_vs_julia", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "not an admission-only or PUBLIC-R-BRIDGE boundary kind"))
     check("boundary_context_wrong_verdict_refused",
           ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "PASS"}, "NUMERIC-UNVERIFIED", "is not R_BOUNDARY_UNCHANGED"))
     check("boundary_context_with_comparison_refused",
-          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "comparison": {}}, "NUMERIC-UNVERIFIED", "so it is compared, not context"))
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "pin": "P1", "comparison": {}}, "NUMERIC-UNVERIFIED", "so it is compared, not context"))
     # N1 covers an R refusal recorded by a receipt; a bridge case nobody ran is not context.
     check("boundary_context_not_executed_bridge_case_refused",
           ctx_case({"evidence_kind": "not_executed", "verdict": "NOT_EXECUTED"}, "NUMERIC-UNVERIFIED",
                    "not an admission-only or PUBLIC-R-BRIDGE boundary kind"))
     check("boundary_context_bridge_kind_on_native_case_refused",
-          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED", "must be a -PUBLIC-R-BRIDGE case",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "pin": "P1"}, "NUMERIC-UNVERIFIED", "must be a -PUBLIC-R-BRIDGE case",
                    ids=("C", "C-NATIVE"), ctx_ids=("C-NATIVE",)))
     check("boundary_context_all_cases_refused",
-          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "pin": "P1"}, "NUMERIC-UNVERIFIED",
                    "every executable case is boundary context", ids=("C-PUBLIC-R-BRIDGE",)))
     # The duplicate-id hole: a context id listed twice in executable_case_ids would pass the count test while no
     # executable case outside the context list is compared (the receipt compares case C, which the row does not list).
     check("boundary_context_duplicate_executable_id_refused",
-          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "pin": "P1"}, "NUMERIC-UNVERIFIED",
                    "executable_case_ids lists a case id twice", ids=("C-PUBLIC-R-BRIDGE", "C-PUBLIC-R-BRIDGE")))
+
+    check("boundary_context_p0_pin_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "pin": "P0"}, "NUMERIC-UNVERIFIED", 'receipt pin "P0" is not P1'))
+    check("boundary_context_missing_pin_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED"}, "NUMERIC-UNVERIFIED", "receipt pin null is not P1"))
+    check("boundary_context_source_ids_naming_another_row_refused",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "pin": "P1", "source_ids": ["covariance/OTHER"]},
+                   "NUMERIC-UNVERIFIED", "does not name covariance/N"))
+    check("boundary_context_source_ids_naming_the_row_evidenced",
+          ctx_case({"evidence_kind": "r_public_bridge_boundary", "verdict": "R_BOUNDARY_UNCHANGED", "pin": "P1", "source_ids": ["covariance/N"]}, "EVIDENCED"))
+
+    # Issue #829: N9 block required when the receipt declares a polished compared point.
+    def polished_case(extra):
+        def f():
+            root, tmp = numeric_root(extra)
+            try:
+                code, out = run(root)
+                st = status_of(root)
+                return st == "NUMERIC-UNVERIFIED", f"status={st} {out[:200]}"
+            finally:
+                shutil.rmtree(tmp)
+        return f
+    check("n9_polished_point_without_block_refused", polished_case({"compared_point": "newton_polished"}))
+
+    # Issue #829: the checker's N1 kinds and N9 constants are the assembler's (drift test).
+    def drift():
+        src = (Path(__file__).parent / "true_parity_check.mjs").read_text()
+        kinds = dict(re.findall(r"(\w+): \{ verdict: '(\w+)', suffix: (?:'[^']*'|null) \}", src))
+        suffixes = dict(re.findall(r"(\w+): \{ verdict: '\w+', suffix: ('[^']*'|null) \}", src))
+        js_kinds = {k: (kinds[k], None if suffixes[k] == "null" else suffixes[k].strip("'")) for k in kinds}
+        bound = float(re.search(r"CONVERGENCE_GRADIENT_BOUND = ([0-9e.\-]+);", src).group(1))
+        pts = tuple(re.findall(r"'(\w+)'", re.search(r"CONVERGENCE_POINTS = new Set\(\[([^\]]*)\]\)", src).group(1)))
+        ok = js_kinds == A.BOUNDARY_CONTEXT_KINDS and bound == A.CONVERGENCE_GRADIENT_BOUND and pts == A.CONVERGENCE_POINTS
+        return ok, f"js_kinds={js_kinds} bound={bound} pts={pts}"
+    check("n1_kinds_and_n9_constants_match_the_checker", drift)
 
     # Maintainer ruling 2026-10-05 (D-319), C4: an EVIDENCED real-data row must cite a direct-engine run (a receipt
     # with non-empty engines.R and engines.julia objects). The scoreboard never shows EVIDENCED on an RD row the

@@ -164,7 +164,7 @@ end
 _default_hessian(::NegativeBinomial, ::LogLink) = :observed
 
 """
-    fit_nb_gllvm(Y; K, link=LogLink(), mask=nothing, r_init=nothing, …) -> NBFit
+    fit_nb_gllvm(Y; K, n_init=1, link=LogLink(), mask=nothing, r_init=nothing, …) -> NBFit
 
 Fit a negative-binomial (NB2) GLLVM by L-BFGS over `[β; vec(Λ); log r]` on the
 Laplace marginal (`nb_marginal_loglik_laplace`), jointly estimating the dispersion
@@ -192,8 +192,51 @@ behaviour.
 `converged` is forced `false` when the fitted `r` lies outside `[1e-6, 1e6]` (the
 Poisson limit above, unidentified extreme overdispersion below), matching the grouped
 NB fitters; the reported `loglik` is unchanged.
+
+`n_init` (default `1`, a single start; the call is then exactly the fit without the keyword)
+fits from `n_init` starts and returns the one with the highest log-likelihood, preferring
+converged fits. Start 1 is the usual warm start (or your `Λ_init`); starts `2:n_init` use
+lower-triangular `0.3 * randn` loadings from fixed seeds, as in [`fit_poisson_gllvm`](@ref), so
+the result is reproducible and the global random stream is untouched. The Laplace likelihood can
+have several local optima, and a fit that reports `converged = true` is a local optimum only
+(#1022: on `vegan::mite`, `K = 2`, two random starts stop 33.3 log-likelihood units below the
+optimum the default start reaches). The default start is not always the best one either. Compare
+`loglik` across `n_init` values to check. Fit time is roughly `n_init` times the single-start
+time. A start that throws is skipped; if all of starts `2:n_init` fail, the first fit is returned.
 """
-function fit_nb_gllvm(Y::AbstractMatrix; K::Integer,
+function fit_nb_gllvm(Y::AbstractMatrix; K::Integer, n_init::Integer = 1, kwargs...)
+    n_init >= 1 || throw(ArgumentError("fit_nb_gllvm: n_init must be at least 1; got $n_init"))
+    return _best_of_starts(_fit_nb_gllvm_start, Y, K, n_init, kwargs)
+end
+
+# Best of `n_init` Laplace fits (#1022), mirroring `fit_poisson_gllvm`'s `n_init` (#915 / #1012).
+# Start 1 is the unchanged default call; the extra starts replace `Λ_init` with a seeded
+# lower-triangular draw (the same seeds as the Poisson fitter). Converged fits rank before
+# unconverged ones, then higher `loglik`; ties keep the earlier start, so `n_init = 1` and any
+# case where start 1 wins are exactly the single-start fit. `fitter` is the single-start function.
+function _best_of_starts(fitter, Y, K, n_init, kwargs)
+    best = fitter(Y; K = K, kwargs...)
+    n_init == 1 && return best
+    p = size(Y, 1)
+    better(a, b) = a.converged != b.converged ? a.converged : a.loglik > b.loglik
+    for s in 2:n_init
+        L = 0.3 .* randn(Random.Xoshiro(915 + s), p, K)
+        for k in 1:K, i in 1:min(k - 1, p)
+            L[i, k] = 0.0
+        end
+        cand = try
+            fitter(Y; K = K, merge((; kwargs...), (Λ_init = L,))...)
+        catch e
+            e isa InterruptException && rethrow()
+            nothing
+        end
+        cand !== nothing && isfinite(cand.loglik) && better(cand, best) && (best = cand)
+    end
+    return best
+end
+
+# One Laplace NB2 fit from a single start (the historical `fit_nb_gllvm` body).
+function _fit_nb_gllvm_start(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing,
         gradient::Symbol = :analytic,
         hessian::Symbol = _default_hessian(NegativeBinomial(1.0, 0.5), link),
