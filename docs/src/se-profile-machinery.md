@@ -72,7 +72,9 @@ Supported fit classes:
   components are identified (see below).
 
 Everything else (other fit classes, `K_W > 0` on a `GllvmFit`, a `GllvmFit`
-with a phylogenetic block, `n_cores > 1`) throws an `ArgumentError`. `cross_corr` is always
+with a phylogenetic block) throws an `ArgumentError`, as does `n_cores < 1` or `n_cores`
+above `Threads.nthreads()`. `n_cores = k > 1` refits replicates on `k` Julia threads (start Julia with
+`julia -t k`); the draws are bit-identical to `n_cores = 1` for the same `seed`. `cross_corr` is always
 skipped. A replicate whose refit throws or does not converge is counted in
 `n_failed` and left out of the percentiles. Defaults mirror R: `n_boot = 999`,
 `conf = 0.95`, `progress = true`; these defaults still need maintainer

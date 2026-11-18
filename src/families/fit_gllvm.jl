@@ -132,6 +132,71 @@ _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentErr
     "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
     "zero-inflated (ZIPoisson, ZINegBin, ZIB) routes listed in ?fit_gllvm."))
 
+# Fitters that take neither `mask` nor `missing` responses: every cell enters the likelihood.
+# A mask, or a `missing` cell in `Y`, is refused here, before any work, with the same
+# `ArgumentError` on every such route; without this the call ended in a raw `MethodError`
+# that named an internal signature (#1217). Mask SUPPORT on these routes is a separate
+# question and is not added here.
+function _refuse_mask_route(caller::AbstractString, mask, Y = nothing)
+    mask === nothing || throw(ArgumentError(
+        "$caller: mask is not supported on this route (the fitter takes no mask and no missing " *
+        "responses, so every cell enters the likelihood); drop the mask, or use a route that " *
+        "accepts one (see ?fit_gllvm)"))
+    Y === nothing && return nothing
+    k = findfirst(ismissing, Y)
+    k === nothing || throw(ArgumentError(
+        "$caller: missing responses are not supported on this route (the fitter takes no mask " *
+        "and no missing responses, so every cell enters the likelihood); Y is missing at " *
+        "trait $(k[1]), unit $(k[2]). Remove the unobserved cells, or use a route that " *
+        "accepts a mask (see ?fit_gllvm)"))
+    return nothing
+end
+
+# `fit_gaussian_reml` refuses `missing` in `Y` with the text used by draft PR 1252 (`_refuse_na_response`
+# in `src/na_input.jl`), word for word, so that the two drafts give one message whichever lands
+# first; this copy is dropped once that file is on main.
+function _refuse_missing_gaussian_reml(caller::AbstractString, Y::AbstractMatrix)
+    Missing <: eltype(Y) && any(ismissing, Y) || return nothing
+    bad = findall(ismissing, Y)
+    throw(ArgumentError("$caller does not accept `missing` in `Y`: $(length(bad)) missing " *
+        "cell(s), first at (row, column) = ($(bad[1][1]), $(bad[1][2])). This fitter has no " *
+        "`mask`; remove or impute the missing cells, or use `fit_gaussian_gllvm`, which " *
+        "derives a mask from `missing`."))
+end
+
+# The same refusal for a `Y` typed `Union{Missing, Real}` (these fitters are typed
+# `AbstractMatrix{<:Real}`, so such a `Y` found no method at all). A matrix of that type with
+# no missing cell is passed on as a plain real matrix.
+for _f in (:fit_row_random_gllvm, :fit_rrr_gllvm, :fit_constrained_gllvm, :fit_quadratic_gllvm,
+           :fit_studentt_gllvm, :fit_beta_hurdle_gllvm, :fit_delta_lognormal_gllvm,
+           :fit_hurdle_poisson_gllvm, :fit_hurdle_nb_gllvm, :fit_delta_gamma_gllvm,
+           :fit_zip_gllvm, :fit_zip_gllvm_cov, :fit_zinb_gllvm, :fit_zinb_gllvm_cov,
+           :fit_zib_gllvm, :fit_zib_gllvm_cov, :fit_grouped_gaussian, :fit_grouped_nongaussian,
+           :fit_lognormal_gllvm)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}; kwargs...)
+        _refuse_mask_route($(string(_f)), nothing, Y)
+        return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y); kwargs...)
+    end
+end
+# The second argument is typed `PrecisionPhy`: untyped, a plain real matrix with any other second
+# argument would find only this method and recurse into itself until the stack overflows.
+for _f in (:fit_precision_multivariate, :fit_joint_phylo_grouped_gaussian)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}, phy::PrecisionPhy; kwargs...)
+        _refuse_mask_route($(string(_f)), nothing, Y)
+        return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y), phy; kwargs...)
+    end
+end
+
+# `fit_precision_multivariate` takes no `mask` keyword. Its source file is byte-pinned by frozen
+# receipts (`test_destination_b_phylo_uncertainty.jl`), so the refusal for a mask is a method
+# here and the fitter's own file is untouched. It covers a dense real `Y`; any other matrix type
+# with a `mask` still ends in the fitter's own `MethodError`.
+function fit_precision_multivariate(Y::Matrix{<:Real}, phy::PrecisionPhy; mask = nothing, kwargs...)
+    _refuse_mask_route("fit_precision_multivariate", mask)
+    return invoke(fit_precision_multivariate, Tuple{AbstractMatrix{<:Real}, PrecisionPhy},
+                  Y, phy; kwargs...)
+end
+
 # Drop `offset = nothing` (no offset; some routes would otherwise reject the keyword), and
 # normalise any other offset once. Shared by `fit_gllvm` and the `gllvm` formula front end,
 # which calls some fitters directly.
@@ -239,6 +304,46 @@ function _weights_blocked_route(family; phylo = nothing, grouping = nothing,
     return nothing
 end
 
+# Per-response-column family (issue #98): `family` a length-p vector sends the fit to
+# `fit_mixed_gllvm` (one shared K-dimensional latent block, one family per row of Y).
+# Only the keywords that fitter takes are forwarded; every other structural or
+# dispersion route is refused here rather than silently ignored.
+const _PER_COLUMN_KWARGS = (:links, :N, :offset, :β_init, :Λ_init, :dispersion_init,
+                            :g_tol, :iterations, :newton_maxiter, :newton_tol)
+
+function _fit_gllvm_per_column(Y, family::AbstractVector; K, num_lv, row_eff, disp_group,
+        pervar, grouping, unit, unit_obs, cluster, cluster2, phylo, phylo_rank, phylo_mode,
+        species_id, Kmax, weights, kwargs)
+    unsupported = String[]
+    row_eff === :none || push!(unsupported, "row_eff")
+    disp_group === nothing || push!(unsupported, "disp_group")
+    pervar && push!(unsupported, "pervar")
+    grouping === nothing || push!(unsupported, "grouping")
+    phylo === nothing || push!(unsupported, "phylo")
+    all(isnothing, (unit, unit_obs, cluster, cluster2, phylo_rank, phylo_mode, species_id,
+                    Kmax)) || push!(unsupported, "unit/cluster/phylo/Kmax options")
+    weights === nothing || push!(unsupported, "weights")
+    for k in keys(kwargs)
+        k in _PER_COLUMN_KWARGS || push!(unsupported, String(k))
+    end
+    isempty(unsupported) || throw(ArgumentError(
+        "fit_gllvm: a per-column family vector (family = [one family per row of Y]) " *
+        "routes to fit_mixed_gllvm, which does not take: " * join(unsupported, ", ") *
+        ". Use links = [...] for per-row links; accepted keywords are K (or num_lv), " *
+        join(string.(_PER_COLUMN_KWARGS), ", ") * "."))
+    if num_lv !== nothing
+        K !== nothing && K != num_lv && throw(ArgumentError(
+            "fit_gllvm: K=$K and num_lv=$num_lv disagree; pass only one"))
+        K = num_lv
+    end
+    K === nothing && throw(ArgumentError("fit_gllvm: K (or num_lv) is required"))
+    kw = NamedTuple(kwargs)
+    # `offset = nothing` means no offset, as on the single-family routes.
+    haskey(kw, :offset) && kw.offset === nothing &&
+        (kw = Base.structdiff(kw, NamedTuple{(:offset,)}))
+    return fit_mixed_gllvm(Y; families = family, K = K, kw...)
+end
+
 """
     fit_gllvm(Y; family = Normal(), K = nothing, num_lv = nothing, Kmax = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
@@ -256,6 +361,7 @@ Nested and other family routes reject explicit selection.
 - `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal. Without `X`,
   one intercept per trait is estimated (`pars.β`); `fit_gaussian_gllvm` itself treats
   `X = nothing` as a zero mean. An explicit `X` defines the complete mean.
+  `missing` entries in `Y` derive an observation mask and emit one `@info`.
 - `Binomial()` → [`fit_binomial_gllvm`](@ref) — Laplace marginal (binary / binomial)
 - `Poisson()`  → [`fit_poisson_gllvm`](@ref) — Laplace marginal (counts)
 - `TruncatedPoisson()` → [`fit_truncated_poisson_gllvm`](@ref) — zero-truncated Poisson
@@ -378,6 +484,16 @@ accepted there. Weights are supported on the Poisson Laplace route only
 `X_lv` or `aghq`); every other route throws an `ArgumentError` naming what blocks it. For
 `Binomial()` gllvmTMB reads `weights` as trial counts; pass those as `N` instead.
 
+# Per-column families
+
+`family` may be a length-`p` vector, one family per row of `Y` (`Normal()`, `Poisson()`,
+`Binomial()`, `NegativeBinomial()`, `Gamma()`, `Beta()`); the fit shares one `K`-dimensional
+latent block across the rows and is [`fit_mixed_gllvm`](@ref), which it returns
+(`MixedFamilyFit`). A homogeneous vector gives the single-family fit. Accepted keywords:
+`K` (or `num_lv`), `links`, `N`, `offset`, and the optimiser controls of `fit_mixed_gllvm`;
+`row_eff`, `disp_group`, `pervar`, `grouping`, `phylo`, `weights` and the like throw an
+`ArgumentError`.
+
 # Structural / dispersion variants (gllvm-style keyword routing)
 
 These keyword arguments route to the corresponding specialised fitter while keeping
@@ -455,6 +571,7 @@ two of them. Therefore at most one of `row_eff != :none`, effective
 fit_gllvm(Y; family = Normal(),   K = 2)                          # Gaussian
 fit_gllvm(Y; family = Binomial(), K = 2, link = LogitLink())      # binary
 fit_gllvm(Y; family = Poisson(),  K = 2, n_init = 5)               # best of 5 starts (Poisson Laplace route; default 1)
+fit_gllvm(Y; family = NegativeBinomial(), K = 2, n_init = 5)     # best of 5 starts (NB2 Laplace routes, shared or per-species r; default 1)
 fit_gllvm(Y; family = Poisson(),  K = 2, row_eff = :random)       # random row effect
 fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 2)          # shared r (default)
 fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)  # per-species r
@@ -476,6 +593,13 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
                    species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
+    if family isa AbstractVector
+        return _fit_gllvm_per_column(Y, family; K = K, num_lv = num_lv, row_eff = row_eff,
+            disp_group = disp_group, pervar = pervar, grouping = grouping, unit = unit,
+            unit_obs = unit_obs, cluster = cluster, cluster2 = cluster2, phylo = phylo,
+            phylo_rank = phylo_rank, phylo_mode = phylo_mode, species_id = species_id,
+            Kmax = Kmax, weights = weights, kwargs = kwargs)
+    end
     if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
         requested = kwargs[:optimizer]
         _optimizer_method(requested, Optim.LBFGS(); route = "fit_gllvm")
@@ -818,6 +942,8 @@ end
 function _fit_gllvm_grouped(::NegativeBinomial, Y::AbstractMatrix; aghq = false,
         aghq_control = (;), kwargs...)
     _aghq_request(aghq) === :off && return fit_nb_gllvm_grouped(Y; kwargs...)
+    get(kwargs, :n_init, 1) > 1 && throw(ArgumentError(
+        "fit_gllvm: n_init > 1 is not available with aghq; use aghq_control=(multistart=true,)"))
     return fit_nb_gllvm_grouped_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
 end
 _fit_gllvm_grouped(::Beta,  Y::AbstractMatrix; kwargs...) = fit_beta_gllvm_grouped(Y; kwargs...)

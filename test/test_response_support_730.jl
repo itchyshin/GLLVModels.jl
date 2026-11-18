@@ -115,6 +115,31 @@ using Distributions: Beta, Gamma
         end
     end
 
+    @testset "grouped NB / NB1 / Tweedie / beta-binomial (remaining siblings)" begin
+        one_ = ones(Int, p)
+        X = reshape(Float64[((7s + 3t) % 11) / 5 - 1 for t in 1:p, s in 1:n], p, n, 1)
+        Nb = fill(5, p, n); Yq = rand(MersenneTwister(2), 0:5, p, n)
+        Ytw = float.(Yp)
+        cases = (
+            ("fit_nb_gllvm_grouped_cov", Yp, (Y; kw...) -> fit_nb_gllvm_grouped_cov(Y; X = X, K = 1, group = one_, kw...), (-1, NaN)),
+            ("fit_nb1_gllvm_grouped", Yp, (Y; kw...) -> fit_nb1_gllvm_grouped(Y; K = 1, group = one_, kw...), (-1, NaN)),
+            ("fit_tweedie_gllvm_grouped", Ytw, (Y; kw...) -> fit_tweedie_gllvm_grouped(Y; K = 1, group = one_, kw...), (-1.0, NaN)),
+            ("fit_beta_binomial_gllvm_grouped", Yq, (Y; kw...) -> fit_beta_binomial_gllvm_grouped(Y; K = 1, N = Nb, group = one_, kw...), (-1, 9)),
+            ("fit_beta_binomial_gllvm_grouped_cov", Yq, (Y; kw...) -> fit_beta_binomial_gllvm_grouped_cov(Y; X = X, K = 1, N = Nb, group = one_, kw...), (-1, 9)))
+        for (name, Y, f, bads) in cases
+            for bad in bads
+                @test msg_ok(thrown(() -> f(with_cell(Y, bad))), name)
+            end
+            # clean data fits; a masked bad cell stays legal and has no effect
+            @test isfinite(f(Y).loglik)
+            mask = trues(p, n); mask[1, 1] = false
+            # the first bad value is integer-valued (-1), as the count fitters still
+            # convert masked cells with Integer.() (a separate, pre-existing limitation); Tweedie takes NaN instead
+            Z = copy(Y); Z[1, 1] = name == "fit_tweedie_gllvm_grouped" ? NaN : bads[1]
+            @test f(Z; mask = mask).loglik == f(Y; mask = mask).loglik
+        end
+    end
+
     @testset "clean data fits as before" begin
         @test fit_poisson_gllvm(Yp; K = 1).converged
         @test fit_binomial_gllvm(Yn; K = 1).converged

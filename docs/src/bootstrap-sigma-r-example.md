@@ -239,7 +239,8 @@ Summary of what is supported:
 | `GllvmFit`, no W tier, no pins, no phylogenetic block, no retained Gaussian record | tier `:B` only: `Sigma`, `R`, `communality` |
 | `TwoLevelFit` (pass `individual`) | tiers `:B` and `:W`, plus `ICC_site` |
 | `GllvmFit` with `K_W > 0`, with pinned loadings, or with a phylogenetic block | refused |
-| non-Gaussian fits, `PrecisionMultivariateFit`, `JointPhyloGroupedGaussianFit`, any other type | refused |
+| `PrecisionMultivariateFit`, `JointPhyloGroupedGaussianFit` | tier `:phy` only (see the phylogenetic-tier page) |
+| non-Gaussian fits, any other type | refused |
 | `n_cores > 1` | refused |
 
 `cross_corr` is never available (R needs a multinomial trait), and `ICC` needs
@@ -248,6 +249,8 @@ a `TwoLevelFit` with both tiers; on a `GllvmFit` it is dropped with an
 
 ## Where next
 
+[Worked example: the phylogenetic tier](bootstrap-sigma-r-phy-example.md) runs the same
+function on a `PrecisionMultivariateFit` and a `JointPhyloGroupedGaussianFit`.
 [SE and profile machinery](se-profile-machinery.md) states what
 `bootstrap_Sigma_r` is and is not (including the legacy `bootstrap_Sigma`,
 which is a different estimand). [Confidence intervals](confidence-intervals.md)

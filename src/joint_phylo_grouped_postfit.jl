@@ -139,6 +139,83 @@ function extract_Sigma(fit::JointPhyloGroupedGaussianFit; level::Symbol,
     throw(ArgumentError("part must be one of :total, :shared, :unique; got :$part"))
 end
 
+function _joint_phylo_grouped_species_term(fit::JointPhyloGroupedGaussianFit,
+        species_level)
+    species_level isa Symbol || throw(ArgumentError(
+        "species_level must be a Symbol naming a fitted ordinary grouping term"))
+    index = findfirst(term -> term.name === species_level, fit.terms)
+    index === nothing && throw(ArgumentError(
+        "species_level must name a fitted ordinary grouping term ($(join(string.(getfield.(fit.terms, :name)), ", "))); got :$species_level"))
+    n = length(fit.species_id)
+    partition_error = ArgumentError("species_level=:$(species_level) must induce the " *
+        "same observation partition as species_id; a term on another grouping " *
+        "(for example a site term) is not species-level variance")
+    rows, groups, weights = findnz(fit.incidences[index])
+    group_of = zeros(Int, n)
+    for (row, group, weight) in zip(rows, groups, weights)
+        (weight == 1.0 && group_of[row] == 0) || throw(partition_error)
+        group_of[row] = group
+    end
+    all(>(0), group_of) || throw(partition_error)
+    species_to_group = Dict{Int,Int}()
+    group_to_species = Dict{Int,Int}()
+    for observation in 1:n
+        species, group = fit.species_id[observation], group_of[observation]
+        get!(species_to_group, species, group) == group &&
+            get!(group_to_species, group, species) == species || throw(partition_error)
+    end
+    return index
+end
+
+"""
+    extract_phylo_signal(fit::JointPhyloGroupedGaussianFit; species_level, ci = false)
+        -> NamedTuple
+
+Per-trait phylogenetic signal of a joint phylogenetic-plus-ordinary Gaussian
+fit, the point estimate of `gllvmTMB::extract_phylo_signal()` (R/extract-omega.R:592-623
+at the P1 pin). With `a[t] = diag(Sigma_phy)[t]` (shared plus phylogenetic unique
+variance) and `u[t]` the diagonal of the ordinary term named by `species_level`,
+`V_eta[t] = a[t] + u[t]`, `H2 = a / V_eta`, `Psi = u / V_eta` and `C2_non = 0`
+(an ordinary diagonal term carries no shared latent part). Observation residual
+variance and every ordinary term not on the species grouping are excluded from
+`V_eta`, as R excludes them.
+
+`species_level` is required. It must name an ordinary term whose observation
+partition equals the partition given by `fit.species_id`, so a site term cannot
+be mistaken for species-level variance. `ci = true` is refused. A fit whose
+covariance components are not separately identifiable is refused, because the
+split between `a`, `u` and the residual is then not determined by the data.
+
+Returns the column table `(trait, H2, C2_non, Psi, V_eta)`. This method makes no
+claim of numerical agreement with R: the fit itself differs (per-trait residual
+variance here, one shared residual SD in R's Gaussian route).
+"""
+function extract_phylo_signal(fit::JointPhyloGroupedGaussianFit;
+        species_level = nothing, ci::Bool = false)
+    ci && throw(ArgumentError("phylogenetic signal intervals are outside the " *
+        "joint phylo-grouped point-estimate scope (GJL-GATE-PHYLO-LATENT-SIGNAL-CI)"))
+    species_level === nothing && throw(ArgumentError(
+        "species_level is required to identify the species-grouped variance source"))
+    index = _joint_phylo_grouped_species_term(fit, species_level)
+    component = _joint_phylo_grouped_component_identification(fit)
+    component.reason === :invalid && throw(ArgumentError(
+        "cannot verify covariance-component identification " *
+        "(GJL-GATE-PHYLO-LATENT-SIGNAL-IDENTIFICATION-INVALID)"))
+    component.reason === :identified || throw(ArgumentError(
+        "extract_phylo_signal requires separately identified covariance components " *
+        "(GJL-GATE-PHYLO-LATENT-SIGNAL-IDENTIFICATION)"))
+    a = collect(Float64, diag(fit.phylo_covariance))
+    u = collect(Float64, diag(fit.ordinary_covariances[index]))
+    v_eta = a .+ u
+    ok = [isfinite(v) && v > 0 for v in v_eta]
+    p = _joint_phylo_grouped_traits(fit)
+    return (trait = ["trait$(t)" for t in 1:p],
+        H2 = [ok[t] ? a[t] / v_eta[t] : NaN for t in 1:p],
+        C2_non = zeros(p),
+        Psi = [ok[t] ? u[t] / v_eta[t] : NaN for t in 1:p],
+        V_eta = v_eta)
+end
+
 function _joint_phylo_grouped_fixed_summary(fit::JointPhyloGroupedGaussianFit,
         Y::AbstractMatrix)
     size(Y) == fit.response_shape && Matrix{Float64}(Y) == fit.response ||
