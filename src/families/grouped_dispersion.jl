@@ -414,8 +414,9 @@ _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
     Bool[d < 1e-6 for d in dvec]
 
 # Informational upper end for the Gamma shape α (issue #864, maintainer decision
-# 2026-10-25: warn-only). On per-trait USairpollution (K = 1) the `manu` shape stops at
-# 3.7e5 while gllvmTMB reaches 2.8e8; the log-likelihood differs by about 8e-5, so the
+# 2026-10-25: warn-only). On per-trait USairpollution (K = 1) the `manu` shape stopped at
+# 3.7e5 with the cancelling density (near 1e10 with the stable density, #1175) while
+# gllvmTMB reaches 2.8e8; the log-likelihood differs by about 8e-5, so the
 # likelihood is flat in that direction and the large shape is a boundary the user should
 # be told about. This stays separate from `dispersion_boundary` (which is lower-end only
 # for Gamma since 2026-09-29, because a large α is identified when the data really are
@@ -659,7 +660,7 @@ function _grouped_warm_start(Zemp::AbstractMatrix, K::Integer, β_init, Λ_init;
 end
 
 """
-    fit_nb_gllvm_grouped(Y; K, group, link=LogLink(), mask=nothing, offset=nothing,
+    fit_nb_gllvm_grouped(Y; K, group, n_init=1, link=LogLink(), mask=nothing, offset=nothing,
                          hessian=:observed, β_init=nothing, Λ_init=nothing,
                          optimizer=nothing, …) -> NBGroupedFit
 
@@ -688,8 +689,23 @@ as in [`fit_nb_gllvm`](@ref); `r_group` still starts at `r₀ = 10`.
 conditional BFGS Poisson-ridge polish. Explicit LBFGS uses LBFGS for the initial
 and boundary stages and skips the polish; explicit BFGS uses BFGS at every
 executed stage. [`optimizer_info`](@ref) retains the per-attempt results.
+
+`n_init` (default `1`, a single start; the call is then exactly the fit without the keyword)
+fits from `n_init` starts and returns the one with the highest log-likelihood, preferring
+converged fits, with the same seeding and selection as `n_init` in [`fit_nb_gllvm`](@ref)
+(start 1 is the usual warm start or your `Λ_init`; starts `2:n_init` use seeded
+lower-triangular `0.3 * randn` loadings). Each start runs the full single-start procedure
+above, including the boundary restarts and polish. Fit time is roughly `n_init` times the
+single-start time. A start that throws is skipped; if all of starts `2:n_init` fail, the first
+fit is returned. `n_init > 1` is not available with `aghq` in `fit_gllvm`.
 """
-function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
+function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, n_init::Integer = 1, kwargs...)
+    n_init >= 1 || throw(ArgumentError("fit_nb_gllvm_grouped: n_init must be at least 1; got $n_init"))
+    return _best_of_starts(_fit_nb_gllvm_grouped_start, Y, K, n_init, kwargs)
+end
+
+# One Laplace grouped-NB2 fit from a single start (the historical `fit_nb_gllvm_grouped` body).
+function _fit_nb_gllvm_grouped_start(Y::AbstractMatrix; K::Integer, group::AbstractVector{<:Integer},
         link::Link = LogLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
         optimizer = nothing, g_tol::Real = 1e-5, iterations::Integer = 500,
@@ -705,7 +721,8 @@ function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, group::AbstractVect
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -973,7 +990,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped_cov")
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -1823,7 +1840,7 @@ not flagged (2026-09-29); `converged` is forced `false` whenever any group is
 flagged.
 `dispersion_upper` (length G, #864) is informational only: it marks groups whose fitted
 `α[g]` is above `1e5`, where the likelihood can be flat in the shape (on per-trait
-USairpollution `manu` stops at 3.7e5 while gllvmTMB reaches 2.8e8). It comes with a
+USairpollution `manu` stopped at 3.7e5 with the cancelling density, near 1e10 with the stable one, while gllvmTMB reaches 2.8e8). It comes with a
 warning, does not change `dispersion_boundary`, and never changes `converged`.
 `offset` is the p×n training offset the fit was made with (`nothing` when the fit had
 none); [`getLV`](@ref) uses it by default.
@@ -2474,7 +2491,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped")
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -2627,7 +2644,8 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped_cov")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -2726,9 +2744,10 @@ function _tweedie_grouped_laplace_weight(hessian::Symbol, f::TweedieED, μ, me, 
 end
 
 # Per-site mode search for the Tweedie grouped kernel (#503, the #479 / NB1 pattern).
-# Returns `(z, converged)`. The step is Fisher-scored always: expected information is
-# >= 0, so `Λ'WΛ + I` is SPD and every Newton direction ascends; the converged mode is
-# the fixed point of `Λ's − z = 0`, which does not involve W.
+# Returns `(z, converged)`. The step weight is Fisher, or max(observed, Fisher) on the
+# log link (#1042): either is >= 0, so `Λ'WΛ + I` is SPD and every Newton direction
+# ascends; the converged mode is the fixed point of `Λ's − z = 0`, which does not
+# involve W.
 #
 # Before this change the kernel ran undamped Fisher scoring (`z .+ Δ`) and returned
 # whatever `z` it held when the loop stopped, converged or not, so a site that
@@ -2749,7 +2768,17 @@ function _tweedie_grouped_mode(fams::AbstractVector, y::AbstractVector, n::Abstr
         μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(fams, μ, n, me, y)
-        W  = _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        # Step weight max(observed, Fisher) on the log link, as the scalar search
+        # does (`_laplace_mode_step_weight(::TweedieED)`, #623): pure Fisher
+        # under-states the curvature when y >> μ and the unchecked small-step
+        # branch below then limit-cycles (#1042). The mode (fixed point of
+        # `Λ's − z = 0`) does not involve W.
+        W  = if link isa LogLink
+            max.(_tweedie_grouped_laplace_weight.(Ref(:observed), fams, μ, me, y, Ref(link), η),
+                 _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η))
+        else
+            _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        end
         if mask !== nothing
             s = ifelse.(mask, s, 0.0)
             W = ifelse.(mask, W, 0.0)
@@ -2793,8 +2822,8 @@ function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    # Role separation (mirrors NB2/Beta/NB1 above): the MODE SEARCH is Fisher-scored,
-    # always; `hessian` governs only the post-search log-det below.
+    # Role separation (mirrors NB2/Beta/NB1 above): the MODE SEARCH picks its own step
+    # weight; `hessian` governs only the post-search log-det below.
     z, ok = _tweedie_grouped_mode(fams, y, n, Λ, β, link;
                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # Larger-budget retry from z = 0 (mirrors #507's NB1 retry), only where the default

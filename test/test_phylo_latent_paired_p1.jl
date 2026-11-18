@@ -112,6 +112,13 @@ function _plp1_case(case, fixture; refit::Bool, stationarity_gap::Bool = false)
             jr.gradient_norm <= _PLP1_A15_BOUNDS.julia_gradient_norm
         @test maximum(abs.(Float64.(collect(jr.beta)) .- r_theta[1:n_traits])) <=
             _PLP1_A15_BOUNDS.beta_abs
+        # Known mismatch vs gllvmTMB P1 (README "A15 results": stationarity gap,
+        # recorded, not widened): the strict A14-style cross-gradient bar is not
+        # met on the stored receipt. Broken, not passing; flips to an
+        # "Unexpected Pass" error if the gap closes, prompting removal.
+        @test_broken rr.cross.r_gradient_max_abs_at_julia_theta <= PL_P1_TOL.cross_gradient
+        @test_broken maximum(abs, g) <= PL_P1_TOL.cross_gradient
+        @test_broken jr.converged
     else
         @test rr.cross.r_gradient_max_abs_at_julia_theta <= PL_P1_TOL.cross_gradient
         @test maximum(abs, g) <= PL_P1_TOL.cross_gradient

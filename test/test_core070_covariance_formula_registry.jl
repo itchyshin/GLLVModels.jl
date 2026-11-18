@@ -1,3 +1,6 @@
+# Wrapped in a module so the registry include/using below does not replace or
+# clash with Core070CaseRegistry bindings in Main when other test files share the process.
+module Core070CovarianceFormulaRegistryTest
 using Test,TOML
 include(joinpath(@__DIR__,"parity","core070_case_registry.jl"))
 using .Core070CaseRegistry
@@ -10,4 +13,5 @@ using .Core070CaseRegistry
         @test requested_ids(join(vcat(group,formulas),','))==vcat(group,formulas)
     end
     @test validate_manifest(TOML.parsefile(joinpath(@__DIR__,"..","docs/dev-log/core070/frozen-r070-contract.toml")))
+end
 end
