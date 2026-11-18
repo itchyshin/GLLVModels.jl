@@ -116,7 +116,7 @@ _register_shard_table!(4, (
         "test_tweedie_grouped_mode_search_503.jl", "test_tweedie_grouped_k1_mode_1042.jl", "test_studentt_core070.jl", "test_lognormal.jl",
         "test_zib_x_identity.jl", "test_ordinal_fit.jl", "test_ordinal_logit_twin.jl",
         "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
-        "test_formula_pervar.jl", "test_formula_default_x_guard.jl", "test_statsapi.jl",
+        "test_formula_pervar.jl", "test_formula_default_x_guard.jl", "test_formula_site_design_rank.jl", "test_statsapi.jl",
         "test_postfit_zib_tweedie.jl", "test_extract_latent_scores.jl", "test_select_lv_759.jl",
         "test_select_lv_p1_twin.jl", "test_issue_108_anova_docs.jl", "test_cross_kernel.jl",
         "test_source_covariance.jl", "test_grouped_gaussian.jl", "test_destination_b_public.jl",
@@ -370,7 +370,7 @@ _register_shard_table!(8, (
         "test_gamma_fit.jl", "test_tweedie_engine_health.jl", "test_tweedie_cdf.jl",
         "test_lognormal.jl", "test_multinomial_separation.jl", "test_zib_x_identity.jl",
         "test_ordinal_logit_twin.jl", "test_truncated_formula.jl", "test_com_poisson.jl",
-        "test_gaussian_pervar_design.jl", "test_formula_default_x_guard.jl", "test_postfit_zib_tweedie.jl",
+        "test_gaussian_pervar_design.jl", "test_formula_default_x_guard.jl", "test_formula_site_design_rank.jl", "test_postfit_zib_tweedie.jl",
         "test_extract_gamma.jl", "test_grouped_gaussian.jl", "test_precision_shared_residual.jl",
         "test_destination_b_tree_precision.jl", "test_destination_b_postfit.jl", "test_source_fit_optimizer_health.jl",
         "test_bridge_gradient_payload.jl", "test_coevolution_glm.jl", "test_spde_latent_binomial_trials.jl",
@@ -809,6 +809,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_pervar_heywood_736.jl")   # #736
     _shard_include("test_formula_pervar.jl")
     _shard_include("test_formula_default_x_guard.jl")
+    _shard_include("test_formula_site_design_rank.jl")
     _shard_include("test_aicbic_newfits.jl")
     _shard_include("test_postfit.jl")
     _shard_include("test_issue_737_omega_doc.jl")
@@ -1000,6 +1001,7 @@ println(_SHARD === nothing ?
     _shard_include("test_cov_analytic_grad.jl")
     _shard_include("test_formula_input.jl")
     _shard_include("test_formula.jl")
+    _shard_include("test_formula_site_design_rank.jl")
     _shard_include("test_optimizer_selection.jl")
     _shard_include("test_formula_no_intercept_default.jl")
     _shard_include("test_simulate.jl")
