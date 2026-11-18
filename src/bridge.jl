@@ -332,7 +332,19 @@ function _bridge_ci_method(options)
 end
 
 _bridge_ci_level(options) = Float64(_bridge_get(options, "ci_level", 0.95))
-_bridge_ci_nboot(options) = Int(_bridge_get(options, "ci_nboot", 200))
+# `ci_nboot` is read only by the bootstrap route. There it must be a positive integer
+# (R sends doubles, so an integral Float64 is fine), as the native Gaussian bootstrap
+# already requires `n_boot >= 1`; otherwise the Laplace routes returned all-NaN
+# intervals with an empty `ci_note` (0) or an InexactError (fractional values).
+function _bridge_ci_nboot(options)
+    raw = _bridge_get(options, "ci_nboot", 200)
+    if _bridge_ci_method(options) == "bootstrap"
+        (raw isa Real && isfinite(raw) && raw >= 1 && isinteger(raw)) || throw(ArgumentError(
+            "bridge_fit: ci_nboot must be a positive integer for ci_method=\"bootstrap\" " *
+            "(got $(repr(raw)))"))
+    end
+    return Int(raw)
+end
 _bridge_ci_seed(options)  = Int(_bridge_get(options, "ci_seed", 0))
 
 # Empty CI payload (the "none" default and the skip-with-note cases).
