@@ -165,7 +165,8 @@ function _check_finite_covariates(X::AbstractArray, caller::AbstractString;
     throw(ArgumentError("$caller: $name[$idx] = $(X[first_bad]) is not a finite number " *
         "($bad non-finite entr$(bad == 1 ? "y" : "ies")$loc). " *
         "Covariates must be finite; NaN, `missing` and Inf are not accepted. " * hint))
-=======
+end
+
 # All-zero count columns (ruling on constant columns, second sentence). A species whose
 # observed cells are all zero has no finite maximum-likelihood intercept: the fit runs to a
 # large negative value and still reports `converged = true`. The Poisson and ZIP fitters call
@@ -200,5 +201,4 @@ function _warn_all_zero_count_columns(Y::AbstractMatrix, mask; caller::AbstractS
     zinote = caller == "fit_zip_gllvm" ? " The zero-inflation term of such a species also runs off to a large value, so it is not identified either." : ""
     @warn "$caller: species column(s) $cols have no non-zero count in any observed cell. The fit still runs, but the intercept of such a species has no finite maximum-likelihood value (it ends at a large negative number set by where the optimiser stops), so `converged = true` does not mean it is identified.$zinote Drop the column or treat its estimates as not identified." maxlog=1 _id=Symbol("all_zero_count_columns:", caller, ":", join(cols, ","))
     return nothing
->>>>>>> origin/main
 end
