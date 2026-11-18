@@ -178,8 +178,15 @@ ladder gives ordinal families, and is declined at 20 traits or more. Ineligible 
 the Laplace fit; convergence means the frozen-node gradient rule, not re-adapted
 stationarity. `aghq_control` is as for Poisson. `hessian` must be `:observed`. There is no
 `offset` for ordinal fits.
+
+Laplace retention follows [`fit_poisson_gllvm`](@ref) (an unmoved, unconverged run returns the Laplace
+fit), and this fitter adds a second rule: a run that moved but stopped on `:adaptation_failed` or
+`:optimizer_failed` before converging is also discarded when the Laplace fit converged, with a
+warning giving both log-likelihoods. The other AGHQ fitters keep a moved point in that case; the
+asymmetry rests on one fixture and the siblings are unexamined. `_adapt_hook` is an internal test
+seam (default `identity`), not public API.
 """
-function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer,aghq=:auto,aghq_control=(;),kwargs...)
+function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer,aghq=:auto,aghq_control=(;),_adapt_hook=identity,kwargs...)
     request=_aghq_request(aghq);request===:off && throw(ArgumentError("fit_ordinal_gllvm_pertrait_aghq needs aghq != false; call fit_ordinal_gllvm_pertrait"))
     c=_aghq_controls(aghq_control)
     c=_aghq_controls(merge(c,(mode_maxiter=get(kwargs,:newton_maxiter,c.mode_maxiter),mode_tol=get(kwargs,:newton_tol,c.mode_tol))))
@@ -206,7 +213,9 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer
     if c.multistart
         alt=copy(theta);alt[p+1:p+rr].=.3;push!(starts,alt)
     end
-    result=aghq_multistart_optimize(starts,problem.adapt,problem.objective;_aghq_outer_controls(c)...)
+    # _adapt_hook is a test-only seam (default identity = production behaviour) that lets a test
+    # wrap the site-adaptation callback to inject a deterministic quadrature failure.
+    result=aghq_multistart_optimize(starts,_adapt_hook(problem.adapt),problem.objective;_aghq_outer_controls(c)...)
     if !result.usable
         @warn "AGHQ failed; retained Laplace" requested=request
         info=AGHQFitInfo(request,:laplace,1,k,1,:adaptation_failed,false,Inf,c,base_controls,result,
@@ -214,6 +223,22 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Integer};K::Integer
         return _ordinal_with_integration(base,info)
     end
     selected=result.selected;t=selected.parameters
+    # Unmoved and unconverged: no AGHQ estimate exists; retain Laplace and record the
+    # run's own stop reason (policy and the exact stop reasons: _aghq_unmoved_unconverged).
+    if _aghq_unmoved_unconverged(selected)
+        @warn "AGHQ did not move from its start and did not converge; retained Laplace" requested=request reason=selected.stop_reason
+        info=AGHQFitInfo(request,:laplace,1,k,1,selected.stop_reason,false,Inf,c,base_controls,result,
+            AGHQAdaptation[],nothing,"",NaN)
+        return _ordinal_with_integration(base,info)
+    end
+    # Moved but stopped on a failure before converging: retain a converged Laplace fit
+    # (rule 2 in aghq_outer.jl, _aghq_failure_stop; ordinal only).
+    if _aghq_failure_stop(selected) && base.converged
+        @warn "AGHQ stopped on a failure before converging; retained Laplace" requested=request reason=selected.stop_reason aghq_loglik=-selected.objective laplace_loglik=base.loglik
+        info=AGHQFitInfo(request,:laplace,1,k,1,selected.stop_reason,false,Inf,c,base_controls,result,
+            AGHQAdaptation[],nothing,"",NaN)
+        return _ordinal_with_integration(base,info)
+    end
     data=AGHQOrdinalData(problem.data.responses,problem.data.mask,problem.data.C,problem.data.link isa ProbitLink)
     mode_gradient=maximum(d.gradient_max for d in problem.mode_diagnostics(t))
     info=AGHQFitInfo(request,:aghq,k,k,length(problem.grid.logw),selected.stop_reason,false,Inf,c,base_controls,
