@@ -758,6 +758,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; mask = nothing, fami
     end
     all(isfinite, data) || throw(ArgumentError("responses exceed Float64 range"))
     trials = _grouped_nongaussian_trials(data, N, kind)
+    _grouped_warn_binary_unique(termvec, trials, kind)
     default_means = X === nothing
     D = default_means ? _trait_mean_design(p, n) : _source_mean_design(X, p, n)
     q = size(D, 2)
@@ -908,7 +909,14 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; mask = nothing, fami
         # FD Hessian all still difference `objective_cold`.
         objective_refine = analytic_gradient ? objective_warm : objective_cold
         refined = try
-            Optim.optimize(objective_refine, gradient!, candidate, Optim.BFGS(),
+            # `initial_stepnorm`: plain BFGS takes its first step along -gradient
+            # unscaled. On the Poisson unique-only (`mode=:indep`) fit the gradient
+            # is ~500, so that step overflows exp(2 * log-sd), the analytic gradient
+            # throws, and the search stalled at iteration 2 (twin-gllvm-a-1118:
+            # loglik 117 below R at the default iteration cap). A short first step
+            # keeps the whole search inside the valid region.
+            Optim.optimize(objective_refine, gradient!, candidate,
+                Optim.BFGS(initial_stepnorm=0.01),
                 Optim.Options(g_tol=Float64(g_tol), iterations=Int(iterations)))
         catch
             nothing
