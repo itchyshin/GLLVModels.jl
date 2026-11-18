@@ -183,12 +183,13 @@ its mode and every post-fit path rebuilds the objective with it. Agreement with
 R under `:shared` has not been measured. This optimizer does not establish
 qualification or R parity.
 """
-function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::PrecisionPhy;
+function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::PrecisionPhy; mask = nothing,
         rank::Integer = 1, phylo_mode::Symbol = :barelowrank, terms,
         unit = nothing, unit_obs = nothing, cluster = nothing, cluster2 = nothing,
         species_id::AbstractVector{<:Integer} = collect(1:phy.n_leaves),
         X = nothing, coefficient_names = nothing, start = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 200, residual_mode::Symbol = :trait)
+    _refuse_mask_route("fit_joint_phylo_grouped_gaussian", mask)
     _pmv_residual_mode(residual_mode)
     phy = _validate_precision_fit_input(phy)
     p, n = size(Y)

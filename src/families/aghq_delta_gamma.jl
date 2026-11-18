@@ -11,6 +11,8 @@
 # Log-density of one cell at the two linear predictors, generic in the number type.
 @inline function _delta_gamma_logf(y::Float64, ηz, ηc, α)
     y > 0 || return -log1p(exp(ηz))                    # log(1 - pi), pi = logistic(eta_z)
+    # from shape 1e3 the stable Gamma density (the expanded form below cancels, refs #1175)
+    α >= _GAMMA_STIRLING_FROM && return -log1p(exp(-ηz)) + _gamma_logpdf(α, exp(ηc), y)
     return -log1p(exp(-ηz)) + α * log(α) - loggamma(α) - α * ηc +
            (α - 1) * log(y) - α * y * exp(-ηc)         # log pi + Gamma(shape alpha, mean exp(eta_c))
 end
