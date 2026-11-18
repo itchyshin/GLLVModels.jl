@@ -288,8 +288,8 @@ end
 
 # Non-Gaussian (Laplace) family path: reuse the `_family_ci` per-family adapter
 # (src/confint_family.jl) for the fit's own (θ, nll). Families with no adapter
-# there (lognormal, truncated_poisson, ordinal per-trait +/- X, mixed-family)
-# raise MethodError, caught below -> NaN. X_lv fits are rejected inside
+# there (lognormal, truncated_poisson, mixed-family) raise MethodError, caught
+# below -> NaN. X_lv fits are rejected inside
 # `_family_ci` itself (same reason confint() rejects them) -> also NaN.
 function _bridge_gradient_max_family(fit, Y; kwargs...)
     try
@@ -1530,8 +1530,8 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
         scores = _bridge_scores(() -> getLV(fit, Yi; rotate = true, mask = M))
         family_out = key == "ordinal_probit" ? "ordinal_probit" : "ordinal"
         model_out = key == "ordinal_probit" ? "ordinal_probit_rr" : "ordinal_rr"
-        # gradient_max resolves to NaN here: OrdinalPerTraitFit has no _family_ci
-        # adapter (no packed objective to rebuild on this engine yet).
+        # gradient_max stays the assemble default NaN. Native confint has a
+        # _family_ci adapter; this branch still returns ci = nothing (#1187).
         base = _bridge_assemble_ng(fit, family_out, model_out, traits, units, p, K, Yi, nothing;
             alpha = fit.β, dispersion = fill(NaN, p),
             df = _nparams(fit), scores = scores, ci = nothing, mask = M)
@@ -1941,8 +1941,8 @@ function _bridge_assemble_ordinal_cov(fit::OrdinalPerTraitCovFit,
             "CI routing remains a follow-up. Sigma/correlation use Lambda*Lambda' " *
             "(communality 1).",
         ci = nothing,
-        # gradient_max: NaN — OrdinalPerTraitCovFit has no _family_ci adapter (no
-        # packed objective to rebuild on this engine yet).
+        # gradient_max stays NaN here. Native confint has a _family_ci adapter
+        # for OrdinalPerTraitCovFit; this branch still returns ci = nothing.
         gradient_max = NaN)
     return merge(base, (beta_cov = β, gamma = γ, gamma_status = _fixed_status(coef_fixed),
                         cutpoints = Matrix{Float64}(fit.τ),

@@ -1,3 +1,9 @@
+2026-11-18: #1187 per-trait ordinal CI docs. Julia 1.10.13, 1 thread.
+`julia --project=. --startup-file=no -e 'using Test; include("test/test_ordinal_ci_docs_1187.jl")'`.
+Before: 0 passed, 7 failed (the pages still called the endpoints follow-ups).
+After: 7 passed, 0 failed. Full `Pkg.test` not run.
+See after-task/2026-11-18-ordinal-ci-docs-1187.md.
+
 2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
 `julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
 Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).
