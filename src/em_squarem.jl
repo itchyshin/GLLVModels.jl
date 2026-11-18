@@ -180,6 +180,7 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
                               assert_monotone = true,
                               safety_check = true, safety_polish_iters = 50,
                               safety_tol = 1e-3, safety_warmstart = true)
+    _refuse_na_response("em_fit_phylo_squarem", y)
     p, n = size(y)
     K_B ≥ 1 || throw(ArgumentError("K_B must be ≥ 1"))
     K_B < p || throw(ArgumentError("EM requires K_B < p; got K_B=$K_B, p=$p"))
