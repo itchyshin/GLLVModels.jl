@@ -17,7 +17,7 @@
     "log": "docs/dev-log/core070/true-parity-latest/receipts/postfit/postfit-policy-p1/verify.txt"
   },
   "r_call": "coef.gllvmTMB_multi's empty-X_fix_names branch (R/vcov-coef.R:59-65 at P1 9539352f6), evaluated by the batch on a synthetic object list(X_fix_names = character(0)), not on a fitted model",
-  "julia_surface": "StatsAPI.coef(fit::GllvmFit) on a real fit with no X (src/postfit.jl:652 at the measured commit 681c4c3ca)",
+  "julia_surface": "StatsAPI.coef(fit::GllvmFit) on a real fit with no X (src/postfit.jl:848 at the measured commit 421dc4582)",
   "comparand": "length(coef)==0 on both sides",
   "check": "length(StatsAPI.coef(fit_no_x))==0 && length(r_empty_coef)==0",
   "harness_fields": {
