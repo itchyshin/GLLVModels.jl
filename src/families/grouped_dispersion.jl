@@ -2647,13 +2647,9 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-<<<<<<< HEAD
     _check_finite_covariates(X, "fit_nb1_gllvm_grouped_cov"; obs = msk)
-    Yc = Integer.(_sanitize_missing(Y, 0))
-=======
     _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped_cov")
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
->>>>>>> origin/main
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
