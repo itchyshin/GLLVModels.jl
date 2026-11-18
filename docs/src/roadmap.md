@@ -35,9 +35,11 @@ non-Gaussian Laplace.
 - One-part Laplace families through `fit_gllvm`: Binomial, Poisson,
   NegativeBinomial, Beta, Ordinal, and Gamma.
 - Wald/profile/bootstrap confidence-interval routes for scalar-dispersion
-  one-part Laplace families and grouped NB2/NB1/Beta/Gamma; grouped Tweedie and
-  per-trait ordinal endpoints remain explicit unavailable status rows while
-  parity and bridge exposure are audited.
+  one-part Laplace families, grouped NB2/NB1/Beta/Gamma, and per-trait
+  ordinal fits (native Wald and bootstrap for `beta[t]`, `Lambda[i,k]` and
+  `tau[t,c]`; a profile end can stay open). Grouped Tweedie endpoints remain
+  unavailable, and `bridge_fit` still refuses per-trait ordinal intervals,
+  while parity and bridge exposure are audited.
 - Native ordinary `X_lv` trait-effect inference for Gaussian, Poisson, NB2,
   Binomial, Beta, Gamma, and shared-cutpoint Ordinal fits, including
   selected-entry profile-likelihood canaries for `B_lv`.

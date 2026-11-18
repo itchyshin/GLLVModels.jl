@@ -215,7 +215,7 @@ not establish agreement for its uncertainty or for other family combinations.
 | `simulate` (parametric draw from a fit) | ✅ selected non-Gaussian | `simulate(fit, n)` for scalar-mean GLM-style fits and Tweedie; `simulate(fit, X)` for covariate fits. Two-part bootstrap CIs use internal samplers, but public `simulate` methods are not universal. |
 | `aic` / `bic` / `show` | ✅ | all families |
 | Σ_y / communality / correlation / phylo signal H² | ✅ Gaussian | report-ready extractors |
-| Confidence intervals (Wald / profile / bootstrap) | ✅ scalar/grouped dispersion · 🔨 per-trait ordinal | Gaussian, scalar-dispersion GLM families, grouped-dispersion NB2/NB1/Beta/Gamma, the two-part families, and shared-cutpoint ordinal via `confint(fit, Y; method=…)`; per-trait ordinal-cutpoint CI endpoints are follow-ups; bootstrap is thread-parallel |
+| Confidence intervals (Wald / profile / bootstrap) | ✅ scalar/grouped · ✅ per-trait ordinal Wald/bootstrap | Gaussian, scalar-dispersion GLM families, grouped-dispersion NB2/NB1/Beta/Gamma, the two-part families, shared-cutpoint ordinal, and per-trait ordinal (`beta[t]`, `Lambda[i,k]`, `tau[t,c]`) via native `confint(fit, Y; method=:wald` or `:bootstrap)`; a per-trait ordinal profile interval can return an open end; `bridge_fit` still refuses per-trait ordinal intervals; bootstrap is thread-parallel |
 | Ordination biplot | ✅ | |
 
 ## Interface
@@ -375,8 +375,10 @@ Check these restrictions when translating an R analysis:
   ordinary `unit` / `unit_obs` terms has a Julia counterpart, described on the
   [temporal page](temporal.md), and is not reached through this bridge.
 - **Per-trait nuisance-parameter intervals** — grouped NB2/NB1/Beta/Gamma CIs
-  are supported; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints
-  remain unavailable.
+  are supported. Grouped Tweedie intervals remain unavailable. Per-trait
+  ordinal Wald and bootstrap intervals (`beta[t]`, `Lambda[i,k]`, `tau[t,c]`)
+  are available through native `confint`; a profile interval can return an
+  open end. `bridge_fit` still refuses per-trait ordinal intervals.
 - **`σ_phy` from `fit_gaussian_gllvm` is not gllvmTMB's `phylo_unique` scale
   (#136).** In the Julia row model, `σ_phy` is a signed parameter that enters
   the likelihood only as the last column of the augmented phylogenetic

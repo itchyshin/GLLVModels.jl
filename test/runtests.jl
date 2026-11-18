@@ -659,6 +659,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gamma_laplace.jl")
     _shard_include("test_binomial_fit.jl")
     _shard_include("test_poisson_fit.jl")
+    _shard_include("test_ordinal_ci_docs_1187.jl")
     _shard_include("test_poisson_n_init.jl")
     _shard_include("test_nb_n_init.jl")
     _shard_include("test_laplace_curvature_contract.jl")
