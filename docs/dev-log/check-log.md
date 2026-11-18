@@ -1,3 +1,55 @@
+2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
+`julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
+Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).
+New testset `Ordinal fitters reject all-masked trait rows` on main source:
+`fit_ordinal_gllvm` 0/3 (no throw); `fit_ordinal_gllvm_pertrait` 1/3
+(already `ArgumentError` via category guard, message lacks trait wording);
+`fit_ordinal_gllvm_pertrait_cov` 1/3 (same). Branch with guard: 3/3 each,
+9/9. AGHQ public route testset: 1/1 on branch (`ArgumentError` before problem
+build). Full `Pkg.test` not run. See after-task
+`2026-11-12-ordinal-masked-trait-1140.md`.
+
+2026-11-11: #1107 derive the Gaussian observation mask from `missing`.
+Julia 1.10.13, `JULIA_NUM_THREADS=1`, `julia --project=. -e 'include(...)'`.
+`test/test_fix_1107.jl`: 27 passed, 0 failed, 0 errored, 35.4s.
+Neighbors in the same process: `test_ledermann_pervar_k.jl` 6 passed;
+`test_mask_missing_763.jl` 47 passed; `test_gaussian_pervar.jl` 14 passed.
+The same file on current main `3f6d74ecb` (worktree `/tmp/gllvm-main`,
+same Julia): 3 passed, 2 failed, 4 errored, 33.5s. Failures are the
+issue MREs: `fit_gaussian_gllvm(Ym)` `MethodError` `symmetric_type` on
+`Union{Missing,Float64}` in `ppca_init`; `fit_gllvm(Ym; family=Normal())`
+cannot convert `Missing` to `Float64` in the trait-intercept exact path;
+`fit_gaussian_pervar_gllvm(Ym)` `copyto!` into `Matrix{Float64}`.
+JET, Aqua, Allocs, and the full suite were not run.
+`_resolve_obs_mask` was not edited. See
+after-task/2026-11-11-fix-1107-gaussian-missing-mask.md.
+
+2026-11-11: #1108 VA missing mask. Julia 1.10.13, 1 thread.
+`test/test_fix_1108.jl` after the change: 35 passed, 0 failed, 0 errored.
+The same file on main source (`3f6d74ecb`): 0 passed, 2 errored
+(`MethodError` on `fit_poisson_gllvm_va` and `fit_binomial_gllvm_va`
+for `Matrix{Union{Missing,Int64}}`). Existing VA files, all passed:
+variational 10, binomial 12+17, negbin 13, gamma 15, beta 7, dgamma 17,
+exponential 18, va_vs_laplace 8. Full `Pkg.test` not run.
+See after-task/2026-11-11-va-missing-mask-1108.md.
+
+2026-11-08: PR #1019 first-pass resume. Independent check: local and
+remote `cursor/readme-lambda-init-b368` were `5c8c6b673`; PR OPEN
+DRAFT, `mergeable_state` dirty vs `origin/main` `8791591a`. Normal
+merge of `origin/main` into this branch (CHANGELOG kept both the
+README Y #1007 bullet and main's NB `n_init` #1022). No `src/` alias
+restore. #1008 is closed by the owner (2026-11-02) as a keyword typo.
+Inspected logs: guard job 128023334108 failed on historical commit
+`2efcb469c` (`Closes #1008`) with `intended-closes: 1007` at that run;
+Julia 1 shard 2/4 job 128023341940 was Unexpected Pass at
+`test/test_phylo_nb_xlv.jl:162` (`@test_broken` after #1024), already
+`@test` on main. Current main Julia 1 shard 2 still fails
+`test_convergence_sweep.jl:108` (`|Λ| > 8` got 5.21 on 1.13.3);
+Julia 1.10 shard 2 on main is green. That ordinal assertion is out of
+this README PR's scope. Focused README tests here (Julia 1.10.13,
+`JULIA_NUM_THREADS=1`): 13 passed / 0 failed. See
+after-task/2026-11-08-readme-1007-pr1019.md.
+
 2026-10-31: #1005 body restores Closes #948 plus intended-closes so
 the wrong-close guard accepts commit 1cde1b673. The `@test_broken`
 comment cites #1018; the owed draft points at the filed issue.
@@ -17,6 +69,14 @@ after-task/2026-10-31-wire-xlv-nb-binomial-948-review.md.
 into runtests.jl (#948). Profile canaries stay behind GLLVM_XLV_CANARY.
 Focused run: 29 passed, 0 failed, 1 skip. See
 after-task/2026-10-25-wire-xlv-nb-binomial-948.md.
+2026-10-31: PR #1019 narrowed to #1007 (README `Y`). The #1008
+`λ_init` alias on Laplace routes was removed: #1008 was a keyword
+error (`Λ_init` works; 6/6 starts clean on aed938e). The
+`λ_init`/`Λ_init` naming question stays on #149. README examples
+run on shard 1 only.
+
+2026-10-30: README optimizer example defines `Y` (#1007).
+See after-task/2026-10-30-readme-lambda-init-1007-1008.md.
 
 2026-10-25: Family CI bootstrap and profile-refit rethrow
 InterruptException. A "not supported" simulate stub is now
