@@ -134,9 +134,36 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
         end
         delta = cholH \ grad
         all(isfinite, delta) || return nothing, nothing, nothing
-
         q0 = _phylo_gamma_xlv_logpost(Y, beta, Lambda, alpha_lv, alpha_shape,
                                       mean_eta, Q, leaf_pos, eps, u)
+        # g'delta below rounding is the mode when no trial step strictly raises
+        # the log-posterior. Decide that before the line search: `q1 >= q0` holds
+        # with equality on a zero-gain step, so accept-versus-reject must not
+        # choose convergence (#1129). A strict ascent is left to the search and
+        # to `tol`. The rejected-step floor below stays.
+        if abs(dot(grad, delta)) < 1e-12
+            ascends = false
+            step_try = 1.0
+            n_try = n * K
+            for _try in 1:30
+                eps_try = copy(eps)
+                u_try = copy(u)
+                @inbounds for s in 1:n, k in 1:K
+                    eps_try[s, k] += step_try * delta[(s - 1) * K + k]
+                end
+                @inbounds for j in eachindex(u_try)
+                    u_try[j] += step_try * delta[n_try + j]
+                end
+                q_try = _phylo_gamma_xlv_logpost(Y, beta, Lambda, alpha_lv,
+                    alpha_shape, mean_eta, Q, leaf_pos, eps_try, u_try)
+                if isfinite(q_try) && q_try > q0
+                    ascends = true
+                    break
+                end
+                step_try *= 0.5
+            end
+            ascends || (mode_found = true; break)
+        end
         accepted = false
         step = 1.0
         n_z = n * K
@@ -160,7 +187,17 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
             end
             step *= 0.5
         end
-        accepted || return nothing, nothing, nothing
+        # A line search that cannot raise the log-posterior while the Newton
+        # decrement `g'delta` is below rounding level means (eps, u) is the mode to
+        # floating point: the Fisher-scaled Newton step stalls near 1e-7 and `q1 >= q0`
+        # is lost to noise (measured: g'delta below 1e-12 at the stall). That is
+        # convergence, not a failed search; same rule as `_mixed_mode`/`_isdm_mode`
+        # (`nd_tol = 1e-12`). Without it the objective is 1e12 at a knife-edge
+        # finite-difference step and LBFGS stops at "gradient_at_failure_value".
+        if !accepted
+            abs(dot(grad, delta)) < 1e-12 && (mode_found = true; break)
+            return nothing, nothing, nothing
+        end
         if step * max_delta < tol
             mode_found = true
             break

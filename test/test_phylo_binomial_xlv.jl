@@ -1,5 +1,6 @@
 using GLLVModels, Test, Random, LinearAlgebra
 using Distributions: Binomial
+include(joinpath(@__DIR__, "xlv_canary_boundary.jl"))
 
 function _dense_leaf_phylo_binomial_xlv_loglik(Y, N, beta, Lambda, alpha_lv,
         sigma2_phy, phy, X_lv; maxiter = 120, tol = 1e-10)
@@ -211,14 +212,21 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
         sigma2_phy_init = sigma2,
         iterations = 300, g_tol = 1e-5,
         newton_maxiter = 120, newton_tol = 1e-10)
-    @test fit.converged
+    # sigma2_phy is not identified here (the documented non-identification of the phylogenetic variance with
+    # free species intercepts, refs #1048, P53 GAMMA-PHY; no phylogenetic effect is drawn). The fit may
+    # end at sigma2_phy = 0 with the failure-value stop; accepted only under the five conditions in
+    # xlv_canary_boundary.jl, and the sentinel is not clamped in the source.
+    theta_truth_plain = vcat(beta, vec(alpha_lv), GLLVModels.pack_lambda(Lambda))
+    nll_plain = th -> GLLVModels.binomial_lv_nll_packed(th, Y, N, p, K, LogitLink(); X_lv = X_lv, q_lv = q_lv,
+                                                        maxiter = 120, tol = 1e-10)
+    @test _xlv_converged_or_boundary(fit; nll_plain = nll_plain, theta_start_plain = theta_truth_plain)
     @test isfinite(fit.loglik)
     @test fit.sigma2_phy > 0
 
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
     prof = GLLVModels._phylo_binomial_xlv_profile_eta_realized(
         fit, Y, N, phy, X_lv, [1], eta_target;
-        level = 0.95, profile_iterations = 700,
+        level = 0.95, profile_iterations = 5000,
         newton_maxiter = 120, newton_tol = 1e-10)
     @test prof.method == :profile_eta_realized
     @test prof.term == ["B_eta_realized[1,1]"]
@@ -230,6 +238,8 @@ if get(ENV, "GLLVM_XLV_CANARY", "0") == "1"
     @test prof.lower[1] <= prof.target[1] <= prof.upper[1]
     @test isfinite(prof.lr_deviance[1])
     @test prof.lr_deviance[1] <= prof.lr_cutoff[1]
+    # a profile LR cannot be negative: the constrained refit is a restriction of the free fit
+    @test prof.lr_deviance[1] >= -1e-6
     @test prof.constrained_error[1] < 1e-3
     @test prof.covered == [true]
     @test prof.pd_hessian

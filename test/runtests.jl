@@ -672,10 +672,9 @@ println(_SHARD === nothing ?
     # (src/phylo_*_xlv.jl) ARE shipped, included at src/GLLVModels.jl:103-107. That
     # is untested shipped code. All five pass; each was run individually first.
     #
-    # test_phylo_gamma_xlv.jl is deliberately NOT wired in yet: its :123
-    # assertion compares against a reference implementation inside the test file
-    # that still computes the Fisher log-det, and updating that oracle should
-    # not be done by whoever changed the code it judges.
+    # test_phylo_gamma_xlv.jl, test_phylo_ordinal_xlv.jl and
+    # test_binomial_case_contract.jl are included once, after the gated files
+    # at the end of this list (refs #1048). They are not in the duration tables.
     _shard_include("test_phylo_xlv.jl")
     _shard_include("test_phylo_beta_xlv.jl")
 
@@ -685,14 +684,13 @@ println(_SHARD === nothing ?
     # snapshot too). Likelihood identities, likelihood ArgumentError
     # guards, and the cheap profile ArgumentError guards run in CI.
     # The NB sparse-vs-dense-leaf identity is `@test_broken` (1.3e-2
-    # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv
-    # stays unwired (same flake class; not in #948).
+    # gap at equal parameters; do not widen atol). test_phylo_ordinal_xlv.jl
+    # is included once at the end of this list (refs #1048).
     _shard_include("test_phylo_binomial_xlv.jl")
     _shard_include("test_phylo_nb_xlv.jl")
     _shard_include("test_phylo_nb_xlv_mode_1125.jl")
     _shard_include("test_xlv_nb_binomial_wired.jl")
 
-    #   include("test_phylo_ordinal_xlv.jl")
     #   test_sparse_phy_grad.jl is now opt-in: GLLVM_SPARSE_PHY_GRAD_TESTS=1 (end of the list).
 
 
@@ -1214,11 +1212,10 @@ println(_SHARD === nothing ?
     # Previously unwired, green on Julia 1.10.12 and 1.13.3 (ci-speed-report-20261109):
     # core070 covariance registries (self-contained modules), A4/S4 receipts,
     # kernel-latent unique bridge, #770 predictive_check binomial trials, #1022 NB mite regressions.
-    # Gated at the end of this list (see _shard_include_if): test_sparse_phy_grad
+    # Gated at the end of the duration-table list (see _shard_include_if): test_sparse_phy_grad
     # (912 s, opt-in) and test_destination_b_a4_s4_fixed_coordinate_evaluator (Julia 1.10.x only).
-    # Still unwired on purpose: test_phylo_ordinal_xlv and
-    # test_phylo_gamma_xlv (optimiser-sensitive canaries), test_binomial_case_contract
-    # (stale SHA pins).
+    # The Gamma and ordinal xLV canaries and the binomial case contract are wired
+    # after those gated includes (refs #1048).
     _shard_include("test_core070_covariance_registry.jl")
     _shard_include("test_core070_covariance_formula_registry.jl")
     _shard_include("test_destination_b_a4_s4_receipts.jl")
@@ -1236,9 +1233,25 @@ println(_SHARD === nothing ?
     _shard_include("parity/test_core070_pin.jl")
     # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
     _shard_include("test_zero_column_warning.jl")
-    # Gated (see `_shard_include_if`); keep last so no other position shifts.
+    # Gated (see `_shard_include_if`). Kept at the same positions as on main so the
+    # N=8 position fallback of files that are not in the duration table does not move.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
+    # #1048 / #1129: outside both duration tables, so each file runs in exactly one
+    # shard by the position rule. Placed after every include main already had.
+    # #1048: gate logic of the boundary-stop acceptance used by the NB and binomial
+    # canaries (always runs; the canaries themselves stay behind GLLVM_XLV_CANARY=1).
+    _shard_include("test_xlv_canary_boundary.jl")
+    # #1129: NB xLV fit must not stop short of the nested plain model.
+    _shard_include("test_phylo_nb_xlv_early_stop.jl")
+    # #1048: Gamma and NB xLV mode-search rounding-floor regressions.
+    _shard_include("test_phylo_gamma_xlv_mode_floor.jl")
+    _shard_include("test_phylo_nb_xlv_mode_floor.jl")
+    # #1048: Gamma and ordinal canaries (phylogenetic effect drawn, profile budget
+    # 5000; Gamma seed 754) and the binomial case contract.
+    _shard_include("test_phylo_gamma_xlv.jl")
+    _shard_include("test_phylo_ordinal_xlv.jl")
+    _shard_include("test_binomial_case_contract.jl")
     # New test files go in test/auto/ and are picked up here; no line to add.
     for _f in _AUTO_FILES
         _auto_in_shard(_f) && include(joinpath("auto", _f))

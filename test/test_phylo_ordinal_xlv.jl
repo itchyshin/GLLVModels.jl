@@ -105,7 +105,7 @@ function _dense_leaf_phylo_ordinal_xlv_logpost(
 end
 
 function _simulate_phylo_ordinal_xlv(Lambda, alpha_lv, tau, X_lv; rng = Random.default_rng(),
-        epsilon_scale = 1.0)
+        epsilon_scale = 1.0, a_phy = nothing)
     p = size(Lambda, 1)
     n = size(X_lv, 1)
     K = size(Lambda, 2)
@@ -113,6 +113,7 @@ function _simulate_phylo_ordinal_xlv(Lambda, alpha_lv, tau, X_lv; rng = Random.d
     epsilon = epsilon_scale .* randn(rng, n, K)
     Z_truth = X_lv * alpha_lv + epsilon
     eta = Lambda * transpose(Z_truth)
+    a_phy === nothing || (eta = eta .+ a_phy)
     Y = Matrix{Int}(undef, p, n)
     for s in 1:n, t in 1:p
         probs = [GLLVModels._ord_prob(c, eta[t, s], tau, LogitLink()) for c in 1:C]
@@ -197,8 +198,16 @@ end
     alpha_lv = reshape([0.40], q_lv, K)
     tau = [-1.1, 0.05, 1.25]
     sigma2 = 0.25
+    # Draw the phylogenetic intercept (one value per leaf, shared across sites) from
+    # N(0, sigma2 * C_leaf), the same covariance the model uses, so sigma2_phy is
+    # not driven to the zero boundary by data that carry no phylogenetic signal (#1048).
+    keep = filter(i -> i != phy.root_index, 1:phy.n_total)
+    Qc = Matrix(phy.Q_topology[keep, keep])
+    leaf_pos = [(lp = phy.leaf_indices[t]; phy.root_index < lp ? lp - 1 : lp) for t in 1:p]
+    Sigma_a = Symmetric(sigma2 .* inv(Qc)[leaf_pos, leaf_pos])
+    a_phy = cholesky(Sigma_a).L * randn(rng, p)
     Y, Z_truth = _simulate_phylo_ordinal_xlv(Lambda, alpha_lv, tau, X_lv;
-                                             rng = rng, epsilon_scale = 0.05)
+                                             rng = rng, epsilon_scale = 0.05, a_phy = a_phy)
     @test all([all(vec(sum(Y .== c; dims = 2)) .> 0) for c in 1:(length(tau) + 1)])
 
     fit = GLLVModels._fit_phylo_ordinal_xlv(
@@ -215,7 +224,7 @@ end
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
     prof = GLLVModels._phylo_ordinal_xlv_profile_eta_realized(
         fit, Y, phy, X_lv, [6], eta_target;
-        level = 0.95, profile_iterations = 250,
+        level = 0.95, profile_iterations = 5000,
         profile_max_expand = 5, profile_max_bisect = 6,
         newton_maxiter = 80, newton_tol = 1e-9)
     @test prof.method == :profile_eta_realized
