@@ -42,6 +42,9 @@ end
 # are not checked; categories with no observations are left as they are.
 function _check_ordinal_levels(Y::AbstractMatrix, obs; caller::AbstractString = "ordinal",
         C = nothing)
+    obs === nothing || size(obs) == size(Y) || throw(DimensionMismatch(
+        "$caller: mask is $(size(obs)); Y is $(size(Y)). `mask` must have the shape of Y " *
+        "(traits × units, true = observed)."))
     for i in eachindex(Y)
         (obs === nothing || obs[i]) || continue
         y = Y[i]
@@ -53,6 +56,16 @@ function _check_ordinal_levels(Y::AbstractMatrix, obs; caller::AbstractString = 
                 "level; observed codes must be integers in 1..$(Ci === nothing ? "C" : Ci) " *
                 "(coded from 1, not 0-based)." *
                 ". Fix the data, or mark unobserved cells `mask = false`."))
+    end
+    return nothing
+end
+
+function _check_ordinal_trait_observed(obs::AbstractMatrix{Bool}, caller::AbstractString)
+    p = size(obs, 1)
+    @inbounds for t in 1:p
+        any(@view obs[t, :]) || throw(ArgumentError(
+            "$caller: trait $t has no observed responses; drop it from `Y` or mark at " *
+            "least one cell observed."))
     end
     return nothing
 end
@@ -554,6 +567,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm")
     # Category count and warm starts use OBSERVED cells only, so a masked cell's
     # (arbitrary) value never leaks into the fit.
@@ -698,6 +712,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm_pertrait")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait")
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
@@ -746,7 +761,12 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     Λ̂ = unpack_lambda(@view(θ̂[(p + 1):(p + rr)]), p, K)
     τ̂ = _unpack_cutpoints_pertrait(@view(θ̂[(p + rr + 1):(p + rr + ncut)]), C)
     _warn_runaway_loadings(Λ̂, "Ordinal")
-    return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, _fit_verdict(res)..., _fit_gradient_norm(res))
+    # `Optim.converged` also fires on a zero-length step far from a stationary point;
+    # require the gradient test too, as scalar NB1 does (#505, `_nb1_grouped_g_met`).
+    # `gradient_norm` is recorded beside that verdict and does not enter it (refs #1050).
+    ll, conv, iters = _fit_verdict(Optim.minimum(res),
+        Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
+    return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, ll, conv, iters, _fit_gradient_norm(res))
 end
 
 """
@@ -811,6 +831,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
     obs = mask === nothing ? trues(p, n) : mask
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm_pertrait_cov")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait_cov")
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
