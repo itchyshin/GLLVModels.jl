@@ -74,12 +74,11 @@ using Test, GLLVModels, Random, LinearAlgebra
         end
     end
 
-    @testset "em_fa refuses NaN (it returned NaN silently)" begin
-        Yn = copy(Y); Yn[1, 2] = NaN
-        e = thrown(() -> em_fa(Yn, 1))
-        @test e isa ArgumentError && occursin("NaN", e.msg) && occursin("(row, column) = (1, 2)", e.msg)
-        Yi = copy(Y); Yi[1, 2] = Inf              # Inf gave loglik = NaN, converged = false, no message
-        e = thrown(() -> em_fa(Yi, 1))
-        @test e isa ArgumentError && occursin("Inf", e.msg) && occursin("(row, column) = (1, 2)", e.msg)
+    @testset "em_fa refuses NaN and Inf (it returned NaN silently)" begin
+        for (what, v) in (("NaN", NaN), ("Inf", Inf), ("Inf", -Inf))
+            Yb = copy(Y); Yb[1, 2] = v
+            e = thrown(() -> em_fa(Yb, 1))
+            @test e isa ArgumentError && occursin(what, e.msg) && occursin("(row, column) = (1, 2)", e.msg)
+        end
     end
 end

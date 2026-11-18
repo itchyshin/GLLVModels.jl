@@ -206,14 +206,16 @@ augmented-state Laplace marginal ([`phylo_glm_marginal_loglik`](@ref)). `Y` is p
 Finite-difference outer gradient (the sparse-Cholesky marginal is not AD-friendly);
 warm start from per-species link-scale means.
 """
-function fit_phylo_glm(Y::AbstractMatrix, phy::AugmentedPhy;
+function fit_phylo_glm(Y::AbstractMatrix, phy::AugmentedPhy; mask = nothing,
         family = Poisson(), link::Link = default_link(family),
         N = nothing, σ²_phy_init::Real = 1.0,
         g_tol::Real = 1e-5, iterations::Integer = 300,
         newton_maxiter::Integer = 50, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_phylo_glm", mask, Y)
     p, n = size(Y)
     p == phy.n_leaves || throw(ArgumentError("size(Y,1)=$p must equal phy.n_leaves=$(phy.n_leaves)"))
     Ntr = N === nothing ? ones(eltype(Y), p, n) : N
+    _check_family_response_support(family, Y, nothing; caller = "fit_phylo_glm", N = Ntr)
     nd = _spde_disp_len(family)
 
     β0 = [sum(linkfun(link, _ws_mean(family, Y[t, s], Ntr[t, s])) for s in 1:n) / n for t in 1:p]
