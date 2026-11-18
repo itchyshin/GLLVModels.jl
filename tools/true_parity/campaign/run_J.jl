@@ -7,7 +7,9 @@
 #
 # Usage: julia --project=<GLLVModels.jl checkout> run_J.jl <cell>
 #   env: CAMPAIGN_DATA, CAMPAIGN_OUT, CAMPAIGN_SMALL=1 (development runs, never a receipt),
-#        GLLVM_JL_SHA (the commit the checkout is at, recorded), CAMPAIGN_COND=0 to skip cond(H).
+#        GLLVM_JL_SHA (the commit the checkout is at, recorded), CAMPAIGN_COND=0 to skip cond(H),
+#        CAMPAIGN_POLISH=1 (ordinal, isdm and fungi cells) also writes <cell>_J_polish.toml via polish_J.jl, a separate
+#        file; the default <cell>_J.toml is unchanged. CAMPAIGN_POLISH_MAX_STEPS (default 3) caps the Newton steps.
 # Julia wall times include first-call compilation (nothing is warmed up), as in the pre-run.
 using GLLVModels, LinearAlgebra, Printf, SHA, TOML, Distributions
 const GM = GLLVModels
@@ -55,6 +57,19 @@ function flush_out(final = false)
 end
 put!(k, v) = (R[k] = v; flush_out())
 timeit(f) = (t = time(); r = f(); (r, time() - t))
+POLISH = !isempty(get(ENV, "CAMPAIGN_POLISH", ""))
+POLISH && include(joinpath(@__DIR__, "polish_J.jl"))
+# The polish record goes to a SEPARATE file, written after the default file is complete (see the end of this script).
+function write_polish(pol, tp)
+    pol["wall_polish_sec"] = tp; pol["cell"] = cell; pol["small"] = SMALL; pol["engine"] = "GLLVModels.jl"
+    pol["gllvmodels_commit"] = get(ENV, "GLLVM_JL_SHA", "unknown"); pol["julia_version"] = string(VERSION); pol["host"] = gethostname()
+    pol["JULIA_NUM_THREADS"] = Threads.nthreads()
+    pol["note"] = "convergence polish record (N9); merged into the compared raw file by polish_merge.py, never read as a receipt by itself"
+    open(joinpath(out_dir, cell * sfx * "_J_polish.toml"), "w") do io; TOML.print(io, pol); end
+    println("POLISH ", cell, " grad ", pol["max_abs_gradient_before"], " -> ", pol["max_abs_gradient"], " steps ", pol["steps_taken"],
+            " met ", pol["criterion_met"], " wall ", round(tp; digits = 1))
+end
+PENDING_POLISH = Ref{Any}(nothing)
 
 # SEs and fixed-effect names/estimates from the public Wald confint (beta[..], gamma[..] terms)
 function fixed_block!(ci)
@@ -117,6 +132,12 @@ if cell in ("gaussian", "poisson", "nb2", "binomial", "ordinal")
         put!("converged", fit.converged); put!("logLik", fit.loglik); put!("iterations", fit.iterations)
         put!("LLt", rows(fit.Λ * fit.Λ')); put!("tau_size", collect(size(fit.τ))); put!("C", fit.C)
         put!("tau", fit.τ isa AbstractMatrix ? rows(fit.τ) : collect(Float64, fit.τ)); ci_block!(fit, Y)
+        if POLISH
+            fit isa GM.OrdinalPerTraitFit || error("CAMPAIGN_POLISH: the ordinal cell is not an OrdinalPerTraitFit ($(typeof(fit)))")
+            PENDING_POLISH[] = () -> begin
+                pol, tp = timeit(() -> polish_ordinal_pertrait(fit, Y)); pol["tau_size"] = collect(size(fit.τ)); write_polish(pol, tp)
+            end
+        end
     end
 elseif cell == "temporal"
     path = csvpath("temporal"); put!("data_sha256", fsha(path)); hdr, cols = readcsv(path)
@@ -167,6 +188,22 @@ elseif cell == "isdm"
     nd0 = merge(d, (log_support = zeros(length(d.value)),))
     put!("predict_newdata_offset0_link", collect(Float64, predict(ft; newdata = nd0).est))
     put!("predict_newdata_offset0_response", collect(Float64, predict(ft; newdata = nd0, type = :response).est))
+    if POLISH
+        PENDING_POLISH[] = () -> begin
+            tbl = GM.isdm_table(fm, d; family = isdm_sources(gbif = Poisson(), survey = cl), trait = :trait, unit = :cell_id)
+            pol, tp = timeit(() -> begin
+                r = polish_isdm(ft, tbl); f1 = pop!(r, "_fit")
+                p1 = predict(f1)
+                r["predict_link"] = collect(Float64, p1.est); r["predict_cell_id"] = String.(p1.cell_id)
+                r["predict_trait"] = String.(p1.trait); r["predict_source"] = String.(p1.isdm_source)
+                r["predict_response"] = collect(Float64, predict(f1; type = :response).est)
+                r["predict_newdata_offset0_link"] = collect(Float64, predict(f1; newdata = nd0).est)
+                r["predict_newdata_offset0_response"] = collect(Float64, predict(f1; newdata = nd0, type = :response).est)
+                r
+            end)
+            write_polish(pol, tp)
+        end
+    end
 elseif cell == "crabs"
     path = csvpath("crabs"); put!("data_sha256", fsha(path)); hdr, cols = readcsv(path)
     trs = ["FL", "RW", "CL", "CW", "BD"]; p = 5; n = length(cols["specimen"])
@@ -222,8 +259,17 @@ elseif cell in ("spider", "beetle", "fungi")
     else
         put!("eta", vec(predict(fit, Y, X; type = :link)))
     end
+    if POLISH
+        cell == "fungi" || error("CAMPAIGN_POLISH covers the fungi cell of this branch only, not $cell")
+        fit isa GM.GllvmCovFit || error("CAMPAIGN_POLISH: the fungi cell is not a GllvmCovFit ($(typeof(fit)))")
+        PENDING_POLISH[] = () -> begin pol, tp = timeit(() -> polish_cov(fit, Y, X)); write_polish(pol, tp) end
+    end
 else
     error("unknown cell $cell")
 end
 put!("finished_unix", time()); put!("DONE", true)
 println("DONE ", cell, " logLik=", get(R, "logLik", NaN), " converged=", get(R, "converged", missing), " wall_fit=", round(get(R, "wall_fit_sec", NaN); digits = 1))
+if POLISH
+    PENDING_POLISH[] === nothing && error("CAMPAIGN_POLISH is set but cell $cell has no polish (ordinal, isdm, fungi only)")
+    PENDING_POLISH[]()
+end
