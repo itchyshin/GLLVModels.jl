@@ -26,6 +26,8 @@
 # Beta conditional log-density at η (μ = logistic(η)), shared form with beta.jl.
 @inline function _beta_logpdf_eta(η, y, φ)
     μ = clamp(1.0 / (1.0 + exp(-η)), 1e-12, 1 - 1e-12)
+    # stable form once both shapes are large (the expanded form below cancels, #1143)
+    _beta_stirling_applies(μ * φ, (1 - μ) * φ) && return _beta_logpdf(μ * φ, (1 - μ) * φ, y)
     return loggamma(φ) - loggamma(μ * φ) - loggamma((1 - μ) * φ) +
            (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y)
 end
