@@ -162,12 +162,13 @@ grouping sources. All ordinary terms must be `mode=:indep, common=false`.
 Use `fit_gllvm(...; phylo=precision, grouping=terms)` for the public route.
 This optimizer does not establish qualification or R parity.
 """
-function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::PrecisionPhy;
+function fit_joint_phylo_grouped_gaussian(Y::AbstractMatrix{<:Real}, phy::PrecisionPhy; mask = nothing,
         rank::Integer = 1, phylo_mode::Symbol = :barelowrank, terms,
         unit = nothing, unit_obs = nothing, cluster = nothing, cluster2 = nothing,
         species_id::AbstractVector{<:Integer} = collect(1:phy.n_leaves),
         X = nothing, coefficient_names = nothing, start = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 200)
+    _refuse_mask_route("fit_joint_phylo_grouped_gaussian", mask)
     phy = _validate_precision_fit_input(phy)
     p, n = size(Y)
     p > 0 && n >= 2 || throw(ArgumentError("fitting needs at least one trait and two observations"))
