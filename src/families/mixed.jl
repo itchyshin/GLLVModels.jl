@@ -529,8 +529,7 @@ function _mixed_pseudo_link_row(fam::Normal, link::Link, y::AbstractVector, n::A
     # missing cell is filled with the row's observed mean for the shared SVD init ONLY
     # (the FIML objective itself drops missing cells — see _mixed_loglik_site). On a
     # dense row cnt == length(y) ⇒ the fill loop is a no-op ⇒ byte-identical to the
-    # old comprehension. (Only the Normal method is widened — all-Normal NA-Gaussian;
-    # mixed non-Gaussian NA is a separate slice.)
+    # old comprehension. (The non-Normal methods below do the same via _mixed_pseudo_row_na, issue #1124.)
     row = Vector{Float64}(undef, length(y))
     acc = 0.0; cnt = 0
     @inbounds for i in eachindex(y)
@@ -545,19 +544,39 @@ function _mixed_pseudo_link_row(fam::Normal, link::Link, y::AbstractVector, n::A
     end
     return row
 end
+# NA-aware pseudodata row for the non-Normal methods below (issue #1124): `f(y_i)` is the
+# link-scale pseudodatum of an OBSERVED cell; a missing cell is filled with the row's
+# observed mean for the shared SVD start ONLY (the objective drops missing cells, see
+# _mixed_loglik_site). With no missing cell the fill loop does nothing, so the row is
+# exactly the old per-cell comprehension.
+function _mixed_pseudo_row_na(f, y::AbstractVector)
+    row = Vector{Float64}(undef, length(y))
+    acc = 0.0; cnt = 0
+    @inbounds for i in eachindex(y)
+        if !ismissing(y[i])
+            row[i] = f(i)
+            acc += row[i]; cnt += 1
+        end
+    end
+    m = cnt == 0 ? 0.0 : acc / cnt
+    @inbounds for i in eachindex(y)
+        ismissing(y[i]) && (row[i] = m)
+    end
+    return row
+end
 function _mixed_pseudo_link_row(fam::Union{Poisson, NegativeBinomial}, link::Link,
         y::AbstractVector, n::AbstractVector)
-    return [linkfun(link, max(float(y[i]) + 0.5, 1e-4)) for i in eachindex(y)]
+    return _mixed_pseudo_row_na(i -> linkfun(link, max(float(y[i]) + 0.5, 1e-4)), y)
 end
 function _mixed_pseudo_link_row(fam::Binomial, link::Link, y::AbstractVector, n::AbstractVector)
-    return [linkfun(link, clamp((float(y[i]) + 0.5) / (float(n[i]) + 1), 1e-4, 1 - 1e-4))
-            for i in eachindex(y)]
+    return _mixed_pseudo_row_na(
+        i -> linkfun(link, clamp((float(y[i]) + 0.5) / (float(n[i]) + 1), 1e-4, 1 - 1e-4)), y)
 end
 function _mixed_pseudo_link_row(fam::Beta, link::Link, y::AbstractVector, n::AbstractVector)
-    return [linkfun(link, clamp(float(y[i]), 1e-6, 1 - 1e-6)) for i in eachindex(y)]
+    return _mixed_pseudo_row_na(i -> linkfun(link, clamp(float(y[i]), 1e-6, 1 - 1e-6)), y)
 end
 function _mixed_pseudo_link_row(fam::Gamma, link::Link, y::AbstractVector, n::AbstractVector)
-    return [linkfun(link, max(float(y[i]), 1e-6)) for i in eachindex(y)]
+    return _mixed_pseudo_row_na(i -> linkfun(link, max(float(y[i]), 1e-6)), y)
 end
 
 # ===========================================================================
@@ -600,12 +619,13 @@ marginal (correctness-first v1; analytic per-trait kernels are future performanc
 work). FD-verified ≤ 1e-6. Warm start: family-aware link-scale pseudodata rows +
 one shared SVD (PPCA-style) + per-family default dispersions.
 """
-function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer,
+function fit_mixed_gllvm(Y::AbstractMatrix; mask = nothing, families::AbstractVector, K::Integer,
         links::Union{Nothing, AbstractVector} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing,
         β_init = nothing, Λ_init = nothing, dispersion_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, offset = nothing)
+    _refuse_mask_route("fit_mixed_gllvm", mask)   # `missing` in Y is handled below (NA-aware FIML), never refused
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, caller = "fit_mixed_gllvm")
     length(families) == p || throw(DimensionMismatch(
@@ -623,6 +643,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; families::AbstractVector, K::Integer
     rr = rr_theta_len(p, K)
 
     _check_mixed_offset_admission(offset, families)
+    _check_mixed_response_support(families, Y, N; caller = "fit_mixed_gllvm")
 
     # Family-aware PPCA warm start: per-trait link-scale pseudodata, one SVD.
     Zemp = Matrix{Float64}(undef, p, n)
