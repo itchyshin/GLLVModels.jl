@@ -1,0 +1,23 @@
+{
+  "archive_sha256": "73b665b22c1497d43dc0674eecd5657f2659a726fcad13004de899833e2d5423",
+  "command": [
+    "/usr/bin/R",
+    "CMD",
+    "INSTALL",
+    "--no-multiarch",
+    "--library=/home/snakagaw/hsq_work/codex-p1-postcoef-current-20261104/totoro-build/library",
+    "/home/snakagaw/hsq_work/codex-p1-postcoef-current-20261104/totoro-build/source"
+  ],
+  "elapsed_seconds": 123.32153502525762,
+  "exit_code": 0,
+  "gllvmTMB_version": "0.7.1",
+  "hostname": "totoro",
+  "installed_tree_sha256": "c7a21d29b958e3ebc5778e07fec988366d8f17918a77059701cd50e2db23bb48",
+  "log_sha256": "55fe68bd10377b0c26344d501e5b497a3fd6f466c20bb7ec232612ad76f2393e",
+  "marker_sha256": "7ea067df756087a1f863c0f8355c89b7f702fd152030c220d344e6d7ea15c355",
+  "original_source_unchanged": true,
+  "r_version": "R version 4.6.1 (2026-06-24) -- \"Happy Hop\"",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "source_tree_sha256": "86fa00f05ee2ccb8ffef65a82cd59c47b1b2a256a5bad86957a92461a6dbe1db",
+  "tool_sha256": "f5ec8c101190ab1a27a4237755acec86100a820e78a0e33174934a3050238119"
+}

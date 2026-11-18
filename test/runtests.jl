@@ -1256,6 +1256,16 @@ println(_SHARD === nothing ?
     _shard_include("test_formula_missing_covariate.jl")
     # fit_mixed_gllvm: an unsupported family marker gives the documented ArgumentError, not a default_link MethodError.
     _shard_include("test_mixed_unsupported_family.jl")
+    # AGHQ Laplace retention: unmoved unconverged runs (all fitters) and the policy predicates.
+    # Appended last so no existing file changes shard.
+    _shard_include("test_aghq_ordinal_unmoved_fallback.jl")
+    _shard_include("test_aghq_unmoved_fallback_siblings.jl")
+    _shard_include("test_aghq_ordinal_failure_fallback.jl")
+    # Gaussian profile nonnegative Woodbury quadratic (DomainError regression). Appended last, so no
+    # existing file changes shard.
+    _shard_include("test_profile_quad_cancellation.jl")
+    # PR 1037 layer (#739 twin parity). Appended last so no existing file changes shard.
+    _shard_include("test_twin_parity_zip_tweedie_beta_gamma_739.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
