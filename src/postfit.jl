@@ -822,7 +822,10 @@ StatsAPI.nobs(fit::GaussianRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::PoissonRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::RowEffectFit) = size(fit.Λ, 1) * length(fit.ρ)
 StatsAPI.nobs(fit::SPDEGaussianFit) = size(fit.nodes, 1)   # univariate spatial GP (p = 1); unchanged
-StatsAPI.nobs(fit::SPDELatentFit) = size(fit.Λ, 1) * size(fit.nodes, 1)
+# p·M observed cells: the fitter stores the p×M trial matrix `N`, so M is its column count.
+# A fit built without `N` (the hand-built dummy constructor) falls back to the mesh-node count.
+StatsAPI.nobs(fit::SPDELatentFit) =
+    size(fit.N, 2) > 0 ? size(fit.N, 1) * size(fit.N, 2) : size(fit.Λ, 1) * size(fit.nodes, 1)
 function StatsAPI.nobs(fit::AnyGllvmFit)
     if hasfield(typeof(fit), :nindiv)
         return fit.nindiv
