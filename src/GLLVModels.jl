@@ -30,6 +30,7 @@ include("source_fit.jl")                 # local candidate: fixed Gaussian sourc
 include("grouped_gaussian.jl")           # internal shared/crossed sparse Gaussian factor kernel
 include("ppca_init.jl")                  # used by fit (warm-start)
 include("em_fa.jl")                      # alternative EM solver
+include("na_input.jl")                   # typed ArgumentError for missing / NaN in Y on Gaussian fitters that have no mask
 include("profile.jl")                    # σ_eps profile-out (used by fit)
 include("fixed_coefficients.jl")         # zero masks for fixed-effect coefficients
 include("fit.jl")
