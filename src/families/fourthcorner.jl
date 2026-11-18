@@ -180,6 +180,7 @@ function fit_fourthcorner_gllvm(Y::AbstractMatrix; family,
 
     # NA handling: derive the observation mask and a sanitized response matrix.
     msk = _resolve_obs_mask(mask, Y)
+    _check_family_response_support(family, Y, msk; caller = "fit_fourthcorner_gllvm", N = N)
     Yc = _sanitize_missing(Y, _cov_placeholder(family))
 
     # Warm start: link-scale row means for β, zero fourth-corner coefficients, SVD

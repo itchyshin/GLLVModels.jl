@@ -11,6 +11,8 @@
 # Log-density of one cell at the two linear predictors, generic in the number type.
 @inline function _delta_gamma_logf(y::Float64, ηz, ηc, α)
     y > 0 || return -log1p(exp(ηz))                    # log(1 - pi), pi = logistic(eta_z)
+    # from shape 1e3 the stable Gamma density (the expanded form below cancels, refs #1175)
+    α >= _GAMMA_STIRLING_FROM && return -log1p(exp(-ηz)) + _gamma_logpdf(α, exp(ηc), y)
     return -log1p(exp(-ηz)) + α * log(α) - loggamma(α) - α * ηc +
            (α - 1) * log(y) - α * y * exp(-ηc)         # log pi + Gamma(shape alpha, mean exp(eta_c))
 end
@@ -217,6 +219,14 @@ function fit_delta_gamma_gllvm_aghq(Y::AbstractMatrix{<:Real};K::Integer,predict
         return _delta_gamma_with_integration(base,info)
     end
     selected=result.selected;t=selected.parameters
+    # Unmoved and unconverged: no AGHQ estimate exists; retain Laplace and record the
+    # run's own stop reason (policy and the exact stop reasons: _aghq_unmoved_unconverged).
+    if _aghq_unmoved_unconverged(selected)
+        @warn "AGHQ did not move from its start and did not converge; retained Laplace" requested=request reason=selected.stop_reason
+        info=AGHQFitInfo(request,:laplace,1,k,1,selected.stop_reason,false,Inf,c,base_controls,result,
+            AGHQAdaptation[],nothing,"",NaN)
+        return _delta_gamma_with_integration(base,info)
+    end
     data=AGHQDeltaGammaData(problem.data.responses,problem.data.offset,predictor,disp_group)
     mode_gradient=maximum(d.gradient_max for d in problem.mode_diagnostics(t))
     info=AGHQFitInfo(request,:aghq,k,k,length(problem.grid.logw),selected.stop_reason,false,Inf,c,base_controls,

@@ -1432,7 +1432,7 @@ test('bridge readback: a receipt of another evidence kind is not affected by the
 
 // --- Maintainer ruling 2026-10-05 (D-319), N1: admission-only and PUBLIC-R-BRIDGE boundary cases are non-binding
 // context. bcTree() adds a numeric row with a compared case and one context case. ---
-function bcTree({ ctxId = 'CASE-N-PUBLIC-R-BRIDGE', ctxReceipt = { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' },
+function bcTree({ ctxId = 'CASE-N-PUBLIC-R-BRIDGE', ctxReceipt = { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', pin: 'P1' },
   rowOver = {}, writeCtx = true } = {}) {
   return ({ readJ, writeJ }) => {
     const cm = readJ('case-map.json');
@@ -1446,8 +1446,8 @@ function bcTree({ ctxId = 'CASE-N-PUBLIC-R-BRIDGE', ctxReceipt = { evidence_kind
   };
 }
 test('N1 boundary context: a PUBLIC-R-BRIDGE refusal and an admission-only case are context; the row binds on the rest', () => {
-  for (const [ctxId, rec] of [['CASE-N-PUBLIC-R-BRIDGE', { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' }],
-    ['CASE-N-FORMULA', { evidence_kind: 'r_only_formula_grammar', verdict: 'R_ONLY_PASS' }]]) {
+  for (const [ctxId, rec] of [['CASE-N-PUBLIC-R-BRIDGE', { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', pin: 'P1' }],
+    ['CASE-N-FORMULA', { evidence_kind: 'r_only_formula_grammar', verdict: 'R_ONLY_PASS', pin: 'P1' }]]) {
     const m = bcTree({ ctxId, ctxReceipt: rec });
     const c1 = runTree(m, 'C1');
     assert.match(c1.stdout, /C1_MET$/m, `${rec.evidence_kind}\n${c1.stdout}`);
@@ -1465,8 +1465,11 @@ for (const [name, opts, why] of [
   ['a boundary kind with the wrong verdict', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'PASS' } }, /verdict "PASS" is not R_BOUNDARY_UNCHANGED/],
   // N1 covers an R refusal recorded by a receipt; a bridge case nobody ran is not context.
   ['a not-executed PUBLIC-R-BRIDGE case', { ctxReceipt: { evidence_kind: 'not_executed', verdict: 'NOT_EXECUTED' } }, /evidence_kind "not_executed" is not an admission-only or PUBLIC-R-BRIDGE boundary kind/],
-  ['a bridge kind on a case that is not a PUBLIC-R-BRIDGE case', { ctxId: 'CASE-N-NATIVE', ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' } }, /a r_public_bridge_boundary case must be a -PUBLIC-R-BRIDGE case/],
+  ['a bridge kind on a case that is not a PUBLIC-R-BRIDGE case', { ctxId: 'CASE-N-NATIVE', ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', pin: 'P1' } }, /a r_public_bridge_boundary case must be a -PUBLIC-R-BRIDGE case/],
   ['a context receipt that carries a comparison block', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', comparison: { pin: 'P1', cases: [] } } }, /carries a comparison block, so it is compared, not context/],
+  ['a context receipt pinned to P0', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', pin: 'P0' } }, /receipt pin "P0" is not P1/],
+  ['a context receipt with no pin', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED' } }, /receipt pin undefined is not P1/],
+  ['a context receipt whose source_ids name another row', { ctxReceipt: { evidence_kind: 'r_public_bridge_boundary', verdict: 'R_BOUNDARY_UNCHANGED', pin: 'P1', source_ids: ['covariance/OTHER'] } }, /source_ids \["covariance\/OTHER"\] does not name covariance\/COV-N/],
   ['every case set aside as context', { rowOver: { executable_case_ids: ['CASE-N-PUBLIC-R-BRIDGE'] } }, /every executable case is boundary context/],
   // The duplicate-id hole: the context id listed twice passes the count test while no case outside the context list
   // is compared (rn.json compares CASE-N, which this row no longer lists).
@@ -1492,6 +1495,13 @@ function cpTree(cp) {
 }
 const cpBlock = (rg, jg, over = {}) => ({ gradient_bound: 1e-5, compared_point: 'newton_polished',
   engines: { R: { max_abs_gradient: rg }, julia: { max_abs_gradient: jg } }, ...over });
+test('N9 convergence parity: a receipt that declares a polished compared point must carry the block', () => {
+  for (const mut of [(r) => { r.compared_point = 'newton_polished'; }, (r) => { r.comparison.compared_point = 'newton_polished'; }]) {
+    const c1 = runTree(({ readJ, writeJ }) => { const r1 = readJ('receipts/r1.json'); mut(r1); writeJ('receipts/r1.json', r1); }, 'C1');
+    assert.match(c1.stdout, /C1_NOT_MET$/m);
+    assert.match(c1.stdout, /declares compared_point newton_polished but has no convergence_parity block/);
+  }
+});
 test('N9 convergence parity: both engines at or below 1e-5 bind (the ordinal pre-run numbers, and exactly 1e-5)', () => {
   for (const cp of [cpBlock(4.709e-7, 2.365e-6), cpBlock(1e-5, 1e-5), cpBlock(0, 0, { compared_point: 'returned' })]) {
     const c1 = runTree(cpTree(cp), 'C1');
@@ -1946,6 +1956,73 @@ test('C6: the docs/src check applies to KEPT_AS_JULIA_EXTRA only, in git mode to
     }
   });
 }
+
+test('POST-COEF: C1 and C8 refuse an unqualified capture', () => {
+  const m = brTree({ sid: 'postfit-policy/POST-COEF-EMPTY', caseId: 'CORE070-POSTFIT-COEF-EMPTY-NATIVE', kind: 'numeric_r_vs_julia' });
+  for (const mode of ['C1', 'C8']) {
+    const result = runTree(m, mode);
+    assert.match(result.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'));
+    assert.match(result.stdout, /postfit-policy\/POST-COEF-EMPTY/);
+  }
+});
+test('POST-COEF: a signed exception cannot waive a missing capture', () => {
+  const targetRel = 'receipts/postfit/cases/CORE070-POSTFIT-COEF-EMPTY-NATIVE.json';
+  const mutate = ({readJ, writeJ}) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({source_id:'postfit-policy/POST-COEF-EMPTY', classification:'required_core',
+      executable_case_ids:['CORE070-POSTFIT-COEF-EMPTY-NATIVE'], evidence:{receipt:`${L}/${targetRel}`},
+      measured_against:P1_FULL, disposition:null, evidence_tier:'numeric',
+      receipt_status_exception:{reason:'synthetic exception',signed_by:'Shinichi Nakagawa',signed_on:'2026-09-27'}});
+    writeJ('case-map.json', cm);
+    writeJ(targetRel, {case_id:'CORE070-POSTFIT-COEF-EMPTY-NATIVE', verdict:'UNQUALIFIED',
+      evidence_kind:'numeric_r_vs_julia', batch_verifier:{status:'UNVERIFIED',log:null},
+      glvmodels_worktree_dirty:null, comparison:{pin:'P1',cases:[]}});
+  };
+  for (const mode of ['C1','C8']) {
+    const result=runTree(mutate, mode);
+    assert.match(result.stdout,new RegExp(`${mode}_NOT_MET$`,'m'));
+    assert.match(result.stdout,/postfit-policy\/POST-COEF-EMPTY/);
+    if (mode === 'C1') assert.match(result.stdout,/POST-COEF case receipt missing/);
+    else assert.match(result.stdout,/NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
+  }
+});
+test('POST-COEF: a signed exception cannot waive an unqualified separate case', () => {
+  const targetRel = 'receipts/postfit/cases/CORE070-POSTFIT-COEF-THREE-FIT-NATIVE.json';
+  const mutate = ({readJ, writeJ}) => {
+    const cm = readJ('case-map.json');
+    cm.rows.push({source_id:'postfit-policy/POST-COEF-EMPTY', classification:'required_core',
+      executable_case_ids:['CORE070-POSTFIT-COEF-EMPTY-NATIVE'], evidence:{receipt:`${L}/${targetRel}`},
+      measured_against:P1_FULL, disposition:null, evidence_tier:'numeric',
+      receipt_status_exception:{reason:'synthetic exception',signed_by:'Shinichi Nakagawa',signed_on:'2026-09-27'}});
+    writeJ('case-map.json', cm);
+    writeJ(targetRel, {case_id:'CORE070-POSTFIT-COEF-THREE-FIT-NATIVE',
+      harness_case_id:'CORE070-POSTFIT-COEF-EMPTY-NATIVE',verdict:'UNQUALIFIED',
+      evidence_kind:'numeric_r_vs_julia',batch_verifier:{status:'UNVERIFIED',log:null},
+      glvmodels_worktree_dirty:null,comparison:{pin:'P1',cases:[]}});
+  };
+  for (const mode of ['C1','C8']) {
+    const result=runTree(mutate, mode);
+    assert.match(result.stdout,new RegExp(`${mode}_NOT_MET$`,'m'));
+    assert.match(result.stdout,/postfit-policy\/POST-COEF-EMPTY/);
+    if (mode === 'C1') assert.match(result.stdout,/POST-COEF artifact check: case identity or historical binding/);
+    else assert.match(result.stdout,/NUMERIC_LABEL_WITHOUT_NUMERIC_RECEIPT/);
+  }
+});
+test('POST-COEF: C1 and C8 refuse an unqualified capture at a Git ref', () => {
+  const dir = makeGitRepo('base');
+  try {
+    const readJ = (rel) => JSON.parse(readFileSync(join(dir, L, rel), 'utf8'));
+    const writeJ = (rel, v) => { mkdirSync(dirname(join(dir, L, rel)), { recursive: true }); writeFileSync(join(dir, L, rel), JSON.stringify(v, null, 1)); };
+    brTree({ sid: 'postfit-policy/POST-COEF-EMPTY', caseId: 'CORE070-POSTFIT-COEF-EMPTY-NATIVE', kind: 'numeric_r_vs_julia' })({ readJ, writeJ });
+    execFileSync('git', ['add', `${L}/case-map.json`, `${L}/receipts/br.json`], { cwd: dir });
+    execFileSync('git', ['-c', 'user.email=test@test.invalid', '-c', 'user.name=test', 'commit', '-qm', 'postcoef fixture'], { cwd: dir });
+    for (const mode of ['C1', 'C8']) {
+      const result = runGit(dir, mode);
+      assert.match(result.stdout, new RegExp(`${mode}_NOT_MET$`, 'm'));
+      assert.match(result.stdout, /postfit-policy\/POST-COEF-EMPTY/);
+    }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
 
 if (failures > 0) {
   console.log(`\n${failures} control(s) FAILED`);

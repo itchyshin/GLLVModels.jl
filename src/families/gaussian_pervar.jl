@@ -25,7 +25,7 @@
 using LinearAlgebra
 
 """
-    gaussian_pervar_marginal_loglik(y, Λ, φ²vec; X=nothing, β=nothing) -> Real
+    gaussian_pervar_marginal_loglik(y, Λ, φ²vec; X=nothing, β=nothing, mask=nothing) -> Real
 
 Gaussian GLLVM marginal log-likelihood with **per-species** (heteroscedastic)
 residual variances. `y` is `p × n_sites`, `Λ` is `p × K` unit-tier loadings, and
@@ -43,11 +43,19 @@ Fixed effects: pass both `X::Array{<:Real,3}` of shape `(p, n_sites, q)` and
 
 Passing a constant variance vector `fill(σ², p)` reproduces the scalar marginal
 `gaussian_marginal_loglik(y, Λ, sqrt(σ²); …)` to machine precision.
+
+`mask` (`false` = unobserved) drops those cells: each site contributes the normal
+density of its observed subvector, with covariance `Λ[obs,:] Λ[obs,:]' + diag(φ²[obs])`.
+`mask = nothing` is the complete-data factorization above.
 """
 function gaussian_pervar_marginal_loglik(y::AbstractMatrix, Λ::AbstractMatrix,
                                          φ²vec::AbstractVector;
                                          X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
-                                         β::Union{Nothing, AbstractVector} = nothing)
+                                         β::Union{Nothing, AbstractVector} = nothing,
+                                         mask = nothing)
+    # Complete data keeps the factorization below. A mask (including one derived from
+    # `missing`) uses the marginal of each site's observed subvector (#1107).
+    mask === nothing || return _gaussian_pervar_observed_loglik(y, Λ, φ²vec; X, β, mask)
     p, n = size(y)
     K    = size(Λ, 2)
     length(φ²vec) == p ||
@@ -100,6 +108,108 @@ function gaussian_pervar_marginal_loglik(y::AbstractMatrix, Λ::AbstractMatrix,
 
     Tout = promote_type(Tres, Td)
     return -convert(Tout, 0.5) * (n * p * log(convert(Tout, 2π)) + n * logdet_M + quad)
+end
+
+# Cholesky of Λ[obs,:] Λ[obs,:]' + diag(φ²[obs]): the marginal covariance of one
+# site's observed responses. `obs` is a vector of trait indices.
+function _pervar_obs_cholesky(Λ, φ², obs)
+    Lo = Λ[obs, :]
+    M = Lo * Lo'
+    @inbounds for i in eachindex(obs)
+        M[i, i] += φ²[obs[i]]
+    end
+    return cholesky(Symmetric(M))
+end
+
+# Profiled coefficients for a masked per-species Gaussian: GLS of the observed
+# subvector at each site. `obs_by_site[s]` lists the observed traits at site s.
+function _pervar_profile_beta(Λ, φ², Y, X, obs_by_site)
+    q = size(X, 3)
+    T = promote_type(eltype(Λ), eltype(φ²))
+    q == 0 && return T[]
+    A = zeros(T, q, q)
+    b = zeros(T, q)
+    for (site, obs) in pairs(obs_by_site)
+        isempty(obs) && continue
+        F = _pervar_obs_cholesky(Λ, φ², obs)
+        Xi = X[obs, site, :]
+        yi = Y[obs, site]
+        A += Xi' * (F \ Xi)
+        b += Xi' * (F \ yi)
+    end
+    return cholesky(Symmetric(A)) \ b
+end
+
+# Marginal log-likelihood of the observed subvectors. `X`/`β` both nothing means
+# a zero mean; otherwise the residual is `y - X β` and masked cells are not read.
+function _pervar_observed_loglik_sites(y, Λ, φ², X, β, obs_by_site)
+    T = promote_type(eltype(Λ), eltype(φ²), eltype(y),
+                     β === nothing ? Float64 : eltype(β))
+    q = X === nothing ? 0 : size(X, 3)
+    acc = zero(T)
+    for (site, obs) in pairs(obs_by_site)
+        isempty(obs) && continue
+        k = length(obs)
+        F = _pervar_obs_cholesky(Λ, φ², obs)
+        r = Vector{T}(undef, k)
+        @inbounds for i in 1:k
+            t = obs[i]
+            μ = zero(T)
+            if q > 0
+                for j in 1:q
+                    μ += X[t, site, j] * β[j]
+                end
+            end
+            yt = y[t, site]
+            ismissing(yt) && throw(ArgumentError(
+                "observed Gaussian response ($t, $site) is missing"))
+            isfinite(yt) || throw(ArgumentError(
+                "observed Gaussian response ($t, $site) must be finite"))
+            r[i] = yt - μ
+        end
+        acc -= convert(T, 0.5) * (k * log(convert(T, 2π)) + logdet(F) + dot(r, F \ r))
+    end
+    return acc
+end
+
+function _gaussian_pervar_observed_loglik(y, Λ, φ²vec; X, β, mask)
+    p, n = size(y)
+    size(Λ, 1) == p ||
+        throw(ArgumentError("Λ first dim ($(size(Λ, 1))) must equal p ($p)"))
+    length(φ²vec) == p ||
+        throw(ArgumentError("φ²vec length ($(length(φ²vec))) must equal p ($p)"))
+    size(mask) == (p, n) || throw(DimensionMismatch(
+        "mask size $(size(mask)) must equal size(y) $((p, n))"))
+    (X === nothing) == (β === nothing) ||
+        throw(ArgumentError("Provide both X and β or neither"))
+    if X !== nothing
+        size(X, 1) == p ||
+            throw(ArgumentError("X first dim ($(size(X, 1))) must equal p ($p)"))
+        size(X, 2) == n ||
+            throw(ArgumentError("X second dim ($(size(X, 2))) must equal n_sites ($n)"))
+        length(β) == size(X, 3) ||
+            throw(ArgumentError("β length ($(length(β))) must equal size(X, 3) ($(size(X, 3)))"))
+    end
+    all(v -> isfinite(v) && v > 0, φ²vec) ||
+        throw(ArgumentError("residual variances must be finite and positive"))
+    obs_by_site = [findall(view(mask, :, s)) for s in 1:n]
+    return _pervar_observed_loglik_sites(y, Λ, φ²vec, X, β, obs_by_site)
+end
+
+# `mask === nothing` and no `missing` in `Y` keeps the complete-data path.
+# `missing` with no mask derives `observed_mask(Y)` and logs that once (#1107).
+# An explicit mask is validated by `_resolve_obs_mask` (a `missing` cell marked
+# observed is an ArgumentError). Float64 `Y` does not scan for `missing`.
+function _derive_obs_mask(mask, Y; caller::AbstractString)
+    if mask !== nothing
+        size(mask) == size(Y) || throw(DimensionMismatch(
+            "$caller: mask size $(size(mask)) must equal size(Y) $(size(Y))"))
+        return _resolve_obs_mask(mask, Y)
+    end
+    Missing <: eltype(Y) || return nothing
+    any(ismissing, Y) || return nothing
+    @info "$caller: derived the observation mask from missing entries in Y" maxlog=1
+    return observed_mask(Y)
 end
 
 """
@@ -186,7 +296,7 @@ function _nparams(fit::GaussianPerVarFit)
 end
 
 """
-    fit_gaussian_pervar_gllvm(Y; K, X=nothing, fixed_residual_sd=0.0,
+    fit_gaussian_pervar_gllvm(Y; K, X=nothing, mask=nothing, fixed_residual_sd=0.0,
                              aghq=false, aghq_control=(;), g_tol=1e-5, iterations=1000)
         -> GaussianPerVarFit
 
@@ -200,11 +310,20 @@ computational limit (`K < p` for the PPCA warm start only). Inadmissible `K`
 here raises `ArgumentError` before optimisation.
 
 `Y` is `p × n_sites`. Optimises `θ = [vec(packed Λ); log φ²_1 … log φ²_p]` with
-fixed effects profiled out analytically. With `X=nothing`, the `p` trait intercepts
-are the row means of `Y`, independent of the covariance. An explicit finite,
+fixed effects profiled out analytically. With `X=nothing` and complete data, the
+`p` trait intercepts are the row means of `Y`, independent of the covariance. An explicit finite,
 full-column-rank design `X` of shape `(p, n_sites, q)` defines the complete mean
 `X_s * β`; no intercept is added. Its `q` coefficients are profiled by GLS at
 each covariance evaluation. A zero-column design specifies a zero mean.
+
+`missing` entries in `Y` derive an observation mask (`false` where `Y` is
+`missing`) and emit one `@info` (`maxlog=1`) that the mask was derived. An
+explicit `mask` is also accepted and does not emit that notice. Masked cells are
+dropped from the marginal (the observed subvector at each site). Intercepts or
+`X` coefficients are then the profiled GLS estimates on the observed cells, not
+the raw row means, and the fit uses L-BFGS even when `method=:em` (EM needs
+complete data). A `missing` cell marked observed is an `ArgumentError`. Every
+trait needs at least one observed response.
 
 `method=:em` (default) uses EM only for the intercept-only `K < p` case;
 explicit designs use L-BFGS, as does `method=:lbfgs`. This is ML profiling,
@@ -239,6 +358,7 @@ The shared-σ `fit_gaussian_gllvm` is untouched; this is a parallel variant.
 function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
                                    K::Integer,
                                    X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
+                                   mask = nothing,
                                    fixed_residual_sd::Real = 0.0,
                                    aghq = false,
                                    aghq_control = (;),
@@ -260,6 +380,15 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         throw(ArgumentError("fixed_residual_sd must be finite and nonnegative with a representable square"))
     request = _aghq_request(aghq)
     integration_controls = _aghq_controls(aghq_control)
+
+    # #1107: derive a mask from `missing` before the Float64 copy. An all-true
+    # mask (or none) stays on the complete-data path below.
+    msk = _derive_obs_mask(mask, Y; caller = "fit_gaussian_pervar_gllvm")
+    if msk !== nothing && any(iszero, msk)
+        return _fit_gaussian_pervar_masked(Y, msk; K = K, X = X, c = c, c² = c²,
+            request = request, integration_controls = integration_controls,
+            g_tol = g_tol, iterations = iterations)
+    end
 
     Yf = Matrix{Float64}(Y)
     all(isfinite, Yf) || throw(ArgumentError("Y must contain only finite responses"))
@@ -405,6 +534,112 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
         @warn "Rejected numerically unfactorizable covariance evaluations; no ridge was added" count=rejected_covariances[]
     end
 
+    fit = GaussianPerVarFit(
+        collect(Float64, β_hat),
+        Matrix{Float64}(Λ_hat),
+        collect(Float64, φ²_hat),
+        Float64(ll),
+        conv,
+        iters,
+        collect(Float64, ψ²_hat),
+        c,
+    )
+    return _pervar_with_fallback(fit, request, integration_controls)
+end
+
+# Incomplete responses: L-BFGS on the observed-subvector marginal. EM (`em_fa`)
+# needs a complete scatter, so `method=:em` uses this path too. Placeholders in
+# `Yf` sit only where `msk` is false and are never read.
+function _fit_gaussian_pervar_masked(Y, msk; K, X, c, c², request,
+        integration_controls, g_tol, iterations)
+    p, n = size(Y)
+    for t in 1:p
+        any(@view msk[t, :]) || throw(ArgumentError(
+            "fit_gaussian_pervar_gllvm: trait $t has no observed responses"))
+    end
+    Yf = zeros(Float64, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        msk[t, s] || continue
+        y = Y[t, s]
+        ismissing(y) && throw(ArgumentError(
+            "fit_gaussian_pervar_gllvm: mask marks ($t, $s) observed where Y is missing"))
+        y isa Real && isfinite(y) || throw(ArgumentError(
+            "fit_gaussian_pervar_gllvm: observed response ($t, $s) must be finite"))
+        Yf[t, s] = Float64(y)
+    end
+    Xf = if X === nothing
+        nothing
+    else
+        size(X, 1) == p && size(X, 2) == n ||
+            throw(DimensionMismatch("X must have shape (p=$p, n=$n, q)"))
+        all(isfinite, X) || throw(ArgumentError("X must contain only finite values"))
+        design = Array{Float64,3}(X)
+        A = reshape(design, p * n, size(design, 3))
+        rank(A) == size(A, 2) || throw(ArgumentError("X must have full column rank"))
+        design
+    end
+    # Warm-start means: observed row means. The fit itself profiles them by GLS.
+    β0 = Vector{Float64}(undef, p)
+    Yfilled = copy(Yf)
+    @inbounds for t in 1:p
+        cols = findall(@view msk[t, :])
+        β0[t] = sum(@view Yf[t, cols]) / length(cols)
+        for s in 1:n
+            msk[t, s] || (Yfilled[t, s] = β0[t])
+        end
+    end
+    design = Xf === nothing ? _trait_intercept_design(p, n) : Xf
+    Yc = if Xf === nothing
+        Yfilled .- reshape(β0, p, 1)
+    elseif size(Xf, 3) == 0
+        copy(Yfilled)
+    else
+        A = reshape(Xf, p * n, size(Xf, 3))
+        Yfilled .- reshape(A * (A \ vec(Yfilled)), p, n)
+    end
+    Λ0, _ = ppca_init(Yc, K)
+    col_var = Vector{Float64}(undef, p)
+    @inbounds for t in 1:p
+        cols = findall(@view msk[t, :])
+        col_var[t] = sum(abs2, Yc[t, s] for s in cols) / max(length(cols) - 1, 1)
+    end
+    φ²_0 = max.(0.5 .* col_var .- c², 1e-3)
+    rrlen = rr_theta_len(p, K)
+    params0 = vcat(pack_lambda(Λ0), log.(φ²_0))
+    obs_by_site = [findall(@view msk[:, s]) for s in 1:n]
+    rejected_covariances = Ref(0)
+    function nll(params)
+        θ_Λ = @view params[1:rrlen]
+        logφ² = @view params[(rrlen + 1):(rrlen + p)]
+        Λ = unpack_lambda(θ_Λ, p, K)
+        ψ² = exp.(logφ²)
+        all(v -> isfinite(v) && v > 0, ψ²) || return oftype(first(params), Inf)
+        φ² = ψ² .+ c²
+        all(isfinite, φ²) || return oftype(first(params), Inf)
+        try
+            β = _pervar_profile_beta(Λ, φ², Yf, design, obs_by_site)
+            return -_pervar_observed_loglik_sites(Yf, Λ, φ², design, β, obs_by_site)
+        catch err
+            err isa PosDefException || rethrow()
+            rejected_covariances[] += 1
+            return oftype(first(params), Inf)
+        end
+    end
+    opts = Optim.Options(g_tol = g_tol, iterations = Int(iterations), show_trace = false)
+    res = Optim.optimize(nll, params0, Optim.LBFGS(), opts; autodiff = :forward)
+    params_hat = Optim.minimizer(res)
+    θ_Λ_hat = params_hat[1:rrlen]
+    logφ²_hat = params_hat[(rrlen + 1):(rrlen + p)]
+    Λ_hat = unpack_lambda(θ_Λ_hat, p, K)
+    ψ²_hat = exp.(logφ²_hat)
+    φ²_hat = ψ²_hat .+ c²
+    β_hat = _pervar_profile_beta(Λ_hat, φ²_hat, Yf, design, obs_by_site)
+    _, conv, iters = _fit_verdict(res)
+    ll = -nll(params_hat)
+    conv = conv && isfinite(ll)
+    if rejected_covariances[] > 0
+        @warn "Rejected numerically unfactorizable covariance evaluations; no ridge was added" count=rejected_covariances[]
+    end
     fit = GaussianPerVarFit(
         collect(Float64, β_hat),
         Matrix{Float64}(Λ_hat),

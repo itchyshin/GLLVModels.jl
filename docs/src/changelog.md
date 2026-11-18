@@ -6,12 +6,33 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **CHANGED (returned values):** the AGHQ fitters keep the Laplace fit when the quadrature
+  run never produced an AGHQ estimate. A usable run that never left its start and did not
+  converge (all seven AGHQ fitters), and for `fit_ordinal_gllvm_pertrait_aghq` also a run
+  that moved but stopped on `:adaptation_failed` or `:optimizer_failed` while the Laplace
+  fit converged, now return the Laplace fit with `integration.actual = :laplace` and
+  `integration.reason` set to the run's stop reason, plus one warning. Before, they returned
+  an unconverged AGHQ-typed fit. `loglik`, `integration.*` and the applicable post-fit
+  routes change for such fits; `fit.converged` is the Laplace fit's flag. The ordinal
+  rule is asymmetric (siblings still keep a moved point) and rests on one fixture. See the
+  Unreleased entry in `CHANGELOG.md` for the full list.
+- **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
+  `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
+  and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`
+  cell marked observed is an `ArgumentError`. Complete data is unchanged.
+  Structured Gaussian routes that already refuse a mask still refuse.
+  Variational fitters derive their mask the same way (#1108, in the repository CHANGELOG).
 - **Development:** ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
   and the default per-trait NB2 formula route accept direct outer-optimizer
   selection with `:lbfgs`, `:bfgs`, or configured Optim methods. The default
   preserves historical behavior; `optimizer_info(fit)` reports executed
   stages. Explicit selection is refused for unsupported nested routes and
   profile/bootstrap refits that do not yet forward the solver.
+- **IN (refs #1107, #1108), behaviour change:** NaN or Inf at an observed cell of `Y` is
+  an `ArgumentError` naming the fitter and the cell on `fit_gaussian_gllvm`,
+  `fit_dep_gllvm` and `fit_gllvm(Normal())`. At `K = p` they returned `loglik = NaN`
+  with `converged = false` and no message. Use `missing` or `mask = false` for
+  unobserved cells.
 - **CHANGED (default, breaking):** `DeltaLogNormal()` / `DeltaGamma()`
   (`fit_delta_lognormal_gllvm` / `fit_delta_gamma_gllvm`, and `fit_gllvm`)
   default to `disp_group = :species` — one dispersion per trait, matching R
@@ -24,11 +45,21 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   fitting API remains unchanged. After the rename, `using GLLVM` cannot resolve
   a package. Once `GLLVModels` is loaded, `GLLVModels.GLLVM` is only a temporary
   qualified alias; it does not provide import compatibility and is deprecated.
+- **IN, behaviour change:** `spde_fem` throws an `ArgumentError` naming any mesh
+  node that belongs to no triangle (what a duplicated input point becomes in
+  `spde_mesh_delaunay`). Such a node has zero lumped mass; the fit used to return
+  `loglik = -Inf` with `converged = false` and no message. Meshes where every node is in a
+  triangle are unchanged.
 - **Development:** fixed Gaussian source fits accept a complete mean design `X`.
   Explicit-source wide/long formulas expose trait intercepts, shared slopes,
   categorical contrasts and interactions. Fits retain the copied design, response
   shape and coefficient labels. No R source-grammar, bridge, random-slope or
   calibrated-uncertainty claim is implied.
+- **IN (refs #730), behaviour change:** a NaN or Inf in `y` is an `ArgumentError`
+  naming the fitter and the offending indices on `fit_phylo_gaussian`,
+  `fit_spde_gaussian` and `fit_relaxed_clock`. These fitters take no `mask` or `missing`;
+  they used to return `loglik = -Inf` (or an all-NaN fit) with `converged = false` and no
+  message. Finite data is unchanged.
 - **Development:** per-trait Gaussian fitting accepts an explicit fixed residual
   SD and estimates unique variances within that constraint. Results retain unique
   and total diagonal variances; existing defaults and parameter counts are unchanged.
@@ -87,6 +118,15 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   by decision (e.g. GP-1).
 
 ### Fixed
+- **FIX:** the Gaussian profile likelihood (`gaussian_profile_nll`, `profile_recover`)
+  no longer throws a `DomainError` when a large unabsorbed mean makes the Woodbury
+  quadratic cancel; it uses the nonnegative form `(r - Lz)'D^-1(r - Lz) + z'z`. Values
+  match the old form to about 1e-16 where that was accurate. The GLS branch
+  (`profile_beta = true`) is unchanged.
+- **FIX:** the README Poisson optimizer example defines the count matrix `Y`
+  (#1007). The `:bfgs` / `:lbfgs` block used an undefined `Y` and raised
+  `UndefVarError` in a fresh session. The confidence-interval block is also
+  self-contained. No fitter change.
 - **FIX:** three fitters no longer report `converged = true` off an optimum
   (refs #754, #753, #781). `fit_branch_re` requires a small Nelder–Mead
   simplex in parameter space and records `sigma2_boundary` when `σ²` or

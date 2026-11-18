@@ -132,6 +132,71 @@ _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentErr
     "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
     "zero-inflated (ZIPoisson, ZINegBin, ZIB) routes listed in ?fit_gllvm."))
 
+# Fitters that take neither `mask` nor `missing` responses: every cell enters the likelihood.
+# A mask, or a `missing` cell in `Y`, is refused here, before any work, with the same
+# `ArgumentError` on every such route; without this the call ended in a raw `MethodError`
+# that named an internal signature (#1217). Mask SUPPORT on these routes is a separate
+# question and is not added here.
+function _refuse_mask_route(caller::AbstractString, mask, Y = nothing)
+    mask === nothing || throw(ArgumentError(
+        "$caller: mask is not supported on this route (the fitter takes no mask and no missing " *
+        "responses, so every cell enters the likelihood); drop the mask, or use a route that " *
+        "accepts one (see ?fit_gllvm)"))
+    Y === nothing && return nothing
+    k = findfirst(ismissing, Y)
+    k === nothing || throw(ArgumentError(
+        "$caller: missing responses are not supported on this route (the fitter takes no mask " *
+        "and no missing responses, so every cell enters the likelihood); Y is missing at " *
+        "trait $(k[1]), unit $(k[2]). Remove the unobserved cells, or use a route that " *
+        "accepts a mask (see ?fit_gllvm)"))
+    return nothing
+end
+
+# `fit_gaussian_reml` refuses `missing` in `Y` with the text used by draft PR 1252 (`_refuse_na_response`
+# in `src/na_input.jl`), word for word, so that the two drafts give one message whichever lands
+# first; this copy is dropped once that file is on main.
+function _refuse_missing_gaussian_reml(caller::AbstractString, Y::AbstractMatrix)
+    Missing <: eltype(Y) && any(ismissing, Y) || return nothing
+    bad = findall(ismissing, Y)
+    throw(ArgumentError("$caller does not accept `missing` in `Y`: $(length(bad)) missing " *
+        "cell(s), first at (row, column) = ($(bad[1][1]), $(bad[1][2])). This fitter has no " *
+        "`mask`; remove or impute the missing cells, or use `fit_gaussian_gllvm`, which " *
+        "derives a mask from `missing`."))
+end
+
+# The same refusal for a `Y` typed `Union{Missing, Real}` (these fitters are typed
+# `AbstractMatrix{<:Real}`, so such a `Y` found no method at all). A matrix of that type with
+# no missing cell is passed on as a plain real matrix.
+for _f in (:fit_row_random_gllvm, :fit_rrr_gllvm, :fit_constrained_gllvm, :fit_quadratic_gllvm,
+           :fit_studentt_gllvm, :fit_beta_hurdle_gllvm, :fit_delta_lognormal_gllvm,
+           :fit_hurdle_poisson_gllvm, :fit_hurdle_nb_gllvm, :fit_delta_gamma_gllvm,
+           :fit_zip_gllvm, :fit_zip_gllvm_cov, :fit_zinb_gllvm, :fit_zinb_gllvm_cov,
+           :fit_zib_gllvm, :fit_zib_gllvm_cov, :fit_grouped_gaussian, :fit_grouped_nongaussian,
+           :fit_lognormal_gllvm)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}; kwargs...)
+        _refuse_mask_route($(string(_f)), nothing, Y)
+        return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y); kwargs...)
+    end
+end
+# The second argument is typed `PrecisionPhy`: untyped, a plain real matrix with any other second
+# argument would find only this method and recurse into itself until the stack overflows.
+for _f in (:fit_precision_multivariate, :fit_joint_phylo_grouped_gaussian)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}, phy::PrecisionPhy; kwargs...)
+        _refuse_mask_route($(string(_f)), nothing, Y)
+        return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y), phy; kwargs...)
+    end
+end
+
+# `fit_precision_multivariate` takes no `mask` keyword. Its source file is byte-pinned by frozen
+# receipts (`test_destination_b_phylo_uncertainty.jl`), so the refusal for a mask is a method
+# here and the fitter's own file is untouched. It covers a dense real `Y`; any other matrix type
+# with a `mask` still ends in the fitter's own `MethodError`.
+function fit_precision_multivariate(Y::Matrix{<:Real}, phy::PrecisionPhy; mask = nothing, kwargs...)
+    _refuse_mask_route("fit_precision_multivariate", mask)
+    return invoke(fit_precision_multivariate, Tuple{AbstractMatrix{<:Real}, PrecisionPhy},
+                  Y, phy; kwargs...)
+end
+
 # Drop `offset = nothing` (no offset; some routes would otherwise reject the keyword), and
 # normalise any other offset once. Shared by `fit_gllvm` and the `gllvm` formula front end,
 # which calls some fitters directly.
@@ -296,6 +361,7 @@ Nested and other family routes reject explicit selection.
 - `Normal()`   → [`fit_gaussian_gllvm`](@ref) — closed-form Gaussian marginal. Without `X`,
   one intercept per trait is estimated (`pars.β`); `fit_gaussian_gllvm` itself treats
   `X = nothing` as a zero mean. An explicit `X` defines the complete mean.
+  `missing` entries in `Y` derive an observation mask and emit one `@info`.
 - `Binomial()` → [`fit_binomial_gllvm`](@ref) — Laplace marginal (binary / binomial)
 - `Poisson()`  → [`fit_poisson_gllvm`](@ref) — Laplace marginal (counts)
 - `TruncatedPoisson()` → [`fit_truncated_poisson_gllvm`](@ref) — zero-truncated Poisson
@@ -505,6 +571,7 @@ two of them. Therefore at most one of `row_eff != :none`, effective
 fit_gllvm(Y; family = Normal(),   K = 2)                          # Gaussian
 fit_gllvm(Y; family = Binomial(), K = 2, link = LogitLink())      # binary
 fit_gllvm(Y; family = Poisson(),  K = 2, n_init = 5)               # best of 5 starts (Poisson Laplace route; default 1)
+fit_gllvm(Y; family = NegativeBinomial(), K = 2, n_init = 5)     # best of 5 starts (NB2 Laplace routes, shared or per-species r; default 1)
 fit_gllvm(Y; family = Poisson(),  K = 2, row_eff = :random)       # random row effect
 fit_gllvm(Y; family = NegativeBinomial(1.0, 0.5), K = 2)          # shared r (default)
 fit_gllvm(Y; family = NegativeBinomial(), K = 2, disp_group = :species)  # per-species r
@@ -875,6 +942,8 @@ end
 function _fit_gllvm_grouped(::NegativeBinomial, Y::AbstractMatrix; aghq = false,
         aghq_control = (;), kwargs...)
     _aghq_request(aghq) === :off && return fit_nb_gllvm_grouped(Y; kwargs...)
+    get(kwargs, :n_init, 1) > 1 && throw(ArgumentError(
+        "fit_gllvm: n_init > 1 is not available with aghq; use aghq_control=(multistart=true,)"))
     return fit_nb_gllvm_grouped_aghq(Y; aghq = aghq, aghq_control = aghq_control, kwargs...)
 end
 _fit_gllvm_grouped(::Beta,  Y::AbstractMatrix; kwargs...) = fit_beta_gllvm_grouped(Y; kwargs...)
