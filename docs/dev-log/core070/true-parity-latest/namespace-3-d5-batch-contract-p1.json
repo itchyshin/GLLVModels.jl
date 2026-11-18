@@ -1,0 +1,60 @@
+{
+ "schema": 1,
+ "status": "contract for ONE numeric case; additive; does not edit, replace or re-pin namespace-1-batch-contract-p1.json",
+ "area": "namespace-3",
+ "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+ "gllvmtmb_version": "0.7.1",
+ "source_id": "namespace/export/extract_phylo_signal",
+ "registration_case_id": "CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE",
+ "case_id": "CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A",
+ "case_note": "The registration case (a name check, from the frozen namespace-1 contract) stays in the frozen contract and is cited by the row as registration_case_ids. This numeric case is the row's only executable case.",
+ "evidence_kind": "numeric_r_vs_julia",
+ "design": {
+  "case": "A",
+  "seed": 4401,
+  "dimensions": "8 species x 3 sites x 3 traits (72 values)",
+  "tree_newick": "(((s1:2,s2:2):1,(s3:1,s4:1):2):1,((s5:1.5,s6:1.5):1,(s7:1,s8:1):1.5):1.5);",
+  "truth": {
+   "lambda": [
+    0.7,
+    -0.45,
+    0.5
+   ],
+   "species_variance": [
+    0.12,
+    0.22,
+    0.18
+   ],
+   "residual_sd": 0.6,
+   "scale": "correlation scale, tree rescaled to root-to-tip height 1"
+  },
+  "r_call": "gllvmTMB(value ~ 0 + trait + phylo_latent(species, d = 1, tree = tree) + indep(0 + trait | species), unit = 'site', cluster = 'species', family = gaussian(), REML = FALSE, engine = 'tmb'); extract_phylo_signal(fit)",
+  "julia_call": "fit_joint_phylo_grouped_gaussian(Y, phy; rank = 1, phylo_mode = :barelowrank, terms = [GroupingTerm(:cluster; mode = :indep, common = false)], residual_mode = :shared); extract_phylo_signal(fit; species_level = :cluster)",
+  "matched_point": "Julia objective and extract_phylo_signal evaluated at R's estimates (iterations = 0), R parameters mapped by TMB block name: b_fix, theta_rr_phy, log_sigma_eps, theta_diag_species",
+  "independent_fit": "one Julia fit from the default start, residual_mode = :shared, 1500 iterations cap",
+  "frozen_data_sha256": "290d0b6af4fb3c11bae052ad1e3f36a439e00600779e467bd5496106f594fd4b",
+  "tree_file_sha256": "35522214cd3b523b826cf0d67f9d65a915c8f509e8b016927f5d4f33237148aa"
+ },
+ "design_sha256": "8396814f3556b18e98c8d61cf4a4e0bac609611d1db752beb41b59bf65b82ede",
+ "seed": 4401,
+ "bars": {
+  "matched_point": {
+   "logLik": 1e-06,
+   "H2": 1e-06,
+   "Psi": 1e-06,
+   "V_eta": 1e-06
+  },
+  "independent_fit": {
+   "logLik": 0.0001,
+   "H2": 0.001
+  }
+ },
+ "decision_rule": "matched point decides: the comparison block binds the four matched-point quantities; the independent fit is recorded and reported against its bars but does not decide.",
+ "approval": "seed 4401, these bars and the decision rule approved by the maintainer on 13 Nov 2026 (relayed answer; recorded here, not a signature field).",
+ "julia_code_requirement": "fit_joint_phylo_grouped_gaussian with residual_mode = :shared (draft PR 1115)",
+ "caveats": [
+  "one data draw with 8 species, no reseeding",
+  "trait 2 sits on the boundary (Psi about 1e-8, H2 about 1)",
+  "at the matched point H2, Psi and V_eta depend only on the loadings and species variances, so they test the name mapping and the formula; logLik is the only tree-sensitive number"
+ ]
+}

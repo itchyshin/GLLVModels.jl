@@ -22,7 +22,7 @@ Inputs:
 - `docs/dev-log/core070/true-parity-latest/case-map-fit-input.json` (10 rows, sha256 `568c054ed5f3786b96c9acb796e28d98e4523c4edc5fe5ad9f69ab150cee3639`)
 - `docs/dev-log/core070/true-parity-latest/case-map-inference.json` (63 rows, sha256 `9c58f51d0a3c78c0af58fc963c92a6afb8d3bc460a43d969a4b2c2017c88d857`)
 - `docs/dev-log/core070/true-parity-latest/case-map-isdm.json` (21 rows, sha256 `e6d69cb2385b5d6cd14ffd22cccab9b6f8b1ad4e22e15db2d40fa3a08288fe62`)
-- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `641e8095db0ff16b479434e0780276dfc63cb341e7be36457cb7ba6749516dbb`)
+- `docs/dev-log/core070/true-parity-latest/case-map-namespace.json` (69 rows, sha256 `6e4db11afec1c390e8d8001d4b3b64359ff940be10cd288e2f2e87fe48bdc476`)
 - `docs/dev-log/core070/true-parity-latest/case-map-postfit.json` (52 rows, sha256 `f347bf35b7fc59068b3c43cad241996e73bbcefe01d95bf5c36207388af749ce`)
 
 ## Totals by family
@@ -36,9 +36,9 @@ Inputs:
 | `fit-input` | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
 | `inference` | 3 | 50 | 10 | 0 | 0 | 0 | 0 | 0 | 63 |
 | `isdm` | 11 | 5 | 4 | 0 | 0 | 0 | 1 | 0 | 21 |
-| `namespace` | 55 | 0 | 10 | 3 | 0 | 0 | 0 | 1 | 69 |
+| `namespace` | 56 | 0 | 10 | 2 | 0 | 0 | 0 | 1 | 69 |
 | `postfit` | 45 | 1 | 4 | 0 | 1 | 1 | 0 | 0 | 52 |
-| `all` | 206 | 63 | 35 | 3 | 2 | 1 | 6 | 1 | 317 |
+| `all` | 207 | 63 | 35 | 2 | 2 | 1 | 6 | 1 | 317 |
 
 ## P1 twin fixtures present at this head, not bound to any row
 
@@ -381,7 +381,7 @@ decision for the PR that measures it, not something this tool does.
 | namespace-export-extract_loadings `namespace/export/extract_loadings` | required_core; cases: P1-JULIA-EXTRACT-LOADINGS-RAW | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_loadings.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_lv_effects `namespace/export/extract_lv_effects` | required_core; cases: P1-JULIA-LV-EFFECTS-TRAIT, P1-JULIA-LV-EFFECTS-AXIS | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_lv_effects.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_ordination `namespace/export/extract_ordination` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ORDINATION | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-ORDINATION.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
-| namespace-export-extract_phylo_signal `namespace/export/extract_phylo_signal` | required_core; cases: CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE | REGISTRATION-ONLY | not bound; cited: docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE.json, docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json | family namespace; evidence_tier registration; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
+| namespace-export-extract_phylo_signal `namespace/export/extract_phylo_signal` | required_core; cases: CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_proportions `namespace/export/extract_proportions` | required_core; cases: P1-JULIA-PROPORTIONS-ONE-TIER-SHARED-UNIT, P1-JULIA-PROPORTIONS-TWO-LEVEL-PROPORTION, P1-JULIA-PROPORTIONS-TWO-LEVEL-VARIANCE | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/julia-twins/namespace-numeric/extract_proportions.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_repeatability `namespace/export/extract_repeatability` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-REPEATABILITY | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-REPEATABILITY.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
 | namespace-export-extract_residual_cor `namespace/export/extract_residual_cor` | required_core; cases: CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COR | EVIDENCED | docs/dev-log/core070/true-parity-latest/receipts/postfit/cases/CORE070-SURFCONV-POSTFIT-POSTFIT-SURFACE-EXTRACT-RESIDUAL-COR.json | family namespace; evidence_tier numeric; measured_against 9539352f66f2db2cc26b1c393e67212a359b60c9 |
