@@ -92,6 +92,7 @@ _register_shard_table!(4, (
         "test_postfit_twins_p1.jl", "test_diagnostics_p1.jl", "test_off_predict_twin_p1.jl",
         "test_temporal_likelihood_internals.jl", "test_isdm_cloglog_internals.jl", "test_convergence_sweep.jl",
         "test_zinb_observed_laplace.jl", "test_input_validation.jl", "test_response_support_730.jl",
+        "test_zero_sites_check.jl",
         "test_bootstrap_decisions.jl", "test_wtier_crosscov.jl", "test_branch_re_helpers.jl",
         "test_extractors_invariants.jl", "test_docstring_postfit_mask_offset_750.jl", "test_docstring_confint_lv_effects.jl",
         "test_mask_missing_763.jl", "test_bootstrap_sigma_r.jl",
@@ -1175,6 +1176,7 @@ println(_SHARD === nothing ?
     _shard_include("test_eta_clamp_869.jl")
     _shard_include("test_eta_clamp_rescue_874.jl")
     _shard_include("test_response_support_730.jl")
+    _shard_include("test_zero_sites_check.jl")
     _shard_include("test_response_support_730_va_ordinal.jl")
     _shard_include("test_bootstrap_decisions.jl")
     _shard_include("test_clamp_and_replicate_retention_docs.jl")
