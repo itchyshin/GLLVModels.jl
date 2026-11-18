@@ -209,3 +209,16 @@ end
     @test_throws ArgumentError confint_spde_latent(fit1, Y, wrong_locs)
     @test_throws ArgumentError confint_spde_latent(fit2, Y, wrong_locs)
 end
+
+@testset "SPDE-latent nobs counts sites, not mesh nodes" begin
+    Random.seed!(7778)
+    nodes, tris = _grid_mesh_pf(6, 5.0)                 # 36 mesh nodes
+    locs = nodes[collect(1:3:36), :]                    # 12 sites
+    p, M = 3, size(locs, 1)
+    Y = rand(0:4, p, M)
+    fit = fit_spde_latent_gllvm(Y, nodes, tris, locs; family = Poisson(), K = 1,
+                                iterations = 20, newton_maxiter = 40)
+    @test M != size(nodes, 1)
+    @test GLLVModels.StatsAPI.nobs(fit) == p * M
+    @test GLLVModels.StatsAPI.nobs(fit) != p * size(nodes, 1)
+end
