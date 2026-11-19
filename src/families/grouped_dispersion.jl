@@ -1223,7 +1223,7 @@ Beta/logit Hessian used by TMB's Laplace objective.
 """
 function beta_grouped_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,
         β::AbstractVector, φvec::AbstractVector; link::Link = LogitLink(),
-        mask = nothing, offset = nothing, hessian::Symbol = :observed, kwargs...)
+        mask = nothing, offset = nothing, hessian::Symbol = _default_hessian(Beta(1.0, 1.0), link), kwargs...)
     p = size(Λ, 1)
     length(φvec) == p || throw(ArgumentError("length(φvec)=$(length(φvec)) must equal p=$p"))
     N = ones(Int, size(Y))
@@ -1443,16 +1443,18 @@ times the median (a flat-plateau stationary point), the fit restarts once from t
 start with every `φ = 1` and once from the returned point, and keeps the best run only
 if its log-likelihood is higher by more than `1e-6`; `iterations` then counts the kept run
 only. This improves the local search but does not guarantee the global maximum. With one
-group this matches [`fit_beta_gllvm`](@ref). `hessian=:observed` (the default)
-uses the exact conditional Beta/logit curvature used by TMB's Laplace objective;
-set `hessian=:fisher` to retain the expected-information approximation.
+group this matches [`fit_beta_gllvm`](@ref). The default `hessian` is `:observed` for the
+logit link, the exact conditional Beta/logit curvature used by TMB's Laplace objective,
+and `:fisher` for the probit and cloglog links, where no observed curvature exists
+(`hessian = :observed` with those links is an `ArgumentError`); set `hessian=:fisher` to
+retain the expected-information approximation with the logit link.
 `β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
 as in [`fit_nb_gllvm`](@ref); the per-group `φ` still starts at `φ₀ = 10`.
 """
 function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogitLink(), mask = nothing, offset = nothing,
-        hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
+        hessian::Symbol = _default_hessian(Beta(1.0, 1.0), link), β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
@@ -1581,7 +1583,8 @@ end
 Fit a Beta GLLVM with **grouped / per-trait precision** and **shared site
 covariates** `X` (`p×n×q`). Working vector `[β; γ_free; pack(Λ); log φ_1 … log φ_G]`;
 offset `O = Xγ` is passed into the grouped Laplace marginal. Default
-`hessian=:observed` matches TMB; identity checks against shared
+The default `hessian` is `:observed` (matches TMB) for the logit link and `:fisher` for
+probit and cloglog; identity checks against shared
 [`fit_gllvm_cov`](@ref) should force `hessian=:fisher`. `converged` requires the
 optimizer's gradient criterion, and a run that stops without it gets the same
 restart as [`fit_beta_gllvm_grouped`](@ref) (warm start with `γ = 0` and every
@@ -1591,7 +1594,7 @@ under X for Beta (twin API B). Keep `fit_gllvm_cov` for the shared-`φ` + X opt-
 function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3},
         K::Integer, group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogitLink(), mask = nothing, γ_fixed = nothing,
-        hessian::Symbol = :observed,
+        hessian::Symbol = _default_hessian(Beta(1.0, 1.0), link),
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
