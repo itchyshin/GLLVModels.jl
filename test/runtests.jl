@@ -1256,6 +1256,8 @@ println(_SHARD === nothing ?
     _shard_include("test_formula_missing_covariate.jl")
     # fit_mixed_gllvm: an unsupported family marker gives the documented ArgumentError, not a default_link MethodError.
     _shard_include("test_mixed_unsupported_family.jl")
+    # Temporal parser refusals name the marker the user called (refs #1286).
+    _shard_include("test_temporal_refusal_marker_name.jl")
     # AGHQ Laplace retention: unmoved unconverged runs (all fitters) and the policy predicates.
     # Appended last so no existing file changes shard.
     _shard_include("test_aghq_ordinal_unmoved_fallback.jl")

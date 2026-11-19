@@ -12,6 +12,19 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 - **IN (#1190):** a formula covariate holding `missing` is an `ArgumentError` naming the column and
   the first site (it was `KeyError: key missing not found`); a column used only inside a function,
   such as `coalesce(x, 0.0)`, is left to that function.
+- **IN (#1286):** every refusal in the temporal parser and the three marker
+  constructors names the marker the user called (`temporal_indep()`,
+  `temporal_dep()` or `temporal_latent()`) instead of `temporal_latent()`:
+  the four messages that named it directly (complete Gaussian response,
+  `0 + trait | series` form, trait-intercept block, three-trait rule) and the
+  default closing "See ..." line of all the others. The `temporal_latent()`
+  text is unchanged byte for byte, and the same inputs are refused. Message
+  only. Still naming `temporal_latent()`: the rank-one check (only
+  `temporal_latent()` reaches it), the `predict(newdata)` and iid-inference
+  refusals in `src/temporal_methods.jl`, and the default closing line of the
+  post-fit helper refusals there (`forecast_temporal`, `bootstrap_temporal`,
+  `profile_temporal`, `compare_temporal`). Differs from gllvmTMB until its
+  issue 1812 lands.
 - **CHANGED (returned values):** the AGHQ fitters keep the Laplace fit when the quadrature
   run never produced an AGHQ estimate. A usable run that never left its start and did not
   converge (all seven AGHQ fitters), and for `fit_ordinal_gllvm_pertrait_aghq` also a run
