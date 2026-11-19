@@ -1,3 +1,10 @@
+2026-11-19: #1156 Beta grouped fitters with the probit and cloglog links. Julia 1.10.13, 1 thread, `julia --project=. test/<file>`.
+`test/test_grouped_dispersion_beta_gamma.jl`: 44 passed, 0 failed (the new testset `Beta grouped: probit / cloglog links fit under the default curvature (#1156)` is 12 of them).
+The same file with the new testset and the old `src/` (stash of `src/`): 24 passed, 8 failed, 1 errored; the failures are `loglik = -Inf`, `iterations = 0`, `converged = false` for both links and the `ArgumentError` from the marginal's default.
+Neighbours on the branch (test environment with QuadGK and StableRNGs where a file needs them): `test_beta_grouped_convergence.jl` 19/19, `test_beta_grouped_ci_y_clamp_1155.jl` 6/6,
+`test_beta_fit.jl` 8/8, `test_beta_laplace.jl` 2/2, `test_nb_beta_x_identity.jl` 14/14, `test_confint_bootstrap_verdict_beta.jl` 39/39, `test_beta_grouped_mode_search.jl` no failure.
+Full `Pkg.test()`, JET and Aqua not run. See after-task `2026-11-19-beta-grouped-default-hessian-1156.md`.
+
 2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
 `julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
 Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).

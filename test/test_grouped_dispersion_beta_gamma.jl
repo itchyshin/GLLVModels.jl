@@ -139,4 +139,39 @@ using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
         @test isfinite(fg.loglik)
         @test fg.group == collect(1:p)
     end
+
+    # #1156: the observed Laplace curvature exists only for Beta with the logit link. The
+    # grouped fitters used to default to :observed for every link, the objective's bare
+    # `catch` turned the resulting ArgumentError into the 1e12 sentinel, and the fit came
+    # back with loglik -Inf, converged = false, iterations = 0. The default is now the
+    # link's own default curvature (`_default_hessian`), as in the shared-precision fitter.
+    @testset "Beta grouped: probit / cloglog links fit under the default curvature (#1156)" begin
+        rng = MersenneTwister(11); p, n = 4, 40
+        L = [0.8, 0.4, -0.5, 0.3]; z = randn(rng, n); a = rand(rng, p) .* 0.7 .+ 0.3
+        Y = [(μ = cdf(Normal(), 0.5 * a[j] - 0.3 + 0.5 * L[j] * z[i]); φ = 8.0;
+              clamp(rand(rng, Beta(μ * φ, (1 - μ) * φ)), 1e-4, 1 - 1e-4)) for j in 1:p, i in 1:n]
+        X = reshape(repeat(z', p, 1), p, n, 1)
+        for lk in (ProbitLink(), CLogLogLink())
+            f = fit_gllvm(Y; family = Beta(), K = 1, link = lk)
+            g = fit_beta_gllvm_grouped(Y; K = 1, link = lk, hessian = :fisher)
+            @test isfinite(f.loglik)
+            @test f.iterations > 0
+            @test f.converged
+            @test f.hessian === :fisher
+            @test f.loglik ≈ g.loglik atol = 1e-6
+            fc = fit_beta_gllvm_grouped_cov(Y; X = X, K = 1, link = lk)
+            @test isfinite(fc.loglik)
+            @test fc.iterations > 0
+            @test fc.hessian === :fisher
+            m = beta_grouped_marginal_loglik_laplace(Y, reshape([0.3, 0.2, -0.2, 0.1], p, 1),
+                                                     zeros(p), fill(10.0, p); link = lk)
+            @test isfinite(m)
+        end
+        # the logit default is unchanged
+        @test fit_beta_gllvm_grouped(Y; K = 1, iterations = 5).hessian === :observed
+        # an explicit :observed with a non-logit link keeps refusing
+        @test_throws ArgumentError beta_grouped_marginal_loglik_laplace(Y,
+            reshape([0.3, 0.2, -0.2, 0.1], p, 1), zeros(p), fill(10.0, p);
+            link = ProbitLink(), hessian = :observed)
+    end
 end
