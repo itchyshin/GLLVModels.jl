@@ -1236,6 +1236,8 @@ println(_SHARD === nothing ?
     _shard_include("parity/test_core070_pin.jl")
     # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
     _shard_include("test_zero_column_warning.jl")
+    # Temporal parser refusals name the marker the user called (refs #1286).
+    _shard_include("test_temporal_refusal_marker_name.jl")
     # AGHQ Laplace retention: unmoved unconverged runs (all fitters) and the policy predicates.
     # Appended last so no existing file changes shard.
     _shard_include("test_aghq_ordinal_unmoved_fallback.jl")
