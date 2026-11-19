@@ -1,3 +1,9 @@
+2026-11-19: #1246 bridge_fit `ci_seed` validation. Julia 1.10.13, 1 thread, `julia --project=<env with QuadGK, StableRNGs> test/<file>`.
+`test/test_bridge_ci_nboot.jl`: the existing `ci_nboot` testset 12/12 (unchanged) and the new testset `bridge_fit: ci_seed must be an integer` 42/42.
+The new testset with the old `src/` (stash of `src/`): 3 passed, 19 failed, 20 errored (`InexactError`, `MethodError`, no `ArgumentError`).
+Neighbours on the branch: `test_bridge_ci.jl` 65/65, `test_bridge_x.jl` 192/192, `test_bridge_missing_mask.jl` 107/107, `test_bridge_grouped_dispersion.jl` 129/129.
+Full `Pkg.test()`, JET and Aqua not run. See after-task `2026-11-19-bridge-ci-seed-1246.md`.
+
 2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
 `julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
 Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).
