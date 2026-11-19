@@ -43,6 +43,15 @@ _default_hessian(::TweedieED, ::LogLink) = :observed
 _glm_obs_weight(f::TweedieED, μ, n, me, y, link::LogLink, η) =
     μ^(1.0 - f.p) * ((2.0 - f.p) * μ + (f.p - 1.0) * y) / f.φ
 
+# Longest run of terms summed either side of the largest one. The terms are close to
+# Gaussian in j with standard deviation about sqrt((p-1) j*), and the stop rule (a term
+# 37 below the largest) needs about 8.6 of them, so a fixed 5000 cut the sum short once
+# j* exceeded about 580 (φ below ~3e-6 at y of order 1) and the density came out too
+# low (#1177). The cap grows with sqrt(j*) and is bounded above so that one density call
+# at an extreme (y, φ, p) stays affordable; below that bound the sum is exact and where
+# the old cap was not reached the value is unchanged.
+_tweedie_series_cap(jmode::Integer) = clamp(ceil(Int, 10.0 * sqrt(float(jmode)) + 100.0), 5000, 400_000)
+
 # log a(y, φ, p): the μ-free Dunn–Smyth normalising series (1 < p < 2, y > 0).
 #   α = (2-p)/(1-p)  (α < 0 here)
 #   logW_j = j·[ -α·log y + α·log(p-1) - (1-α)·log φ - log(2-p) ]
@@ -78,7 +87,7 @@ function _tweedie_logA(y::Float64, φ::Float64, p::Float64)
         end
     end
     drop = 37.0
-    cap = 5000
+    cap = _tweedie_series_cap(j0)
     s = 1.0                                # sum of exp(logW_j - w0), mode term = 1
     j = j0 + 1
     while j <= j0 + cap
