@@ -128,8 +128,9 @@ end
         # current Julia 1 (1.13.3), landing at 5.208452513947484; AVX-512
         # kernels reach ~33.69 and pass. Keep the check where it is
         # expected to pass. No other assertion or tolerance is changed.
+        # Upstream fix (#1098): Julia 1.10 / AVX2 AGHQ warm start now reaches |Λ| > 8.
         if VERSION < v"1.11" || _x86_avx2_without_avx512()
-            @test_broken maximum(abs, fita.Λ) > 8
+            @test maximum(abs, fita.Λ) > 8
         else
             @test maximum(abs, fita.Λ) > 8
         end
