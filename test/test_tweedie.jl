@@ -96,4 +96,23 @@ using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra, Specia
         @test GLLVModels._tweedie_series_cap(1) == 5000
         @test GLLVModels._tweedie_series_cap(10^12) == 400_000
     end
+
+    # ---------------------------------------------------------------------
+    # 9. Past the 400000-term bound the series is cut short; that must warn.
+    #    Warnings carry maxlog = 1 per (side, decade of φ, power rounded to 0.1),
+    #    so each case below uses a bucket no other test or fit in the suite uses.
+    # ---------------------------------------------------------------------
+    @testset "series cut at the term cap warns (#1177)" begin
+        @test_logs (:warn, r"Tweedie normalising series \(upper side\) stopped at its cap of 400000") (:warn, r"Tweedie normalising series \(lower side\) stopped at its cap of 400000") begin
+            @test isfinite(tweedie_logpdf(3.7, 3.7, 3.1e-11, 1.37))
+        end
+        @test_logs (:warn, r"Tweedie normalising series \(window side\) stopped at its cap of 400000") begin
+            @test isfinite(GLLVModels._tweedie_logA_ad(3.7, 3.1e-12, 1.63))
+        end
+        @test_logs min_level = Base.CoreLogging.Warn begin
+            tweedie_logpdf(2.0, 2.0, 1e-4, 1.5)
+            tweedie_logpdf(0.5, 0.7, 1.0, 1.2)
+            GLLVModels._tweedie_logA_ad(2.0, 1e-4, 1.5)
+        end
+    end
 end

@@ -52,6 +52,19 @@ _glm_obs_weight(f::TweedieED, μ, n, me, y, link::LogLink, η) =
 # the old cap was not reached the value is unchanged.
 _tweedie_series_cap(jmode::Integer) = clamp(ceil(Int, 10.0 * sqrt(float(jmode)) + 100.0), 5000, 400_000)
 
+# One message per (side, decade of φ, power rounded to 0.1) and session: a fit whose
+# dispersion runs towards zero would otherwise print one per likelihood evaluation.
+@noinline function _warn_tweedie_series_truncated(side::Symbol, y, φ, p, cap)
+    @warn string("Tweedie normalising series (", side, " side) stopped at its cap of ", cap,
+        " terms before the terms fell 37 nats below the largest, so log a(y, φ, p) is ",
+        "too low and the log-density is under-counted (y = ", y, ", φ = ", φ, ", p = ", p,
+        "). Treat this value as a lower bound: the series needs more terms than the cap ",
+        "allows, which happens for very small dispersion (φ below about 1e-9) or ",
+        "extreme y and power (refs #1177).") _id = (:tweedie_series_cap, side,
+        floor(Int, log10(max(float(φ), 1e-300))), round(float(p); digits = 1)) maxlog = 1
+    return nothing
+end
+
 # log a(y, φ, p): the μ-free Dunn–Smyth normalising series (1 < p < 2, y > 0).
 #   α = (2-p)/(1-p)  (α < 0 here)
 #   logW_j = j·[ -α·log y + α·log(p-1) - (1-α)·log φ - log(2-p) ]
@@ -90,19 +103,29 @@ function _tweedie_logA(y::Float64, φ::Float64, p::Float64)
     cap = _tweedie_series_cap(j0)
     s = 1.0                                # sum of exp(logW_j - w0), mode term = 1
     j = j0 + 1
+    up_done = false
     while j <= j0 + cap
         d = logW(float(j)) - w0
         s += exp(d)
-        d < -drop && break
+        if d < -drop
+            up_done = true
+            break
+        end
         j += 1
     end
+    up_done || _warn_tweedie_series_truncated(:upper, y, φ, p, cap)
     j = j0 - 1
+    down_done = false
     while j >= 1 && j >= j0 - cap
         d = logW(float(j)) - w0
         s += exp(d)
-        d < -drop && break
+        if d < -drop
+            down_done = true
+            break
+        end
         j -= 1
     end
+    (down_done || j < 1) || _warn_tweedie_series_truncated(:lower, y, φ, p, cap)
     return -log(y) + w0 + log(s)
 end
 

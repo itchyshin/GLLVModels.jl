@@ -23,7 +23,14 @@ function _tweedie_logA_ad(y::Float64, φ::Real, p::Real)
     while true
         lo = max(1, jstar - W); hi = jstar + W
         terms = Float64[logWv(float(j)) for j in lo:hi]
-        (maximum(terms) - max(terms[1], terms[end])) >= 37.0 || W >= wcap ? break : (W *= 2)
+        m = maximum(terms)
+        (m - max(terms[1], terms[end])) >= 37.0 && break
+        if W >= wcap
+            (lo == 1 || m - terms[1] >= 37.0) && m - terms[end] >= 37.0 ||
+                _warn_tweedie_series_truncated(:window, y, φv, pv, wcap)
+            break
+        end
+        W *= 2
     end
     α = (2.0 - p) / (1.0 - p)
     a = -α * log(y) + α * log(p - 1.0) - (1.0 - α) * log(φ) - log(2.0 - p)

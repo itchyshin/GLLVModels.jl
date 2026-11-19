@@ -18,7 +18,7 @@ See `docs/dev-log/check-log.md` entry of 2026-11-19. New testset fails 9 of 12 o
 
 ## Not done / limits
 
-- Below phi about 1e-9 the 400000-term bound still cuts the series; this is silent, as before. Raising it makes one density call at extreme `y` cost seconds.
+- Below phi about 1e-9 the 400000-term bound still cuts the series; this now emits one `@warn` (`maxlog = 1` per side, decade of phi and power rounded to 0.1) from `_tweedie_logA` and `_tweedie_logA_ad`; the value is still a lower bound. Raising it makes one density call at extreme `y` cost seconds.
 - The reported `loglik` of fits whose dispersion runs to zero changes; those fits were not re-examined.
 - Full `Pkg.test()`, JET and Aqua were not run. No tolerance or expectation was changed.
 - Rose verdict: not run.
