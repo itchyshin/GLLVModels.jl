@@ -1,3 +1,11 @@
+2026-11-19: #1177 Tweedie series cap. Julia 1.10.13, 1 thread, `julia --project=. test/<file>`.
+`test/test_tweedie.jl`: 26 passed, 0 failed (the new testset `small dispersion: series not truncated (#1177)` is 12 of them).
+The same file with the new testset and the old `src/` (stash of `src/`): 15 passed, 9 failed, 2 errored; the 9 failures are the density rows against the p = 3/2 Bessel closed form.
+Neighbours on the branch: `test_aghq_tweedie.jl` 35/35, `test_tweedie_engine_health.jl` 48/48, `test_tweedie_speed.jl` 6/6 (max relative change of log a over its grid 8.9e-16),
+`test_tweedie_grouped_engine_health.jl` 47/47, `test_grouped_dispersion_tweedie_nb1.jl` 25/25, `test_tweedie_power_contract.jl` 25/25,
+`test_tweedie_cdf.jl` 55 passed + 16 broken (unchanged; run in a temporary environment because QuadGK is a test-environment dependency).
+Full `Pkg.test()`, JET and Aqua not run. See after-task `2026-11-19-tweedie-series-cap-1177.md`.
+
 2026-11-12: #1140 ordinal all-masked trait row. Julia 1.10.13, 1 thread.
 `julia --project=. --startup-file=no -e 'include("test/test_ordinal_level_check.jl")'`.
 Existing testset on `origin/main`: 36 passed, 0 failed (unchanged).

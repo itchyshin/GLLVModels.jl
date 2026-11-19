@@ -1,4 +1,4 @@
-using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
+using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra, SpecialFunctions
 
 @testset "Tweedie family" begin
     # ---------------------------------------------------------------------
@@ -70,5 +70,49 @@ using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
         # `converged` must mean converged: see test_tweedie_engine_health.jl for
         # the full G-a…G-d gates this cell used to pass while stalled.
         @test fit.converged
+    end
+
+    # ---------------------------------------------------------------------
+    # 8. Small dispersion (#1177): the normalising series must not be cut at a
+    #    fixed number of terms. At p = 3/2 the density has a closed form,
+    #    log f = -(2/φ)(√μ + y/√μ) + log(√x I₁(2√x) / y),  x = 4y/φ²,
+    #    with log I₁(z) = z + log(besselix(1, z)).
+    # ---------------------------------------------------------------------
+    @testset "small dispersion: series not truncated (#1177)" begin
+        closed(y, μ, φ) = begin
+            x = 4y / φ^2; z = 2sqrt(x)
+            -(2 / φ) * (sqrt(μ) + y / sqrt(μ)) + 0.5 * log(x) + z + log(besselix(1, z)) - log(y)
+        end
+        for (y, μ, φ) in [(2.0, 2.0, 1e-4), (2.0, 2.0, 1e-6), (8.0, 8.0, 1e-6),
+                          (2.0, 2.0, 1e-7), (8.0, 8.0, 1e-7), (0.5, 0.5, 1e-7),
+                          (2.0, 1.3, 1e-7)]
+            @test isapprox(tweedie_logpdf(y, μ, φ, 1.5), closed(y, μ, φ); atol = 1e-6)
+        end
+        # the AD copy of the series used by the AGHQ Tweedie fitter has to agree
+        for (y, φ, pw) in [(2.0, 1e-7, 1.5), (0.57, 1.5e-6, 1.9496), (1.2, 3e-7, 1.2936)]
+            @test GLLVModels._tweedie_logA_ad(y, φ, pw) ≈ GLLVModels._tweedie_logA(y, φ, pw) atol = 1e-8
+        end
+        # where the old fixed cap was not reached the cap does not change anything
+        @test GLLVModels._tweedie_series_cap(1) == 5000
+        @test GLLVModels._tweedie_series_cap(10^12) == 400_000
+    end
+
+    # ---------------------------------------------------------------------
+    # 9. Past the 400000-term bound the series is cut short; that must warn.
+    #    Warnings carry maxlog = 1 per (side, decade of φ, power rounded to 0.1),
+    #    so each case below uses a bucket no other test or fit in the suite uses.
+    # ---------------------------------------------------------------------
+    @testset "series cut at the term cap warns (#1177)" begin
+        @test_logs (:warn, r"Tweedie normalising series \(upper side\) stopped at its cap of 400000") (:warn, r"Tweedie normalising series \(lower side\) stopped at its cap of 400000") begin
+            @test isfinite(tweedie_logpdf(3.7, 3.7, 3.1e-11, 1.37))
+        end
+        @test_logs (:warn, r"Tweedie normalising series \(window side\) stopped at its cap of 400000") begin
+            @test isfinite(GLLVModels._tweedie_logA_ad(3.7, 3.1e-12, 1.63))
+        end
+        @test_logs min_level = Base.CoreLogging.Warn begin
+            tweedie_logpdf(2.0, 2.0, 1e-4, 1.5)
+            tweedie_logpdf(0.5, 0.7, 1.0, 1.2)
+            GLLVModels._tweedie_logA_ad(2.0, 1e-4, 1.5)
+        end
     end
 end
