@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">GLLVModels.jl response structure mark</title>
+  <desc id="desc">A rounded hexagonal badge with five response columns crossed by solid and dashed latent-structure paths.</desc>
+  <defs>
+    <linearGradient id="ring" x1="62" y1="124" x2="454" y2="390" gradientUnits="userSpaceOnUse"><stop stop-color="#CB3C33"/><stop offset=".48" stop-color="#9558B2"/><stop offset="1" stop-color="#4063D8"/></linearGradient>
+    <linearGradient id="shared" x1="106" y1="218" x2="406" y2="318" gradientUnits="userSpaceOnUse"><stop stop-color="#CB3C33"/><stop offset=".52" stop-color="#D84CDB"/><stop offset="1" stop-color="#4063D8"/></linearGradient>
+    <filter id="soft-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="9" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <path d="M256 20 464 140V372L256 492 48 372V140Z" fill="#0B1F3A"/>
+  <path d="M256 35 448 147V365L256 477 64 365V147Z" fill="none" stroke="url(#ring)" stroke-linejoin="round" stroke-width="12"/>
+  <g stroke="#B8C8E4" stroke-linecap="round" stroke-width="8" opacity=".7"><path d="M118 174V344"/><path d="M187 140V378"/><path d="M256 126V392"/><path d="M325 140V378"/><path d="M394 174V344"/></g>
+  <path d="M98 321C146 321 165 205 246 205S333 321 414 321" fill="none" stroke="#D84CDB" stroke-linecap="round" stroke-width="25" opacity=".3" filter="url(#soft-glow)"/>
+  <path d="M98 321C146 321 165 205 246 205S333 321 414 321" fill="none" stroke="url(#shared)" stroke-linecap="round" stroke-width="17"/>
+  <path d="M101 359C155 283 193 286 244 335S335 350 408 274" fill="none" stroke="#8D7DFF" stroke-dasharray="11 18" stroke-linecap="round" stroke-width="10" opacity=".9"/>
+  <g fill="#CB3C33"><circle cx="118" cy="228" r="14"/><circle cx="187" cy="309" r="14"/></g><g fill="#389826"><circle cx="187" cy="228" r="14"/><circle cx="256" cy="336" r="14"/></g><g fill="#9558B2"><circle cx="256" cy="255" r="15"/><circle cx="325" cy="228" r="14"/><circle cx="394" cy="309" r="14"/></g>
+  <circle cx="246" cy="205" r="27" fill="#F7F9FC" stroke="#D84CDB" stroke-width="10" filter="url(#soft-glow)"/><circle cx="246" cy="205" r="18" fill="#F7F9FC"/>
+</svg>
