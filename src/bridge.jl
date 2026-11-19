@@ -345,7 +345,16 @@ function _bridge_ci_nboot(options)
     end
     return Int(raw)
 end
-_bridge_ci_seed(options)  = Int(_bridge_get(options, "ci_seed", 0))
+# `ci_seed` seeds the bootstrap RNG. R sends doubles, so an integral Float64 is fine; a
+# fractional, non-finite, out-of-range or non-numeric value used to die inside `Int(...)`
+# with an error that named neither `bridge_fit` nor the option, whatever `ci_method` was.
+function _bridge_ci_seed(options)
+    raw = _bridge_get(options, "ci_seed", 0)
+    (raw isa Real && isfinite(raw) && isinteger(raw) &&
+        typemin(Int) <= raw <= typemax(Int)) || throw(ArgumentError(
+        "bridge_fit: ci_seed must be an integer (got $(repr(raw)))"))
+    return Int(raw)
+end
 
 # Empty CI payload (the "none" default and the skip-with-note cases).
 function _bridge_ci_payload(method::AbstractString, level::Real, note::AbstractString)
@@ -508,7 +517,7 @@ Confidence intervals are routed through `options` (all optional):
     re-implemented), so bounds are identical to the equivalent native call.
   - `"ci_level"` — nominal coverage (default `0.95`).
   - `"ci_nboot"` — bootstrap replicates (default `200`).
-  - `"ci_seed"`  — bootstrap RNG seed (default `0`; fixed → reproducible).
+  - `"ci_seed"`  — bootstrap RNG seed, an integer (an integral double is accepted; default `0`; fixed → reproducible).
 """
 function bridge_fit(; y,
                     family = nothing,
