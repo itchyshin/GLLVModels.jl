@@ -1,6 +1,6 @@
 ## Design note: convergence status at a Heywood boundary (P182 / #1284)
 
-**Status of the names: PROPOSED, answer pending from Brian.** Every name below lives in one place (`src/fit.jl`, the `_HEYWOOD_*` block and `convergence_status`), so a rename is a one-line change.
+**Names settled by SHINICHI-1753-1118 (converged rule adopted; Heywood folded into `boundary`).** Every name below lives in one place (`src/fit.jl`, the `_HEYWOOD_*` block and `convergence_status`), so a rename is a one-line change.
 
 ### Rule being implemented
 `converged = true` only at an interior optimum. Bound, Heywood and active-clamp each get their own status plus a warning naming the parameter (SHINICHI-0545 / BRIAN-1430-1117). This PR covers the Heywood case on the Normal path only.
@@ -14,8 +14,8 @@
 |---|---|---|
 | Boolean | `fit.converged` (false at a boundary) | `converged` (FALSE at a boundary) |
 | Status field | `convergence_status(fit)::Symbol` | `convergence_status` (character), same values |
-| Values | `:converged`, `:heywood`, `:not_converged`; reserved for later PRs: `:at_bound`, `:active_clamp` | `"converged"`, `"heywood"`, `"not_converged"`, reserved `"at_bound"`, `"active_clamp"` |
-| Parameter list | `heywood_traits(fit)::Vector{Int}` | `heywood_traits` (integer vector) |
+| Values | `:converged`, `:boundary`, `:not_converged` (`:degenerate` arrives with the full rule) | `"converged"`, `"boundary"`, `"not_converged"`, `"degenerate"` |
+| Parameter list | `boundary_params(fit)` of `(name, kind)`; Heywood is `kind = :heywood` (`heywood_traits(fit)::Vector{Int}` kept) | `boundary_params` (name, kind) |
 | Warning | `@warn` naming the trait index and the remedy | same text |
 
 Why a derived accessor rather than a new `GllvmFit` field: `GllvmFit` is rebuilt at five call sites (intercept wrapper, AGHQ wrapper, loading profile, bridge); a stored field would need all of them changed and could go stale. `convergence_status` is computed from `converged`, `Λ` and `σ_eps`, so it stays correct on every rebuilt copy. If the answer is a stored field, the accessor becomes a field read.

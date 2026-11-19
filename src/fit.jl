@@ -89,8 +89,9 @@ _reset_unidentified_warnings!() = (lock(() -> empty!(_UNIDENTIFIED_WARNED), _UNI
 # ---- Heywood status (#1284) ------------------------------------------------------------
 # A Gaussian fit whose communality reaches 1 for some trait is at a boundary (uniqueness -> 0),
 # not an interior optimum, even when Optim's gradient test passes. converged=true is reserved for
-# interior optima (BRIAN-1430-1117 / SHINICHI-0545), so such a fit gets converged=false, its own
-# status (`convergence_status(fit) == :heywood`) and a warning naming the trait(s).
+# interior optima (BRIAN-1430-1117 / SHINICHI-0545), so such a fit gets converged=false, the
+# status (`convergence_status(fit) == :boundary`, kind :heywood in `boundary_params(fit)`) and a
+# warning naming the trait(s).
 # Names and threshold are provisional (answer pending from Brian); change them here only.
 const _HEYWOOD_COMMUNALITY = 0.999
 
@@ -113,13 +114,23 @@ Indices of traits at a Heywood boundary (communality above $(_HEYWOOD_COMMUNALIT
 heywood_traits(fit::GllvmFit) = _heywood_traits_from(fit.pars, fit.model)
 
 """
+    boundary_params(fit::GllvmFit) -> Vector{NamedTuple{(:name, :kind)}}
+
+Parameters at a boundary, one `(name, kind)` per entry. Heywood traits appear as
+`(name = "trait 8", kind = :heywood)`; empty when none (SHINICHI-1753-1118 converged rule).
+"""
+boundary_params(fit::GllvmFit) =
+    [(name = string("trait ", t), kind = :heywood) for t in heywood_traits(fit)]
+
+"""
     convergence_status(fit::GllvmFit) -> Symbol
 
-`:converged` (interior optimum), `:heywood` (a trait's communality is at 1, see
-[`heywood_traits`](@ref)) or `:not_converged`. Provisional names.
+`:converged` (interior optimum), `:boundary` (a parameter is at a boundary, e.g. a Heywood
+trait with communality at 1; see [`boundary_params`](@ref)) or `:not_converged`. The boundary
+check runs before the converged flag, so a boundary fit never reads `:converged`.
 """
 function convergence_status(fit::GllvmFit)
-    isempty(heywood_traits(fit)) || return :heywood
+    isempty(boundary_params(fit)) || return :boundary
     return fit.converged ? :converged : :not_converged
 end
 
@@ -130,7 +141,7 @@ function _heywood_screen(pars, model, converged::Bool)
     @warn string("Heywood boundary: trait ", join(idx, ", "), " has communality > ",
                  _HEYWOOD_COMMUNALITY, " (its unique variance is ~0 relative to the shared factor); ",
                  "the fit is at a boundary, not an interior optimum, so converged is set to false ",
-                 "and convergence_status(fit) is :heywood. Traits on very different scales share one ",
+                 "and convergence_status(fit) is :boundary (kind :heywood in boundary_params(fit)). Traits on very different scales share one ",
                  "σ_eps: standardise or transform the traits, or use pervar = true.")
     return false
 end
