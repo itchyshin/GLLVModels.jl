@@ -264,6 +264,7 @@ function _fit_nb_gllvm_start(Y::AbstractMatrix; K::Integer,
     q_lv = 0
     X_lv_fit = nothing
     if X_lv !== nothing
+        _check_finite_covariates(X_lv, "fit_nb_gllvm"; unit = :site, name = "X_lv")
         K > 0 || throw(ArgumentError("X_lv requires a positive latent dimension K"))
         size(X_lv, 1) == n ||
             throw(ArgumentError("X_lv first dim ($(size(X_lv, 1))) must equal n_sites ($n)"))

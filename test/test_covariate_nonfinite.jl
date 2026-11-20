@@ -61,6 +61,31 @@ using Test, GLLVModels, Random, Distributions, StatsModels
                       "fit_fourthcorner_gllvm", "TR[2, 1]")
     end
 
+    @testset "X_lv on Laplace fitters (#1250)" begin
+        rng2 = MersenneTwister(1250)
+        p2, n2, K2 = 6, 40, 1
+        xl = randn(rng2, n2)
+        Xlv = reshape(xl, n2, 1)
+        lam = randn(rng2, p2)
+        Ylv = [rand(rng2, Poisson(exp(0.4 + lam[t] * xl[j]))) for t in 1:p2, j in 1:n2]
+        Yb = rand(rng2, 0:3, p2, n2)
+        Yg = 0.2 .+ rand(rng2, p2, n2)
+        Yβ = clamp.(rand(rng2, p2, n2), 0.05, 0.95)
+        Yo2 = rand(rng2, 1:3, p2, n2)
+        routes = [
+            ("fit_poisson_gllvm", Ylv, () -> fit_poisson_gllvm(Ylv; K = K2, X_lv = with(Xlv, (3, 1), NaN), it...)),
+            ("fit_nb_gllvm", Ylv, () -> fit_nb_gllvm(Ylv; K = K2, X_lv = with(Xlv, (3, 1), Inf), it...)),
+            ("fit_binomial_gllvm", Yb, () -> fit_binomial_gllvm(Yb; K = K2, X_lv = with(Xlv, (3, 1), NaN), it...)),
+            ("fit_gamma_gllvm", Yg, () -> fit_gamma_gllvm(Yg; K = K2, X_lv = with(Xlv, (3, 1), Inf), it...)),
+            ("fit_beta_gllvm", Yβ, () -> fit_beta_gllvm(Yβ; K = K2, X_lv = with(Xlv, (3, 1), NaN), it...)),
+            ("fit_ordinal_gllvm", Yo2, () -> fit_ordinal_gllvm(Yo2; K = K2, X_lv = with(Xlv, (3, 1), Inf), it...)),
+        ]
+        for (caller, _Y, f) in routes
+            @test refused(f, caller, "X_lv")
+        end
+        @test isfinite(fit_poisson_gllvm(Ylv; K = K2, X_lv = Xlv, it...).loglik)
+    end
+
     @testset "multinomial X" begin
         ycat = [1 + (j % 3) for j in 1:n]; Xm = randn(rng, n, 2)
         for v in (NaN, Inf)
