@@ -28,10 +28,13 @@ Summary container holding out-of-sample cross-validation evaluation results.
 Fields:
 - `k_folds::Int`: number of folds ($K$)
 - `split::Symbol`: split strategy (`:random`, `:site`, or `:species`)
-- `loglik::Float64`: total out-of-sample log-likelihood summed across all test cells
+- `loglik::Float64`: total out-of-sample log-likelihood summed across all test cells, evaluated at
+  a plug-in latent score (for a site-held-out fold the score is 0 when that site has no training cells)
 - `mse::Float64`: overall out-of-sample Mean Squared Error
 - `residual_mean::Float64`: sample mean of out-of-sample Dunn–Smyth randomized quantile residuals (target ≈ 0)
-- `residual_std::Float64`: sample standard deviation of out-of-sample randomized quantile residuals (target ≈ 1)
+- `residual_std::Float64`: sample standard deviation of out-of-sample randomized quantile residuals;
+  under a plug-in score, a held-out site is scored at latent 0 so `residual_std` is often above 1
+  even for a well-specified Gaussian model (`sqrt(1 + mean(Λ²)/σ²)` at the true parameters)
 - `fold_logliks::Vector{Float64}`: out-of-sample log-likelihood for each fold
 - `fold_mses::Vector{Float64}`: out-of-sample MSE for each fold
 - `fold_residual_means::Vector{Float64}`: mean of quantile residuals per fold
@@ -67,7 +70,8 @@ function Base.show(io::IO, ::MIME"text/plain", res::CVResult)
     println(io, "  Out-of-sample logLik: ", @sprintf("%.4f", res.loglik))
     println(io, "  Out-of-sample MSE:    ", @sprintf("%.6f", res.mse))
     println(io, "  Residual Mean:        ", @sprintf("%.4f", res.residual_mean), " (target ≈ 0)")
-    println(io, "  Residual Std:         ", @sprintf("%.4f", res.residual_std), " (target ≈ 1)")
+    println(io, "  Residual Std:         ", @sprintf("%.4f", res.residual_std),
+            " (≈1 only when the latent score is known; site-held-out folds use plug-in z = 0)")
     println(io, "\nFold breakdown:")
     println(io, "  Fold     logLik        MSE   Resid.Mean   Resid.Std")
     for k in 1:res.k_folds
