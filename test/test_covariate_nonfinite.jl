@@ -115,3 +115,32 @@ using Test, GLLVModels, Random, Distributions, StatsModels
         @test chk(Xp, "f"; obs = trues(p, n)) === nothing
     end
 end
+
+# #1250: the X_lv sibling. A NaN or Inf in X_lv is refused by name in the six single-family
+# fitters that take it; a clean X_lv still fits.
+@testset "non-finite X_lv is refused (#1250)" begin
+    rng = MersenneTwister(11)
+    p, n = 6, 60
+    xl = randn(rng, n)
+    z = 0.7 .* xl .+ 0.5 .* randn(rng, n)
+    lam = [0.8, 0.6, -0.5, 0.7, 0.3, -0.4]
+    mu = exp.(0.5 .+ lam * z')
+    Y = [rand(rng, Poisson(mu[t, s])) for t in 1:p, s in 1:n]
+    Yb = [rand(rng, Binomial(3, 0.4)) for t in 1:p, s in 1:n]
+    Yg = 0.3 .+ rand(rng, p, n)
+    Yu = clamp.(0.1 .+ 0.8 .* rand(rng, p, n), 0.05, 0.95)
+    Yo = [rand(rng, 1:3) for t in 1:p, s in 1:n]
+    cases = [("fit_poisson_gllvm", fit_poisson_gllvm, Y, (;)),
+             ("fit_nb_gllvm", fit_nb_gllvm, Y, (;)),
+             ("fit_binomial_gllvm", fit_binomial_gllvm, Yb, (; N = fill(3, p, n))),
+             ("fit_gamma_gllvm", fit_gamma_gllvm, Yg, (;)),
+             ("fit_beta_gllvm", fit_beta_gllvm, Yu, (;)),
+             ("fit_ordinal_gllvm", fit_ordinal_gllvm, Yo, (;))]
+    for bad in (NaN, Inf), (nm, fit, Ym, kw) in cases
+        Xlv = reshape(copy(xl), n, 1)
+        Xlv[5, 1] = bad
+        err = try; fit(Ym; K = 1, X_lv = Xlv, kw...); nothing; catch e; e; end
+        @test err isa ArgumentError
+        @test err isa ArgumentError && occursin(nm, err.msg) && occursin("X_lv[5, 1]", err.msg)
+    end
+end
