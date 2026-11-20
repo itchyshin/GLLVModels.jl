@@ -29,11 +29,20 @@
 @inline _tp_observed_Wc_at(family, t, y, ηc, Wc) = _tp_observed_Wc(family, y, ηc, Wc)
 @inline _tp_observed_Wc_at(fams::AbstractVector, t, y, ηc, Wc) = _tp_observed_Wc(fams[t], y, ηc, Wc)
 
+# Clamp on the positive-part predictor η^c. The ±30 cap suits log/logit links; the
+# DeltaLogNormal η^c is an identity-scale meanlog (log y reaches -690 at y = 1e-300), so a
+# cap there makes the clamped score unable to vanish at the exact mode and the search
+# reports failure (#1243). For DeltaLogNormal the cap is 30 + the largest |log y| over the
+# site's positive cells (the shared z moves every species' η^c together); other families
+# keep ±30.
+_tp_clamp_ηc_vec(fam, η, y) = _clamp_eta.(η)
+_tp_clamp_ηc_vec(fams::AbstractVector, η, y) = _clamp_eta.(η)
+
 # Site log-posterior q(z) = Σ_t logf_t − ½z'z: the objective the mode search climbs.
 function _twopart_logpost(family, y::AbstractVector, Λz::AbstractMatrix, Λc::AbstractMatrix,
         βz::AbstractVector, βc::AbstractVector, offz, offc, z::AbstractVector)
     ηz = _clamp_eta.(βz .+ offz .+ Λz * z)
-    ηc = _clamp_eta.(βc .+ offc .+ Λc * z)
+    ηc = _tp_clamp_ηc_vec(family, βc .+ offc .+ Λc * z, y)
     ℓ = 0.0
     @inbounds for t in eachindex(y)
         ℓ += _tp_pieces_at(family, t, y[t], ηz[t], ηc[t])[5]
@@ -95,7 +104,7 @@ function _twopart_mode_stage(family, y::AbstractVector,
         mul!(Λzz, Λz, z)
         mul!(Λcz, Λc, z)
         ηz .= _clamp_eta.(βz .+ offz .+ Λzz)
-        ηc .= _clamp_eta.(βc .+ offc .+ Λcz)
+        ηc .= _tp_clamp_ηc_vec(family, βc .+ offc .+ Λcz, y)
         ℓ0 = 0.0
         @inbounds for t in 1:p
             s_z, s_c, W_z, W_c, logf = _tp_pieces_at(family, t, y[t], ηz[t], ηc[t])
@@ -326,7 +335,7 @@ function twopart_loglik_site(family, y::AbstractVector,
     # the fitters' objective return its 1e12 sentinel instead of a garbage surface.
     ok || return -Inf
     ηz = _clamp_eta.(βz .+ offz .+ Λz * ẑ)
-    ηc = _clamp_eta.(βc .+ offc .+ Λc * ẑ)
+    ηc = _tp_clamp_ηc_vec(family, βc .+ offc .+ Λc * ẑ, y)
     Wz = Vector{Float64}(undef, p); Wc = Vector{Float64}(undef, p)
     ℓ = 0.0
     @inbounds for t in 1:p
@@ -410,6 +419,16 @@ struct DeltaLogNormal
 end
 
 DeltaLogNormal() = DeltaLogNormal(1.0)
+
+_tp_etac_cap(::DeltaLogNormal, y) = y > 0 ? _ETA_CLAMP + abs(log(y)) : _ETA_CLAMP
+function _tp_clamp_ηc_vec(fam::DeltaLogNormal, η, y)
+    c = maximum(yt -> _tp_etac_cap(fam, yt), y; init = _ETA_CLAMP)
+    return clamp.(η, -c, c)
+end
+function _tp_clamp_ηc_vec(fams::AbstractVector{<:DeltaLogNormal}, η, y)
+    c = maximum(t -> _tp_etac_cap(fams[t], y[t]), eachindex(y); init = _ETA_CLAMP)
+    return clamp.(η, -c, c)
+end
 
 function _tp_pieces(f::DeltaLogNormal, y, ηz, ηc)
     π = inv(one(ηz) + exp(-ηz))                 # occurrence prob = logistic(η^z)
