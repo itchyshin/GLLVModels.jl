@@ -65,7 +65,7 @@ _register_shard_table!(4, (
         "test_nb_grouped_poisson_ridge.jl", "test_nb_cov_ridge_polish_grad.jl", "test_beta_grouped_convergence.jl",
         "test_gamma_x_identity.jl", "test_gamma_fit.jl", "test_tweedie_engine_health.jl",
         "test_tweedie_grouped_engine_health.jl", "test_tweedie_cdf.jl", "test_exponential.jl",
-        "test_studentt.jl", "test_studentt_input_validation.jl", "test_studentt_boundary_honesty.jl",
+        "test_studentt.jl", "test_studentt_scale_invariance_1154.jl", "test_studentt_input_validation.jl", "test_studentt_boundary_honesty.jl",
         "test_mode_search_623.jl", "test_ordinal_probit.jl", "test_unified_api.jl",
         "test_gaussian_pervar_heywood_736.jl", "test_gaussian_wald_pd_hessian.jl", "test_ordination.jl",
         "test_destination_b_b1_unit_paired_fit.jl", "test_destination_b_b1_balanced_complete_crossed_design.jl", "test_precision_multivariate_fit.jl",

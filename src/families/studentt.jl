@@ -268,7 +268,7 @@ function _studentt_grouped_mode(fams::AbstractVector{<:StudentTFamily}, y::Abstr
     off = offset === nothing ? false : offset
     z = zeros(K)
     for _ in 1:maxiter
-        η  = _clamp_eta.(β .+ off .+ Λ * z)
+        η  = _clamp_eta.(Ref(link), β .+ off .+ Λ * z)
         μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(fams, μ, n, me, y)
@@ -358,7 +358,7 @@ function _studentt_grouped_loglik_site(fams::AbstractVector{<:StudentTFamily}, y
     # fit-level check (an ESTIMATED ν running to the flat Gaussian-limit boundary)
     # and is untouched by this change.
     ok || return -Inf
-    η  = _clamp_eta.(β .+ off .+ Λ * z)
+    η  = _clamp_eta.(Ref(link), β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
     W  = _studentt_grouped_laplace_weight.(Ref(hessian), fams, μ, me, y, Ref(link), η)
