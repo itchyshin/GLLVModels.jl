@@ -168,7 +168,7 @@ function _grouped_laplace_mode_logpost(fams::AbstractVector, y::AbstractVector,
         z::AbstractVector; mask = nothing, offset = nothing)
     p = size(Λ, 1)
     off = offset === nothing ? false : offset
-    η = _clamp_eta.(β .+ off .+ Λ * z)
+    η = _clamp_eta.(Ref(link), β .+ off .+ Λ * z)
     μ = _clamp_mu.(fams, linkinv.(Ref(link), η))
     q = -0.5 * dot(z, z)
     @inbounds for t in 1:p
@@ -183,7 +183,7 @@ function _grouped_laplace_mode_grad(fams::AbstractVector, y::AbstractVector,
         n::AbstractVector, Λ::AbstractMatrix, β::AbstractVector, link::Link,
         z::AbstractVector; mask = nothing, offset = nothing)
     off = offset === nothing ? false : offset
-    η  = _clamp_eta.(β .+ off .+ Λ * z)
+    η  = _clamp_eta.(Ref(link), β .+ off .+ Λ * z)
     μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
     me = mu_eta.(Ref(link), η)
     s  = _glm_score.(fams, μ, n, me, y)

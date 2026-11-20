@@ -19,6 +19,11 @@
 # η clamp is family-agnostic; μ clamp dispatches on the family.
 const _ETA_CLAMP = 30.0
 _clamp_eta(η) = clamp(η, -_ETA_CLAMP, _ETA_CLAMP)
+# Link-aware clamp (#1154): under the identity link η is the mean itself, so a ±30 cap
+# silently truncates any response of order 30 or more. Overflow protection is only
+# needed for exp-type inverse links.
+_clamp_eta(::IdentityLink, η) = η
+_clamp_eta(::Link, η) = _clamp_eta(η)
 
 # log det of the K×K Laplace curvature `Λ'WΛ + I`. With K = 0 the matrix is 0×0 and its log
 # det is 0, but Julia 1.12's `logdet(::Symmetric)` throws on an empty matrix (1.10 returns
