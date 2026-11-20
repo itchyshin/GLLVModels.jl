@@ -6,6 +6,12 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **IN (refs #1144), behaviour change:** `confint`, `profile_ci` and `bootstrap_ci` on a Gaussian fit made
+  without a mask throw an `ArgumentError` for `missing`, NaN or Inf in `y` (they returned all-NaN
+  intervals). Masked fits are unchanged. No signature change.
+- **IN (#1190):** a formula covariate holding `missing` is an `ArgumentError` naming the column and
+  the first site (it was `KeyError: key missing not found`); a column used only inside a function,
+  such as `coalesce(x, 0.0)`, is left to that function.
 - **IN (#1286):** every refusal in the temporal parser and the three marker
   constructors names the marker the user called (`temporal_indep()`,
   `temporal_dep()` or `temporal_latent()`) instead of `temporal_latent()`:
@@ -35,6 +41,13 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   cell marked observed is an `ArgumentError`. Complete data is unchanged.
   Structured Gaussian routes that already refuse a mask still refuse.
   Variational fitters derive their mask the same way (#1108, in the repository CHANGELOG).
+- **IN (refs #1107, #1108), behaviour change:** a NaN, `missing` or Inf in a
+  covariate array is an `ArgumentError` naming the fitter, the array and the first
+  entry on `fit_rrr_gllvm`, `fit_constrained_gllvm`, the `*_cov` and grouped-covariate
+  fitters, `fit_gllvm_speciescov`, `fit_fourthcorner_gllvm`, `fit_multinomial_gllvm`, the per-trait ordinal
+  covariate fitter and the formula routes that reach them. They used to return
+  `loglik = -Inf` with `converged = false` and no message. Where `mask` is accepted,
+  only entries at observed response cells are checked.
 - **Development:** ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
   and the default per-trait NB2 formula route accept direct outer-optimizer
   selection with `:lbfgs`, `:bfgs`, or configured Optim methods. The default
