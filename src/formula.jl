@@ -103,9 +103,21 @@ function _build_site_modelmatrix(rhs, data; contrasts::AbstractDict = Dict{Symbo
 
     rhs_term = length(non_const) == 1 ? non_const[1] : Tuple(non_const)
     f_cov = FormulaTerm(ConstantTerm(0), rhs_term)
-    sch = StatsModels.schema(f_cov, cols, contrasts)
-    applied = StatsModels.apply_schema(f_cov, sch)
-    mm = StatsModels.modelmatrix(applied.rhs, cols)
+    # A function term whose function cannot take the column (e.g. `scale(x)`, which StatsModels
+    # does not define for a scalar) stopped with a raw `MethodError` (#1190).
+    fterms = [t for t in non_const if t isa FunctionTerm]
+    local applied, mm
+    try
+        sch = StatsModels.schema(f_cov, cols, contrasts)
+        applied = StatsModels.apply_schema(f_cov, sch)
+        mm = StatsModels.modelmatrix(applied.rhs, cols)
+    catch e
+        e isa MethodError && any(t -> e.f === t.f, fterms) && throw(ArgumentError(
+            "function term `$(first(t for t in fterms if e.f === t.f))` in the formula cannot be " *
+            "evaluated on a column of `data` (no method `$(e.f)` for $(typeof.(e.args))); " *
+            "compute the transformed column first and use its name in the formula"))
+        rethrow()
+    end
     cnames = StatsModels.coefnames(applied.rhs)
     cnames_vec = cnames isa AbstractVector ? string.(cnames) : [string(cnames)]
     return Matrix{Float64}(mm), cnames_vec
@@ -412,8 +424,34 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             "ZIB through @formula is no-X only for now (pass `@formula(y ~ 1)`); " *
             "ZIB+X formula / bridge admission is still OWED"))
     else
+        _check_cov_route_family_and_keywords(family, kwargs)
         return fit_gllvm_cov(Y; family = family, X = X, K = K, kwargs...)
     end
+end
+
+# The generic covariate route (`fit_gllvm_cov`) takes a family marker with a `_cov_default_link`
+# method and a closed keyword list. A marker without covariate support, a non-family value
+# (String, Symbol, vector) or a keyword the fitter lacks (a typo, or `row_eff`) used to stop
+# with a raw `MethodError` naming an internal function (#1190). Refuse them here, by name.
+function _check_cov_route_family_and_keywords(family, kwargs)
+    hasmethod(_cov_default_link, Tuple{typeof(family)}) || throw(ArgumentError(
+        "gllvm: family `$(family isa Union{AbstractString, Symbol} ? repr(family) : typeof(family))` " *
+        "has no covariate formula route (a formula with covariates such as `y ~ 1 + x`); " *
+        "use `@formula(y ~ 1)` for the no-covariate route where the family allows it, or " *
+        "pass a family instance such as `Poisson()`. The family must be a family object, " *
+        "not a String, Symbol or vector"))
+    accepted = Symbol[]
+    for m in methods(fit_gllvm_cov)
+        append!(accepted, Base.kwarg_decl(m))
+    end
+    accepted = unique(accepted)
+    unknown = [k for k in keys(kwargs) if !(k in accepted)]
+    isempty(unknown) || throw(ArgumentError(
+        "gllvm: keyword(s) $(join(string.("`", unknown, "`"), ", ")) not accepted by the covariate " *
+        "formula route for family $(nameof(typeof(family))); accepted keywords are " *
+        join(string.("`", sort!(setdiff(accepted, [:family, :X, :K])), "`"), ", ") *
+        ". Check the spelling"))
+    return nothing
 end
 
 """
