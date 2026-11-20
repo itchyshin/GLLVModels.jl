@@ -473,5 +473,17 @@ using GLLVModels, Test, Random, LinearAlgebra, Statistics
         @test extract_proportions(fit) ≈ GLLVModels.proportions(fit; component = :shared) atol = 1e-10
         # Omega: the diagonal W tier is already inside the unit total.
         @test diag(extract_Omega(fit)) ≈ diag(Σ) atol = 1e-10
+
+        # extract_Sigma(level = :unit) must use the same identified total, so
+        # its diagonal agrees with sigma_y_site and the unique part is the
+        # remainder (LL' + diag(s) = Sigma), consistent with extract_correlations.
+        LL = fit.pars.Λ * fit.pars.Λ'
+        tot = extract_Sigma(fit; level = :unit, part = :total)
+        @test tot.Sigma ≈ Σ atol = 1e-10
+        @test tot.R ≈ extract_correlations(fit; level = :unit) atol = 1e-10
+        un = extract_Sigma(fit; level = :unit, part = :unique)
+        @test un.s ≈ diag(Σ) .- diag(LL) atol = 1e-10
+        @test Matrix(extract_Sigma(fit; level = :unit, part = :shared).Sigma) +
+              Diagonal(un.s) ≈ tot.Sigma atol = 1e-10
     end
 end
