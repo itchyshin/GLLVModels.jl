@@ -91,13 +91,25 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
     end
 end
 
-@testset "confint: fit with beta requires X (no silent NaN)" begin
+@testset "fit with beta requires X at every _confint_reconstruct_nll call site (no silent NaN)" begin
     Random.seed!(7)
     p, n = 5, 150
     Y = 0.6 * randn(1, n) .* [0.7, -0.5, 0.4, 0.7, -0.3] .+ 0.5 * randn(p, n) .+ (1:p)
     X = zeros(p, n, p); for i in 1:p; X[i, :, i] .= 1; end
     fit = fit_gaussian_gllvm(Y; K = 1, X = X)
-    @test_throws ArgumentError GLLVModels.confint(fit, Y; method = :wald)
+    msg = "design array `X`"
+    # confint, direct reconstruction, derived-Wald Hessian, sanity_multi
+    @test_throws msg GLLVModels.confint(fit, Y; method = :wald)
+    @test_throws msg GLLVModels._confint_reconstruct_nll(fit, Y, nothing, nothing)
+    @test_throws msg GLLVModels._tw_sigma_from_hessian(fit, Y, nothing, nothing)
+    @test_throws msg GLLVModels.sanity_multi(fit; y = Y)
+    # bridge gradient helper swallows errors by design and reports NaN, never a bogus number
+    @test isnan(GLLVModels._bridge_gradient_max_gaussian(fit, Y, nothing, nothing))
+    # supplying X works
     ci = GLLVModels.confint(fit, Y; method = :wald, X = X)
     @test all(isfinite, ci.lower) && ci.pd_hessian
+    @test isfinite(GLLVModels._bridge_gradient_max_gaussian(fit, Y, X, nothing))
+    # check_consistency (diagnostics.jl ysim path) and flag_unreliable_loadings refuse a design-X fit
+    # before reaching the reconstruction (lambda_constraint needs X = nothing), so are unreachable here
+    @test_throws ArgumentError GLLVModels.gllvmTMB_check_consistency(fit, Y; n_sim = 5)
 end
