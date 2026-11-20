@@ -171,6 +171,11 @@ const _OffsetCIFit = Union{PoissonFit, BinomialFit, NBFit, NB1Fit, GP1Fit, BetaF
                            TweediePerTraitPowerFit, DeltaLogNormalFit, DeltaGammaFit,
                            HurdlePoissonFit, HurdleNBFit, ZIPFit, ZINBFit, ZIBFit}
 
+# Covariate fits do not record the observation mask, so `confint` without `mask` would
+# silently rebuild the wrong objective (#1260). Like offset mismatches, refuse when the
+# Laplace marginal at the fitted values does not reproduce `fit.loglik`.
+const _CILoglikGuardFit = Union{_OffsetCIFit, GllvmCovFit, OrdinalPerTraitCovFit}
+
 # Offset column for unit `s` in a simulation (0 when there is no offset).
 _ci_offcol(::Nothing, s::Integer) = 0.0
 _ci_offcol(O::AbstractMatrix, s::Integer) = view(O, :, s)
@@ -240,7 +245,7 @@ _ci_nondefault_link(fit) = (fit isa BetaFit && !(fit.link isa LogitLink)) ||
 # `:va` (the variational one).
 function _check_ci_objective(fit, ad::_FamilyCI, offset, objective::Symbol, alt)
     objective === :va && return nothing
-    fit isa _OffsetCIFit || return nothing
+    fit isa _CILoglikGuardFit || return nothing
     hasproperty(fit, :loglik) || return nothing
     ll = fit.loglik
     isfinite(ll) || return nothing
