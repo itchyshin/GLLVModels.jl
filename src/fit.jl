@@ -122,14 +122,22 @@ Parameters at a boundary, one `(name, kind)` per entry. Heywood traits appear as
 boundary_params(fit::GllvmFit) =
     [(name = string("trait ", t), kind = :heywood) for t in heywood_traits(fit)]
 
+# Did the optimiser itself finish with a finite log-likelihood? `fit.converged` cannot answer this
+# once the Heywood screen has set it to false, so ask the stored Optim result when there is one.
+_optimiser_finished(fit::GllvmFit) =
+    fit.optim_result isa Optim.OptimizationResults ? _fit_verdict(fit.optim_result)[2] : fit.converged
+
 """
     convergence_status(fit::GllvmFit) -> Symbol
 
-`:converged` (interior optimum), `:boundary` (a parameter is at a boundary, e.g. a Heywood
-trait with communality at 1; see [`boundary_params`](@ref)) or `:not_converged`. The boundary
-check runs before the converged flag, so a boundary fit never reads `:converged`.
+`:converged` (interior optimum), `:not_converged` (the optimiser did not finish or the
+log-likelihood is not finite) or `:boundary` (a parameter is at a boundary, e.g. a Heywood
+trait with communality at 1; see [`boundary_params`](@ref)). First match wins, in that order
+(SHINICHI-1753-1118): `:not_converged` is tested before `:boundary`, so a fit whose optimiser
+failed never reads `:boundary`.
 """
 function convergence_status(fit::GllvmFit)
+    _optimiser_finished(fit) || return :not_converged
     isempty(boundary_params(fit)) || return :boundary
     return fit.converged ? :converged : :not_converged
 end
