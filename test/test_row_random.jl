@@ -93,4 +93,17 @@ using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
         @test predict(fit, Y; type = :roweffect) ≈ ρ̂
         @test size(predict(fit, Y; type = :response)) == (p, n)
     end
+
+    # ------------------------------------------------------------------
+    # Second small-σ_row start: Bernoulli d=2 (r6c seed 2, 8x250) has a local mode at
+    # σ_row ≈ 0.66 (ll -1293.1906) reached from σ_row_init = 1.0; the better mode is
+    # σ_row ≈ 0 (ll -1293.0028, matches gllvmTMB). The default fit must find it.
+    # ------------------------------------------------------------------
+    @testset "Bernoulli d=2 false-convergence (second start)" begin
+        using DelimitedFiles
+        Y = Matrix{Float64}(readdlm(joinpath(@__DIR__, "fixtures", "row_random_bern_d2_s2_Y.csv"), ','))
+        fit = fit_row_random_gllvm(Y; family = Binomial(), K = 2)
+        @test fit.loglik >= -1293.01
+        @test fit.σ_row < 0.1
+    end
 end
