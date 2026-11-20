@@ -878,3 +878,52 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     return OrdinalPerTraitCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, τ̂, C, link,
                                  _fit_verdict(res)...)
 end
+
+# ---- Collapsed ordinal cutpoint = boundary (SHINICHI-1753-1118; twin gllvmTMB #1397 / PR #1833) ----
+# Cutpoints are τ₁ then τ_c = τ_{c-1} + exp(ψ_c). A log-increment ψ_c below -15 means two adjacent
+# cutpoints coincide (an unobserved intermediate category): the Hessian still looks PD with a huge SE,
+# but the fit is on a boundary. The cut-off mirrors the R twin's `ordinal_log_increment_floor = -15`
+# (a fixed internal value, not user-settable); change it here only.
+const _ORDINAL_LOG_INCREMENT_FLOOR = -15.0
+
+# True when any finite adjacent cutpoint gap has log below the floor. A zero or negative gap
+# (log -Inf or NaN) counts as collapsed; NaN padding in per-trait matrices is skipped.
+function _ordinal_collapsed_rows(τ::AbstractMatrix)
+    rows = Int[]
+    for t in axes(τ, 1)
+        r = filter(isfinite, τ[t, :])
+        any(c -> log(r[c] - r[c-1]) < _ORDINAL_LOG_INCREMENT_FLOOR || !(r[c] > r[c-1]),
+            2:length(r)) && push!(rows, t)
+    end
+    return rows
+end
+
+_ordinal_boundary_params(τ::AbstractVector) =
+    isempty(_ordinal_collapsed_rows(reshape(τ, 1, :))) ? NamedTuple{(:name, :kind),Tuple{String,Symbol}}[] :
+    [(name = "ordinal cutpoints", kind = :ordinal_cutpoint)]
+_ordinal_boundary_params(τ::AbstractMatrix) =
+    [(name = string("trait ", t, " ordinal cutpoints"), kind = :ordinal_cutpoint)
+     for t in _ordinal_collapsed_rows(τ)]
+
+const _OrdinalAnyFit = Union{OrdinalFit, OrdinalPerTraitFit, OrdinalPerTraitCovFit}
+
+"""
+    boundary_params(fit::OrdinalFit / OrdinalPerTraitFit / OrdinalPerTraitCovFit)
+
+Collapsed cutpoint increments (log-increment below $(_ORDINAL_LOG_INCREMENT_FLOOR)), one
+`(name, kind = :ordinal_cutpoint)` per shared fit or per trait; empty when none.
+"""
+boundary_params(fit::_OrdinalAnyFit) = _ordinal_boundary_params(fit.τ)
+
+"""
+    convergence_status(fit::OrdinalFit / OrdinalPerTraitFit / OrdinalPerTraitCovFit) -> Symbol
+
+`:not_converged` (optimiser flag false or non-finite log-likelihood), then `:boundary` (a collapsed
+cutpoint increment, see [`boundary_params`](@ref)), else `:converged`. No Hessian is stored for
+these fits, so `:degenerate` is not decided here.
+"""
+function convergence_status(fit::_OrdinalAnyFit)
+    (fit.converged && isfinite(fit.loglik)) || return :not_converged
+    isempty(boundary_params(fit)) || return :boundary
+    return :converged
+end
