@@ -329,7 +329,7 @@ function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0))
     xs, ws = _gauss_hermite(20)
     # Combined objective/gradient: ONE inner-solve pass per evaluation. The outer
     # gradient is exact via the envelope theorem (∂ELBO/∂(m,v)=0 at the inner

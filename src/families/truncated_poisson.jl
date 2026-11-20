@@ -145,7 +145,7 @@ function fit_truncated_poisson_gllvm(Y::AbstractMatrix; K::Integer,
         collect(float.(Λ_init))
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0))
     N1 = ones(Int, size(Yc))
     function negll(θ)
         β = θ[1:p]

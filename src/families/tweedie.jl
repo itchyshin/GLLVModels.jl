@@ -366,7 +366,7 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
     logφ0 = log(float(φ_init))
     ξ0 = log((float(p_init) - 1.0) / (2.0 - float(p_init)))   # logit(p_init - 1)
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logφ0, ξ0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logφ0, ξ0)
     function negll(θ)
         β = θ[1:p_sp]
         Λ = unpack_lambda(θ[(p_sp + 1):(p_sp + rr)], p_sp, K)

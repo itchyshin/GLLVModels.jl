@@ -479,8 +479,8 @@ function fit_zi_gllvm(Y::AbstractMatrix{<:Union{Missing, Real}}; mask = nothing,
     # One L-BFGS run from a start; returns the unpacked optimum, Optim's verdict and the
     # smallest site eigenvalue there.
     function run_from(Λstart)
-        θ0 = isnb ? vcat(β0, lz0, pack_lambda(Λstart), logphi0) :
-                    vcat(β0, lz0, pack_lambda(Λstart))
+        θ0 = isnb ? vcat(β0, lz0, _pack_lambda_start(Λstart), logphi0) :
+                    vcat(β0, lz0, _pack_lambda_start(Λstart))
         res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
                              autodiff = :finite)
         β, lz, Λ, phi = unpack(Optim.minimizer(res))

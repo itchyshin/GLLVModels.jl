@@ -728,7 +728,7 @@ function _fit_nb_gllvm_grouped_start(Y::AbstractMatrix; K::Integer, group::Abstr
     _mask_warmstart!(Zemp, msk)
     β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, mask = msk,
                                  guarded = true, caller = "fit_nb_gllvm_grouped")   # #874
-    θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), fill(log(10.0), G))
 
     function negll(θ)
         β = θ[1:p]
@@ -1001,7 +1001,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     @inbounds for j in 1:kk
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
-    θ0 = vcat(β0, zeros(q), pack_lambda(Λ0), fill(log(10.0), G))
+    θ0 = vcat(β0, zeros(q), _pack_lambda_start(Λ0), fill(log(10.0), G))
 
     function negll(θ)
         β = θ[1:p]
@@ -1048,7 +1048,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
         @inbounds for j in 1:kk1
             Λ1[:, j] = F1.U[:, j] .* (F1.S[j] / sqrt(n))
         end
-        θ1 = vcat(β1, γ1, pack_lambda(Λ1), fill(log(10.0), G))
+        θ1 = vcat(β1, γ1, _pack_lambda_start(Λ1), fill(log(10.0), G))
         θ̂2, nll2, conv2, iters2 = _fit_from(θ1)
         if isfinite(nll2) && nll2 < nll - 1e-6
             θ̂, nll, conv0, iters0 = θ̂2, nll2, conv2, iters2
@@ -1473,7 +1473,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
     β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init)
-    θ0 = vcat(β0, pack_lambda(Λ0), fill(log(10.0), G))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), fill(log(10.0), G))
 
     function negll(θ)
         β = θ[1:p]
@@ -1621,7 +1621,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     @inbounds for j in 1:kk
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
-    θ0 = vcat(β0, zeros(q), pack_lambda(Λ0), fill(log(10.0), G))
+    θ0 = vcat(β0, zeros(q), _pack_lambda_start(Λ0), fill(log(10.0), G))
 
     function negll(θ)
         β = θ[1:p]
@@ -1965,7 +1965,7 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     @inbounds for j in 1:kk
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
-    θ0 = vcat(β0, pack_lambda(Λ0), fill(log(2.0), G))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), fill(log(2.0), G))
 
     function negll(θ)
         β = θ[1:p]
@@ -2126,7 +2126,7 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     @inbounds for j in 1:kk
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
-    θ0 = vcat(β0, zeros(q), pack_lambda(Λ0), fill(log(2.0), G))
+    θ0 = vcat(β0, zeros(q), _pack_lambda_start(Λ0), fill(log(2.0), G))
 
     function negll(θ)
         β = θ[1:p]
@@ -2501,7 +2501,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     β0, Λ0 = _grouped_warm_start(Zemp, K, β_init, Λ_init; offset = offset, mask = msk,
                                  guarded = _eta_cap_guarded(link),
                                  caller = "fit_nb1_gllvm_grouped")   # #874
-    θ0 = vcat(β0, pack_lambda(Λ0), fill(log(1.0), G))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), fill(log(1.0), G))
 
     function negll(θ)
         β = θ[1:p]
@@ -2659,7 +2659,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     @inbounds for j in 1:kk
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
-    θ0 = vcat(β0, zeros(q), pack_lambda(Λ0), fill(log(1.0), G))
+    θ0 = vcat(β0, zeros(q), _pack_lambda_start(Λ0), fill(log(1.0), G))
 
     function negll(θ)
         β = θ[1:p]
@@ -3095,7 +3095,7 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
     end
     ξ0 = spec.nfree == 0 ? Float64[] :
          spec.mode === :shared ? [_tweedie_xi(power0[1])] : _tweedie_xi.(power0)
-    θ0 = vcat(β0, pack_lambda(Λ0), fill(log(1.0), G), ξ0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), fill(log(1.0), G), ξ0)
 
     function negll(θ)
         β = θ[1:p]

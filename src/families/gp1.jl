@@ -331,7 +331,7 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
     # Inner solve: optimize (β,Λ) at FIXED α, warm-started from (βs,Λs). The forbidden
     # region 1+αμ≤0 is caught by the marginal's own guard and surfaces here as 1e12.
     function fit_bL(α, βs, Λs)
-        θ0 = vcat(βs, pack_lambda(Λs))
+        θ0 = vcat(βs, _pack_lambda_start(Λs))
         function negll(θ)
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)

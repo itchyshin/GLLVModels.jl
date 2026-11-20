@@ -303,7 +303,7 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
         Matrix{Float64}(alpha_lv_init)
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logφ0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logφ0)
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
@@ -320,7 +320,7 @@ function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = if X_lv_fit !== nothing
-        θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0), logφ0)
+        θ0_lv = vcat(β0, vec(alpha0), _pack_lambda_start(Λ0), logφ0)
         negll_lv = θ -> begin
             v = try
                 beta_lv_nll_packed(θ, Yc, p, K, link;

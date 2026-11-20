@@ -563,7 +563,7 @@ function fit_beta_binomial_gllvm(Y::AbstractMatrix; K::Integer,
     end
     logφ0 = φ_init === nothing ? log(10.0) : log(float(φ_init))
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logφ0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logφ0)
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
@@ -730,7 +730,7 @@ function fit_beta_binomial_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
     logφ0 = φ_init === nothing ? log(10.0) : log(float(φ_init))
-    θ0 = vcat(β0, pack_lambda(Λ0), fill(logφ0, G))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), fill(logφ0, G))
 
     function negll(θ)
         β = θ[1:p]
@@ -908,7 +908,7 @@ function fit_beta_binomial_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
     logφ0 = φ_init === nothing ? log(10.0) : log(float(φ_init))
-    θ0 = vcat(β0, zeros(q), pack_lambda(Λ0), fill(logφ0, G))
+    θ0 = vcat(β0, zeros(q), _pack_lambda_start(Λ0), fill(logφ0, G))
 
     function negll(θ)
         β = θ[1:p]

@@ -463,7 +463,7 @@ function fit_compoisson_gllvm(Y::AbstractMatrix; K::Integer,
     end
     logν0 = log(float(ν_init))
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logν0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logν0)
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)

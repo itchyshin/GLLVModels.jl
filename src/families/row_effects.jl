@@ -170,8 +170,8 @@ function fit_roweffect_gllvm(Y::AbstractMatrix; family,
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
-    θ0 = has_disp ? vcat(β0, zeros(nfree), pack_lambda(Λ0), log(_cov_disp_init(family))) :
-                    vcat(β0, zeros(nfree), pack_lambda(Λ0))
+    θ0 = has_disp ? vcat(β0, zeros(nfree), _pack_lambda_start(Λ0), log(_cov_disp_init(family))) :
+                    vcat(β0, zeros(nfree), _pack_lambda_start(Λ0))
     function negll(θ)
         β = θ[1:p]
         ρfree = θ[(p + 1):(p + nfree)]

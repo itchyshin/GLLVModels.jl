@@ -377,7 +377,7 @@ function fit_truncated_nbinom2_gllvm(Y::AbstractMatrix; K::Integer,
     # One L-BFGS run from a start; returns the optimum, Optim's verdict and the
     # smallest site eigenvalue there.
     function run_from(Λstart, logrstart)
-        res = Optim.optimize(negll, vcat(β0, pack_lambda(Λstart), logrstart), ls, opts;
+        res = Optim.optimize(negll, vcat(β0, _pack_lambda_start(Λstart), logrstart), ls, opts;
                              autodiff = :finite)
         θ̂ = collect(Float64, Optim.minimizer(res))
         β̂ = θ̂[1:p]
@@ -663,7 +663,7 @@ function fit_truncated_nbinom2_gllvm_pertrait(Y::AbstractMatrix; K::Integer,
         fill(log(float(r_init)), p)
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logr0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logr0)
     length(θ0) == p + rr + p || throw(ArgumentError(
         "per-trait pack length $(length(θ0)) ≠ p+rr+p=$(p + rr + p)"))
     function negll(θ)

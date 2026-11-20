@@ -179,7 +179,7 @@ function fit_poisson_random_slope(Y::AbstractMatrix{<:Real}, grouping::AbstractV
             idx += (q - j)
         end
     end
-    θ0 = vcat(β0, pack_lambda(Λ0), chol0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), chol0)
 
     # Guarded objective: as Σ_b → boundary the augmented Woodbury chols can fail; a
     # large finite penalty keeps the line search off the degenerate ridge (matching

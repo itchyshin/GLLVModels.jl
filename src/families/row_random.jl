@@ -149,8 +149,8 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family 
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
-    θ0 = has_disp ? vcat(β0, pack_lambda(Λ0), log(σ_row_init), log(_cov_disp_init(family))) :
-                    vcat(β0, pack_lambda(Λ0), log(σ_row_init))
+    θ0 = has_disp ? vcat(β0, _pack_lambda_start(Λ0), log(σ_row_init), log(_cov_disp_init(family))) :
+                    vcat(β0, _pack_lambda_start(Λ0), log(σ_row_init))
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
