@@ -904,8 +904,12 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     Λ̂ = unpack_lambda(@view(θ̂[(p + q + 1):(p + q + rr)]), p, K)
     τ̂ = _unpack_cutpoints_pertrait(@view(θ̂[(p + q + rr + 1):(p + q + rr + ncut)]), C)
     _warn_runaway_loadings(Λ̂, "Ordinal")
+    # `Optim.converged` also fires on a zero-length step far from a stationary point;
+    # require the gradient test too, as in `fit_ordinal_gllvm_pertrait` (#1273).
+    ll, conv, iters = _fit_verdict(Optim.minimum(res),
+        Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
     return OrdinalPerTraitCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, τ̂, C, link,
-                                 _fit_verdict(res)...)
+                                 ll, conv, iters)
 end
 
 # Integer-valued float codes: convert once, then run the integer method (#1191).
