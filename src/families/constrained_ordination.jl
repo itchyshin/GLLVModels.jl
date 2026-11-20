@@ -225,8 +225,8 @@ function fit_constrained_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family
     end
     B0 = zeros(q, K)
 
-    θ0 = has_disp ? vcat(β0, pack_lambda(Λ0), vec(B0), log(_cov_disp_init(family))) :
-                    vcat(β0, pack_lambda(Λ0), vec(B0))
+    θ0 = has_disp ? vcat(β0, _pack_lambda_start(Λ0), vec(B0), log(_cov_disp_init(family))) :
+                    vcat(β0, _pack_lambda_start(Λ0), vec(B0))
     qK = q * K
     function negll(θ)
         β = θ[1:p]

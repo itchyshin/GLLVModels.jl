@@ -412,7 +412,7 @@ function fit_ordered_beta_gllvm(Y::AbstractMatrix; K::Integer,
     c0_0  = float(c0_init)
     Δ0    = log(max(float(c1_init) - c0_0, 1e-3))      # c1 = c0 + exp(Δ)
 
-    θ0 = vcat(β0, pack_lambda(Λ0), c0_0, Δ0, logφ0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), c0_0, Δ0, logφ0)
     function negll(θ)
         β  = θ[1:p]
         Λ  = unpack_lambda(θ[(p + 1):(p + rr)], p, K)

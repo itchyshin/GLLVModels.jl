@@ -250,8 +250,8 @@ function fit_quadratic_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family =
     end
     D0 = zeros(p, K)
 
-    θ0 = has_disp ? vcat(β0, pack_lambda(Λ0), vec(D0), log(_cov_disp_init(family))) :
-                    vcat(β0, pack_lambda(Λ0), vec(D0))
+    θ0 = has_disp ? vcat(β0, _pack_lambda_start(Λ0), vec(D0), log(_cov_disp_init(family))) :
+                    vcat(β0, _pack_lambda_start(Λ0), vec(D0))
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)

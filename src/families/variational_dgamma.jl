@@ -201,7 +201,7 @@ function fit_delta_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         Λc0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
-    θ0 = vcat(βz0, βc0, pack_lambda(Λc0), log(α0))
+    θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0), log(α0))
     # Shape bounds: α·logα − logΓ(α) suffers catastrophic cancellation at very large
     # α, which lets the optimiser run α away to nonsense. Confine the shape to a
     # generous, numerically safe range (same trick as fit_gamma_gllvm_va).

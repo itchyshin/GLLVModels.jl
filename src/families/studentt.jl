@@ -540,9 +540,9 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Intege
     ν_fixed = nu === nothing ? nothing : (nu isa Real ? float(nu) : float.(nu))
 
     θ0 = if nu === nothing
-        vcat(β0, pack_lambda(Λ0), logσ0, log_nu_minus_1_0)
+        vcat(β0, _pack_lambda_start(Λ0), logσ0, log_nu_minus_1_0)
     else
-        vcat(β0, pack_lambda(Λ0), logσ0)
+        vcat(β0, _pack_lambda_start(Λ0), logσ0)
     end
 
     function negll(θ)

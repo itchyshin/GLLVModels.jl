@@ -301,7 +301,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         Matrix{Float64}(alpha_lv_init)
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0))
     N1 = ones(Int, size(Yc))                     # unit trials, hoisted out of the per-eval closure
     # R3 (workspace reuse, core070): one Float64 LaplaceModeWorkspace shared across
     # every site of every `negll` evaluation, instead of `_laplace_mode` allocating
@@ -348,7 +348,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         derivative_route = :finite
         # Predictor-informed latent-score route: joint (β, alpha_lv, Λ) by finite
         # differences — the offset depends jointly on Λ and alpha_lv.
-        θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0))
+        θ0_lv = vcat(β0, vec(alpha0), _pack_lambda_start(Λ0))
         negll_lv = θ -> begin
             if _eta_cap_guarded(link)   # #869: the additive η term is offset + the X_lv mean
                 Λ_g = unpack_lambda(view(θ, (p + q_lv * K + 1):(p + q_lv * K + rr)), p, K)

@@ -494,7 +494,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         Matrix{Float64}(alpha_lv_init)
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0))
     ridge_on = isfinite(loading_ridge)
     ridge_τ2 = loading_ridge^2
     function negll(θ)
@@ -514,7 +514,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = if X_lv_fit !== nothing
-        θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0))
+        θ0_lv = vcat(β0, vec(alpha0), _pack_lambda_start(Λ0))
         negll_lv = θ -> begin
             v = try
                 binomial_lv_nll_packed(θ, Yc, Nm, p, K, link;

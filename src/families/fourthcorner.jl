@@ -197,8 +197,8 @@ function fit_fourthcorner_gllvm(Y::AbstractMatrix; family,
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
-    θ0 = has_disp ? vcat(β0, zeros(q * r), pack_lambda(Λ0), log(_cov_disp_init(family))) :
-                    vcat(β0, zeros(q * r), pack_lambda(Λ0))
+    θ0 = has_disp ? vcat(β0, zeros(q * r), _pack_lambda_start(Λ0), log(_cov_disp_init(family))) :
+                    vcat(β0, zeros(q * r), _pack_lambda_start(Λ0))
     function negll(θ)
         β = θ[1:p]
         C = reshape(θ[(p + 1):(p + q * r)], q, r)

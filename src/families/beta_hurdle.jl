@@ -316,7 +316,7 @@ function fit_beta_hurdle_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Int
     end
 
     # --- Objective (negative Laplace marginal) -----------------------------
-    θ0 = vcat(βz0, βc0, pack_lambda(Λc0), log(φ0))
+    θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0), log(φ0))
     function negll(θ)
         βz = θ[1:p]
         βc = θ[(p + 1):(2p)]
