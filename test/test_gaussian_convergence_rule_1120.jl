@@ -54,3 +54,19 @@ end
     end
     @test convergence_status(fith; y = Yh) === :boundary
 end
+
+@testset "max gradient at the reported optimum (#1120)" begin
+    # Well-conditioned Gaussian fixture: the fit's own objective has a near-zero gradient at the
+    # reported optimum, relative to max(1, |nll|) (unit-free, as the converged rule requires).
+    rng = StableRNG(21)
+    p, n = 6, 300
+    Λ = [0.8 0.5 0.3 0.6 0.4 0.7]'
+    Y = Λ * randn(rng, 1, n) .+ randn(rng, p, n)
+    fit = fit_gllvm(Y; family = Normal(), K = 1)
+    @test convergence_status(fit; y = Y) === :converged
+    nll = GLLVModels._confint_reconstruct_nll(fit, Y, nothing, nothing)
+    θ̂ = fit.pars.θ_packed
+    g = GLLVModels.ForwardDiff.gradient(nll, θ̂)
+    @test all(isfinite, g)
+    @test maximum(abs, g) / max(1.0, abs(nll(θ̂))) <= 1e-3
+end
