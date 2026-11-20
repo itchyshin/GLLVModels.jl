@@ -166,7 +166,7 @@ _register_shard_table!(4, (
         "test_destination_b_joint_other_families.jl", "test_nb_boundary_restart.jl", "test_nb1_grouped_mode_search.jl", "test_nb1_fisher_large_counts.jl",
         "test_nb2_grouped_mode_search.jl", "test_grouped_getlv_mode.jl", "test_gamma_grouped_mode_search.jl",
         "test_betabinomial_x_identity.jl", "test_zinb_x_identity.jl", "test_beta_fit.jl",
-        "test_link_honoured.jl", "test_issue_725_extractor_docs.jl", "test_studentt_disp_group.jl",
+        "test_link_honoured.jl", "test_link_residual_unsupported_1230.jl", "test_issue_725_extractor_docs.jl", "test_studentt_disp_group.jl",
         "test_studentt_normalizer_precision.jl", "test_studentt_retained_precision.jl", "test_studentt_grouped_mode_search.jl",
         "test_ordinal_pertrait.jl", "test_ordinal_gradient_gate.jl", "test_ordinal_level_check.jl", "test_ordinal_float_y.jl", "test_ordinal_rowcheck.jl", "test_getlv_rowcheck.jl", "test_fit_gllvm.jl",
         "test_truncated_formula.jl", "test_gaussian_pervar.jl", "test_ledermann_pervar_k.jl",
@@ -346,7 +346,7 @@ _register_shard_table!(8, (
         "test_truncnb2_mode_search.jl", "test_phylo_beta_xlv.jl", "test_grouped_identification_diagnostics.jl",
         "test_destination_b_quadrature.jl", "test_laplace_alloc_equiv.jl", "test_gp1_mode_backtrack.jl",
         "test_nb1_poisson_ridge.jl", "test_grouped_getlv_mode.jl", "test_beta_fit.jl",
-        "test_issue_725_extractor_docs.jl", "test_studentt.jl", "test_studentt_normalizer_precision.jl",
+        "test_link_residual_unsupported_1230.jl", "test_issue_725_extractor_docs.jl", "test_studentt.jl", "test_studentt_normalizer_precision.jl",
         "test_studentt_grouped_mode_search.jl", "test_ordinal_level_check.jl", "test_fit_gllvm.jl",
         "test_ledermann_pervar_k.jl", "test_gaussian_fixed_residual.jl", "test_gaussian_pervar_fallback.jl",
         "test_issue_737_omega_doc.jl", "test_cross_kernel.jl", "test_gaussian_sources.jl",
@@ -768,6 +768,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gamma_fit.jl")
     _shard_include("test_link_honoured.jl")
     _shard_include("test_issue_721_link_docs.jl")
+    _shard_include("test_link_residual_unsupported_1230.jl")
     _shard_include("test_issue_725_extractor_docs.jl")
     _shard_include("test_issue_719_docs_deploy_guard.jl")
     _shard_include("test_tweedie.jl")
