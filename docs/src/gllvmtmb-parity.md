@@ -336,6 +336,9 @@ the plain no-X route (#912; `bridge_capabilities()` reports
 cells and masked cells are excluded from the likelihood. A masked Gaussian
 bridge fit still refuses confidence intervals (`ci_method` other than
 `"none"`), `reml = true`, `X`, and `X_lv` with an `ArgumentError`.
+The R package gllvmTMB currently refuses masked Gaussian fits (gllvmTMB #1840
+was closed with that refusal kept) until alpha is estimated jointly, so this
+route is available from Julia only.
 
 Ordinal-probit comparisons check fitting, observation counts, masks, and links.
 Julia returns per-trait cutpoints and category counts, but the R implementation
