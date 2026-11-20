@@ -116,6 +116,18 @@ function _grouped_warn_identification(terms, p::Integer)
     return nothing
 end
 
+# Binomial with one trial per cell: the unique (trait-specific) variance next to
+# a latent term is only weakly identified (R gllvmTMB gates it off with a
+# message). Julia still fits it, so warn rather than fit it silently.
+function _grouped_warn_binary_unique(terms, trials::AbstractMatrix, kind::Symbol)
+    kind === :binomial && all(==(1.0), trials) || return nothing
+    for term in terms
+        term.mode === :latent && term.unique || continue
+        @warn "Binomial with one trial per cell: the unique variances next to a latent term are weakly identified (R gllvmTMB leaves them out). Treat the unique-variance estimates, their standard errors and the Hessian with caution, or fit the latent term without unique=true." source=term.name
+    end
+    return nothing
+end
+
 function _warn_covariance_redundancy(source, parameter_count, covariance_dimension)
     parameter_count > covariance_dimension || return nothing
     @warn "Covariance is structurally non-identifiable in its current coordinates; loadings and unique variances cannot be separated. Total covariance may still be identifiable. Use a non-redundant supported covariance representation; full-coordinate Wald intervals may be unavailable." source parameter_count covariance_dimension
