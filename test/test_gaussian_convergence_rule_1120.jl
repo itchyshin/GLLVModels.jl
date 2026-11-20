@@ -28,3 +28,29 @@ end
     @test !isempty(boundary_params(fit_nc))
     @test convergence_status(fit_nc) === :not_converged
 end
+
+@testset "convergence_status :degenerate (#1120)" begin
+    # Rule: singular / non-PD Hessian or non-finite SE -> degenerate (after boundary).
+    H_sing = [1.0 1.0; 1.0 1.0]
+    _, se_s, pd_s = GLLVModels._gaussian_wald_covariance_from_hessian(H_sing, 2)
+    @test GLLVModels._wald_degenerate(pd_s, se_s)
+    @test GLLVModels._wald_degenerate(true, [0.1, NaN])
+    @test GLLVModels._wald_degenerate(true, [0.1, Inf])
+    @test !GLLVModels._wald_degenerate(true, [0.1, 0.2])
+
+    # Well-conditioned fit with the data supplied: Hessian is PD, status stays :converged.
+    rng = StableRNG(11)
+    p, n = 6, 150
+    Λ = [0.8 0.5 0.3 0.6 0.4 0.7]'
+    Y = Λ * randn(rng, 1, n) .+ randn(rng, p, n)
+    fit = fit_gllvm(Y; family = Normal(), K = 1)
+    @test convergence_status(fit) === :converged
+    @test convergence_status(fit; y = Y) === :converged
+
+    # A boundary fit is never read as degenerate, even when y is supplied.
+    Yh = _heywood_fixture_1120()
+    fith = redirect_stderr(devnull) do
+        fit_gllvm(Yh; family = Normal(), K = 1)
+    end
+    @test convergence_status(fith; y = Yh) === :boundary
+end

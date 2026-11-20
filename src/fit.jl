@@ -127,19 +127,41 @@ boundary_params(fit::GllvmFit) =
 _optimiser_finished(fit::GllvmFit) =
     fit.optim_result isa Optim.OptimizationResults ? _fit_verdict(fit.optim_result)[2] : fit.converged
 
-"""
-    convergence_status(fit::GllvmFit) -> Symbol
+# Singular / non-PD observed information or a non-finite Wald SE (SHINICHI-1753-1118 `degenerate`).
+# "Inflated" SE has no agreed cut yet, so it is not tested here.
+_wald_degenerate(pd_hessian::Bool, se) = !pd_hessian || !all(isfinite, se)
 
-`:converged` (interior optimum), `:not_converged` (the optimiser did not finish or the
-log-likelihood is not finite) or `:boundary` (a parameter is at a boundary, e.g. a Heywood
-trait with communality at 1; see [`boundary_params`](@ref)). First match wins, in that order
-(SHINICHI-1753-1118): `:not_converged` is tested before `:boundary`, so a fit whose optimiser
-failed never reads `:boundary`.
 """
-function convergence_status(fit::GllvmFit)
+    convergence_status(fit::GllvmFit; y = nothing) -> Symbol
+
+First match wins (SHINICHI-1753-1118):
+
+1. `:not_converged`: the optimiser did not finish, or the log-likelihood is not finite.
+2. `:boundary`: a parameter is at a boundary, e.g. a Heywood trait with communality at 1
+   (see [`boundary_params`](@ref)). Tested before the Hessian, so a boundary fit never reads
+   `:degenerate`.
+3. `:degenerate`: the observed information is singular or not positive definite, or a Wald SE
+   is not finite. A fit does not store its data, so this needs `y` (or a fit with a retained
+   data record); without data, or when `confint` does not admit the fit, the Hessian check is
+   skipped.
+4. `:converged`: otherwise.
+"""
+function convergence_status(fit::GllvmFit; y::Union{Nothing,AbstractMatrix} = nothing)
     _optimiser_finished(fit) || return :not_converged
     isempty(boundary_params(fit)) || return :boundary
-    return fit.converged ? :converged : :not_converged
+    fit.converged || return :not_converged
+    data = y !== nothing ? y :
+           (_has_gaussian_record(fit) ? fit.integration.data.responses : nothing)
+    if data !== nothing
+        ci = try
+            confint(fit, data)
+        catch e
+            e isa ArgumentError || rethrow()
+            nothing
+        end
+        ci !== nothing && _wald_degenerate(ci.pd_hessian, ci.se) && return :degenerate
+    end
+    return :converged
 end
 
 # Apply the Heywood rule at construction time: returns the converged flag to store, and warns.
