@@ -1,9 +1,14 @@
 name: Documenter
 on:
+  # Push to main and tags are unfiltered: every such event still builds and
+  # deploys. Pull requests have no workflow-level paths filter either. A
+  # skipped workflow would leave Documenter missing, which blocks a merge
+  # when that check is required. The changes job below gates the build.
   push:
     branches: [main]
     tags: ['*']
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 permissions:
   contents: write      # let GITHUB_TOKEN push the gh-pages branch (Documenter deploy)
   statuses: write
@@ -20,7 +25,51 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Ready PRs only. On push, tags, and drafts this job is skipped (it still
+  # reports). Push and tag builds do not consult it. Drafts skip the doc
+  # build entirely; ready_for_review runs this filter and then the build
+  # when the PR touches docs-relevant files.
+  changes:
+    name: Docs path filter
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - name: Detect docs-relevant files
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp)
+          gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files?per_page=100" \
+            --jq '.[].filename' > "$tmp"
+          docs=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              docs|docs/*|src|src/*|news|news/*|README|README.*|Project.toml|CHANGELOG.md|.github/workflows/Documenter.yml|tools/check_reader_surface.py)
+                docs=true
+                break
+                ;;
+            esac
+          done < "$tmp"
+          echo "docs=$docs" >> "$GITHUB_OUTPUT"
+          echo "Docs-relevant changes: $docs"
+
   Documenter:
+    needs: changes
+    # Push and tags always build. A ready PR builds only when the filter
+    # found docs-relevant files. If that filter fails, build anyway so a
+    # query error cannot skip the docs. Drafts leave this job skipped:
+    # `changes` does not run, so neither clause matches. !cancelled() keeps
+    # the job from being dropped just because `changes` was skipped on push.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result == 'failure' || needs.changes.outputs.docs == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
