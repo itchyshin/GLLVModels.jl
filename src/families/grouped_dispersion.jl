@@ -1219,7 +1219,7 @@ Total Laplace log-marginal of a Beta GLLVM with **per-species** precision `φvec
 (length p; `Var_t = μ_t(1−μ_t)/(1+φvec[t])`). `Y` is the p×n matrix of proportions
 in (0,1); `Λ` p×K; `β` length-p. With a constant `φvec = fill(φ, p)` this equals the
 shared-precision [`beta_marginal_loglik_laplace`](@ref) to machine precision when
-`hessian=:fisher` (the default). `hessian=:observed` uses the conditional
+`hessian=:fisher` is passed. The default `hessian=:observed` uses the conditional
 Beta/logit Hessian used by TMB's Laplace objective.
 """
 function beta_grouped_marginal_loglik_laplace(Y::AbstractMatrix, Λ::AbstractMatrix,

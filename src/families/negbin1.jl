@@ -238,7 +238,7 @@ Missing data: pass a `mask` (p×n Bool, `false` = unobserved) or `missing` entri
 
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
 `:observed` joint — TMB's choice); the inner mode search is always
-Fisher-scored. Default: NB1/log default `:fisher`. Omitting it is exactly the pre-kwarg
+Fisher-scored. Default: NB1/log default `:observed`. Omitting it is exactly the pre-kwarg
 behaviour.
 """
 function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
