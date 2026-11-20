@@ -85,10 +85,10 @@ implementation detail only.
 | none × dep (`dep()` / unstructured trait covariance) | implemented (function API) |
 | none × latent (`latent()` / ordinary LV GLLVM) | implemented |
 | phylogenetic × indep (`phylo_indep()`) | implemented |
-| phylogenetic × dep (`phylo_dep()`) | implemented (Arc 0 Gaussian function API only) |
+| phylogenetic × dep (`phylo_dep()`) | implemented — R twin `fit_kernel_dep_gllvm`; `fit_phylo_dep_gllvm` is the row-phy Hadamard variant (Arc 0 Gaussian function API only) |
 | phylogenetic × latent (`phylo_latent()`) | implemented; bare Gaussian R twin `fit_phylo_latent_gllvm` with A14/A15 receipts at P1 (promotion pending; `rho != 1` fenced; R's global sparse `phylo_vcv` route has no keyword twin) |
 | animal × indep (`animal_indep()`) | implemented |
-| animal × dep (`animal_dep()`) | implemented (Arc 0 Gaussian function API only) |
+| animal × dep (`animal_dep()`) | implemented — R twin `fit_kernel_dep_gllvm`; `fit_animal_dep_gllvm` is the row-phy Hadamard variant (Arc 0 Gaussian function API only) |
 | animal × latent (`animal_latent()`) | implemented (Arc 0 Gaussian function API only) |
 | spatial × indep (`spatial_indep()`) | implemented |
 | spatial × dep (`spatial_dep()`) | planned (Arc 0 fail-loud entry only) |
@@ -130,8 +130,8 @@ it is **not** Destination B `FINAL-REVIEW`, not twin Δ parity, and not formula 
 
 | Cell | PR (main) | Fitter / test | Status after G2 |
 |---|---|---|---|
-| phylo × dep | #324 | `fit_phylo_dep_gllvm`, `test/test_phylo_dep.jl` | Arc 0 Gaussian function API only |
-| animal × dep | #325 | `fit_animal_dep_gllvm`, `test/test_animal_dep.jl` | same |
+| phylo × dep | #324 | R twin: `fit_kernel_dep_gllvm`, `test/test_kernel_dep.jl`; Hadamard: `fit_phylo_dep_gllvm`, `test/test_phylo_dep.jl` | Arc 0 Gaussian function API only |
+| animal × dep | #325 | R twin: `fit_kernel_dep_gllvm`, `test/test_kernel_dep.jl`; Hadamard: `fit_animal_dep_gllvm`, `test/test_animal_dep.jl` | same |
 | animal × latent | #327 | `fit_animal_latent_gllvm`, `test/test_animal_latent.jl` | same; `unique = true` still refused |
 | spatial × dep | #329 | `fit_spatial_dep_gllvm`, `test/test_spatial_dep.jl` | **fail-loud only** — row stays `planned` |
 | kernel × indep | #331 | `fit_kernel_indep_gllvm`, `test/test_kernel_indep.jl` | Arc 0 Gaussian function API only |
