@@ -140,12 +140,20 @@ if (!exists(".jl_value", mode = "function")) {
 # Source of truth: docs/src/gllvmtmb-parity.md, table "R bridge: parameterization map".
 # Returns a list(name=<gllvm name>, value=<numeric, possibly vector>).
 # ---------------------------------------------------------------------------------
+# Read a dispersion field from a Julia fit. Row-effect fits (RowEffectFit,
+# RowRandomFit) have no `r` / `φ` / `α` field: they store the value in `dispersion`.
+.disp_field <- function(julia_fit, field) {
+  v <- tryCatch(julia_fit[[field]], error = function(e) NULL)
+  if (is.null(v)) v <- julia_fit[["dispersion"]]
+  as.numeric(.jl_value(v))
+}
+
 .convert_dispersion <- function(disp_kind, julia_fit, grouped) {
   switch(disp_kind,
     # NB2: gllvm phi (Var = mu + mu^2 * phi); Julia r (size, Var = mu + mu^2/r).
     # Bridge rule: phi = 1 / r  (also applies to ZINB / Hurdle-NB / grouped-NB).
     nb2 = {
-      r <- if (grouped) as.numeric(.jl_value(julia_fit$r_group)) else as.numeric(.jl_value(julia_fit$r))
+      r <- if (grouped) as.numeric(.jl_value(julia_fit$r_group)) else .disp_field(julia_fit, "r")
       list(name = "phi", value = 1 / r)                       # r = 1/phi  <=>  phi = 1/r
     },
     # NB1: gllvm phi (Var = mu + mu*phi); Julia phi (Var = mu*(1+phi)). Identity map.
@@ -156,7 +164,7 @@ if (!exists(".jl_value", mode = "function")) {
     # Gamma: gllvm phi == SHAPE (Var = mu^2/phi); Julia alpha == shape (Var = mu^2/alpha).
     # Relabel only, no inversion.
     gamma = {
-      a <- if (grouped) as.numeric(.jl_value(julia_fit[["α"]])) else as.numeric(.jl_value(julia_fit[["α"]]))
+      a <- .disp_field(julia_fit, "α")
       list(name = "phi", value = a)                           # relabel alpha -> phi
     },
     # Beta: precision phi identical in both. Identity.
