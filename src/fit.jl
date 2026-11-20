@@ -86,6 +86,96 @@ end
 
 _reset_unidentified_warnings!() = (lock(() -> empty!(_UNIDENTIFIED_WARNED), _UNIDENTIFIED_LOCK); nothing)
 
+# ---- Heywood status (#1284) ------------------------------------------------------------
+# A Gaussian fit whose communality reaches 1 for some trait is at a boundary (uniqueness -> 0),
+# not an interior optimum, even when Optim's gradient test passes. converged=true is reserved for
+# interior optima (BRIAN-1430-1117 / SHINICHI-0545), so such a fit gets converged=false, the
+# status (`convergence_status(fit) == :boundary`, kind :heywood in `boundary_params(fit)`) and a
+# warning naming the trait(s).
+# Names and threshold are provisional (answer pending from Brian); change them here only.
+const _HEYWOOD_COMMUNALITY = 0.999
+
+# Traits whose communality (ΛΛ')_tt / ((ΛΛ')_tt + unique_t) exceeds the cut. Only the plain
+# shared-σ_eps model is screened (no per-trait B/W variances, no phylogenetic block), where
+# unique_t = σ_eps^2 for every trait; other structures return an empty list.
+function _heywood_traits_from(pars, model)
+    (model.has_diag || model.K_phy > 0 || model.has_phy_unique) && return Int[]
+    Λ = pars.Λ
+    σ² = pars.σ_eps^2
+    shared = vec(sum(abs2, Λ; dims = 2))
+    return findall(t -> shared[t] / (shared[t] + σ²) > _HEYWOOD_COMMUNALITY, eachindex(shared))
+end
+
+"""
+    heywood_traits(fit::GllvmFit) -> Vector{Int}
+
+Indices of traits at a Heywood boundary (communality above $(_HEYWOOD_COMMUNALITY)); empty when none.
+"""
+heywood_traits(fit::GllvmFit) = _heywood_traits_from(fit.pars, fit.model)
+
+"""
+    boundary_params(fit::GllvmFit) -> Vector{NamedTuple{(:name, :kind)}}
+
+Parameters at a boundary, one `(name, kind)` per entry. Heywood traits appear as
+`(name = "trait 8", kind = :heywood)`; empty when none (SHINICHI-1753-1118 converged rule).
+"""
+boundary_params(fit::GllvmFit) =
+    [(name = string("trait ", t), kind = :heywood) for t in heywood_traits(fit)]
+
+# Did the optimiser itself finish with a finite log-likelihood? `fit.converged` cannot answer this
+# once the Heywood screen has set it to false, so ask the stored Optim result when there is one.
+_optimiser_finished(fit::GllvmFit) =
+    fit.optim_result isa Optim.OptimizationResults ? _fit_verdict(fit.optim_result)[2] : fit.converged
+
+# Singular / non-PD observed information or a non-finite Wald SE (SHINICHI-1753-1118 `degenerate`).
+# "Inflated" SE has no agreed cut yet, so it is not tested here.
+_wald_degenerate(pd_hessian::Bool, se) = !pd_hessian || !all(isfinite, se)
+
+"""
+    convergence_status(fit::GllvmFit; y = nothing) -> Symbol
+
+First match wins (SHINICHI-1753-1118):
+
+1. `:not_converged`: the optimiser did not finish, or the log-likelihood is not finite.
+2. `:boundary`: a parameter is at a boundary, e.g. a Heywood trait with communality at 1
+   (see [`boundary_params`](@ref)). Tested before the Hessian, so a boundary fit never reads
+   `:degenerate`.
+3. `:degenerate`: the observed information is singular or not positive definite, or a Wald SE
+   is not finite. A fit does not store its data, so this needs `y` (or a fit with a retained
+   data record); without data, or when `confint` does not admit the fit, the Hessian check is
+   skipped.
+4. `:converged`: otherwise.
+"""
+function convergence_status(fit::GllvmFit; y::Union{Nothing,AbstractMatrix} = nothing)
+    _optimiser_finished(fit) || return :not_converged
+    isempty(boundary_params(fit)) || return :boundary
+    fit.converged || return :not_converged
+    data = y !== nothing ? y :
+           (_has_gaussian_record(fit) ? fit.integration.data.responses : nothing)
+    if data !== nothing
+        ci = try
+            confint(fit, data)
+        catch e
+            e isa ArgumentError || rethrow()
+            nothing
+        end
+        ci !== nothing && _wald_degenerate(ci.pd_hessian, ci.se) && return :degenerate
+    end
+    return :converged
+end
+
+# Apply the Heywood rule at construction time: returns the converged flag to store, and warns.
+function _heywood_screen(pars, model, converged::Bool)
+    idx = _heywood_traits_from(pars, model)
+    isempty(idx) && return converged
+    @warn string("Heywood boundary: trait ", join(idx, ", "), " has communality > ",
+                 _HEYWOOD_COMMUNALITY, " (its unique variance is ~0 relative to the shared factor); ",
+                 "the fit is at a boundary, not an interior optimum, so converged is set to false ",
+                 "and convergence_status(fit) is :boundary (kind :heywood in boundary_params(fit)). Traits on very different scales share one ",
+                 "σ_eps: standardise or transform the traits, or use pervar = true.")
+    return false
+end
+
 """
     fit_gaussian_gllvm(y; K, K_W=0, has_diag=false, K_phy=0,
                        has_phy_unique=false, Σ_phy=nothing, X=nothing,
@@ -543,7 +633,9 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
             # sentinel plateau must not report converged=true.
             _fit_verdict(res)[1],
             Optim.iterations(res),
-            _fit_verdict(res)[2],
+            _heywood_screen((σ_eps = σ_eps_hat, Λ = Λ_hat),
+                            GllvmModel(Int(p), Int(K), 0, false, Int(K_phy), has_phy_unique),
+                            _fit_verdict(res)[2]),
             res,
             t1 - t0,
             nothing,
@@ -729,7 +821,9 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         # (gaussian_profile_nll) has no catch/sentinel return today, so the
         # screen only guards against a future one; logLik stays the
         # recomputed closed-form value.
-        (_fit_verdict(res)[2]),
+        _heywood_screen((σ_eps = rec.σ_eps, Λ = rec.Λ_B),
+                        GllvmModel(Int(p), Int(K), Int(K_W), has_diag, Int(K_phy), has_phy_unique),
+                        _fit_verdict(res)[2]),
         res,
         t1 - t0,
         nothing,
