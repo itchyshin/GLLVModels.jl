@@ -62,13 +62,32 @@ function _formula_bare_symbols(term)
     return Symbol[s for t in parts for s in _formula_bare_symbols(t)]
 end
 
+# A `Union{Missing,T}` column with no `missing` value is passed to StatsModels as `T` when
+# `T <: Number`, so a complete numeric column is read as continuous rather than categorical.
+function _narrow_union_missing_numeric(v)
+    T = eltype(v)
+    Missing <: T || return v
+    U = Base.nonmissingtype(T)
+    U <: Number || return v
+    return convert(AbstractVector{U}, v)
+end
+
+function _formula_narrow_union_cols(rhs, cols::NamedTuple)
+    need = Set(unique(_extract_formula_symbols(rhs)))
+    newvals = ntuple(i -> begin
+            k = keys(cols)[i]
+            v = cols[k]
+            k in need ? _narrow_union_missing_numeric(v) : v
+        end, length(cols))
+    return NamedTuple{keys(cols)}(newvals)
+end
+
 # Covariate columns used as bare terms in the formula RHS. A bare column holding a `missing`
 # stopped with `KeyError: key missing not found` inside StatsModels; `gllvm` does not drop or
 # impute sites, so it refuses such a column with a message that names it. A column used only
-# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. A column whose
-# type allows `Missing` but holds none is passed through unchanged (how it is read is a
-# separate, undecided question), and columns the formula does not use are not looked at.
-function _formula_covariate_columns(rhs, cols::NamedTuple)
+# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. Columns the
+# formula does not use are not looked at.
+function _formula_covariate_columns(rhs, cols::NamedTuple; caller::AbstractString = "gllvm")
     for s in unique(_formula_bare_symbols(rhs))
         haskey(cols, s) || continue
         v = cols[s]
@@ -76,7 +95,7 @@ function _formula_covariate_columns(rhs, cols::NamedTuple)
         nmiss = count(ismissing, v)
         nmiss == 0 || throw(ArgumentError(
             "covariate `$s` in the formula has $nmiss `missing` value(s) (first at site " *
-            "$(findfirst(ismissing, v))); `gllvm` does not drop or impute sites. Remove those " *
+            "$(findfirst(ismissing, v))); `$caller` does not drop or impute sites. Remove those " *
             "sites from `Y` and `data`, or fill the covariate, before fitting"))
     end
     return cols
