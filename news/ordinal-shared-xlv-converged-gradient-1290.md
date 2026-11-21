@@ -1,0 +1,1 @@
+`fit_ordinal_gllvm` (shared cutpoints, including the `X_lv` route) and the phylo `X_lv` ordinal point fitter no longer report `converged = true` from `Optim.converged` alone; they also require the gradient test used by the other ordinal and phylo fitters (#1290).
