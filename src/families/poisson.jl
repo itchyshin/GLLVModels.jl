@@ -281,6 +281,17 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         @inbounds for j in 1:kk
             L[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
         end
+        # #1249: row-mean filling leaves a species group with no shared site contributing
+        # nothing to the leading singular vectors, so its start loadings are exactly 0.
+        # Under a mask that is a stationary point (its sites' modes stay 0, so the
+        # gradient on those loadings is 0) and L-BFGS stops there with converged = true.
+        # Give any numerically-zero row a small nonzero first-column loading (always a free entry).
+        if msk !== nothing
+            scale = max(maximum(abs, L), 0.1)
+            @inbounds for t in 1:p
+                maximum(abs, view(L, t, :)) <= 1e-8 * scale && K >= 1 && (L[t, 1] = 0.1 * scale)
+            end
+        end
         L
     else
         collect(float.(Λ_init))
