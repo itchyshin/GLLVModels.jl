@@ -319,7 +319,6 @@ function augmented_phy(newick::AbstractString; correlation::Bool = false)
 
     c.i <= lastindex(c.s) &&
         error("extra characters after end of tree at position $(c.i)")
-    _check_unique_tip_names(leaf_names)
 
     # Reindex: place leaves first (1:p) in the order they were encountered,
     # then internal nodes in the order they were added (post-order, so the
@@ -342,6 +341,8 @@ function augmented_phy(newick::AbstractString; correlation::Bool = false)
             error("tree is not binary (an internal node has $(n_children[i]) " *
                   "children; every internal node must have exactly two)")
     end
+    _check_unique_tip_names(leaf_names)
+
     perm = Vector{Int}(undef, n_total)   # perm[new_idx] = old_idx
     new_idx_of = Vector{Int}(undef, n_total)
     for (new_i, old_i) in enumerate(leaf_indices)

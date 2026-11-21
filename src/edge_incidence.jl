@@ -213,13 +213,13 @@ function edge_phy(newick::AbstractString)
 
     c.i <= lastindex(c.s) &&
         error("extra characters after end of tree at position $(c.i)")
-    _check_unique_tip_names(leaf_names)
 
     n_total = length(node_parent_raw)
     p       = length(leaf_indices_raw)
     n_total == 2 * p - 1 ||
         error("tree is not binary (got $n_total nodes for $p leaves; expected $(2p - 1)); " *
               "fit_phylo_latent_gllvm(...; tree = ...) accepts a tree with polytomies")
+    _check_unique_tip_names(leaf_names)
 
     # Reindex: leaves to rows 1..p (in encounter order), then internal nodes
     # in their original (post-order) order, root last.
