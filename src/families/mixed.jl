@@ -614,6 +614,11 @@ Arguments:
   accepted on every trait. gllvmTMB's Bernoulli-cloglog exception (its integrated
   two-source contract) is not admitted here.
 
+Each `Normal()` trait carries its own residual SD (as in CRAN `gllvm`). gllvmTMB
+instead estimates one shared `sigma_eps` for all Gaussian traits in a mixed-family fit,
+so with two or more Gaussian traits `logLik` and `aic` are not comparable across the
+two programs (Julia's is higher, with more parameters); see the gllvmTMB parity page.
+
 The L-BFGS gradient is a DIRECT ForwardDiff gradient of the pure-value mixed
 marginal (correctness-first v1; analytic per-trait kernels are future performance
 work). FD-verified ≤ 1e-6. Warm start: family-aware link-scale pseudodata rows +

@@ -354,6 +354,14 @@ the current in-sample post-fit methods. Confidence intervals are unavailable.
 Mixed-family X, masks, cbind/weights, REML, ordinal/NB1/two-part components, and CI endpoints
 remain unsupported.
 
+Gaussian traits differ from gllvmTMB here. `fit_mixed_gllvm` estimates
+one SD per Gaussian trait (as CRAN `gllvm` does), whereas gllvmTMB estimates a single
+`sigma_eps` shared by all Gaussian traits in a mixed-family fit. With two or more
+Gaussian traits Julia has (number of Gaussian traits minus 1) more parameters, its
+`logLik` is the higher, and `logLik` and `aic` are not comparable across the two.
+The likelihood function itself is the same (tying the Julia sigmas to one value
+reproduces gllvmTMB's `logLik`). Mixes with no Gaussian trait are unaffected.
+
 REML is currently available only for Gaussian models. Non-Gaussian models use
 the documented Laplace likelihood approximation; they should not be described
 as REML fits.
