@@ -93,6 +93,7 @@ _register_shard_table!(4, (
         "test_temporal_likelihood_internals.jl", "test_isdm_cloglog_internals.jl", "test_convergence_sweep.jl",
         "test_zinb_observed_laplace.jl", "test_input_validation.jl", "test_response_support_730.jl",
         "test_k_argument_check.jl",
+        "test_formula_union_numeric_covariate_1247.jl",
         "test_dup_tip_names.jl",
         "test_zero_sites_check.jl",
         "test_bootstrap_decisions.jl", "test_wtier_crosscov.jl", "test_branch_re_helpers.jl",
@@ -1254,6 +1255,7 @@ println(_SHARD === nothing ?
     _shard_include("test_zero_column_warning.jl")
     # Formula covariate columns typed Union{Missing,T} (refs #1190).
     _shard_include("test_formula_missing_covariate.jl")
+    _shard_include("test_formula_union_numeric_covariate_1247.jl")
     # fit_mixed_gllvm: an unsupported family marker gives the documented ArgumentError, not a default_link MethodError.
     _shard_include("test_mixed_unsupported_family.jl")
     # Temporal parser refusals name the marker the user called (refs #1286).
