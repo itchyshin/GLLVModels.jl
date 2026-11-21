@@ -706,15 +706,20 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
         cursor += rr
         τ̂ = _unpack_cutpoints(@view(θ̂[(cursor + 1):(cursor + C - 1)]))
         _warn_runaway_loadings(Λ̂, "Ordinal")
-        return OrdinalFit(Λ̂, τ̂, C, link, _fit_verdict(res)...,
+        return OrdinalFit(Λ̂, τ̂, C, link, _ordinal_shared_verdict(res, g_tol)...,
                           alpha_hat, collect(Float64, θ̂))
     else
         Λ̂ = unpack_lambda(θ̂[1:rr], p, K)
         τ̂ = _unpack_cutpoints(θ̂[(rr + 1):(rr + C - 1)])
         _warn_runaway_loadings(Λ̂, "Ordinal")
-        return OrdinalFit(Λ̂, τ̂, C, link, _fit_verdict(res)...)
+        return OrdinalFit(Λ̂, τ̂, C, link, _ordinal_shared_verdict(res, g_tol)...)
     end
 end
+
+# `Optim.converged` also fires on a zero-length step far from a stationary point (#505, #1290);
+# require the gradient test too, as `fit_ordinal_gllvm_pertrait` does.
+_ordinal_shared_verdict(res, g_tol) = _fit_verdict(Optim.minimum(res),
+    Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
 
 """
     fit_ordinal_gllvm_pertrait(Y; K, link=LogitLink(), …) -> OrdinalPerTraitFit
