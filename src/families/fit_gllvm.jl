@@ -353,7 +353,7 @@ end
 function _check_K_argument(K, caller::AbstractString; family = nothing)
     K === nothing && return nothing
     family isa Multinomial && return nothing
-    K isa Integer || throw(ArgumentError(
+    K isa Integer && !(K isa Bool) || throw(ArgumentError(
         "$caller: K must be a non-negative integer (got K = $K of type $(typeof(K)))"))
     (K >= 0 || family isa Normal) || throw(ArgumentError(
         "$caller: K must be a non-negative integer (got K = $K)"))
