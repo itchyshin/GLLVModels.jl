@@ -245,6 +245,7 @@ _register_shard_table!(4, (
         "test_predict_missing_p1.jl", "test_parity_binomial_gaussian_fixtures.jl", "test_data_twins_2_p1.jl",
         "test_cov_ord_latent_p1.jl", "test_cov_phylo_twins_p1.jl", "test_totoro_323_track_a_harness.jl",
         "test_temporal_oracles.jl", "test_temporal_fit_receipts.jl", "test_temporal_composed_receipts.jl",
+        "test_temporal_union_missing_covariate_1283.jl",
         "test_zip_zinb_stall.jl", "test_robustness_sweep.jl", "test_convergence_553_554.jl",
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl", "test_truncated_confint_masked_nan_730.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
@@ -1258,6 +1259,7 @@ println(_SHARD === nothing ?
     _shard_include("test_mixed_unsupported_family.jl")
     # Temporal parser refusals name the marker the user called (refs #1286).
     _shard_include("test_temporal_refusal_marker_name.jl")
+    _shard_include("test_temporal_union_missing_covariate_1283.jl")
     # AGHQ Laplace retention: unmoved unconverged runs (all fitters) and the policy predicates.
     # Appended last so no existing file changes shard.
     _shard_include("test_aghq_ordinal_unmoved_fallback.jl")

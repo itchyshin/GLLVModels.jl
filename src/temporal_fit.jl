@@ -167,6 +167,8 @@ function fit_temporal_gllvm(long_data; formula, temporal, trait::Symbol=:trait,
     y = Float64.(cols[formula.lhs.sym])
     spec = _temporal_with_composition(spec,
         _temporal_composition(spec, structure, cols, y; unit=unit, unit_obs=unit_obs))
+    _formula_covariate_columns(formula.rhs, cols; caller = "fit_temporal_gllvm")
+    cols = _formula_narrow_union_cols(formula.rhs, cols)
     response, X, coef_names = _temporal_design(formula, cols)
     L = TemporalLayout(size(X, 2), spec)
     theta0 = if start === nothing
