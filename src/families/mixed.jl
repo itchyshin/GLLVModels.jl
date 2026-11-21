@@ -854,3 +854,32 @@ function communality(fit::MixedFamilyFit, Y::AbstractMatrix;
     Σ = sigma_y_site(fit, Y; N = N)
     return [_safe_ratio(ΛΛt[t, t], Σ[t, t]) for t in 1:size(fit.Λ, 1)]
 end
+
+# ---------------------------------------------------------------------------
+# Information criteria for the three fits that are not in `AnyGllvmFit` (refs #1149):
+# `loglikelihood`, `dof`, `aic`, `bic`, `nobs`, with the same conventions as
+# `AnyGllvmFit` in src/postfit.jl (aic = 2k - 2ll; nobs = p*n observed cells; the
+# bic(fit, Y) form uses nobs). `_loglik` and `_nparams` already exist for
+# OrderedBetaFit and QuadraticFit; the mixed-family count is beta + reduced Lambda +
+# one dispersion per dispersion-carrying trait (`n_disp`), as for the other fits.
+# ---------------------------------------------------------------------------
+_loglik(fit::MixedFamilyFit) = fit.loglik
+function _nparams(fit::MixedFamilyFit)
+    p, K = size(fit.Λ)
+    return length(fit.β) + (p * K - div(K * (K - 1), 2)) + fit.n_disp
+end
+
+const _IcExtraFit = Union{OrderedBetaFit, QuadraticFit, MixedFamilyFit}
+
+StatsAPI.loglikelihood(fit::_IcExtraFit) = _loglik(fit)
+StatsAPI.dof(fit::_IcExtraFit) = _nparams(fit)
+StatsAPI.aic(fit::_IcExtraFit) = 2 * StatsAPI.dof(fit) - 2 * StatsAPI.loglikelihood(fit)
+StatsAPI.bic(fit::_IcExtraFit, n::Integer) =
+    StatsAPI.dof(fit) * log(n) - 2 * StatsAPI.loglikelihood(fit)
+StatsAPI.bic(fit::_IcExtraFit, Y::AbstractMatrix; mask = nothing) =
+    StatsAPI.bic(fit, StatsAPI.nobs(fit, Y; mask = mask))
+function StatsAPI.nobs(fit::_IcExtraFit, Y::AbstractMatrix; mask = nothing)
+    mask !== nothing && return count(mask)
+    Missing <: eltype(Y) && return count(!ismissing, Y)
+    return length(Y)
+end
