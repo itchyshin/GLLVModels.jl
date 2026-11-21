@@ -3338,6 +3338,7 @@ function _family_profile(ad::_FamilyCI, sel::Vector{Int}, level::Real;
     m = length(ad.θ)
     cutoff = quantile(Chisq(1), level)
     ll_full = -ad.nll(ad.θ)
+    warned_better = Ref(false)
     # Wald SEs to seed the bracket steps (cheap relative to the refits).
     H = _family_hessian(ad)
     se_all = fill(NaN, m)
@@ -3360,13 +3361,13 @@ function _family_profile(ad::_FamilyCI, sel::Vector{Int}, level::Real;
             ll, ok, sol = _family_profile_refit(ad, i, c, warm_lo;
                                                 g_tol = profile_g_tol,
                                                 iterations = profile_iterations)
-            ok ? (warm_lo = sol; 2.0 * (ll_full - ll)) : NaN
+            ok ? (warm_lo = sol; _profile_deviance(ll_full, ll, "confint(method = :profile)", warned_better)) : NaN
         end
         function dev_hi(c)
             ll, ok, sol = _family_profile_refit(ad, i, c, warm_hi;
                                                 g_tol = profile_g_tol,
                                                 iterations = profile_iterations)
-            ok ? (warm_hi = sol; 2.0 * (ll_full - ll)) : NaN
+            ok ? (warm_hi = sol; _profile_deviance(ll_full, ll, "confint(method = :profile)", warned_better)) : NaN
         end
         # Seed the first candidate near the Wald bound (θ̂ ± √cutoff·SE) so the
         # bracket is found in ~1 refit; false-position root-finding does the rest.
@@ -3386,7 +3387,7 @@ function _family_profile(ad::_FamilyCI, sel::Vector{Int}, level::Real;
             ll_f, ok_f, _ = _family_profile_refit(ad, i, θi + log(1e-6), copy(warm_lo);
                                                   g_tol = profile_g_tol,
                                                   iterations = profile_iterations)
-            D_floor = ok_f ? 2.0 * (ll_full - ll_f) : NaN
+            D_floor = ok_f ? _profile_deviance(ll_full, ll_f, "confint(method = :profile)", warned_better) : NaN
             open_lower = isfinite(D_floor) && D_floor < cutoff
             open_lower && (lower = -Inf)
         end
