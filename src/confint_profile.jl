@@ -285,6 +285,21 @@ function _profile_refit_with_fixed(fit::GllvmFit, i::Integer, c::Real,
     return (ll_c, true, Optim.minimizer(res))
 end
 
+# A constrained refit that beats the reported log-likelihood gives D < 0, i.e. the
+# reported fit is not the maximum of the objective being profiled (#1185). Warn once
+# per routine call; the deviance is returned unchanged (existing clamping is kept).
+const _PROFILE_BETTER_TOL = 1e-3
+function _profile_deviance(ll_full::Real, ll_c::Real, routine::AbstractString,
+                           warned::Base.RefValue{Bool})
+    D = 2.0 * (ll_full - ll_c)
+    if D < -_PROFILE_BETTER_TOL && !warned[]
+        warned[] = true
+        @warn "$routine: a constrained refit reached log-likelihood $(ll_c), above the reported log-likelihood $(ll_full) (negative profile deviance $(D)). The reported fit is not the maximum of the profiled objective, so the profile interval is unreliable; refit with more starting values and re-profile."
+    end
+    return D
+end
+
+
 # Bracket-then-root-find on one side (lower if Δ_init < 0, upper if > 0).
 #
 # Phase 1 (bracket): walk outward from x0 = θ̂_i in geometrically doubling steps
@@ -477,6 +492,7 @@ function profile_ci(fit::GllvmFit, param_index::Integer;
     cutoff = quantile(Chisq(1), level)
     θ̂_i = float(θ̂[param_index])
     ll_full = fit.logLik
+    warned_better = Ref(false)
 
     # Wald SE on the working scale; fall back to a heuristic if non-PD.
     se_i = _profile_wald_se(fit, param_index, y, X, Σ_phy)
@@ -499,7 +515,7 @@ function profile_ci(fit::GllvmFit, param_index::Integer;
         if ok
             # Update warm-start in the enclosing scope for the next call.
             θ_red_warm_lower = θ_red_new
-            return 2.0 * (ll_full - ll_c)
+            return _profile_deviance(ll_full, ll_c, "profile_ci", warned_better)
         else
             return NaN
         end
@@ -512,7 +528,7 @@ function profile_ci(fit::GllvmFit, param_index::Integer;
             iterations = profile_iterations)
         if ok
             θ_red_warm_upper = θ_red_new
-            return 2.0 * (ll_full - ll_c)
+            return _profile_deviance(ll_full, ll_c, "profile_ci", warned_better)
         else
             return NaN
         end
@@ -621,6 +637,7 @@ function _tmbprofile_curve(fit::GllvmFit, param_index::Integer;
 
     θ̂_i = float(θ̂[param_index])
     ll_full = fit.logLik
+    warned_better = Ref(false)
     cutoff = quantile(Chisq(1), level)
 
     se_i = _profile_wald_se(fit, param_index, y, X, Σ_phy)
@@ -647,7 +664,7 @@ function _tmbprofile_curve(fit::GllvmFit, param_index::Integer;
             push!(theta, x_out)
             push!(nll, -ll_c)
             warm = warm_new
-            D = 2.0 * (ll_full - ll_c)
+            D = _profile_deviance(ll_full, ll_c, "profile curve", warned_better)
             x_in = x_out
             (isfinite(D) && D ≥ cutoff) && break
             abs_step *= 2
