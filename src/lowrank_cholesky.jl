@@ -22,6 +22,15 @@ using LinearAlgebra
 import LinearAlgebra: logdet, mul!, ldiv!
 
 """
+    _chol_solve(C::Cholesky, B)
+
+Solve `C \\ B` via the upper-triangular factor. On Julia ≥ 1.12 with
+ForwardDiff 0.10.x, `Cholesky \\ b` can halve the derivative through an
+exactly diagonal factor at the evaluation point; the explicit `U` solves do not.
+"""
+_chol_solve(C::Cholesky, B::AbstractVecOrMat) = C.U \ (C.U' \ B)
+
+"""
     LowRankPlusDiagChol{T}
 
 Factorisation of `M = Λ Λ' + Diagonal(d)` that stores three small pieces:
@@ -123,7 +132,7 @@ function ldiv!(out::AbstractVector, F::LowRankPlusDiagChol,
     mul!(buf_K, F.Λ', out)
     # Step 3: in-place K × K Cholesky solve. After this `buf_K` holds
     # (I + Λ' D⁻¹ Λ)⁻¹ Λ' D⁻¹ b.
-    ldiv!(F.cholK, buf_K)
+    copyto!(buf_K, _chol_solve(F.cholK, buf_K))
     # Step 4: out = Dinv_b - D⁻¹ Λ buf_K. `out` already holds Dinv_b;
     # subtract D⁻¹ (Λ buf_K) via an explicit inner loop (BLAS gemv
     # would need a temporary p-vector and would not buy anything at

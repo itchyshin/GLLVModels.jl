@@ -261,7 +261,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
             # Ã⁻¹ y (p × n)
             Dinv_y = d_inv .* y                       # p × n
             LtDy = L_U' * Dinv_y                      # (K_B + K_W) × n
-            zy = cA \ LtDy
+            zy = _chol_solve(cA, LtDy)
             Ainv_y = Dinv_y .- DinvL * zy             # p × n
 
             # Per-q apply: Ã⁻¹ X[:, :, j] (p × n), accumulate into M and v.
@@ -272,7 +272,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
                 Xj = @view X[:, :, j]
                 Dinv_Xj = d_inv .* Xj
                 LtDXj = L_U' * Dinv_Xj
-                zXj = cA \ LtDXj
+                zXj = _chol_solve(cA, LtDXj)
                 @inbounds Ainv_X[:, :, j] = Dinv_Xj .- DinvL * zXj
             end
             for j in 1:q
@@ -298,7 +298,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
             # Pass-through residual computation (β provided or no X)
             if suff !== nothing
                 # SCRATCH sufficient-statistic form (no p x n Dual temporaries)
-                Ainv = Matrix{Td}(Diagonal(d_inv)) .- DinvL * (cA \ Matrix(DinvL'))
+                Ainv = Matrix{Td}(Diagonal(d_inv)) .- DinvL * (_chol_solve(cA, Matrix(DinvL')))
                 quad = _ss_quad(Ainv, β, suff)
             else
             if X === nothing || q == 0
@@ -316,7 +316,7 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
             end
             Dinv_r = d_inv .* resid
             LtDr = L_U' * Dinv_r
-            z = cA \ LtDr
+            z = _chol_solve(cA, LtDr)
             Ainv_r = Dinv_r .- DinvL * z
             quad = sum(resid .* Ainv_r)
             # Cancellation guard: the subtractive form r'D̃⁻¹r − z'L'D̃⁻¹r loses
@@ -379,9 +379,9 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
         AnB = A_tilde .+ n .* B_tilde
         cAnB = cholesky(Symmetric((AnB + AnB') ./ 2))
 
-        v_mean = cAnB \ m
+        v_mean = _chol_solve(cAnB, m)
         quad_mean = n * dot(m, v_mean)
-        V_c = cA_sym \ Y_centered
+        V_c = _chol_solve(cA_sym, Y_centered)
         quad_centered = sum(Y_centered .* V_c)
         quad = quad_mean + quad_centered
 
@@ -517,14 +517,14 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
             vvec = zeros(Float64, q)
             Dinv_y = d_inv .* y
             LtDy = L_U' * Dinv_y
-            zy = cA \ LtDy
+            zy = _chol_solve(cA, LtDy)
             Ainv_y = Dinv_y .- DinvL * zy
             Ainv_X = Array{Float64}(undef, p, n, q)
             for j in 1:q
                 Xj = @view X[:, :, j]
                 Dinv_Xj = d_inv .* Xj
                 LtDXj = L_U' * Dinv_Xj
-                zXj = cA \ LtDXj
+                zXj = _chol_solve(cA, LtDXj)
                 @inbounds Ainv_X[:, :, j] = Dinv_Xj .- DinvL * zXj
             end
             for j in 1:q
@@ -557,7 +557,7 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
             end
             Dinv_r = d_inv .* resid
             LtDr = L_U' * Dinv_r
-            z = cA \ LtDr
+            z = _chol_solve(cA, LtDr)
             Ainv_r = Dinv_r .- DinvL * z
             quad = sum(resid .* Ainv_r)
             quad = _quad_cancel_guard(quad, sum(Dinv_r .* resid), resid, L_U, z, d_inv)  # as in gaussian_profile_nll
@@ -610,9 +610,9 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
         cA_sym = cholesky(Symmetric((A_tilde + A_tilde') ./ 2))
         AnB = A_tilde .+ n .* B_tilde
         cAnB = cholesky(Symmetric((AnB + AnB') ./ 2))
-        v_mean = cAnB \ m
+        v_mean = _chol_solve(cAnB, m)
         quad_mean = n * dot(m, v_mean)
-        V_c = cA_sym \ Y_centered
+        V_c = _chol_solve(cA_sym, Y_centered)
         quad_centered = sum(Y_centered .* V_c)
         quad = quad_mean + quad_centered
         logdet_total = logdet(cAnB) + (n - 1) * logdet(cA_sym)
