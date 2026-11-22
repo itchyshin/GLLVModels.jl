@@ -11,6 +11,7 @@ using TOML
 using LinearAlgebra
 
 include(joinpath(@__DIR__, "parity_trial_inputs.jl"))
+include(joinpath(@__DIR__, "frozen_rng.jl"))   # stored (not re-simulated) draws for frozen-seed cells
 include(joinpath(@__DIR__, "core070_receipts.jl"))
 using .Core070Receipts
 include(joinpath(@__DIR__, "core070_case_registry.jl"))
@@ -64,7 +65,7 @@ function _core070_execution_paths(requested::AbstractVector{<:AbstractString})
     paths = String[
         "src", "test/parity/core070_receipts.jl", "test/parity/core070_case_registry.jl", "test/parity/parity_helpers.jl",
         "test/parity/core070_pin.jl", "tools/core070_oracle_pins.toml",
-        "test/parity/parity_trial_inputs.jl", "test/parity/test_negbin_parity.jl", "test/parity/truncnb2_policy.jl", "test/parity/nb2_health.jl",
+        "test/parity/parity_trial_inputs.jl", "test/parity/frozen_rng.jl", "test/parity/test_negbin_parity.jl", "test/parity/truncnb2_policy.jl", "test/parity/nb2_health.jl",
         "test/parity/family_formula_cases.jl", "test/parity/test_truncated_nbinom2_parity.jl", "docs/dev-log/core070/family-formulas-contract.json",
         "test/parity/poisson_beta_health.jl", "test/parity/test_poisson_parity.jl", "test/parity/test_beta_parity.jl", "docs/dev-log/core070/poisson-beta-required-contract.json", "test/parity/runparity.jl", "test/parity/r_health.R",
         "tools/core070_delta_matched.jl", "test/parity/test_delta_lognormal_parity.jl",
