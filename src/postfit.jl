@@ -40,6 +40,31 @@ function _loadings(fit)
     end
 end
 
+# Size checks for the per-cell arguments of post-fit calls (refs #1198). The per-site loops
+# below read `view(mask, :, s)` and `view(N, :, s)` under `@inbounds`, so an argument that is
+# not the shape of `Y` was read past its end (wrong values in a default build, `BoundsError`
+# under `--check-bounds=yes`) or silently truncated. The messages are the fitters' wording
+# (`N`: binomial.jl `fit_binomial_gllvm`; `mask`: `_resolve_obs_mask`).
+function _postfit_trials(N, p::Integer, n::Integer)
+    N === nothing && return fill(1, p, n)
+    size(N) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
+    return N
+end
+function _check_postfit_mask(mask, Y::AbstractMatrix)
+    mask === nothing && return nothing
+    size(mask) == size(Y) || throw(DimensionMismatch(
+        "mask is $(size(mask)); Y is $(size(Y)). `mask` must have the shape of Y " *
+        "(traits × units, true = observed)."))
+    return mask
+end
+
+# `X` is the p×n×q design of a covariate fit (`covariates.jl` `fit_gllvm_cov`'s wording).
+function _check_postfit_design(X::AbstractArray{<:Real, 3}, p::Integer, n::Integer)
+    size(X, 1) == p && size(X, 2) == n ||
+        throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
+    return X
+end
+
 # The offset a Laplace post-fit call (getLV / predict / residuals) adds to
 # η = β + offset + Λz, for the Poisson, NB2, binomial and hurdle-Poisson fits, which keep
 # their training offset in `fit.offset`. The rule follows gllvmTMB's `predict`: training
@@ -325,8 +350,9 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
     end
     eltype(Y)<:Integer || throw(ArgumentError("Laplace binomial getLV requires integer responses"))
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     K = size(fit.Λ, 2)
     Zmean = _lv_score_mean_for_fit(fit, Y, X_lv)
     if component === :mean
@@ -658,7 +684,7 @@ function residuals(fit::BinomialFit, Y::AbstractMatrix;
         return result
     end
     p, n = size(Y)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     μ = predict(fit, Y; type = :response, N = N, X_lv = X_lv,mask=mask,offset=offset)
     if type === :pearson
         return (Y .- Nm .* μ) ./ sqrt.(Nm .* μ .* (1 .- μ))
@@ -817,7 +843,10 @@ cell-count analogue (`p` times the stored unit count) so the convention holds
 without requiring `Y`.
 """
 function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
-    mask !== nothing && return count(mask)
+    # A vector mask is the one column of a single-column `Y` (the response-vector form
+    # `nobs(fit, y; mask)` reshapes `y` to length(y) × 1); it is counted as that column.
+    mask !== nothing && return count(_check_postfit_mask(
+        mask isa AbstractVector && size(Y, 2) == 1 ? reshape(mask, :, 1) : mask, Y))
     Missing <: eltype(Y) && return count(!ismissing, Y)
     return length(Y)
 end
@@ -1091,6 +1120,7 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
     end
     eltype(Y)<:Integer || throw(ArgumentError("Laplace Poisson getLV currently requires integer responses"))
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     # A weighted fit's modes are those of the weighted joint (as gllvmTMB's), which are
     # defined for the training cells only.
     Wt = fit.weights
@@ -1098,7 +1128,7 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
         "getLV: this Poisson fit was weighted; its latent modes are defined on the training " *
         "data ($(size(Wt, 1))×$(size(Wt, 2))) only, got Y of size $(size(Y, 1))×$(size(Y, 2))"))
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     K = size(fit.Λ, 2)
     Zmean = _lv_score_mean_for_fit(fit, Y, X_lv)
     if component === :mean
@@ -1268,8 +1298,9 @@ function getLV(fit::NBFit, Y::AbstractMatrix{<:Integer};
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     K = size(fit.Λ, 2)
     fam = NegativeBinomial(fit.r, 0.5)
     Zmean = _lv_score_mean_for_fit(fit, Y, X_lv)
@@ -1387,8 +1418,9 @@ function getLV(fit::NB1Fit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                rotate::Bool = true, mask = nothing, offset = nothing)
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     K = size(fit.Λ, 2)
     fam = NB1(fit.φ)
     Z = Matrix{Float64}(undef, K, n)
@@ -1498,8 +1530,9 @@ function getLV(fit::GP1Fit, Y::AbstractMatrix{<:Integer};
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                rotate::Bool = true, mask = nothing, offset = nothing)
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _postfit_trials(N, p, n)
     K = size(fit.Λ, 2)
     fam = GeneralizedPoisson1(fit.α)
     Z = Matrix{Float64}(undef, K, n)
@@ -1622,6 +1655,7 @@ function getLV(fit::BetaFit, Y::AbstractMatrix{<:Real};
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     K = size(fit.Λ, 2)
     fam = Beta(fit.φ, 1.0)
@@ -1762,6 +1796,7 @@ function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     K = size(fit.Λ, 2)
     Zmean = _lv_score_mean_for_fit(fit, Y, X_lv)
     if component === :mean
@@ -1783,6 +1818,7 @@ function getLV(fit::OrdinalPerTraitFit, Y::AbstractMatrix{<:Integer};
                rotate::Bool = true, mask = nothing)
     _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     K = size(fit.Λ, 2)
     Z = Matrix{Float64}(undef, K, n)
     @inbounds for s in 1:n
@@ -1804,6 +1840,8 @@ function getLV(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix{<:Integer},
                rotate::Bool = true, mask = nothing)
     _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
+    _check_postfit_design(X, p, n)
     K = size(fit.Λ, 2)
     O = _build_offset(X, fit.γ)
     Z = Matrix{Float64}(undef, K, n)
@@ -1987,6 +2025,7 @@ function getLV(fit::GammaFit, Y::AbstractMatrix{<:Real};
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     p, n = size(Y)
+    _check_postfit_mask(mask, Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     K = size(fit.Λ, 2)
     fam = Gamma(fit.α, 1.0)
@@ -3183,7 +3222,8 @@ mode `ẑₛ` at `η = β + Xγ + Λz`.
 function getLV(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:Real, 3};
                rotate::Bool = true, N::Union{Nothing, AbstractMatrix} = nothing)
     p, n = size(Y); K = size(fit.Λ, 2)
-    Nm = N === nothing ? fill(1, p, n) : N
+    _check_postfit_design(X, p, n)
+    Nm = _postfit_trials(N, p, n)
     fam = _cov_family(fit.family, fit.dispersion)
     O = _build_offset(X, fit.γ)
     Z = Matrix{Float64}(undef, K, n)

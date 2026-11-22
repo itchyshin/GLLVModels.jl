@@ -75,7 +75,8 @@ the canonical [`rotation`](@ref).
 function getLV(fit::GllvmSpeciesCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:Real, 3};
                rotate::Bool = true, N::Union{Nothing, AbstractMatrix} = nothing)
     p, n = size(Y); K = size(fit.Λ, 2)
-    Nm = N === nothing ? fill(1, p, n) : N
+    _check_postfit_design(X, p, n)
+    Nm = _postfit_trials(N, p, n)
     fam = _cov_family(fit.family, fit.dispersion)
     O = _build_offset_species(X, fit.B)
     Z = Matrix{Float64}(undef, K, n)
