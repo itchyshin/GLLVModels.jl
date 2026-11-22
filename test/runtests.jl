@@ -463,6 +463,7 @@ _register_shard_table!(8, (
         "test_se_machinery.jl", "test_summary_table.jl", "test_variational.jl",
         "test_twolevel.jl", "test_bridge_mixed.jl", "test_bridge_x.jl",
         "test_bridge_lv_predictor.jl", "test_lv_ci.jl", "test_bridge_missing_mask.jl",
+        "test_bridge_options_allowlist.jl",
         "test_curvature_census.jl", "test_variance_decomp_p1.jl", "test_bridge_readback_p1.jl",
         "test_off_predict_twin_p1.jl", "test_cov_phylo_twins_p1.jl", "test_isdm_cloglog_internals.jl",
         "test_eta_clamp_rescue_874.jl", "test_bootstrap_decisions.jl", "test_lambda_constraint_wald_794.jl",
@@ -1061,6 +1062,7 @@ println(_SHARD === nothing ?
     _shard_include("test_phylo_eta_realized.jl")
     _shard_include("test_bridge_missing_mask.jl")
     _shard_include("test_bridge_gaussian_offset.jl")
+    _shard_include("test_bridge_options_allowlist.jl")
     _shard_include("test_hessian_kwarg.jl")
     _shard_include("test_confint_hessian_consistency.jl")
     _shard_include("test_confint_hessian_twopart_truncnb2.jl")
