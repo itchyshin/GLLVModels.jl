@@ -1,0 +1,29 @@
+# Frozen simulated data for test_twin_parity_zip_tweedie_beta_gamma_739.jl (Refs #739).
+# Julia's seeded RNG stream differs across versions (seed-82 Tweedie: 1 of 750 cells differs
+# between 1.10.12 and 1.13.2), so these Y matrices are saved, not re-simulated.
+# Generated on Julia 1.10.12 by gen_frozen_parity_739.jl; same format as zi_p1.toml
+# (site,trait,y CSV + sha256 guard). The R values they are compared with live in the stored
+# docs/dev-log/core070/true-parity-latest receipts, unchanged.
+[tweedie]
+seed = 82
+n_trait = 5
+n_unit = 150
+data_file = "frozen_parity_739_tweedie.csv"
+data_sha256 = "1de80a4ee6d1cb088d726e740533c2ee3008118490d495379246dd1d97071242"
+julia_version = "1.10.12"
+
+[beta]
+seed = 45
+n_trait = 5
+n_unit = 60
+data_file = "frozen_parity_739_beta.csv"
+data_sha256 = "ddc717895d97786aeddeff7d47ad25f87166998a137f09846d743aeab8ecf473"
+julia_version = "1.10.12"
+
+[gamma]
+seed = 54
+n_trait = 5
+n_unit = 120
+data_file = "frozen_parity_739_gamma.csv"
+data_sha256 = "55cc61e3e466938fcc6000476c75302e298dff84b42d9749223c961bcf092d18"
+julia_version = "1.10.12"
