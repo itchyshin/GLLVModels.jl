@@ -79,4 +79,42 @@ using GLLVModels, Test, Random, Distributions, Statistics
         @test size(fit.Λ) == (p, K)
         @test length(fit.β) == p
     end
+
+    @testset "VA-based standard errors (objective=:va)" begin
+        Random.seed!(324)
+        p, K, n = 6, 1, 150
+        β = 0.8 .+ 0.3 .* randn(p)
+        Λ = 0.7 .* randn(p, K)
+        Y = Matrix{Float64}(undef, p, n)
+        for s in 1:n
+            z = randn(K)
+            for t in 1:p
+                Y[t, s] = rand(Exponential(exp(β[t] + sum(Λ[t, :] .* z))))
+            end
+        end
+        fit = GLLVModels.fit_exponential_gllvm_va(Y; K = K)
+
+        ci_va = confint(fit, Y; method = :wald, objective = :va)
+        ci_la = confint(fit, Y; method = :wald, objective = :laplace)
+        nterm = p + (p * K - div(K * (K - 1), 2))
+        @test length(ci_va.term) == nterm
+        @test ci_va.method == :wald
+        fin = isfinite.(ci_va.se)
+        @test any(fin)
+        for i in eachindex(ci_va.term)
+            if isfinite(ci_va.lower[i]) && isfinite(ci_va.upper[i])
+                @test ci_va.lower[i] ≤ ci_va.estimate[i] ≤ ci_va.upper[i]
+            end
+        end
+        @test ci_va.term == ci_la.term
+        @test ci_va.estimate ≈ ci_la.estimate
+        @test ci_va.estimate[1] ≈ fit.β[1] atol = 1e-8
+
+        ct = coef_table(fit, Y; objective = :va)
+        ctfin = isfinite.(ct.std_error)
+        @test any(ctfin)
+        @test all(ct.lower[ctfin] .< ct.estimate[ctfin] .< ct.upper[ctfin])
+
+        @test_throws ArgumentError confint(fit, Y; method = :profile, objective = :va)
+    end
 end

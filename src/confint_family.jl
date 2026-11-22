@@ -1658,6 +1658,7 @@ end
 function _family_ci(fit::ExponentialFit, Y::AbstractMatrix;
                     offset = nothing,
                     mask = nothing,
+                    objective::Symbol = :laplace,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
     M = _ci_mask(mask, Y)
@@ -1665,7 +1666,9 @@ function _family_ci(fit::ExponentialFit, Y::AbstractMatrix;
     nll = function (θv)
         β = θv[1:p]; Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K)
         v = try
-            -exponential_marginal_loglik_laplace(Y, Λ, β; link = link, mask = M, offset = offset, hessian = fit.hessian, maxiter = newton_maxiter, tol = newton_tol)
+            objective === :va ?
+                -exponential_marginal_loglik_va(Y, Λ, β; maxiter = newton_maxiter, tol = newton_tol) :
+                -exponential_marginal_loglik_laplace(Y, Λ, β; link = link, mask = M, offset = offset, hessian = fit.hessian, maxiter = newton_maxiter, tol = newton_tol)
         catch
             return 1e12
         end
@@ -3532,8 +3535,8 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
     is_aghq && objective!==:aghq && throw(ArgumentError("AGHQ intervals require the fitted frozen objective; use objective=:fit"))
     objective in (:laplace, :va, :aghq) && (objective!==:aghq || is_aghq) ||
         throw(ArgumentError("objective must select :fit or an available estimator; got :$objective"))
-    if objective === :va && !(fit isa Union{PoissonFit, NBFit, BinomialFit, BetaFit, GammaFit, DeltaGammaFit})
-        throw(ArgumentError("objective=:va is only available for Poisson/NB/Binomial/Beta/Gamma/Delta-Gamma fits"))
+    if objective === :va && !(fit isa Union{PoissonFit, NBFit, BinomialFit, BetaFit, GammaFit, ExponentialFit, DeltaGammaFit})
+        throw(ArgumentError("objective=:va is only available for Poisson/NB/Binomial/Beta/Gamma/Exponential/Delta-Gamma fits"))
     end
     if objective === :va && method !== :wald
         throw(ArgumentError("objective=:va currently supports method=:wald only"))
@@ -3560,13 +3563,9 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
         # legitimately differ from the adapter's default (see `_check_ci_objective`).
         alt = function (kind::Symbol)
             try
-                if fit isa ExponentialFit
-                    return exponential_marginal_loglik_va(Y, fit.Λ, fit.β; maxiter = newton_maxiter, tol = newton_tol)
-                else
-                    a = _family_ci(fit, Y; N = N, X = X, objective = :va, mask = nothing, offset = nothing,
-                                   newton_maxiter = newton_maxiter, newton_tol = newton_tol)
-                    return -a.nll(a.θ)
-                end
+                a = _family_ci(fit, Y; N = N, X = X, objective = :va, mask = nothing, offset = nothing,
+                               newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+                return -a.nll(a.θ)
             catch e
                 e isa InterruptException && rethrow()
                 return NaN
@@ -3698,8 +3697,9 @@ and convergence flag. These are functional inference routes, not a coverage
 validation. AGHQ rejects requests for Laplace or VA intervals to avoid changing
 the estimator silently. `:laplace` explicitly selects Laplace for other fits. `:va` instead uses the negative variational (ELBO) marginal and is
 available only for the scalar-μ GLM families (`PoissonFit`, `NBFit`,
-`BinomialFit`, `BetaFit`, `GammaFit`) with `method = :wald`; combine it with a VA
-fit (e.g. `fit_poisson_gllvm_va`) for VA-consistent standard errors. Masked
+`BinomialFit`, `BetaFit`, `GammaFit`, `ExponentialFit`) and `DeltaGammaFit` with
+`method = :wald`; combine it with a VA fit (e.g. `fit_poisson_gllvm_va`) for
+VA-consistent standard errors. Masked
 confidence intervals currently require `objective = :laplace`.
 
 ```julia

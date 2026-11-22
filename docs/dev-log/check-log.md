@@ -1,3 +1,8 @@
+2026-11-22: #1186 `confint(...; objective = :va)` for `ExponentialFit`. Julia 1.10.14,
+`julia --project=. test/test_variational_exponential.jl`: 39 passed, 0 failed, 15.5s.
+`julia --project=. test/test_confint_family.jl`: 345 passed, 0 failed, 8m06s.
+See after-task `2026-11-22-confint-va-exponential-1186.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
