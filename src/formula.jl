@@ -54,6 +54,34 @@ function _extract_formula_symbols(term)
     return syms
 end
 
+# Columns that enter the formula RHS as bare terms, alone or in an interaction. Arguments of a
+# function term are not included: the function sees the raw column and owns its `missing`.
+function _formula_bare_symbols(term)
+    term isa Term && return Symbol[term.sym]
+    parts = term isa InteractionTerm ? term.terms : term isa Tuple ? term : ()
+    return Symbol[s for t in parts for s in _formula_bare_symbols(t)]
+end
+
+# Covariate columns used as bare terms in the formula RHS. A bare column holding a `missing`
+# stopped with `KeyError: key missing not found` inside StatsModels; `gllvm` does not drop or
+# impute sites, so it refuses such a column with a message that names it. A column used only
+# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. A column whose
+# type allows `Missing` but holds none is passed through unchanged (how it is read is a
+# separate, undecided question), and columns the formula does not use are not looked at.
+function _formula_covariate_columns(rhs, cols::NamedTuple)
+    for s in unique(_formula_bare_symbols(rhs))
+        haskey(cols, s) || continue
+        v = cols[s]
+        Missing <: eltype(v) || continue
+        nmiss = count(ismissing, v)
+        nmiss == 0 || throw(ArgumentError(
+            "covariate `$s` in the formula has $nmiss `missing` value(s) (first at site " *
+            "$(findfirst(ismissing, v))); `gllvm` does not drop or impute sites. Remove those " *
+            "sites from `Y` and `data`, or fill the covariate, before fitting"))
+    end
+    return cols
+end
+
 # Extract site-level model matrix mm (n × q) and coefficient names from formula RHS.
 function _build_site_modelmatrix(rhs, data; contrasts::AbstractDict = Dict{Symbol, Any}())
     cols = Tables.columntable(data)
@@ -255,6 +283,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
         length(column) == n || throw(DimensionMismatch(
             "`data` column `$name` has $(length(column)) rows but Y has $n sites (columns)"))
     end
+    _formula_covariate_columns(formula.rhs, cols)
     if grouping !== nothing || get(kwargs, :phylo, nothing) !== nothing
         sources === nothing || throw(ArgumentError("do not combine grouping with explicit sources"))
         K === _FORMULA_K_UNSET || throw(ArgumentError("grouping terms own their ranks; do not supply K"))
@@ -287,6 +316,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             coefficient_names=coefficient_names, kwargs...)
     end
     K === _FORMULA_K_UNSET && throw(UndefKeywordError(:K))
+    _check_K_argument(K, "gllvm"; family = family)
     # The formula builds the design below and splats `kwargs...` after it, so a caller `X`
     # would silently win over the formula covariates (#742).
     haskey(kwargs, :X) && throw(ArgumentError(

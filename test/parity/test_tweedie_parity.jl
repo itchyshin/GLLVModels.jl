@@ -11,18 +11,15 @@ const _TW_SEED = 82
 const _TW_LOGLIK_ATOL = 1e-6
 
 @testset "Tweedie GLLVModels parity: frozen gllvmTMB fid 6" begin
-    Random.seed!(_TW_SEED)
+    # Stored seed-82 draw (not re-simulated): Julia's seeded stream differs between 1.10.12
+    # and 1.13.2 (1 of 750 cells, a randexp tail inside the Tweedie sampler). The data come
+    # from fixtures/frozen_rng_tweedie_s82.toml (sha256-checked), generated on 1.10.12 by
+    # fixtures/generate_frozen_rng_w15.jl from the original DGP: seed _TW_SEED = 82, p = 5,
+    # K = 1, n = 150, β = [0.5, -0.2, 0.3, -0.4, 0.1], Λ = 0.5 .* parity_loadings_p5k2()[:, 1:K],
+    # φ = [0.8, 1.0, 1.2, 0.9, 1.1], power 1.5.
     p, K, n = 5, 1, 150
-    β_true = [0.5, -0.2, 0.3, -0.4, 0.1]
-    Λ_true = 0.5 .* parity_loadings_p5k2()[:, 1:K]
-    φ_true = [0.8, 1.0, 1.2, 0.9, 1.1]
     p_true = 1.5
-    Z = randn(K, n)
-    μ = exp.(β_true .+ Λ_true * Z)
-    Y = zeros(p, n)
-    for t in 1:p, s in 1:n
-        Y[t, s] = GLLVModels._tweedie_sample(μ[t, s], φ_true[t], p_true, Random.default_rng())
-    end
+    Y = parity_load_frozen_rng("frozen_rng_tweedie_s82.toml"; expected_sha = "9c907d36d4b77add334b8d1ff5f4c169eca932fb623a8619de51946579d772d1").Y
 
     @testset "fixed common power is the same public model on both engines" begin
         r_fit = fit_gllvmtmb_parity_tweedie(Y, K; p_fixed = p_true)
