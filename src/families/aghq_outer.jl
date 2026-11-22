@@ -186,6 +186,36 @@ function _aghq_select_run(runs)
     return candidates[argmin([runs[i].objective for i in candidates])]
 end
 
+# Laplace-retention policy for the selected usable run of an AGHQ fitter. Every AGHQ
+# fitter calls _aghq_unmoved_unconverged; only the ordinal fitter also calls
+# _aghq_failure_stop. A fitter that retains Laplace records actual=:laplace with the
+# selected run's own stop_reason, so the record differs from the no-usable-run fallback
+# (integration.result.usable is true) and from an AGHQ estimate (actual is :laplace).
+#
+# Rule 1, all AGHQ fitters. A usable run that never left its start (parameter_shift==0)
+# and did not converge has no AGHQ estimate: its parameters are the Laplace warm start or
+# the synthetic multistart guess, unchanged. aghq_outer_optimize produces this state only
+# with these stop reasons: :adaptation_cap (budget spent before a step was accepted),
+# :no_merit_descent (every first-stage step rejected), :optimizer_failed (the first
+# proposal threw), :adaptation_failed (a later proposal could not be re-adapted, so best
+# stayed at the start), :warm_start_stagnation, and :final_stationarity_lost (an
+# unmoved stationary start lost its certificate at finalization). :finalization_failed
+# runs are unusable and never selected; :objective_stagnation implies movement.
+# Laplace convergence is not required: returning a start point unchanged is never an
+# AGHQ fit, and the returned Laplace fit keeps its own convergence flag.
+_aghq_unmoved_unconverged(run)=run.parameter_shift==0 && !run.converged
+
+# Rule 2, ordinal only (evidence: separated trait 3 of the test_convergence_sweep seed-4
+# fixture under OpenBLAS Haswell/Zen kernels; no sibling case has been examined). A run
+# that moved but ended on a failure stop, :adaptation_failed or :optimizer_failed, before
+# converging has no stationarity certificate. The caller retains Laplace only when Laplace
+# converged, because here a moved AGHQ point exists and is discarded only for a certified
+# alternative. Budget and stagnation stops (:adaptation_cap, :no_merit_descent,
+# :objective_stagnation, :warm_start_stagnation, :final_stationarity_lost) keep a moved
+# AGHQ point. :finalization_failed is listed for completeness; such a run is unusable.
+_aghq_failure_stop(run)=!run.converged &&
+    run.stop_reason in (:adaptation_failed,:optimizer_failed,:finalization_failed)
+
 """
     aghq_multistart_optimize(starts, adapt, objective; kwargs...)
 

@@ -141,6 +141,14 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
         step = 1.0
         n_z = n * K
         max_delta = maximum(abs, delta)
+        # Roundoff floor of the log-posterior comparison below. Once the Newton step's own
+        # predicted gain (1/2 grad' delta) is under this floor, `q1 >= q0` is decided by
+        # rounding noise (the gain falls below 1 ulp of q0 near delta ~ 1e-7, long before
+        # `tol`), so a strict test rejects a step that is fine and every halving after it,
+        # the search returns `nothing`, and the marginal is reported as -Inf at a point where
+        # the mode exists. Allow a loss of at most the floor, and only in that regime.
+        noise_floor = 64 * Base.eps(Float64) * max(abs(q0), 1.0)
+        in_noise = 0.5 * dot(grad, delta) <= noise_floor
         for _half in 1:30
             eps_trial = copy(eps)
             u_trial = copy(u)
@@ -152,7 +160,7 @@ function _phylo_gamma_xlv_mode(Y, beta, Lambda, alpha_lv, alpha_shape,
             end
             q1 = _phylo_gamma_xlv_logpost(Y, beta, Lambda, alpha_lv, alpha_shape,
                                           mean_eta, Q, leaf_pos, eps_trial, u_trial)
-            if isfinite(q1) && q1 >= q0
+            if isfinite(q1) && (q1 >= q0 || (in_noise && q1 >= q0 - noise_floor))
                 eps = eps_trial
                 u = u_trial
                 accepted = true

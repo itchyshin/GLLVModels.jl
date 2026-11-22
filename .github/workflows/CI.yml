@@ -12,7 +12,10 @@ on:
   # docs/dev-log/core070/binomial-paired-contract.toml
   # (test_binomial_case_contract.jl). Ignoring docs wholesale would skip CI on
   # a contract edit that can break the suite. No test reads a .md file.
-  # Documenter.yml has no paths-ignore, so docs/src/*.md still rebuild the site.
+  # Documenter.yml does not paths-ignore and does not use a workflow paths
+  # filter. A docs/src/*.md edit still rebuilds the site once the PR is ready.
+  # Drafts, and ready PRs that do not touch docs-relevant files, skip that
+  # job so the check is reported rather than missing.
   #
   # The two lists are written out rather than shared via a YAML anchor:
   # GitHub Actions does not support anchors/aliases, so `&x` / `*x` would not
@@ -22,7 +25,11 @@ on:
     paths-ignore:
       - '*.md'
       - '**/*.md'
+  # ready_for_review is required so marking a draft ready starts the full PR
+  # matrix without another push. opened/synchronize/reopened stay the defaults.
+  # paths-ignore is unchanged: a markdown-only PR still skips this workflow.
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
     paths-ignore:
       - '*.md'
@@ -72,9 +79,17 @@ jobs:
         # Pull requests run the current stable Julia only; LTS (1.10) still runs
         # on every push to main and on manual dispatch. This halves the runner
         # queue that held PRs for hours (Shinichi, 24 Oct 2026).
+        #
+        # Draft PRs keep only shard 1 (the smoke job). The matrix context is
+        # not available in a job-level `if`, so the shard list itself shrinks.
+        # Shards 2-8 are absent on that draft run; marking the PR ready fires
+        # ready_for_review with draft == false and creates all eight again.
+        # Push and workflow_dispatch leave `draft` unset, so the `&&` is false
+        # and the full shard list is unchanged, including macOS/Windows when
+        # full_matrix is set. Coverage stays on the workflow_dispatch input.
         version: ${{ fromJSON(github.event_name == 'pull_request' && '["1"]' || '["1.10", "1"]') }}
         os: [ubuntu-latest]
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.draft) && '[1]' || '[1, 2, 3, 4, 5, 6, 7, 8]') }}
         include: ${{ (github.event_name == 'workflow_dispatch' && inputs.full_matrix) && fromJSON('[{"version":"1","os":"macOS-latest"},{"version":"1","os":"windows-latest"}]') || fromJSON('[]') }}
     steps:
       - uses: actions/checkout@v6
