@@ -313,18 +313,21 @@ Binomial. Warm start: empirical link-scale intercepts + an SVD loadings init;
 `κ`, `τ` from `κ_init`, `τ_init`; a family-appropriate dispersion init.
 """
 function fit_spde_latent_gllvm(Y::AbstractMatrix, nodes::AbstractMatrix,
-        tris::AbstractMatrix{<:Integer}, locs::AbstractMatrix;
+        tris::AbstractMatrix{<:Integer}, locs::AbstractMatrix; mask = nothing,
         family = Poisson(), K::Integer = 1,
         link::Link = default_link(family), α::Integer = 2,
         N = nothing, κ_init::Real = 1.0, τ_init::Real = 1.0,
         g_tol::Real = 1e-5, iterations::Integer = 300,
         newton_maxiter::Integer = 50, newton_tol::Real = 1e-9)
+    _refuse_mask_route("fit_spde_latent_gllvm", mask, Y)
     p, M = size(Y)
     rr = rr_theta_len(p, K)
 
     Cdiag, G = spde_fem(nodes, tris)
     A = spde_projector(nodes, tris, locs)
     Ntr = N === nothing ? ones(eltype(Y), p, M) : N
+    _check_family_response_support_normal(family, Y, nothing;
+        caller = "fit_spde_latent_gllvm", N = Ntr)
 
     # Warm start: empirical link-scale intercepts + SVD loadings (PPCA-like).
     Zemp = [linkfun(link, _ws_mean(family, Y[t, s], Ntr[t, s])) for t in 1:p, s in 1:M]
@@ -372,7 +375,7 @@ function fit_spde_latent_gllvm(Y::AbstractMatrix, nodes::AbstractMatrix,
     τ̂ = exp(θ̂[p + rr + 2])
     disp = _spde_disp_value(family, θ̂[(dbase + 1):(dbase + nd)])
 
-    return SPDELatentFit(β̂, Λ̂, κ̂, τ̂, disp, link, family, _fit_verdict(res)...,
+    return SPDELatentFit(β̂, Λ̂, κ̂, τ̂, disp, link, family, _spde_fit_verdict(res, θ0)...,
                          nodes, tris, Matrix{Float64}(Ntr), Int(α))
 end
 

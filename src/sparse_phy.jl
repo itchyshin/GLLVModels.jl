@@ -228,6 +228,40 @@ function _parse_node!(c::_NewickCursor,
     end
 end
 
+# Message for a non-positive branch length met while building a tree from a Newick string.
+# A Newick string with no `:length` anywhere parses to all-zero lengths, which used to read as
+# one zero-length branch ("node 1 has length 0.0"); say so when every non-root length is 0
+# (#1165). Message only: the same ErrorException is thrown for the same inputs.
+function _newick_branch_length_message(node::Integer, b::Real,
+                                       node_length::AbstractVector, node_parent::AbstractVector{<:Integer})
+    if all(i -> node_parent[i] == 0 || iszero(node_length[i]), eachindex(node_parent))
+        return "branch length must be > 0, but every branch length in this Newick string is 0.0: " *
+               "it has no branch lengths (or all are 0). Give each branch a length, " *
+               "e.g. \"((t1:0.5,t2:0.5):0.3,t3:0.8);\" (node $node has length $b)"
+    end
+    return "branch length must be > 0; node $node has length $b"
+end
+
+# Duplicate tip names are an error (P61 DUP-TIP-NAMES, issue #1165 item 3): the
+# sparse and edge-incidence parsers used to accept them, and a name-keyed lookup then
+# silently merged two tips. Unnamed tips (empty label) are not checked. Same
+# condition `fit_phylo_latent_gllvm` already refuses.
+function _check_unique_tip_names(leaf_names::AbstractVector{<:AbstractString})
+    seen = Set{String}()
+    dups = String[]
+    for nm in leaf_names
+        isempty(nm) && continue
+        if nm in seen
+            nm in dups || push!(dups, nm)
+        else
+            push!(seen, nm)
+        end
+    end
+    isempty(dups) ||
+        error("tree tip names must be unique; duplicated: " * join(dups, ", "))
+    return nothing
+end
+
 """
     augmented_phy(newick::AbstractString; correlation::Bool = false) :: AugmentedPhy{Float64}
 
@@ -285,6 +319,7 @@ function augmented_phy(newick::AbstractString; correlation::Bool = false)
 
     c.i <= lastindex(c.s) &&
         error("extra characters after end of tree at position $(c.i)")
+    _check_unique_tip_names(leaf_names)
 
     # Reindex: place leaves first (1:p) in the order they were encountered,
     # then internal nodes in the order they were added (post-order, so the
@@ -292,7 +327,8 @@ function augmented_phy(newick::AbstractString; correlation::Bool = false)
     n_total = length(node_parent)
     p = length(leaf_indices)
     n_total == 2 * p - 1 ||
-        error("tree is not binary (got $n_total nodes for $p leaves; expected $(2p - 1))")
+        error("tree is not binary (got $n_total nodes for $p leaves; expected $(2p - 1)); " *
+              "fit_phylo_latent_gllvm(...; tree = ...) accepts a tree with polytomies")
     # Binary trees only, checked per node: the global 2p-1 count alone can be
     # satisfied by a polytomy plus a unary node (#153). The check lives here, not
     # in the shared `_parse_node!`, because the phylo-latent route admits polytomies.
@@ -334,7 +370,7 @@ function augmented_phy(newick::AbstractString; correlation::Bool = false)
         parent_old == 0 && continue       # root has no parent edge
         b = node_length[old_child]
         b > 0 ||
-            error("branch length must be > 0; node $old_child has length $b")
+            error(_newick_branch_length_message(old_child, b, node_length, node_parent))
         push!(branch_lengths, b)
         new_child  = new_idx_of[old_child]
         new_parent = new_idx_of[parent_old]
