@@ -414,8 +414,9 @@ _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
     Bool[d < 1e-6 for d in dvec]
 
 # Informational upper end for the Gamma shape α (issue #864, maintainer decision
-# 2026-10-25: warn-only). On per-trait USairpollution (K = 1) the `manu` shape stops at
-# 3.7e5 while gllvmTMB reaches 2.8e8; the log-likelihood differs by about 8e-5, so the
+# 2026-10-25: warn-only). On per-trait USairpollution (K = 1) the `manu` shape stopped at
+# 3.7e5 with the cancelling density (near 1e10 with the stable density, #1175) while
+# gllvmTMB reaches 2.8e8; the log-likelihood differs by about 8e-5, so the
 # likelihood is flat in that direction and the large shape is a boundary the user should
 # be told about. This stays separate from `dispersion_boundary` (which is lower-end only
 # for Gamma since 2026-09-29, because a large α is identified when the data really are
@@ -988,6 +989,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_nb_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped_cov")
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
@@ -1607,6 +1609,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_beta_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
@@ -1839,7 +1842,7 @@ not flagged (2026-09-29); `converged` is forced `false` whenever any group is
 flagged.
 `dispersion_upper` (length G, #864) is informational only: it marks groups whose fitted
 `α[g]` is above `1e5`, where the likelihood can be flat in the shape (on per-trait
-USairpollution `manu` stops at 3.7e5 while gllvmTMB reaches 2.8e8). It comes with a
+USairpollution `manu` stopped at 3.7e5 with the cancelling density, near 1e10 with the stable one, while gllvmTMB reaches 2.8e8). It comes with a
 warning, does not change `dispersion_boundary`, and never changes `converged`.
 `offset` is the p×n training offset the fit was made with (`nothing` when the fit had
 none); [`getLV`](@ref) uses it by default.
@@ -2111,6 +2114,7 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_gamma_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
@@ -2643,6 +2647,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_nb1_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped_cov")
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
