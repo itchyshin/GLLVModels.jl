@@ -34,4 +34,16 @@ using Test, GLLVModels, StatsModels, Random
     @test occursin("`x`", err.msg)
     @test occursin("missing", err.msg)
     @test occursin("fit_temporal_gllvm", err.msg)
+
+    @testset "coalesce(x, 0.0) with incomplete Union column" begin
+        xm = Vector{Union{Missing, Float64}}(xv)
+        xm[5] = missing
+        f_coalesce = @formula(value ~ 0 + trait + coalesce(x, 0.0))
+        fit_c = fit_temporal_gllvm(merge(base, (x = xm,)); formula = f_coalesce, temporal = tt)
+        fit_pre = fit_temporal_gllvm(
+            merge(base, (x = coalesce.(xm, 0.0),)); formula = f, temporal = tt)
+        @test isfinite(loglikelihood(fit_c))
+        @test length(coef(fit_c)) == length(coef(fit_pre)) == 4
+        @test loglikelihood(fit_c) == loglikelihood(fit_pre)
+    end
 end

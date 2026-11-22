@@ -69,6 +69,10 @@ function _narrow_union_missing_numeric(v)
     Missing <: T || return v
     U = Base.nonmissingtype(T)
     U <: Number || return v
+    # A real `missing` cannot be stored in `Vector{U}`. Leave it: a bare term is
+    # refused by `_formula_covariate_columns`, and a term used only inside a
+    # function (e.g. `coalesce(x, 0.0)`) must still see the missing values.
+    any(ismissing, v) && return v
     return convert(AbstractVector{U}, v)
 end
 
