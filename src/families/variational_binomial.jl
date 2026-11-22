@@ -272,6 +272,7 @@ function binomial_marginal_loglik_va(Y::AbstractMatrix, N::AbstractMatrix,
     size(N) == size(Y) ||
         throw(DimensionMismatch("N must match Y size $(size(Y))"))
     _va_check_mask(mask, Y)
+    _va_check_response("binomial_marginal_loglik_va", Y, mask)
     Λ2 = Λ .^ 2
     xs, ws = _gauss_hermite(gh)
     acc = 0.0

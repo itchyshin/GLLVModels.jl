@@ -229,6 +229,27 @@ end
         @test split(strip(t.stdout), "\n") ==
               ["docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
                "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"]
+        fresh = run_pin_script(script; pin = "P1", oracle_build = "totoro-20261104")
+        @test fresh.success
+        if fresh.success
+            @test split(strip(fresh.stdout), "\n") ==
+                  ["docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json",
+                   "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/source.json"]
+        end
+        verify_fresh = run_pin_script("""
+            include(raw"$PIN_FILE")
+            rel = _core070_oracle_receipts_rel()
+            text = read(joinpath(raw"$ROOT", rel.build), String)
+            _core070_check_oracle_receipt(text, rel.build, :build)
+            bad = replace(text, "9539352f66f2db2cc26b1c393e67212a359b60c9" => "0000000000000000000000000000000000000000")
+            try
+                _core070_check_oracle_receipt(bad, rel.build, :build)
+                error("wrong pin was accepted")
+            catch e
+                occursin("wrong pin was accepted", sprint(showerror, e)) && rethrow()
+            end
+            """; pin = "P1", oracle_build = "totoro-20261104")
+        @test verify_fresh.success
         bad = run_pin_script(script; pin = "P1", oracle_build = "elsewhere")
         @test !bad.success
         @test occursin("GLLVM_PARITY_ORACLE_BUILD", bad.stderr)
