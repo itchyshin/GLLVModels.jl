@@ -199,7 +199,7 @@ end
         Y, phy; K = K, X_lv = X_lv,
         beta_init = beta, Lambda_init = Lambda, alpha_lv_init = alpha_lv,
         alpha_shape_init = alpha_shape, sigma2_phy_init = sigma2,
-        iterations = 800, g_tol = 1e-5,
+        iterations = 1500, g_tol = 1e-5,
         newton_maxiter = 120, newton_tol = 1e-10)
     @test fit.converged
     @test isfinite(fit.loglik)
@@ -209,7 +209,7 @@ end
     eta_target = vec(GLLVModels._eta_realized_lv_effects(X_lv, Z_truth, Lambda))
     prof = GLLVModels._phylo_gamma_xlv_profile_eta_realized(
         fit, Y, phy, X_lv, [5], eta_target;
-        level = 0.95, profile_iterations = 700,
+        level = 0.95, profile_iterations = 1500,
         newton_maxiter = 120, newton_tol = 1e-10)
     @test prof.method == :profile_eta_realized
     @test prof.term == ["B_eta_realized[5,1]"]

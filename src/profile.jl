@@ -68,6 +68,16 @@ function _gaussian_suff(y::AbstractMatrix, X, q::Integer)
     return (Syy = Syy, C = Cmat, Sxx = Sxmat, q = Int(q))
 end
 
+# Cancellation guard for r'Ã⁻¹r (Woodbury). `quad_sub` is the original subtractive value
+# r'D̃⁻¹r − z'L'D̃⁻¹r and `T` = r'D̃⁻¹r. Returned unchanged (bit-for-bit) unless
+# quad_sub <= 1e-8*T (or non-finite/negative), where the equivalent nonnegative form
+# (r − L z)'D̃⁻¹(r − L z) + z'z is used instead. Generic over Dual numbers.
+function _quad_cancel_guard(quad_sub, T, resid, L_U, z, d_inv)
+    quad_sub > 1.0e-8 * T && return quad_sub
+    e_r = resid .- L_U * z
+    return sum(d_inv .* e_r .* e_r) + sum(abs2, z)
+end
+
 function _ss_quad(Ainv::AbstractMatrix, β, suff)
     a = vec(Ainv)
     quad = sum(Ainv .* suff.Syy)
@@ -309,6 +319,11 @@ function gaussian_profile_nll(params::AbstractVector, y::AbstractMatrix;
             z = cA \ LtDr
             Ainv_r = Dinv_r .- DinvL * z
             quad = sum(resid .* Ainv_r)
+            # Cancellation guard: the subtractive form r'D̃⁻¹r − z'L'D̃⁻¹r loses
+            # about eps*T/quad relative accuracy (T = r'D̃⁻¹r). Keep it bit-for-bit
+            # unless quad <= 1e-8*T (relative error would exceed ~2e-8, or sign flips);
+            # only then use the nonnegative form (r−Lz)'D̃⁻¹(r−Lz) + z'z.
+            quad = _quad_cancel_guard(quad, sum(Dinv_r .* resid), resid, L_U, z, d_inv)
             end # suff
         end
 
@@ -545,6 +560,7 @@ function profile_recover(params::AbstractVector, y::AbstractMatrix;
             z = cA \ LtDr
             Ainv_r = Dinv_r .- DinvL * z
             quad = sum(resid .* Ainv_r)
+            quad = _quad_cancel_guard(quad, sum(Dinv_r .* resid), resid, L_U, z, d_inv)  # as in gaussian_profile_nll
             β_out = β_in === nothing ? Float64[] : collect(β_in)
         end
 
