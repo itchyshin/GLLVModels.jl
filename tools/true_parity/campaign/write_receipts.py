@@ -40,6 +40,17 @@ maintainer chose). When both raw outputs record the gradient max-abs of their ow
 its engine block; the checker then binds the row only if both are <= 1e-5. No committed raw Julia output records that
 field yet, so no receipt carries the block (the polished harness of PR #715 is not merged).
 
+Newton-polished point (N9 compared_point "newton_polished"; signed stopping rule docs/dev-log/decisions/
+2026-10-21-p1-optimizer-stopping-rule.md). When <raw> also holds <cell>_R_polish.json (run_R.R, CAMPAIGN_POLISH=1) and
+<cell>_J_polish.toml (run_J.jl, CAMPAIGN_POLISH=1) for an ordinal, isdm or fungi cell, every compared quantity is taken
+from the polish records (the values AT the polished point, re-extracted there by each engine's own code), the gradients
+and Hessian flags are those AT that point, all four raw files are committed and hashed in read_from (the returned-point
+record is kept beside the polished one), and the block says compared_point "newton_polished" with each engine's
+hessian_positive_definite. Such a receipt binds only if, in addition to the pass rule, both gradients are strictly below
+1e-5 (the stopping rule's "below"), both Hessians are positive definite at the compared point, both polishes met their
+pre-registered criterion, and each engine's self-consistency checks are exactly zero. One polish file without the other
+is refused. No receipt may carry a /tmp path (refused when built).
+
 Signed C4 dispositions. RD-PHYLO-DISPOSITION, RD-TEMPORAL-DISPOSITION and RD-ISDM-DISPOSITION are written as
 DISPOSITION-SIGNED under item F of the rulings page, signed by the maintainer on 2026-10-05 (vault D-319); an agent
 records the signature, no agent signs it.
@@ -289,12 +300,90 @@ def engine_blocks(cell, R, J):
 CONVERGENCE_GRADIENT_BOUND = 1e-5
 
 
+POLISH_CELLS = ("ordinal", "isdm", "fungi")
+POLISH_RULING = "maintainer ruling 2026-10-05 (vault D-319), N9; stopping rule signed 2026-10-21 (docs/dev-log/decisions/2026-10-21-p1-optimizer-stopping-rule.md)"
+POLISH_PROCEDURE = ("pre-registered Newton polish (tools/true_parity/campaign/run_R.R and polish_J.jl, CAMPAIGN_POLISH=1): R restarts nlminb at rel.tol 1e-13, "
+                    "then each engine takes at most max_steps Newton steps, stopping at the first point with gradient max-abs < 1e-5 and a positive-definite "
+                    "Hessian evaluated at that point; a step that raises the objective is not taken; every visited point is recorded in the raw polish files")
+# compared keys taken from each engine's polish record (the values at the polished point)
+R_POLISH_KEYS = ("logLik", "beta", "LLt", "cutpoints", "eta", "predict_link", "predict_response", "predict_newdata_offset0_link",
+                 "predict_newdata_offset0_response", "predict_cell_id", "predict_trait", "predict_source")
+J_POLISH_KEYS = ("logLik", "beta", "beta_terms", "beta_se", "LLt", "tau", "eta", "predict_link", "predict_response", "predict_newdata_offset0_link",
+                 "predict_newdata_offset0_response", "predict_cell_id", "predict_trait", "predict_source")
+# the compared quantities each engine's polish record MUST carry (a returned-point value is never compared as if polished)
+POLISH_REQUIRED = {
+    "ordinal": {"R": ("logLik", "LLt", "cutpoints"), "julia": ("logLik", "LLt", "tau")},
+    "isdm": {s: ("logLik", "beta", "LLt", "predict_link", "predict_response", "predict_newdata_offset0_link", "predict_newdata_offset0_response",
+                 "predict_cell_id", "predict_trait", "predict_source") for s in ("R", "julia")},
+    "fungi": {s: ("logLik", "beta", "LLt", "eta") for s in ("R", "julia")},
+}
+R_SELF = ("self_consistency_fixed_par_max_abs_diff", "self_consistency_beta_vs_opt_par_max_abs_diff")
+J_SELF = ("self_consistency_logLik_abs_diff",)
+
+
+def polished_view(cell, base, pol, side):
+    """The engine's raw record with every compared quantity, the gradient and the Hessian flag replaced by the values AT the
+    polished point. The returned-point values are kept under returned_point. Refuses a polish record of another run."""
+    if pol.get("cell") != cell or bool(pol.get("small")) != bool(base.get("small")):
+        raise SystemExit(f"{cell}: {side} polish record is for cell {pol.get('cell')!r} small={pol.get('small')!r}, not this run")
+    if side == "julia" and pol.get("gllvmodels_commit") != base.get("gllvmodels_commit"):
+        raise SystemExit(f"{cell}: Julia polish commit {pol.get('gllvmodels_commit')} != fit commit {base.get('gllvmodels_commit')}")
+    if side == "R" and pol.get("host") != base.get("host"):
+        raise SystemExit(f"{cell}: R polish host {pol.get('host')} != fit host {base.get('host')}")
+    keys = R_POLISH_KEYS if side == "R" else J_POLISH_KEYS
+    v = dict(base)
+    v["returned_point"] = OrderedDict(logLik=base.get("logLik"), max_abs_gradient=base.get("max_abs_gradient"),
+                                      pdHess=base.get("pdHess"), pd_hessian=base.get("pd_hessian"))
+    for k in POLISH_REQUIRED[cell][side]:
+        if k not in pol: raise SystemExit(f"{cell}: {side} polish record lacks {k} at the polished point")
+    dropped = []
+    for k in keys:
+        if k in pol: v[k] = pol[k]
+        elif k in v: del v[k]; dropped.append(k)   # a returned-point value that is not compared is not carried as if polished
+    v["returned_point_values_not_carried"] = dropped
+    v["compared_point"] = "newton_polished"
+    v["max_abs_gradient"] = pol["max_abs_gradient"]
+    v["hessian_positive_definite"] = pol["hessian_positive_definite"] is True
+    if side == "R": v["pdHess"] = pol.get("pdHess") is True
+    else:
+        v["pd_hessian"] = v["hessian_positive_definite"]
+        if "rebuilt_cells_converged" in pol: v["cells_converged"] = pol["rebuilt_cells_converged"]
+    selfk = R_SELF if side == "R" else J_SELF
+    v["polish"] = OrderedDict(steps_taken=pol.get("steps_taken"), max_steps=pol.get("max_steps"), criterion_met=pol.get("criterion_met") is True,
+                              stopped=pol.get("stopped"), logLik_before=pol.get("logLik_before"), max_abs_gradient_before=pol.get("max_abs_gradient_before"),
+                              hessian_min_eigenvalue=pol.get("hessian_min_eigenvalue"), hessian_max_eigenvalue=pol.get("hessian_max_eigenvalue"),
+                              gradient_method=pol.get("gradient_method", "TMB obj$gr (analytic, Laplace)"),
+                              hessian_method=pol.get("hessian_method", "solve(TMB::sdreport(obj, par.fixed = par)$cov.fixed)"),
+                              wall_polish_sec=pol.get("wall_polish_sec"),
+                              self_consistency=OrderedDict((k, pol.get(k)) for k in selfk))
+    v["polish_self_consistent"] = all(pol.get(k) == 0 for k in selfk)
+    return v
+
+
+def assert_no_tmp(obj, where):
+    """A receipt must not cite a /tmp path (the #990 receipts cited loose /tmp notes no reviewer can read)."""
+    if isinstance(obj, dict):
+        for k, x in obj.items(): assert_no_tmp(k, where); assert_no_tmp(x, where)
+    elif isinstance(obj, list):
+        for x in obj: assert_no_tmp(x, where)
+    elif isinstance(obj, str) and ("/tmp/" in obj or "/private/tmp" in obj or obj.startswith("/tmp")):
+        raise SystemExit(f"{where}: receipt would carry a /tmp path: {obj[:120]!r}")
+
+
 def convergence_parity(R, J):
     """The N9 block (maintainer ruling 2026-10-05, D-319), when both raw outputs record their own gradient max-abs at the
-    returned point; None otherwise (the receipt then carries no block and is judged as before)."""
+    returned point (compared_point "returned") or both are polished views (compared_point "newton_polished", with each engine's
+    Hessian flag at that point); None otherwise (the receipt then carries no block and is judged as before)."""
     rg, jg = R.get("max_abs_gradient"), J.get("max_abs_gradient")
     if not (fin(rg) and fin(jg)):
         return None
+    if R.get("compared_point") == "newton_polished" or J.get("compared_point") == "newton_polished":
+        if not (R.get("compared_point") == J.get("compared_point") == "newton_polished"):
+            raise SystemExit("one engine polished and the other not: refused")
+        return OrderedDict(gradient_bound=CONVERGENCE_GRADIENT_BOUND, compared_point="newton_polished",
+                           engines=OrderedDict(R=OrderedDict(max_abs_gradient=rg, hessian_positive_definite=R["hessian_positive_definite"]),
+                                               julia=OrderedDict(max_abs_gradient=jg, hessian_positive_definite=J["hessian_positive_definite"])),
+                           ruling=POLISH_RULING, procedure=POLISH_PROCEDURE)
     return OrderedDict(gradient_bound=CONVERGENCE_GRADIENT_BOUND, compared_point="returned",
                        engines=OrderedDict(R=OrderedDict(max_abs_gradient=rg), julia=OrderedDict(max_abs_gradient=jg)),
                        ruling="maintainer ruling 2026-10-05 (vault D-319), N9")
@@ -328,6 +417,12 @@ LEG_TEXT = {
     "same_data_sha256": "the two engines did not record the same data sha256",
     "gllvmTMB_deparse_identical_to_P1": "a named gllvmTMB entry point does not deparse identically to its P1 source",
     "R_version_0_7_1_from_P1_library": "R side is not gllvmTMB 0.7.1 from the P1 library",
+    "convergence_parity_both_gradients_within_1e-5": "an engine's gradient max-abs at the compared point is above 1e-5 (N9)",
+    "both_gradients_strictly_below_1e-5_at_compared_point": "an engine's gradient max-abs at the polished point is not strictly below 1e-5 (signed 2026-10-21 stopping rule)",
+    "both_hessians_positive_definite_at_compared_point": "an engine's Hessian at the polished point is not positive definite (signed 2026-10-21 stopping rule)",
+    "both_polishes_met_preregistered_criterion": "an engine's pre-registered Newton polish stopped without meeting its criterion",
+    "full_size_data_not_a_development_run": "the raw outputs are a CAMPAIGN_SMALL development run (reduced data), never a receipt",
+    "polished_quantities_self_consistent": "a polished quantity is not exactly that of the polished parameter vector (self-consistency check not zero)",
 }
 
 
@@ -496,6 +591,15 @@ def run_context(raw, cell):
     return ctx
 
 
+def apply_lane(ctx, raw):
+    """A later lane (the polished recapture) states its own host, lane directory and caps in <raw>/run/lane.json, which
+    replaces the 2026-10-02 campaign's fixed text above."""
+    lj = read_text(Path(raw) / "run" / "lane.json")
+    if ctx is not None and lj:
+        ctx.update(json.loads(lj))
+    return ctx
+
+
 def data_meta(raw, cell):
     for n in (f"{cell}.meta.json", f"{cell}_wide.meta.json"):
         p = Path(raw) / "data_meta" / n
@@ -560,6 +664,12 @@ def process(raw, out_root, apply, quiet=False):
         if not J.get("DONE"):
             if not quiet: print(f"skip {sid}: Julia run not finished")
             continue
+        rpp, jpp = Path(raw) / f"{cell}_R_polish.json", Path(raw) / f"{cell}_J_polish.toml"
+        polished = rpp.exists() or jpp.exists()
+        if polished:
+            if not (rpp.exists() and jpp.exists()): raise SystemExit(f"{sid}: only one engine's polish record is present ({rpp.name}, {jpp.name})")
+            if cell not in POLISH_CELLS: raise SystemExit(f"{sid}: no polished comparison is defined for cell {cell}")
+            R, J = polished_view(cell, R, load_r(rpp), "R"), polished_view(cell, J, load_j(jpp), "julia")
         cases = cases_for(sid, cell, clause, quants, R, J)
         legs = pass_rule(R, J, cases)
         cp = convergence_parity(R, J)
@@ -567,12 +677,21 @@ def process(raw, out_root, apply, quiet=False):
         if cp is not None:
             legs["convergence_parity_both_gradients_within_1e-5"] = all(
                 e["max_abs_gradient"] <= CONVERGENCE_GRADIENT_BOUND for e in cp["engines"].values())
+        if polished:
+            legs["both_gradients_strictly_below_1e-5_at_compared_point"] = all(
+                e["max_abs_gradient"] < CONVERGENCE_GRADIENT_BOUND for e in cp["engines"].values())
+            legs["both_hessians_positive_definite_at_compared_point"] = all(e["hessian_positive_definite"] is True for e in cp["engines"].values())
+            legs["both_polishes_met_preregistered_criterion"] = R["polish"]["criterion_met"] and J["polish"]["criterion_met"]
+            legs["polished_quantities_self_consistent"] = R["polish_self_consistent"] and J["polish_self_consistent"]
+        if R.get("small") or J.get("small"):   # CAMPAIGN_SMALL development data never binds (leg added only then, so committed receipts are unchanged)
+            legs["full_size_data_not_a_development_run"] = False
         binds = all(legs.values())
         eng_r, eng_j = engine_blocks(cell, R, J)
         rdir = camp / fam / CAMPAIGN_DIR
         hashes = OrderedDict()
         off = cell in OFF_REPO
-        for src, nm in ((rp, f"{cell}_R.json"), (jp, f"{cell}_J.toml")):
+        raw_list = ((rp, f"{cell}_R.json"), (jp, f"{cell}_J.toml")) + (((rpp, rpp.name), (jpp, jpp.name)) if polished else ())
+        for src, nm in raw_list:
             dst = rdir / "raw" / (nm + ".gz")
             if off:   # recorded, never committed: the sha256 lets the maintainer's retained copy be verified
                 hashes[str(dst.relative_to(out_root)) + " (uncompressed sha256; this raw file is NOT in the repo)"] = sha_file(src)
@@ -583,11 +702,13 @@ def process(raw, out_root, apply, quiet=False):
             cell=OrderedDict((k, R.get(k)) for k in ("formula",)) | OrderedDict(data_sha256=R["data_sha256"], data_file=J.get("data_file"),
                               p=J.get("p"), n=J.get("n"),
                               data_committed_copy=(f"tools/true_parity/campaign/data/{cell}.csv.gz" if cell in SYNTH else None)),
-            data_meta=data_meta(raw, cell), run=run_context(raw, cell),
+            data_meta=data_meta(raw, cell), run=apply_lane(run_context(raw, cell), raw),
             engine_messages=OrderedDict(R=trim_log(read_text(Path(raw) / "logs" / f"R_{cell}.log")), julia=trim_log(read_text(Path(raw) / "logs" / f"J_{cell}.log"))),
             p1_source_sha256=R["p1_source_sha256"], gllvmTMB_deparse_check=R["deparse_check"],
             cond_H_statement=cond_statement(R, J),
             reasons=reasons(legs, cases), not_covered=NOT_COVERED_COMMON)
+        if polished:
+            extra["polish"] = OrderedDict(R=R["polish"], julia=J["polish"], returned_point=OrderedDict(R=R["returned_point"], julia=J["returned_point"]))
         if off:
             extra["raw_outputs_off_repo"] = (NOTE_OFF_REPO + ". The urbanisation matrix is the maintainer's unpublished data and its redistribution status is unconfirmed, so the "
                 "per-observation raw outputs (linear predictors, loadings) are not committed. This receipt keeps summary values only: logLik, the fixed effects, the maximum "
@@ -595,6 +716,7 @@ def process(raw, out_root, apply, quiet=False):
                 "repository; it prints that and checks the receipt's internal consistency. With the retained raw files, run write_receipts.py --check --local-raw DIR.")
         note = NOTE_OFF_REPO if off else f"receipts/{fam}/{CAMPAIGN_DIR}/raw/{cell}_*.gz"
         rc = build_receipt(sid, cell, clause, cases, legs, eng_r, eng_j, extra, dict(note=note, hashes=hashes), binds, cp)
+        assert_no_tmp(rc, sid)
         results.append((sid, fam, clause, rc, binds, rdir / f"{slug(sid)}.json"))
     # --- C5
     for sid, level in C5:
