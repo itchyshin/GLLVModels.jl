@@ -20,25 +20,21 @@ using GLLVModels, RCall, Test, Random, LinearAlgebra, Statistics
 
 @testset "Gaussian GLLVModels parity: GLLVModels.jl vs gllvmTMB" begin
 
-    # ── 1. Simulate data (tiny fixed seed) ───────────────────────────────────
-    Random.seed!(42)
+    # ── 1. Data: stored seed-42 draw (not re-simulated) ──────────────────────
+    # Julia's seeded randn stream differs between 1.10.12 and 1.13.2 (one tail cell of the
+    # 400 draws), and the R receipt is bound to the 1.10.12 draw. The draw is read from
+    # fixtures/frozen_rng_gaussian_s42.toml (sha256-checked), generated on 1.10.12 by
+    # fixtures/generate_frozen_rng_w15.jl from the original DGP: seed 42, p = 5, K = 2,
+    # n = 80, Λ_true = parity_loadings_p5k2(), σ_true = 0.7, y = Λ_true * randn(K, n) +
+    # σ_true * randn(p, n) (p × n, traits × sites). The stored y is already centred per
+    # trait (step below), because `mean` differs at the last bit across Julia versions.
     p, K, n = 5, 2, 80   # small: p traits, K latent factors, n sites
+    y = parity_load_frozen_rng("frozen_rng_gaussian_s42.toml";
+        expected_sha = "04b210b666fdd7b1d2978bbe801c1f9a3accee7194872580d96b0f37b5d0b417").Y
 
-    Λ_true = [
-        0.8   0.0;   # lower-triangular canonical form (top K×K block)
-        0.5   0.6;
-        0.3  -0.4;
-       -0.2   0.5;
-        0.1   0.3
-    ]
-    σ_true = 0.7
-
-    η = randn(K, n)                       # K × n latent scores
-    y = Λ_true * η + σ_true * randn(p, n) # p × n (traits × sites)
-
-    # Centre per trait so gllvmTMB `0+trait` intercepts match Julia's zero-mean
-    # J1 model (see scratch/2026-08-01-gaussian-rcall-shape.md §2).
-    y .-= mean(y; dims = 2)
+    # y is already centred per trait (done by the generator with `y .-= mean(y; dims = 2)`)
+    # so gllvmTMB `0+trait` intercepts match Julia's zero-mean J1 model (see
+    # scratch/2026-08-01-gaussian-rcall-shape.md §2).
 
     # ── 2. Julia fit via GLLVModels.jl ────────────────────────────────────────────
     jl_fit = fit_gaussian_gllvm(y; K = K)
