@@ -32,6 +32,14 @@ end
     end
 end
 
+@testset "working-with-a-fit population predict wording (#1192)" begin
+    txt = read(joinpath(_DOCS, "working-with-a-fit.md"), String)
+    @test occursin("Population-level (new-site) predictions", txt)
+    @test occursin("GllvmCovFit", txt)
+    @test occursin("RRRFit", txt)
+    @test !occursin("Covariate fits also support population-level", txt)
+end
+
 @testset "Gaussian confint non-PD wording (#738)" begin
     f = GLLVModels._gaussian_wald_covariance_from_hessian
     # Indefinite but invertible Hessian: Cholesky fails, so every SE and Sigma are NaN.

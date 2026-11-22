@@ -134,9 +134,12 @@ end
 """
     predict(fit::RRRFit, X; type=:response) -> p×n matrix
 
-`:link` = the linear predictor `η = β .+ Λ B' X'`; `:response` (= `:mean`) = the
-mean `μ = linkinv(link, η)`. `X` is the n×q site-covariate matrix. Because the
-latent axes are deterministic in the covariates, no original `Y` is required.
+Population-level prediction from an `n×q` site-covariate matrix: `:link` = the
+linear predictor `η = β .+ Λ B' X'`; `:response` (= `:mean`) = the mean
+`μ = linkinv(link, η)`. Because the latent axes are deterministic in the
+covariates, no response matrix is required (contrast unconditional
+`GllvmCovFit`, which uses a trait-major `p×n×q` design and holds the residual
+latent at zero only at new sites).
 """
 function predict(fit::RRRFit, X::AbstractMatrix{<:Real}; type::Symbol = :response)
     type in (:response, :mean, :link) ||
