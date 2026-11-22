@@ -75,15 +75,22 @@ struct NBFit
     theta_packed::Vector{Float64}
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
     optimizer_info::Union{Nothing,OptimizerRecord}
 end
 
+# Pre-n_units compat tier (11 positional args).
+NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, offset, optimizer_info) =
+    NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, offset,
+          _compat_training_units(offset), optimizer_info)
+
 # Pre-offset compat tier (10 positional args): no stored training offset.
 NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, offset) =
-    NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, offset, nothing)
+    NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, offset,
+          _compat_training_units(offset), nothing)
 
 NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
-    NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing, nothing)
+    NBFit(β, Λ, r, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing, 0, nothing)
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -407,6 +414,7 @@ function _fit_nb_gllvm_start(Y::AbstractMatrix; K::Integer,
                                 mask = msk, caller = "fit_nb_gllvm")
         return NBFit(β̂, Λ̂, r̂, link, ll, conv, iters,
                      alpha_hat, collect(Float64, θ̂), hessian, _stored_offset(offset),
+                     _stored_training_units(Y),
                      _optimizer_record(optimizer, stages; controls = controls,
                          derivative = derivative_route, actual = outer_optimizer))
     else
@@ -416,7 +424,7 @@ function _fit_nb_gllvm_start(Y::AbstractMatrix; K::Integer,
         ll, conv, iters = _nb_shared_r_verdict(res, r̂)
         conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb_gllvm")
         return NBFit(β̂, Λ̂, r̂, link, ll, conv, iters, nothing, Float64[], hessian,
-                     _stored_offset(offset),
+                     _stored_offset(offset), _stored_training_units(Y),
                      _optimizer_record(optimizer, stages; controls = controls,
                          derivative = derivative_route, actual = outer_optimizer))
     end

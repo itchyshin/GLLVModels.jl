@@ -79,6 +79,14 @@ end
 _stored_offset(::Nothing) = nothing
 _stored_offset(O::AbstractMatrix) = Matrix{Float64}(O)
 
+# Training unit count (columns of Y) stored on Laplace fits without an offset (#826).
+_stored_training_units(Y::AbstractMatrix) = size(Y, 2)
+
+# Back-fill `n_units` on positional-compat constructors when only `offset` encodes n.
+_compat_training_units(offset, n_units::Integer = 0) =
+    n_units > 0 ? Int(n_units) :
+    (offset isa AbstractMatrix ? size(offset, 2) : 0)
+
 # What an offset looked like, for the error message ("a length-40 vector", "a 40×4 matrix").
 function _describe_offset(offset)
     offset isa AbstractVector && return "a length-$(length(offset)) vector"

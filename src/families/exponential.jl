@@ -116,11 +116,17 @@ struct ExponentialFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
 end
 
 # Pre-offset compat tier (7 positional args): no stored training offset.
 ExponentialFit(β, Λ, link, loglik, converged, iterations, hessian) =
-    ExponentialFit(β, Λ, link, loglik, converged, iterations, hessian, nothing)
+    ExponentialFit(β, Λ, link, loglik, converged, iterations, hessian, nothing, 0)
+
+# Pre-n_units compat tier (8 positional args).
+ExponentialFit(β, Λ, link, loglik, converged, iterations, hessian, offset) =
+    ExponentialFit(β, Λ, link, loglik, converged, iterations, hessian, offset,
+                  _compat_training_units(offset))
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -209,5 +215,6 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     loglik, conv, iters = _fit_verdict(res)
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_exponential_gllvm")
-    return ExponentialFit(β̂, Λ̂, link, loglik, conv, iters, hessian, _stored_offset(offset))
+    return ExponentialFit(β̂, Λ̂, link, loglik, conv, iters, hessian, _stored_offset(offset),
+                          _stored_training_units(Y))
 end

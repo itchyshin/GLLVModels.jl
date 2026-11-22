@@ -123,13 +123,16 @@ end
         @test err isa ArgumentError && occursin("must be :refit or :training", err.msg)
         @test predict(fa, Y; type = :link, modes = :refit) == predict(fa, Y; type = :link)
     end
-    @testset "no-offset fit: :training checks the response count" begin
+    @testset "no-offset fit: :training checks the full training size (#826)" begin
         Y, _ = _sim_draw(MersenneTwister(47), p, n, (r, η) -> rand(r, Poisson(exp(η))))
         f0 = fit_poisson_gllvm(Y; K = 1)
         @test f0.offset === nothing
+        @test f0.n_units == n
         err = try predict(f0, Y[1:(p - 1), :]; type = :link, modes = :training); nothing catch e; e end
         @test err isa ArgumentError && occursin("training data", err.msg)
-        # the unit count is not stored on a fit without an offset, so it cannot be checked there
-        @test size(predict(f0, Y[:, 1:10]; type = :link, modes = :training)) == (p, 10)
+        @test occursin("$p×$n", err.msg)
+        err = try predict(f0, Y[:, 1:10]; type = :link, modes = :training); nothing catch e; e end
+        @test err isa ArgumentError && occursin("training data", err.msg)
+        @test occursin("$p×$n", err.msg) && occursin("10", err.msg)
     end
 end

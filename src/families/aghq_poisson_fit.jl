@@ -112,7 +112,8 @@ function fit_poisson_gllvm(Y::AbstractMatrix;K::Integer,n_init::Integer=1,aghq=f
         result,deepcopy(selected.adaptation),data,_aghq_data_digest(data),mode_gradient)
     selected.parameter_shift==0 && @warn "AGHQ returned its warm start without parameter movement" reason=selected.stop_reason
     return PoissonFit(copy(t[1:p]),unpack_lambda(t[p+1:end],p,K),link,-selected.objective,
-        selected.converged,selected.passes,nothing,copy(t),:observed,info)
+        selected.converged,selected.passes,nothing,copy(t),:observed,info,nothing,
+        size(problem.data.responses, 2))
 end
 # Best of `n_init` Laplace fits (#915). Start 1 is the unchanged default call; the extra
 # starts replace `Λ_init` with a seeded lower-triangular draw. Converged fits rank before
@@ -138,7 +139,7 @@ function _poisson_best_of_starts(Y,K,n_init,kwargs)
     return best
 end
 _poisson_with_integration(f::PoissonFit,i)=PoissonFit(f.β,f.Λ,f.link,f.loglik,f.converged,
-    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,i,f.offset,f.weights)
+    f.iterations,f.alpha_lv,f.theta_packed,f.hessian,i,f.offset,f.n_units,f.weights)
 _is_poisson_aghq(f)=f isa PoissonFit && f.integration!==nothing && f.integration.actual===:aghq
 
 function _poisson_aghq_problem(fit::PoissonFit,Y;mask=nothing,offset=nothing,require_identity=false)
