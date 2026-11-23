@@ -56,4 +56,15 @@ using Random
         fi = fit_ordinal_gllvm_pertrait(Y; K = 1, mask = M)
         @test fm.loglik == fi.loglik
     end
+
+    @testset "Union{Missing,Int} derives a mask (#1191)" begin
+        Ymi = Matrix{Union{Missing, Int}}(Y)
+        Ymi[2, 3] = missing
+        fm = fit_gllvm(Ymi; family = Ordinal(), K = 1)
+        m = trues(p, n)
+        m[2, 3] = false
+        fi = fit_gllvm(Y; family = Ordinal(), K = 1, mask = m)
+        @test fm.loglik == fi.loglik
+        @test fm.converged == fi.converged
+    end
 end

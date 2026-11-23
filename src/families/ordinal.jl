@@ -918,3 +918,23 @@ fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, k
 fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
     fit_ordinal_gllvm_pertrait_cov(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm_pertrait_cov");
                                    mask = mask, kwargs...)
+
+# `missing` in Y (gllvm-style NA): derive a mask and a placeholder-sanitized Int matrix (#1191).
+fit_ordinal_gllvm(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...) =
+    begin
+        msk = _resolve_obs_mask(mask, Y)
+        Yc = Integer.(_sanitize_unobserved(Y, msk, 1))
+        fit_ordinal_gllvm(Yc; mask = msk, kwargs...)
+    end
+fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...) =
+    begin
+        msk = _resolve_obs_mask(mask, Y)
+        Yc = Integer.(_sanitize_unobserved(Y, msk, 1))
+        fit_ordinal_gllvm_pertrait(Yc; mask = msk, kwargs...)
+    end
+fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...) =
+    begin
+        msk = _resolve_obs_mask(mask, Y)
+        Yc = Integer.(_sanitize_unobserved(Y, msk, 1))
+        fit_ordinal_gllvm_pertrait_cov(Yc; mask = msk, kwargs...)
+    end
