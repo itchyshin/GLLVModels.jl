@@ -200,6 +200,7 @@ _register_shard_table!(4, (
         "test_tweedie_speed.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
         "test_comparator_targets.jl", "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl",
         "test_confint_na_y.jl",
+        "test_beta_grouped_hessian_1156.jl",
     ),
     (
         "test_likelihood.jl", "test_packing.jl", "test_docstring_animal_dep_twin.jl",
@@ -945,6 +946,7 @@ println(_SHARD === nothing ?
     _shard_include("test_masked_gaussian_converged_735.jl")   # #735
     _shard_include("test_fix_1107.jl")   # #1107 derive Gaussian mask from missing
     _shard_include("test_confint_na_y.jl")   # #1144 confint / profile_ci / bootstrap_ci refuse missing / NaN in y
+    _shard_include("test_beta_grouped_hessian_1156.jl")   # #1156 grouped Beta hessian default
     _shard_include("test_na_input_maskless_gaussian.jl")   # #1147 typed error for missing / NaN on maskless Gaussian fitters
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")

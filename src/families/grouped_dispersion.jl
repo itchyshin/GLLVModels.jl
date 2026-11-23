@@ -1444,19 +1444,23 @@ times the median (a flat-plateau stationary point), the fit restarts once from t
 start with every `φ = 1` and once from the returned point, and keeps the best run only
 if its log-likelihood is higher by more than `1e-6`; `iterations` then counts the kept run
 only. This improves the local search but does not guarantee the global maximum. With one
-group this matches [`fit_beta_gllvm`](@ref). `hessian=:observed` (the default)
-uses the exact conditional Beta/logit curvature used by TMB's Laplace objective;
-set `hessian=:fisher` to retain the expected-information approximation.
+group this matches [`fit_beta_gllvm`](@ref). The default `hessian` follows
+[`_default_hessian`](@ref) (`:observed` for logit, `:fisher` for other links).
+Explicit `hessian=:observed` is accepted only with [`LogitLink`](@ref).
 `β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
 as in [`fit_nb_gllvm`](@ref); the per-group `φ` still starts at `φ₀ = 10`.
 """
 function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogitLink(), mask = nothing, offset = nothing,
-        hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
+        hessian::Symbol = _default_hessian(Beta(1.0, 1.0), link),
+        β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    hessian === :observed && !(link isa LogitLink) &&
+        throw(ArgumentError("hessian=:observed is currently supported only for Beta with LogitLink(); " *
+            "got $(typeof(link)). Pass hessian=:fisher or omit `hessian` for the default."))
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_beta_gllvm_grouped")
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
@@ -1592,10 +1596,13 @@ under X for Beta (twin API B). Keep `fit_gllvm_cov` for the shared-`φ` + X opt-
 function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3},
         K::Integer, group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogitLink(), mask = nothing, γ_fixed = nothing,
-        hessian::Symbol = :observed,
+        hessian::Symbol = _default_hessian(Beta(1.0, 1.0), link),
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
+    hessian === :observed && !(link isa LogitLink) &&
+        throw(ArgumentError("hessian=:observed is currently supported only for Beta with LogitLink(); " *
+            "got $(typeof(link)). Pass hessian=:fisher or omit `hessian` for the default."))
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
     length(group) == p || throw(ArgumentError("length(group)=$(length(group)) must equal p=$p"))
