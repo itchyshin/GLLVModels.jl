@@ -574,6 +574,7 @@ println(_SHARD === nothing ?
     _shard_include("test_kernel_dep.jl")
     _shard_include("test_kernel_latent.jl")
     _shard_include("test_fit.jl")
+    _shard_include("test_forwarddiff_cholesky_diagonal_start.jl")
     _shard_include("test_gaussian_K_bounds.jl")
     _shard_include("test_laplace_K_bounds.jl")
     _shard_include("test_fixed_effects.jl")

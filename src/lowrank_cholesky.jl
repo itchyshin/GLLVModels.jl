@@ -21,13 +21,9 @@
 using LinearAlgebra
 import LinearAlgebra: logdet, mul!, ldiv!
 
-"""
-    _chol_solve(C::Cholesky, B)
-
-Solve `C \\ B` via the upper-triangular factor. On Julia ≥ 1.12 with
-ForwardDiff 0.10.x, `Cholesky \\ b` can halve the derivative through an
-exactly diagonal factor at the evaluation point; the explicit `U` solves do not.
-"""
+# Solve `C \\ B` via the upper-triangular factor. On Julia ≥ 1.12 with
+# ForwardDiff 0.10.x, `Cholesky \\ b` can halve the derivative through an
+# exactly diagonal factor at the evaluation point; the explicit `U` solves do not.
 _chol_solve(C::Cholesky, B::AbstractVecOrMat) = C.U \ (C.U' \ B)
 
 """
