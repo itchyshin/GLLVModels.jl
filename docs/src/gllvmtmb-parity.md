@@ -273,6 +273,7 @@ not bugs on either side.
 | Gaussian dispersion | per-species SD `φ_j` | single shared `σ` (profiled) | needs a per-species-variance Gaussian fit for exact parity |
 | Dispersion **structure** | per-species by default (`disp.formula = NULL`) | shared scalar by default; per-species via the grouped fitters | route Julia through `fit_*_gllvm_grouped(Y; K, group = 1:p)`, **or** set gllvm `disp.formula = ~1` |
 | Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples |
+| VA latent covariance | default correlated `Lambda.struc` in R | diagonal posterior in `fit_*_gllvm_va` | for `K ≥ 2`, set R `Lambda.struc = "diagonal"` before comparing loadings or ELBO |
 
 ### Families, dispersion, and measured covariates
 
