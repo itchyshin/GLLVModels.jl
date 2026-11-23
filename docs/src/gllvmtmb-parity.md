@@ -374,6 +374,11 @@ Check these restrictions when translating an R analysis:
   OU on long data) is a different model; the temporal source alone and beside
   ordinary `unit` / `unit_obs` terms has a Julia counterpart, described on the
   [temporal page](temporal.md), and is not reached through this bridge.
+- **Poisson observation weights with latent factors** — on the Poisson Laplace
+  route, `weights` multiply each cell's conditional log-density (as in gllvmTMB).
+  With `K = 0`, integer weights act like stacked replicates on the marginal
+  objective; with `K ≥ 1` they are not frequency weights — scaling every weight
+  by a constant does not scale `loglik` by that constant.
 - **Per-trait nuisance-parameter intervals** — grouped NB2/NB1/Beta/Gamma CIs
   are supported; grouped Tweedie and per-trait ordinal-cutpoint CI endpoints
   remain unavailable.

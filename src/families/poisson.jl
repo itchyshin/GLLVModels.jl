@@ -183,7 +183,10 @@ Weights: pass `weights` (observation weights, gllvmTMB's `weights`): each observ
 conditional log-density is multiplied by its weight, so the fit maximises a weighted
 objective (`loglik` reports it). Shapes follow [`fit_gllvm`](@ref): a scalar, a length-`n`
 vector (one weight per unit), or a `p×n` matrix (`1×n` / `p×1` stretch). Values must be
-finite and non-negative at observed cells; unobserved cells are ignored. Weighted fits
+finite and non-negative at observed cells; unobserved cells are ignored. With `K = 0` and
+a truly duplicated design (stacked rows), constant weights reproduce replicating
+observations; with `K ≥ 1` the weights are **not** frequency weights — multiplying every
+weight by the same constant does **not** scale `loglik` by that constant. Weighted fits
 use the finite-difference gradient and are refused together with `X_lv` or AGHQ.
 
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
