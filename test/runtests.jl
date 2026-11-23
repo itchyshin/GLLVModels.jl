@@ -186,7 +186,7 @@ _register_shard_table!(4, (
         "test_confint_bootstrap_verdict_poisson.jl", "test_confint_bootstrap_verdict_beta.jl", "test_confint_bootstrap_verdict_hurdle_delta.jl",
         "test_truncnb2_ci_boundary.jl", "test_confint_bootstrap_ordered_beta.jl", "test_confint_bootstrap_verdict_rest.jl",
         "test_confint_bootstrap_boundary_per_param.jl", "test_second_order_tweedie_grouped_ci.jl", "test_diagnostics.jl",
-        "test_summary_table.jl", "test_formula.jl", "test_simulate.jl",
+        "test_summary_table.jl", "test_formula.jl", "test_simulate.jl", "test_simulate_n_size.jl",
         "test_species_covariates.jl", "test_fourthcorner.jl", "test_structural_confint.jl",
         "test_variational_negbin.jl", "test_variational_dgamma.jl", "test_bridge_grouped_dispersion.jl",
         "test_bridge_x.jl", "test_bridge_lognormal.jl", "test_bridge_truncated_input.jl",

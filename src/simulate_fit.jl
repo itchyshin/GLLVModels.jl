@@ -14,6 +14,12 @@ _sim_family(fit::ExponentialFit) = (Exponential(1.0), fit.link)
 
 const _ScalarMuFit = Union{PoissonFit, NBFit, BetaFit, GammaFit, ExponentialFit}
 
+# Trial-count matrix for binomial simulation: must match the fitted p and requested n (#1198).
+function _check_simulate_trials(Nm::AbstractMatrix, p::Integer, n::Integer)
+    size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
+    return Nm
+end
+
 # Element type of a simulated matrix: continuous families → Float64, else Int.
 _sim_eltype(fam) = fam isa Union{Beta, Gamma, Exponential} ? Float64 : Int
 
@@ -65,7 +71,7 @@ function simulate(fit::BinomialFit, n::Integer;
     end
     offset===nothing || throw(ArgumentError("explicit offset currently requires AGHQ metadata"))
     p, K = size(fit.Λ)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _check_simulate_trials(N === nothing ? fill(1, p, n) : N, p, n)
     Zmean = if fit.alpha_lv === nothing
         zeros(Float64, n, K)
     else
@@ -351,7 +357,7 @@ function simulate(fit::GllvmCovFit, X::AbstractArray{<:Real, 3};
                   N::Union{Nothing, AbstractMatrix} = nothing, rng::AbstractRNG = default_rng())
     p, K = size(fit.Λ); n = size(X, 2)
     fam = _cov_family(fit.family, fit.dispersion)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _check_simulate_trials(N === nothing ? fill(1, p, n) : N, p, n)
     O = _build_offset(X, fit.γ)
     Y = Matrix{_sim_eltype(fit.family)}(undef, p, n)
     @inbounds for s in 1:n
