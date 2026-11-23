@@ -200,6 +200,7 @@ _register_shard_table!(4, (
         "test_tweedie_speed.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
         "test_comparator_targets.jl", "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl",
         "test_confint_na_y.jl",
+        "test_confint_sigma_phy_1178.jl",
     ),
     (
         "test_likelihood.jl", "test_packing.jl", "test_docstring_animal_dep_twin.jl",
