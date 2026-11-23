@@ -655,7 +655,7 @@ each site's conditional mode. Responses are rows and sites are columns:
 ```julia
 fit = fit_poisson_gllvm(Y; K=2, aghq=5)
 fit.integration.actual                 # :aghq or :laplace
-fit.integration.reason                 # stopping or fallback reason
+fit.integration.reason                 # stopping or fallback reason (see below)
 fit.integration.result                 # retained optimization attempts
 predict(fit, Y)                         # conditional rates, including offsets
 confint(fit, Y; parm="beta")            # fitted frozen-node objective
@@ -667,6 +667,19 @@ unpenalized and requires one ordinary loadings-only block, a log link and
 1–5 latent dimensions. Predictor-informed latent scores and ineligible direct
 requests retain Laplace with a visible reason. Other families and structured
 routes are not qualified by this Poisson implementation.
+
+**Laplace is kept when no AGHQ estimate exists.** If the selected quadrature run never
+left its start and did not converge, every AGHQ fitter returns the Laplace fit with
+`fit.integration.actual == :laplace`, `fit.integration.reason` equal to that run's own
+stop reason, and one warning; `fit.integration.result.usable` is `true`, which
+distinguishes it from the fallback after a run with no usable result (reason
+`:adaptation_failed`). `fit.converged` then refers to the returned Laplace fit, and can
+be `true` while `fit.integration.result.selected.converged` is `false`. The ordinal fitter
+additionally keeps a converged Laplace fit when its run moved but stopped on
+:adaptation_failed or :optimizer_failed; the other fitters keep the moved point in that
+case. The unmoved rule is exact: a move of exactly zero is discarded, a small nonzero
+move is kept. A request that only evaluates AGHQ at the Laplace estimate
+(`aghq_control=(n_adapt=1,)`) therefore returns the Laplace log-likelihood.
 
 Convergence refers to the final **frozen-node surrogate gradient**; it does
 not establish stationarity of an objective that differentiates through moving

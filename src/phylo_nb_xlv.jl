@@ -93,9 +93,18 @@ function _phylo_nb_xlv_grad_hessian(Y, beta, Lambda, alpha_lv, r, mean_eta, Q,
         # was — the mode search wants expected information (W ≥ 0, so the step is
         # always well-defined). Only the FINAL assembly, at the converged mode,
         # asks for `:observed`, which is what the log-det needs to match TMB.
-        weight_ts = hessian === :fisher ?
-            _glm_weight(fam, mu_ts, 1, me_ts) :
+        # `:step` (mode search only) is max(observed, Fisher), as in the grouped
+        # Tweedie search (#1122): pure Fisher under-states the curvature when
+        # y >> mu and the Newton loop crawls (refs #1125). Both are >= 0, so the
+        # step still ascends, and the mode (grad = 0) does not involve the weight.
+        weight_ts = if hessian === :fisher
+            _glm_weight(fam, mu_ts, 1, me_ts)
+        elseif hessian === :step
+            max(_glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s], LogLink(), eta_c),
+                _glm_weight(fam, mu_ts, 1, me_ts))
+        else
             _glm_obs_weight(fam, mu_ts, 1, me_ts, Y[t, s], LogLink(), eta_c)
+        end
         uidx = n_z + leaf_pos[t]
 
         grad[uidx] += score_ts
@@ -127,7 +136,8 @@ function _phylo_nb_xlv_mode(Y, beta, Lambda, alpha_lv, r, mean_eta, Q, leaf_pos;
 
     for _ in 1:maxiter
         grad, H = _phylo_nb_xlv_grad_hessian(Y, beta, Lambda, alpha_lv, r,
-                                             mean_eta, Q, leaf_pos, eps, u)
+                                             mean_eta, Q, leaf_pos, eps, u;
+                                             hessian = :step)
         cholH = try
             cholesky(Symmetric(H))
         catch
@@ -330,6 +340,7 @@ function _fit_phylo_nb_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
     size(X_lv, 1) == n ||
         throw(ArgumentError("X_lv rows ($(size(X_lv, 1))) must equal size(Y,2)=$n"))
     q_lv = size(X_lv, 2)
+    _check_response_support(:count, Y, nothing; caller = "_fit_phylo_nb_xlv")
     theta0 = _phylo_nb_xlv_theta0(Y, K, X_lv;
                                   beta_init = beta_init,
                                   Lambda_init = Lambda_init,

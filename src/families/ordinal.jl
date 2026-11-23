@@ -42,6 +42,9 @@ end
 # are not checked; categories with no observations are left as they are.
 function _check_ordinal_levels(Y::AbstractMatrix, obs; caller::AbstractString = "ordinal",
         C = nothing)
+    obs === nothing || size(obs) == size(Y) || throw(DimensionMismatch(
+        "$caller: mask is $(size(obs)); Y is $(size(Y)). `mask` must have the shape of Y " *
+        "(traits × units, true = observed)."))
     for i in eachindex(Y)
         (obs === nothing || obs[i]) || continue
         y = Y[i]
@@ -53,6 +56,44 @@ function _check_ordinal_levels(Y::AbstractMatrix, obs; caller::AbstractString = 
                 "level; observed codes must be integers in 1..$(Ci === nothing ? "C" : Ci) " *
                 "(coded from 1, not 0-based)." *
                 ". Fix the data, or mark unobserved cells `mask = false`."))
+    end
+    return nothing
+end
+
+# Float-valued ordinal codes (what `readdlm` or a CSV reader returns). Integer-valued floats
+# (3.0) are accepted and passed on as `Int`; a non-integer or non-finite observed cell is an
+# `ArgumentError` naming the first such cell. An integer-valued code outside `1:C` (0.0, -1.0)
+# is left to `_check_ordinal_levels`, which gives its own out-of-range error (#1191).
+function _ordinal_float_to_int(Y::AbstractMatrix{<:AbstractFloat}, mask; caller::AbstractString)
+    mask === nothing || size(mask) == size(Y) || throw(DimensionMismatch(
+        "$caller: mask is $(size(mask)); Y is $(size(Y))"))
+    bad = 0
+    first_bad = (0, 0)
+    for i in axes(Y, 2), t in axes(Y, 1)
+        (mask === nothing || mask[t, i]) || continue
+        y = Y[t, i]
+        if !(isfinite(y) && y == round(y) && abs(y) < 1e15)
+            bad += 1
+            bad == 1 && (first_bad = (t, i))
+        end
+    end
+    if bad > 0
+        t, i = first_bad
+        throw(ArgumentError("$caller: Y[$t, $i] = $(Y[t, i]) is not an integer ordinal level " *
+            "($bad observed cell(s) in total). Ordinal codes must be integers coded from 1; " *
+            "integer-valued floats such as 3.0 are accepted. Fix the data, or mark unobserved " *
+            "cells `mask = false`; NaN and Inf are not valid responses."))
+    end
+    return Int[(mask === nothing || mask[t, i]) ? Int(Y[t, i]) : 1
+               for t in axes(Y, 1), i in axes(Y, 2)]
+end
+
+function _check_ordinal_trait_observed(obs::AbstractMatrix{Bool}, caller::AbstractString)
+    p = size(obs, 1)
+    @inbounds for t in 1:p
+        any(@view obs[t, :]) || throw(ArgumentError(
+            "$caller: trait $t has no observed responses; drop it from `Y` or mark at " *
+            "least one cell observed."))
     end
     return nothing
 end
@@ -547,7 +588,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
-    _check_every_trait_observed(mask, Y)
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm")
     # Category count and warm starts use OBSERVED cells only, so a masked cell's
     # (arbitrary) value never leaks into the fit.
@@ -691,7 +732,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     _check_ordinal_link(link)
     p, n = size(Y)
     obs = mask === nothing ? trues(p, n) : mask
-    _check_every_trait_observed(mask, Y)
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm_pertrait")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait")
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
@@ -740,7 +781,11 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     Λ̂ = unpack_lambda(@view(θ̂[(p + 1):(p + rr)]), p, K)
     τ̂ = _unpack_cutpoints_pertrait(@view(θ̂[(p + rr + 1):(p + rr + ncut)]), C)
     _warn_runaway_loadings(Λ̂, "Ordinal")
-    return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, _fit_verdict(res)...)
+    # `Optim.converged` also fires on a zero-length step far from a stationary point;
+    # require the gradient test too, as scalar NB1 does (#505, `_nb1_grouped_g_met`).
+    ll, conv, iters = _fit_verdict(Optim.minimum(res),
+        Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
+    return OrdinalPerTraitFit(Λ̂, β̂, τ̂, C, link, ll, conv, iters)
 end
 
 """
@@ -804,8 +849,9 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
     obs = mask === nothing ? trues(p, n) : mask
-    _check_every_trait_observed(mask, Y)
+    _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm_pertrait_cov")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait_cov")
+    _check_finite_covariates(X, "fit_ordinal_gllvm_pertrait_cov"; obs = obs)
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
         obs[t, i] && (C[t] = max(C[t], Int(Y[t, i])))
@@ -861,3 +907,14 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     return OrdinalPerTraitCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, τ̂, C, link,
                                  _fit_verdict(res)...)
 end
+
+# Integer-valued float codes: convert once, then run the integer method (#1191).
+fit_ordinal_gllvm(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm");
+                      mask = mask, kwargs...)
+fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm_pertrait(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm_pertrait");
+                               mask = mask, kwargs...)
+fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm_pertrait_cov(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm_pertrait_cov");
+                                   mask = mask, kwargs...)
