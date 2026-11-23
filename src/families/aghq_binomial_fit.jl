@@ -140,8 +140,9 @@ function _binomial_aghq_simulate(fit,n;N=nothing,rng=Random.default_rng(),offset
         throw(ArgumentError("new-site AGHQ simulation requires trials N"))) : N
     off=offset===nothing ? (size(d.offset,2)==n ? d.offset : all(iszero,d.offset) ? zeros(p,n) :
         throw(ArgumentError("new-site AGHQ simulation requires offset"))) : offset
-    size(nt)==(p,n) && all(v->v isa Real && isfinite(v) && isinteger(v) && 0<=v<=2.0^53,nt) ||
-        throw(ArgumentError("simulation trials must be finite nonnegative integers p by n"))
+    size(nt) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
+    all(v -> v isa Real && isfinite(v) && isinteger(v) && 0 <= v <= 2.0^53, nt) ||
+        throw(ArgumentError("simulation trials must be finite nonnegative integers"))
     size(off)==(p,n) && all(v->v isa Real && isfinite(v),off) || throw(ArgumentError("simulation offset must be finite p by n"))
     Y=Matrix{Int}(undef,p,n)
     for s in 1:n
