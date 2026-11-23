@@ -1242,8 +1242,10 @@ println(_SHARD === nothing ?
     _shard_include("test_predictive_check_binomial.jl")
     _shard_include("test_nb_mite_multistart_1022.jl")
     _shard_include("test_nb_n_init_mite_1022.jl")
-        "test_binomial_saturated_mode.jl", "test_ordinal_probit_saturated_mode.jl"
-        "test_mask_size_check.jl"
+    _shard_include("test_binomial_saturated_mode.jl")
+    _shard_include("test_ordinal_probit_saturated_mode.jl")
+    # An explicit mask of another size than Y is a DimensionMismatch (Laplace and ordinal fitters).
+    _shard_include("test_mask_size_check.jl")
     # bootstrap_Sigma_r driver (pinned-R behaviour target; no R-output comparison).
     _shard_include("test_bootstrap_sigma_r.jl")
     # Core070 oracle-pin resolver (plain unit test, no R / RCall; spawns small Julia
