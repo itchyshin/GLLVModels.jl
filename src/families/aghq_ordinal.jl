@@ -258,3 +258,8 @@ function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:AbstractFloat}; kwa
         _ordinal_float_to_int(Y, get(kwargs, :mask, nothing); caller = "fit_ordinal_gllvm_pertrait_aghq");
         kwargs...)
 end
+
+function fit_ordinal_gllvm_pertrait_aghq(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...)
+    Yint, msk = _ordinal_resolve_integer_y(Y, mask, "fit_ordinal_gllvm_pertrait_aghq")
+    return fit_ordinal_gllvm_pertrait_aghq(Yint; mask = msk, kwargs...)
+end
