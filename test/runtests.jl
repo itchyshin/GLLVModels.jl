@@ -240,7 +240,8 @@ _register_shard_table!(4, (
         "test_phylo_contrasts.jl", "test_edge_incidence.jl", "test_core070_receipts.jl",
         "test_core070_link_boundaries.jl", "test_sparse_phy_identities.jl", "test_relaxed_clock.jl",
         "test_relaxed_clock_boundary_876.jl", "test_gaussian_formula_covariates.jl", "test_postfit_tables.jl",
-        "test_docs_snippets_734_738.jl", "test_postfit_communality_confint_default_parity.jl", "test_animal_scalar_p1.jl",
+        "test_docs_snippets_734_738.jl", "test_postfit_communality_confint_default_parity.jl",
+        "test_gllvmtmb_parity_confint_default_1020.jl", "test_animal_scalar_p1.jl",
         "test_cross_lineage_p1.jl", "test_cross_lineage_extract_internals.jl", "test_bridge_readback_p1.jl",
         "test_predict_missing_p1.jl", "test_parity_binomial_gaussian_fixtures.jl", "test_data_twins_2_p1.jl",
         "test_cov_ord_latent_p1.jl", "test_cov_phylo_twins_p1.jl", "test_totoro_323_track_a_harness.jl",
@@ -385,7 +386,8 @@ _register_shard_table!(8, (
         "test_covariates.jl", "test_saturation_health.jl", "test_known_sentinel_defects.jl",
         "test_phylo_contrasts.jl", "test_family11_p1_boundary.jl", "test_parity_trial_inputs.jl",
         "test_relaxed_clock.jl", "test_cv_unsupported_773.jl", "test_loading_profile_confirmatory.jl",
-        "test_predict_delta_shared_820.jl", "test_postfit_communality_confint_default_parity.jl", "test_temporal_helpers.jl",
+        "test_predict_delta_shared_820.jl", "test_postfit_communality_confint_default_parity.jl",
+        "test_gllvmtmb_parity_confint_default_1020.jl", "test_temporal_helpers.jl",
         "test_temporal_composed.jl", "test_temporal_composed_receipts.jl", "test_convergence_sweep.jl",
         "test_zip_betaz_wald_926.jl", "test_input_validation.jl", "test_eta_clamp_869.jl",
         "test_truncpois_boot_782.jl", "test_nb_mite_multistart_1022.jl",
@@ -1121,6 +1123,7 @@ println(_SHARD === nothing ?
     _shard_include("test_variance_decomp_p1.jl")
     # Post-fit parity vs gllvmTMB P1 fixtures: tier-local communality (refs #131) and confint default method (@test_broken, refs #1020).
     _shard_include("test_postfit_communality_confint_default_parity.jl")
+    _shard_include("test_gllvmtmb_parity_confint_default_1020.jl")
     # P1 numeric twin of the gllvmTMB namespace row animal_scalar (one shared animal variance on a pedigree A, Gaussian).
     _shard_include("test_animal_scalar_p1.jl")
     # P1 numeric twins of the gllvmTMB namespace rows extract_Gamma and extract_coevolution_modules (cross-lineage kernel tier, Gaussian).
