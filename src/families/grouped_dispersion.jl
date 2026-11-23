@@ -1468,6 +1468,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped")
+    _check_constant_species(Y, msk, gidx; caller = "fit_beta_gllvm_grouped")
     Yc  = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
@@ -1611,6 +1612,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     msk = _resolve_obs_mask(mask, Y)
     _check_finite_covariates(X, "fit_beta_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped_cov")
+    _check_constant_species(Y, msk, gidx; caller = "fit_beta_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
@@ -1954,6 +1956,7 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped")
+    _check_constant_species(Y, msk, gidx; caller = "fit_gamma_gllvm_grouped")
     Yc  = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
     offset === nothing || (Zemp .-= offset)
@@ -2116,6 +2119,7 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     msk = _resolve_obs_mask(mask, Y)
     _check_finite_covariates(X, "fit_gamma_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped_cov")
+    _check_constant_species(Y, msk, gidx; caller = "fit_gamma_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
     _mask_warmstart!(Zemp, msk)
