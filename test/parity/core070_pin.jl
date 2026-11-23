@@ -128,7 +128,8 @@ const _CORE070_ORACLE_RECEIPTS_REL = Dict(
 # installed_tree_sha256 to equal the loaded library's.
 const _CORE070_ORACLE_BUILD_ENV_VAR = "GLLVM_PARITY_ORACLE_BUILD"
 const _CORE070_ORACLE_BUILD_HOSTS = Dict(
-    "P1" => Dict("totoro" => "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json"),
+    "P1" => Dict("totoro" => "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro.json",
+                 "totoro-20261104" => "docs/dev-log/core070/true-parity-latest/receipts/covariance/oracle/build-totoro-20261104.json"),
 )
 
 function _core070_oracle_receipts_rel()

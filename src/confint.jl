@@ -190,10 +190,26 @@ end
 #   [β; log_σ_eps; (log_σ_B; log_σ_W if has_diag);
 #    θ_rr_B; θ_rr_W; (σ_phy if has_phy_unique, identity link); θ_rr_phy]
 # which is exactly what gaussian_nll_packed expects.
+# A Gaussian fit made without a `mask` was fitted on complete data. A `y` that holds `missing`,
+# NaN or Inf and is handed back to a post-fit helper cannot be that data; the helpers used to return
+# all-NaN Wald intervals, or to ignore the cells in a bootstrap, without saying so.
+function _require_complete_y(caller::AbstractString, y)
+    y === nothing && return nothing
+    for (kind, test) in (("missing", ismissing), ("NaN", v -> v isa AbstractFloat && isnan(v)),
+                         ("Inf", v -> v isa AbstractFloat && isinf(v)))
+        bad = findall(test, y)
+        isempty(bad) || throw(ArgumentError("$caller: `y` holds $(length(bad)) $kind cell(s), first at " *
+            "(row, column) = ($(bad[1][1]), $(bad[1][2])). This fit was made without a `mask`, on " *
+            "complete data; pass that complete matrix."))
+    end
+    return nothing
+end
+
 function _confint_reconstruct_nll(fit::GllvmFit, y::AbstractMatrix,
                                   X::Union{Nothing, AbstractArray{<:Real, 3}},
                                   Σ_phy::Union{Nothing, AbstractMatrix})
     _has_gaussian_record(fit) && return _gaussian_record_ci(fit,y;X=X,Σ_phy=Σ_phy).nll
+    _require_complete_y("confint", y)
     X = _mean_X(fit, X, size(y, 2))
     model = fit.model
     q_full = fit.pars.β === nothing ? 0 : length(fit.pars.β)
@@ -565,6 +581,7 @@ function _confint_gaussian(fit::GllvmFit, y, level::Real, parm, X, Σ_phy,
         "confint: method must be a Symbol, one of $(_confint_list(_CONFINT_METHODS)); " *
         "got $(repr(method))"))
     kw = (; kwargs...)
+    _has_gaussian_record(fit) || _require_complete_y("confint", y)
     targets = _confint_derived_targets(fit, parm)
     targets === nothing || return _confint_derived(fit, targets, y, level, X, Σ_phy,
                                                    method, kw, parm)

@@ -78,19 +78,24 @@ end
 @testset "Shared site-X light logLik: GLLVModels.jl vs gllvmTMB" begin
 
     @testset "Gaussian + shared X (q=1)" begin
-        Random.seed!(420)
+        # Stored seed-420 draw (not re-simulated): Julia's seeded randn stream differs
+        # between 1.10.12 and 1.13.2. x (demeaned) and y (centred per trait) come from
+        # fixtures/frozen_rng_xcov_gaussian_s420.toml, generated on 1.10.12 by
+        # fixtures/generate_frozen_rng_w15.jl from the original DGP: seed 420,
+        # Λ = parity_loadings_p5k2(), γ = 0.55, x = randn(n) demeaned,
+        # y = γ .* x' .+ Λ * randn(K, n) .+ 0.7 .* randn(p, n), then centred per trait.
+        # They are stored AFTER demeaning/centring because `mean` differs at the last bit
+        # between the two Julia versions (2.2e-16 here; the raw draws are identical).
         p, K, n = 5, 2, 30
-        Λ = parity_loadings_p5k2()
-        γ = 0.55
+        frozen = parity_load_frozen_rng("frozen_rng_xcov_gaussian_s420.toml";
+            expected_sha = "7a8c62d79eeb1a0bb915dfbce0d898c403600d2c0adcaf919d1701a5d9a1ee13", expected_x_sha = "2a8fac260283493905c72d59b23e988ac51a1128bc6b45d322da4cd60cfb1b38")
         # Julia Gaussian+X has shared β only (no per-trait intercepts in Xβ).
-        # Match no-X oracle: demean site x; centre Y per trait so R `0+trait`
-        # intercepts do not shift the objective (J1 zero-mean alignment).
-        x = randn(n)
-        x .-= mean(x)
+        # Match no-X oracle: site x demeaned; Y centred per trait so R `0+trait`
+        # intercepts do not shift the objective (J1 zero-mean alignment). Both are
+        # already done in the stored arrays.
+        x = frozen.x
         X = parity_site_design(x, p)
-        Z = randn(K, n)
-        y = γ .* x' .+ Λ * Z .+ 0.7 .* randn(p, n)
-        y .-= mean(y; dims = 2)
+        y = frozen.Y
 
         jl_fit = fit_gaussian_gllvm(y; K = K, X = X)
         @test jl_fit.converged
