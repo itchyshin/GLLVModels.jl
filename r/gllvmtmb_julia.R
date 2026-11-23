@@ -45,6 +45,19 @@
 #   still needs a dedicated live pervar check.
 # ---------------------------------------------------------------------------------
 
+# Pre-fit guard for NB1 + row effects (refs #1271). Kept above the JuliaConnectoR
+# load so it can be tested without starting Julia. gllvm_julia() calls this after
+# the family is looked up and before the link check or any fit.
+.check_nb1_row_eff <- function(family, row.eff) {
+  if (identical(family, "negative.binomial1") && !identical(row.eff, "none")) {
+    stop("family 'negative.binomial1' (NB1) with row.eff = '", row.eff, "' is not supported: ",
+         "GLLVModels.jl has no NB1 row-effect fitter, and this bridge would fit NB2 instead. ",
+         "Use row.eff = 'none' with NB1, or family = 'negative.binomial' to keep the row effect.",
+         call. = FALSE)
+  }
+  invisible(NULL)
+}
+
 library(JuliaConnectoR)
 
 # Reuse the low-level wrappers + the .gllvm() module handle if gllvmjl.R is present.
@@ -228,6 +241,7 @@ gllvm_julia <- function(y, X = NULL, family = "negative.binomial", num.lv = 2L,
     stop(sprintf("family '%s' not supported by the bridge (supported: %s)",
                  family, paste(names(.family_map), collapse = ", ")))
   fmap <- .family_map[[family]]
+  .check_nb1_row_eff(family, row.eff)
   link <- if (is.null(link)) .default_link(family) else link
   if (!link %in% names(.link_map))
     stop(sprintf("link '%s' not supported (supported: %s)",
