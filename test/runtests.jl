@@ -83,6 +83,7 @@ _register_shard_table!(4, (
         "test_formula_input.jl", "test_row_random.jl", "test_rrr.jl",
         "test_ordination_uncertainty.jl", "test_ordered_beta.jl", "test_ordered_beta_mode_search.jl",
         "test_variational.jl", "test_va_vs_laplace.jl", "test_va_objective_missing_nan.jl", "test_bridge_ci.jl",
+        "test_bridge_ci_seed_1246.jl",
         "test_bridge_capabilities.jl", "test_phylo_eta_realized.jl", "test_bridge_missing_mask.jl",
         "test_known_sentinel_defects.jl", "test_edge_incidence_solveQ.jl", "test_branch_re_convergence.jl",
         "test_family11_p1_boundary.jl", "test_ordinal_link_input.jl", "test_em_phylo.jl",
@@ -1043,6 +1044,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_ci.jl")
     _shard_include("test_bridge_ci_nan_note_1157.jl")
     _shard_include("test_bridge_ci_nboot.jl")
+    _shard_include("test_bridge_ci_seed_1246.jl")
     _shard_include("test_bridge_grouped_dispersion.jl")
     _shard_include("test_bridge_capabilities.jl")
     _shard_include("test_mixed_mode_search.jl")
