@@ -325,6 +325,7 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
     end
     eltype(Y)<:Integer || throw(ArgumentError("Laplace binomial getLV requires integer responses"))
     p, n = size(Y)
+    _check_postfit_yn(p, n; mask = mask, N = N, caller = "getLV")
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
     K = size(fit.Λ, 2)
@@ -1091,6 +1092,7 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
     end
     eltype(Y)<:Integer || throw(ArgumentError("Laplace Poisson getLV currently requires integer responses"))
     p, n = size(Y)
+    _check_postfit_yn(p, n; mask = mask, N = N, caller = "getLV")
     # A weighted fit's modes are those of the weighted joint (as gllvmTMB's), which are
     # defined for the training cells only.
     Wt = fit.weights
@@ -1744,6 +1746,19 @@ end
 function _check_trait_rows(fit, Y::AbstractMatrix, who::AbstractString)
     size(Y, 1) == size(fit.Λ, 1) || throw(DimensionMismatch(
         "$who: Y has $(size(Y, 1)) rows but the fit has $(size(fit.Λ, 1)) traits"))
+    return nothing
+end
+
+function _check_postfit_yn(p::Int, n::Int; mask = nothing, N = nothing,
+                           X = nothing, caller::AbstractString)
+    mask !== nothing && size(mask) != (p, n) && throw(DimensionMismatch(
+        "$caller: mask is $(size(mask)); Y is $(p)×$n"))
+    N !== nothing && size(N) != (p, n) && throw(DimensionMismatch(
+        "$caller: N is $(size(N)); Y is $(p)×$n"))
+    if X !== nothing
+        (size(X, 1) == p && size(X, 2) == n) || throw(DimensionMismatch(
+            "$caller: X is $(size(X)); Y is $(p)×$n"))
+    end
     return nothing
 end
 
@@ -3183,6 +3198,7 @@ mode `ẑₛ` at `η = β + Xγ + Λz`.
 function getLV(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:Real, 3};
                rotate::Bool = true, N::Union{Nothing, AbstractMatrix} = nothing)
     p, n = size(Y); K = size(fit.Λ, 2)
+    _check_postfit_yn(p, n; N = N, X = X, caller = "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
     fam = _cov_family(fit.family, fit.dispersion)
     O = _build_offset(X, fit.γ)
