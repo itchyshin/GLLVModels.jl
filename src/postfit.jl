@@ -3233,7 +3233,7 @@ This two-argument `predict(fit, design)` route is distinct from
 returns in-sample predictions at the Laplace latent mode.
 
 **New-site `predict(fit, design)` without `Y`** is implemented only for a small
-set of fit types. Besides `GllvmCovFit`, see [`predict(::RRRFit, ...)`](@ref)
+set of fit types. Besides `GllvmCovFit`, see [`predict(::RRRFit, ::AbstractMatrix)`](@ref)
 (`n×q` site matrix; latent axes deterministic in `X`), Destination-B grouped
 records (`GroupedGaussianFit`, `PrecisionMultivariateFit`, `GroupedNonGaussianFit`,
 `JointPhyloGroupedGaussianFit`; design-only population mean with random effects at
