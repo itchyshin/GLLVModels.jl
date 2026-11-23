@@ -66,6 +66,7 @@ public CI method.
 | Grouped NB2/NB1/Beta/Gamma | `beta[t]`, `Lambda[i,k]`, and group-level dispersion `r[g]` / `phi[g]` / `alpha[g]` |
 | Two-part families | `betaz[t]` (occurrence / zero-inflation logits), `betac[t]` (value / count intercepts), `Lambda[i,k]`, and `sigma` / `alpha` / `r` |
 | Ordinal (`OrdinalFit`, shared cutpoints) | `Lambda[i,k]`, `tau[c]` (cutpoints) |
+| Ordinal (`OrdinalPerTraitFit` / `OrdinalPerTraitCovFit`, per-trait cutpoints) | `beta[t]`, `Lambda[i,k]`, `tau[t,c]` for `c ≥ 2` (`tau[t,1] = 0` fixed) |
 
 Dispersion parameters are estimated on the log scale internally; their interval
 **bounds are reported on the natural (positive) scale**.
