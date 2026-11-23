@@ -124,6 +124,20 @@ function _default_route_no_intercept_error(formula::FormulaTerm, family)
     return nothing
 end
 
+function _refuse_formula_covariate_minus_one(rhs)
+    terms = rhs isa Tuple ? collect(rhs) : [rhs]
+    for term in terms
+        if term isa FunctionTerm && term.f === (-)
+            args = term.args
+            length(args) == 2 && args[2] == ConstantTerm(1) &&
+                throw(ArgumentError(
+                    "formula term `$term` is a covariate shifted by one, not a no-intercept " *
+                    "formula; use `0 + x` or `-1 + x` to drop species intercepts"))
+        end
+    end
+    return nothing
+end
+
 function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false,
                                 common_intercept::Bool=false)
     intercept = !StatsModels.omitsintercept(rhs)
@@ -327,6 +341,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
         X = _pervar_formula_design(formula.rhs, cols, p, n; contrasts=contrasts)
         return fit_gllvm(Y; family=family, K=K, pervar=true, X=X, kwargs...)
     end
+    _refuse_formula_covariate_minus_one(formula.rhs)
     mm, cnames = _build_site_modelmatrix(formula.rhs, cols; contrasts = contrasts)
     q = size(mm, 2)
     if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing && q > 0 &&
