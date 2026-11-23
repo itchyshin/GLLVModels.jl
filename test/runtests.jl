@@ -197,7 +197,7 @@ _register_shard_table!(4, (
         "test_namespace_numeric_p1_twin.jl", "test_mc_simulate_p1.jl", "test_variance_decomp_p1.jl",
         "test_off_all_count_twin_p1.jl", "test_weights_twins_p1.jl", "test_temporal_lowrank.jl",
         "test_temporal_composed.jl", "test_isdm.jl", "test_zip_observed_laplace.jl",
-        "test_tweedie_speed.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
+        "test_tweedie_speed.jl", "test_tweedie_series_cap_1177.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
         "test_comparator_targets.jl", "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl",
         "test_confint_na_y.jl",
     ),
@@ -1182,6 +1182,7 @@ println(_SHARD === nothing ?
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")
     _shard_include("test_tweedie_speed.jl")
+    _shard_include("test_tweedie_series_cap_1177.jl")   # #1177 Tweedie series cap at small phi
     _shard_include("test_nb_grouped_postfit.jl")
     _shard_include("test_convergence_553_554.jl")
     _shard_include("test_eta_clamp_869.jl")
