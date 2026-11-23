@@ -141,11 +141,19 @@ Missing data: pass a `mask` (p×n Bool, `false` = unobserved) or simply include
 `missing` entries in `Y` — either way the masked cells are dropped from the
 marginal *and* from the warm start, so the fit depends only on the observed cells.
 """
+function _refuse_row_route_family(family, caller::AbstractString)
+    family isa Union{Poisson, NegativeBinomial, Binomial, Beta, Gamma} && return nothing
+    throw(ArgumentError(
+        "$caller: family must be Poisson(), NegativeBinomial(), Binomial(), Beta(), or " *
+        "Gamma(); got $(typeof(family))"))
+end
+
 function fit_roweffect_gllvm(Y::AbstractMatrix; family,
         K::Integer, link::Union{Nothing, Link} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing, mask = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_row_route_family(family, "fit_roweffect_gllvm")
     p, n = size(Y)
     n >= 1 || throw(ArgumentError("Y must have at least one site (column)"))
     rr = rr_theta_len(p, K)

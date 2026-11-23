@@ -129,6 +129,7 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family 
         link::Union{Nothing, Link} = nothing, σ_row_init::Real = 1.0,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_row_route_family(family, "fit_row_random_gllvm")
     _refuse_mask_route("fit_row_random_gllvm", mask)
     p, n = size(Y)
     n >= 1 || throw(ArgumentError("Y must have at least one site (column)"))
