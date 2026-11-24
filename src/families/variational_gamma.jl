@@ -96,6 +96,7 @@ function gamma_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
     _va_check_mask(mask, Y)
+    _va_check_response("gamma_marginal_loglik_va", Y, mask)
     α > 0 || throw(ArgumentError("shape α must be > 0"))
     Λ2 = Λ .^ 2
     acc = 0.0
@@ -127,7 +128,7 @@ function fit_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_gamma_gllvm_va", link, LogLink())
-    _va_check_mask(mask, Y)
+    _va_check_fit_mask(mask, Y)
     _check_response_support(:positive, Y, mask; caller = "fit_gamma_gllvm_va")
     p, n = size(Y)
     rr = rr_theta_len(p, K)

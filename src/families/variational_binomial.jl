@@ -272,6 +272,7 @@ function binomial_marginal_loglik_va(Y::AbstractMatrix, N::AbstractMatrix,
     size(N) == size(Y) ||
         throw(DimensionMismatch("N must match Y size $(size(Y))"))
     _va_check_mask(mask, Y)
+    _va_check_response("binomial_marginal_loglik_va", Y, mask)
     Λ2 = Λ .^ 2
     xs, ws = _gauss_hermite(gh)
     acc = 0.0
@@ -311,7 +312,7 @@ function fit_binomial_gllvm_va(Y::AbstractMatrix{<:Integer};
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
-    _va_check_mask(mask, Y)
+    _va_check_fit_mask(mask, Y)
     _check_response_support(:binomial, Y, mask; caller = "fit_binomial_gllvm_va", N = Nm)
     rr = rr_theta_len(p, K)
 
