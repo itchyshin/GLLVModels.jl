@@ -103,6 +103,7 @@ using GLLVModels, Test, Random, Distributions, Statistics, LinearAlgebra
         using DelimitedFiles
         Y = Matrix{Float64}(readdlm(joinpath(@__DIR__, "fixtures", "row_random_bern_d2_s2_Y.csv"), ','))
         fit = fit_row_random_gllvm(Y; family = Binomial(), K = 2)
+        @test fit.converged
         @test fit.loglik >= -1293.01
         @test fit.σ_row < 0.1
     end

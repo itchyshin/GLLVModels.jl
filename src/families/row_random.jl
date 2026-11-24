@@ -170,7 +170,8 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family 
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     # The marginal can have a second mode near σ_row ≈ 0 (e.g. Bernoulli, K = 2) that a
     # single start at σ_row_init = 1 misses while still reporting convergence. Run the
-    # requested start plus a small-σ_row start (0.05) and keep the better log-likelihood.
+    # requested start plus a small-σ_row start (0.05); prefer a converged start, then the
+    # better log-likelihood among starts with the same convergence status.
     res = Optim.optimize(negll, θ_start(σ_row_init), ls,
                          Optim.Options(g_tol = g_tol, iterations = iterations);
                          autodiff = :finite)
@@ -178,7 +179,8 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family 
         res2 = Optim.optimize(negll, θ_start(0.05), ls,
                               Optim.Options(g_tol = g_tol, iterations = iterations);
                               autodiff = :finite)
-        Optim.minimum(res2) < Optim.minimum(res) && (res = res2)
+        c1, c2 = Optim.converged(res), Optim.converged(res2)
+        (c2 > c1 || (c2 == c1 && Optim.minimum(res2) < Optim.minimum(res))) && (res = res2)
     end
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
