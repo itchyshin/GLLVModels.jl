@@ -579,7 +579,16 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
                      [(role=:covariate, index=i, coef=cnames[j], response=nothing)
                       for (i, j) in enumerate(free_indices)])
             else
-                response_index = findfirst(==(spec.coef), rnames)
+                # A response-specific intercept's canonical table selector is
+                # `response_name::(Intercept)`. Also accept the bare response
+                # name as a shorthand, preserving earlier tables that used it.
+                # Keep the resolved metadata canonical below.
+                response_matches = findall(i ->
+                    spec.coef == rnames[i] ||
+                    spec.coef == string(rnames[i], "::(Intercept)"), eachindex(rnames))
+                length(response_matches) <= 1 || throw(ArgumentError(
+                    "fixed-effect prior target `$(spec.coef)` is ambiguous between response intercepts"))
+                response_index = isempty(response_matches) ? nothing : only(response_matches)
                 coefficient_index = findfirst(==(spec.coef), cnames)
                 response_index !== nothing && coefficient_index !== nothing && throw(ArgumentError(
                     "fixed-effect prior target `$(spec.coef)` is ambiguous between a response intercept and a covariate coefficient"))

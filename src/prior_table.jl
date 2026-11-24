@@ -45,8 +45,31 @@ end
 function _parse_gllvm_prior_rows(table)
     Tables.istable(typeof(table)) || throw(ArgumentError(
         "priors must be a Tables.jl table with `prior`, `class`, and `coef` columns"))
-    columns = Tables.columns(table)
-    column_names = collect(Tables.columnnames(columns))
+    # NamedTuple vectors are a convenient row-oriented input for mixed prior
+    # classes. Their rows may omit selectors that are optional for that class
+    # (for example, a `fixef` row has no `trait` or `kernel`, while a
+    # `unique_variance` row does). Tables.rowtable expects one rectangular row
+    # schema, so normalize the union of row fields and mark absent fields as
+    # missing before handing each row to the class-specific defaults below.
+    rows, column_names = if table isa AbstractVector && all(row -> row isa NamedTuple, table)
+        names = Symbol[]
+        for row in table, name in propertynames(row)
+            name in names || push!(names, name)
+        end
+        normalized = [NamedTuple{Tuple(names)}(Tuple(
+            hasproperty(row, name) ? getproperty(row, name) : missing for name in names))
+            for row in table]
+        normalized, names
+    else
+        columns = Tables.columns(table)
+        names = collect(Tables.columnnames(columns))
+        table_rows = try
+            Tables.rowtable(table)
+        catch err
+            throw(ArgumentError("priors must be a row-oriented Tables.jl table: $(sprint(showerror, err))"))
+        end
+        table_rows, names
+    end
     length(unique(column_names)) == length(column_names) ||
         throw(ArgumentError("prior_table: column names must be unique"))
     required_columns = (:prior, :class, :coef)
@@ -55,11 +78,6 @@ function _parse_gllvm_prior_rows(table)
     allowed_columns = (required_columns..., :dpar, :group, :scale, :trait, :kernel)
     all(in(allowed_columns), column_names) || throw(ArgumentError(
         "prior_table contains an unsupported column"))
-    rows = try
-        Tables.rowtable(table)
-    catch err
-        throw(ArgumentError("priors must be a row-oriented Tables.jl table: $(sprint(showerror, err))"))
-    end
     parsed = GLLVMPriorRow[]
     for (i, row) in enumerate(rows)
         prior = _prior_table_value(row, :prior)

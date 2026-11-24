@@ -36,12 +36,20 @@ using StatsModels: @formula
     Y = Int.(rand(5, 32) .< 0.43)
     from_table = fit_gllvm(Y; family = Binomial(), K = 1, priors = loading,
                            iterations = 80, newton_maxiter = 100)
-    from_legacy = fit_gllvm(Y; family = Binomial(), K = 1, loading_ridge = 0.5,
+    legacy_sd = inv(sqrt(0.5)) # ridge(lambda) maps to loading_ridge = 1/sqrt(lambda)
+    from_legacy = fit_gllvm(Y; family = Binomial(), K = 1, loading_ridge = legacy_sd,
                             iterations = 80, newton_maxiter = 100)
-    @test from_table.loading_ridge == 0.5
-    @test from_table.loglik == from_legacy.loglik
-    @test from_table.β == from_legacy.β
-    @test from_table.Λ == from_legacy.Λ
+    @test only(from_table.prior_metadata.resolved_targets).class == "loading"
+    @test from_table.prior_metadata.input_table.prior == ["ridge(0.5)"]
+    @test from_table.prior_metadata.loading_penalty ≈ 0.25 * sum(abs2, from_table.Λ)
+    table_objective = from_table.prior_metadata.total_objective
+    legacy_objective = -from_legacy.loglik + 0.25 * sum(abs2, from_legacy.Λ)
+    # The two paths optimize the same criterion, but their latent-factor
+    # coordinates are sign-indeterminate and their finite optimizer stops need
+    # not return bitwise-identical objective values.
+    @test table_objective ≈ legacy_objective atol=1e-5 rtol=1e-8
+    @test from_table.β ≈ from_legacy.β atol=1e-5 rtol=1e-8
+    @test from_table.Λ * from_table.Λ' ≈ from_legacy.Λ * from_legacy.Λ' atol=1e-5 rtol=1e-8
     @test from_table.convergence.penalized
     @test from_table.convergence.objective ≈ from_table.loglik + from_table.convergence.log_prior
     @test from_table.convergence.se_type === :penalised
@@ -209,7 +217,7 @@ end
         priors = mixed_intercept_and_slope, iterations = 120, newton_maxiter = 100)
     @test mixed_fit.prior_metadata.resolved_targets[1].parameter_role == :response_intercept
     @test mixed_fit.prior_metadata.resolved_targets[2].parameter_role == :response_intercept
-    @test !hasproperty(mixed_fit.prior_metadata.resolved_targets[3], :parameter_role)
+    @test mixed_fit.prior_metadata.resolved_targets[3].parameter_role === :covariate
     @test mixed_fit.prior_metadata.fixed_effect_penalty ≈
         (log(0.8) + 0.5 * log(2π) + 0.5 * ((mixed_fit.β[1] - 1) / 0.8)^2) -
         logpdf(student_spec, mixed_fit.β[2]) +

@@ -322,5 +322,16 @@ end
     @test first.logLik ≈ reversed.logLik atol=1e-10 rtol=1e-10
     @test first.log_prior ≈ reversed.log_prior atol=1e-13
     @test first.objective ≈ reversed.objective atol=1e-10 rtol=1e-10
-    @test first.prior_targets == reversed.prior_targets
+    prior_identity(rows) = Dict((r.kernel, r.trait) =>
+        (r.target, r.distribution, r.shape, r.rate, r.mean, r.measure,
+         r.jacobian, r.once_per_target, r.negative_log_normalizer)
+        for r in rows if r.target === :unique_variance)
+    @test prior_identity(first.prior_targets) == prior_identity(reversed.prior_targets)
+    # Parameter positions follow source order, but each index must still name
+    # the same kernel × trait coordinate in its own fit.
+    for fit in (first, reversed), row in fit.prior_targets
+        row.target === :unique_variance || continue
+        @test fit.parameter_names[row.parameter_index] ==
+            "$(row.kernel).unique_sd[$(row.trait)]"
+    end
 end
