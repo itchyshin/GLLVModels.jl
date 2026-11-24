@@ -51,6 +51,7 @@ struct FitConvergence
     status::Symbol
     optimizer_finished::Bool
     relative_gradient::Float64
+    raw_relative_gradient::Float64
     pd_hessian::Bool
     penalized::Bool
     objective::Float64
@@ -64,7 +65,7 @@ struct FitConvergence
 end
 
 const _GLLVM_CONVERGENCE_PROPERTIES = (:status, :optimizer_finished, :relative_gradient,
-    :pd_hessian, :penalized, :objective, :logLik, :log_prior,
+    :raw_relative_gradient, :pd_hessian, :penalized, :objective, :logLik, :log_prior,
     :pd_hessian_unpenalised, :prior_held_params, :se_type,
     :boundary_check_available, :boundary_params)
 
@@ -72,8 +73,44 @@ const _GLLVM_CONVERGENCE_PROPERTIES = (:status, :optimizer_finished, :relative_g
 # optimizer, gradient, boundary scan, and Hessian evidence. Their convergence
 # is therefore unavailable and must fail closed.
 _fit_unavailable_convergence(logLik::Real) = FitConvergence(:degenerate, false,
-    Inf, false, false, Float64(logLik), Float64(logLik), 0.0, false,
+    Inf, Inf, false, false, Float64(logLik), Float64(logLik), 0.0, false,
     String[], :ml, false, String[])
+
+"""Project a minimization gradient onto lower/upper-bound KKT cones.
+
+`lower` and `upper` contain one-based gradient indices at active bounds. For a
+lower bound the valid score is nonnegative; for an upper bound it is
+nonpositive. `lower_scores` and `upper_scores` optionally provide the score in
+the natural constrained coordinate when the optimizer uses a transformation
+(for example, a log-SD coordinate).
+"""
+function _fit_projected_gradient(gradient::AbstractVector; lower = (), upper = (),
+        lower_scores = Dict(), upper_scores = Dict())
+    projected = Float64.(gradient)
+    lower_indices = Int.(collect(lower))
+    upper_indices = Int.(collect(upper))
+    all(i -> 1 <= i <= length(projected), vcat(lower_indices, upper_indices)) ||
+        throw(ArgumentError("boundary gradient index is out of range"))
+    isempty(intersect(lower_indices, upper_indices)) ||
+        throw(ArgumentError("a boundary gradient index cannot be both lower and upper"))
+    for (indices, scores, project) in ((lower_indices, lower_scores, min),
+                                        (upper_indices, upper_scores, max))
+        for index in indices
+            score = Float64(get(scores, index, projected[index]))
+            isfinite(score) || throw(ArgumentError("boundary score must be finite"))
+            projected[index] = project(score, 0.0)
+        end
+    end
+    return projected
+end
+
+"""Convert a log-coordinate score to a finite natural-positive-coordinate score."""
+function _fit_natural_positive_score(log_score::Real, value::Real)
+    isfinite(log_score) || return Float64(log_score)
+    value > 0 || return copysign(floatmax(Float64), Float64(log_score))
+    score = Float64(log_score) / Float64(value)
+    return isfinite(score) ? score : copysign(floatmax(Float64), Float64(log_score))
+end
 
 """Return whether a finite symmetric Hessian is positive definite."""
 function _fit_hessian_pd(H)
@@ -195,20 +232,26 @@ end
 This is the common gate for fitters that provide those quantities. Missing or
 invalid curvature is classified as `:degenerate`; it is never silently treated
 as a successful fit. `relative_gradient` is max-absolute gradient divided by
-`max(1, abs(objective))`.
+`max(1, abs(objective))`, using `projected_gradient` when supplied. The raw
+optimizer-coordinate norm remains available as `raw_relative_gradient`.
 """
 function _fit_convergence(; optimizer_finished::Bool, objective::Real, logLik::Real,
         log_prior::Real = 0.0, penalized::Bool = !iszero(log_prior),
-        gradient, hessian, hessian_unpenalised = hessian,
+        gradient, projected_gradient = nothing, hessian, hessian_unpenalised = hessian,
         prior_targets = String[], boundary_params = String[],
         boundary_check_available::Bool = false,
         relative_gradient_tol::Real = 1e-5)
     isfinite(relative_gradient_tol) && relative_gradient_tol > 0 ||
         throw(ArgumentError("relative_gradient_tol must be positive and finite"))
     grad = try Float64.(gradient) catch; Float64[] end
+    projected = projected_gradient === nothing ? grad :
+        try Float64.(projected_gradient) catch; Float64[] end
     finite = isfinite(objective) && isfinite(logLik) && isfinite(log_prior) &&
-        !isempty(grad) && all(isfinite, grad)
-    relative_gradient = finite ? maximum(abs, grad) / max(1.0, abs(Float64(objective))) : Inf
+        !isempty(grad) && all(isfinite, grad) && length(projected) == length(grad) &&
+        all(isfinite, projected)
+    scale = max(1.0, abs(Float64(objective)))
+    raw_relative_gradient = finite ? maximum(abs, grad) / scale : Inf
+    relative_gradient = finite ? maximum(abs, projected) / scale : Inf
     pd = _fit_hessian_pd(hessian)
     pd0 = _fit_hessian_pd(hessian_unpenalised)
     held = pd && !pd0 && penalized ? String.(prior_targets) : String[]
@@ -226,7 +269,8 @@ function _fit_convergence(; optimizer_finished::Bool, objective::Real, logLik::R
     else
         :converged
     end
-    return FitConvergence(status, optimizer_finished, relative_gradient, pd, penalized,
+    return FitConvergence(status, optimizer_finished, relative_gradient,
+        raw_relative_gradient, pd, penalized,
         Float64(objective), Float64(logLik), Float64(log_prior), pd0, held,
         penalized ? :penalised : :ml, boundary_check_available, boundary)
 end

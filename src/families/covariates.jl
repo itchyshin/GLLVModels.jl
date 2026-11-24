@@ -747,10 +747,20 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
     hessian = failed_objective ? fill(NaN, length(θ̂), length(θ̂)) : _fit_objective_hessian(negll, θ̂)
     hessian_unpenalised = failed_objective ? fill(NaN, length(θ̂), length(θ̂)) :
         _fit_objective_hessian(data_negll, θ̂)
-    diagnostics = _fit_convergence(optimizer_finished = Optim.converged(res),
+    lower_boundary = has_disp && disp̂ <= sqrt(eps(Float64)) ? [p + q + rr + 1] : Int[]
+    lower_boundary_scores = Dict{Int,Float64}()
+    if !isempty(lower_boundary) && !failed_objective
+        index = only(lower_boundary)
+        lower_boundary_scores[index] = _fit_natural_positive_score(gradient[index], disp̂)
+    end
+    projected_gradient = failed_objective ? gradient :
+        _fit_projected_gradient(gradient; lower = lower_boundary,
+            lower_scores = lower_boundary_scores)
+    diagnostics = _fit_convergence(optimizer_finished = Optim.converged(res) && !eta_cap,
         objective = failed_objective ? -Inf : loglik + log_prior,
         logLik = loglik, log_prior = log_prior,
-        penalized = any_prior, gradient = gradient, hessian = hessian,
+        penalized = any_prior, gradient = gradient, projected_gradient = projected_gradient,
+        hessian = hessian,
         hessian_unpenalised = hessian_unpenalised, prior_targets = prior_targets,
         boundary_params = boundary_params, boundary_check_available = true,
         relative_gradient_tol = g_tol)

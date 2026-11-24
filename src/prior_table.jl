@@ -456,9 +456,15 @@ function _fit_gaussian_intercept_prior_table(Y::AbstractMatrix, resolution::GLLV
     hessian_unpenalised = _fit_objective_hessian(data_nll, theta)
     sigma = exp(theta[p + 1])
     boundary = sigma <= 1e-8 * max(1.0, std(vec(data))) ? ["sigma"] : String[]
+    lower_boundary = isempty(boundary) ? Int[] : [p + 1]
+    lower_boundary_scores = isempty(boundary) ? Dict{Int,Float64}() :
+        Dict(p + 1 => _fit_natural_positive_score(gradient[p + 1], sigma))
+    projected_gradient = _fit_projected_gradient(gradient; lower = lower_boundary,
+        lower_scores = lower_boundary_scores)
     diagnostics = _fit_convergence(optimizer_finished = Optim.converged(result),
         objective = -objective(theta), logLik = -data_value, log_prior = -prior_value,
-        penalized = true, gradient = gradient, hessian = hessian,
+        penalized = true, gradient = gradient, projected_gradient = projected_gradient,
+        hessian = hessian,
         hessian_unpenalised = hessian_unpenalised,
         prior_targets = _gllvm_prior_target_names(resolution),
         boundary_params = boundary, boundary_check_available = true,
