@@ -327,11 +327,11 @@ end
          r.jacobian, r.once_per_target, r.negative_log_normalizer)
         for r in rows if r.target === :unique_variance)
     @test prior_identity(first.prior_targets) == prior_identity(reversed.prior_targets)
-    # Parameter positions follow source order, but each index must still name
-    # the same kernel × trait coordinate in its own fit.
-    for fit in (first, reversed), row in fit.prior_targets
-        row.target === :unique_variance || continue
-        @test fit.parameter_names[row.parameter_index] ==
-            "$(row.kernel).unique_sd[$(row.trait)]"
-    end
+    # Parameter positions follow source order. With three fixed means and
+    # rank-one source blocks, the same targets therefore move to these known
+    # coordinates when the source blocks are reversed.
+    target_indices(rows) = Dict((r.kernel, r.trait) => r.parameter_index
+        for r in rows if r.target === :unique_variance)
+    @test target_indices(first.prior_targets) == Dict((:oak, :t1) => 7, (:pine, :t2) => 14)
+    @test target_indices(reversed.prior_targets) == Dict((:oak, :t1) => 13, (:pine, :t2) => 8)
 end
