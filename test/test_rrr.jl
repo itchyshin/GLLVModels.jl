@@ -66,8 +66,8 @@ using GLLVModels, Test, Random, Distributions, Statistics
         @test size(μhat) == (p, n)
         @test all(isfinite, μhat)
 
-        # model-selection criteria (β + Λ + vec(B); Poisson has no dispersion)
-        @test GLLVModels._nparams(fit) == p + (p * K - div(K * (K - 1), 2)) + q * K
+        # model-selection criteria (β + rank-K ΛB'; Poisson has no dispersion)
+        @test GLLVModels._nparams(fit) == p + K * (p + q - K)
         @test isfinite(aic(fit))
         @test isfinite(bic(fit, n))
         # fitted(fit, X) resolves via the generic predict(::, X; type=:response) fallback
@@ -75,5 +75,10 @@ using GLLVModels, Test, Random, Distributions, Statistics
         @test size(ftd) == (p, n)
         @test all(isfinite, ftd)
         @test ftd ≈ μhat
+    end
+
+    @testset "_nparams matches rank-K ΛB' df (#1199)" begin
+        @test 10 + 2 * (10 + 3 - 2) == 32
+        @test 10 + 1 * (10 + 3 - 1) == 22
     end
 end

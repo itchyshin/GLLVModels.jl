@@ -154,10 +154,11 @@ end
 # GllvmCovFit, no family-generic Dunn–Smyth residual is provided for this type.)
 _loglik(fit::RRRFit) = fit.loglik
 
-# Free parameters: β (p) + Λ (modulo K(K−1)/2 rotational df) + vec(B) (q·K) + dispersion?
+# Free parameters: β (p) + rank-K species×covariate block ΛB' (K(p+q−K) df; the
+# lower-triangular Λ and unrestricted B share K(K+1)/2 gauge directions) + dispersion?
 function _nparams(fit::RRRFit)
     p, K = size(fit.Λ); q = size(fit.B, 1)
-    return p + (p * K - div(K * (K - 1), 2)) + q * K + (isnan(fit.dispersion) ? 0 : 1)
+    return p + K * (p + q - K) + (isnan(fit.dispersion) ? 0 : 1)
 end
 
 """
