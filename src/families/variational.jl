@@ -40,6 +40,28 @@ function _gauss_hermite(G::Integer)
     return (E.values, sqrt(π) .* (E.vectors[1, :] .^ 2))
 end
 
+# The VA objectives take `Y` untyped, so `missing` reached them as a TypeError, MethodError or
+# InexactError and a NaN gave a NaN value without a word. The same check serves
+# `confint(...; objective = :va)`. NaN is not a missing-value marker in this package, so a missing
+# or NaN cell that the objective would read (observed under `mask`) is refused, first cell named.
+function _va_check_response(caller::AbstractString, Y::AbstractMatrix, mask = nothing)
+    bad = 0
+    first_bad = (0, 0)
+    for i in axes(Y, 2), t in axes(Y, 1)
+        (mask === nothing || mask[t, i]) || continue
+        y = Y[t, i]
+        if ismissing(y) || (y isa AbstractFloat && isnan(y))
+            bad += 1
+            bad == 1 && (first_bad = (t, i))
+        end
+    end
+    bad == 0 && return nothing
+    t, i = first_bad
+    throw(ArgumentError("$caller: Y[$t, $i] = $(Y[t, i]) is a missing or NaN response " *
+        "($bad such cell(s) in total). Remove or impute them, or mark them unobserved with " *
+        "`mask` where the route takes one (NaN is not a missing-value marker)."))
+end
+
 # Missing responses on the VA fitters (#1108). The mask rule is the Laplace one:
 # `_resolve_obs_mask` / `_sanitize_unobserved` in laplace.jl and response_support.jl,
 # which the Gaussian missing-data path (#1107) also uses. This file only calls them.
@@ -47,6 +69,14 @@ function _va_check_mask(mask, Y)
     mask === nothing && return nothing
     size(mask) == size(Y) || throw(DimensionMismatch(
         "mask is $(size(mask)); Y is $(size(Y))"))
+    return mask
+end
+
+# Fitter entry only (not the marginal-likelihood functions): the same shape check, plus the
+# shared "every trait has an observed cell" refusal (`_check_every_trait_observed`, laplace.jl).
+function _va_check_fit_mask(mask, Y)
+    _va_check_mask(mask, Y)
+    _check_every_trait_observed(mask, Y)
     return mask
 end
 
@@ -155,6 +185,7 @@ function poisson_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
     _va_check_mask(mask, Y)
+    _va_check_response("poisson_marginal_loglik_va", Y, mask)
     Λ2 = Λ .^ 2
     acc = 0.0
     @inbounds for s in axes(Y, 2)
@@ -189,6 +220,12 @@ gradient. The returned `PoissonFit`'s `loglik` field holds the maximised ELBO (a
 lower bound on the true log-marginal), so it is directly comparable across VA fits
 but sits slightly below the Laplace `loglik` for the same data.
 
+The posterior is a Gaussian with a diagonal covariance per site. R `gllvm`'s default
+(`control.va = list(Lambda.struc = "unstructured")`) is a full covariance, so with
+`K ≥ 2` this fit matches `gllvm(...; method = "VA")` only when `gllvm` is given
+`Lambda.struc = "diagonal"`; at `K = 1` the two coincide. The other `fit_*_gllvm_va`
+drivers use the same posterior form.
+
 A `Y` that contains `missing` is fitted, not rejected: the observation mask is
 derived from those cells (a one-time `@info`) and unobserved cells are dropped
 from the ELBO, the same NA rule as [`fit_poisson_gllvm`](@ref). Pass `mask` to
@@ -199,7 +236,7 @@ function fit_poisson_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     p, n = size(Y)
-    _va_check_mask(mask, Y)
+    _va_check_fit_mask(mask, Y)
     _check_response_support(:count, Y, mask; caller = "fit_poisson_gllvm_va")
     rr = rr_theta_len(p, K)
     link = LogLink()

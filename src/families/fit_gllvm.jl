@@ -353,6 +353,35 @@ function _fit_gllvm_per_column(Y, family::AbstractVector; K, num_lv, row_eff, di
     return fit_mixed_gllvm(Y; families = family, K = K, kw...)
 end
 
+# `K` (or `num_lv`) must be an integer. Below zero it used to surface as "invalid Array
+# dimensions" from inside a fitter, and a non-integer as a `TypeError` on the fitter's
+# keyword. `K = 0` is a valid GLM fit and is not touched here; `K > p` keeps the
+# range message of the fitter (`_check_lambda_rank`). A negative Gaussian `K` is left to
+# the Gaussian fitter, whose message already states its own range (`1:p`). Multinomial
+# refuses any `K` other than 0 with its own message, which says why, so it is skipped too.
+function _check_K_argument(K, caller::AbstractString; family = nothing)
+    K === nothing && return nothing
+    family isa Multinomial && return nothing
+    K isa Integer || throw(ArgumentError(
+        "$caller: K must be a non-negative integer (got K = $K of type $(typeof(K)))"))
+    (K >= 0 || family isa Normal) || throw(ArgumentError(
+        "$caller: K must be a non-negative integer (got K = $K)"))
+    return nothing
+end
+
+# A response matrix with no sites or no species is refused up front (P81 ZERO-SITES,
+# issue #1188). Before, `p x 0` returned `logLik = 0.0` (`converged = true` for several
+# families) and `0 x n` ended in a raw `BoundsError` or an empty-reduction error from
+# inside the fitter. The message names the empty dimension.
+function _check_nonempty_Y(Y::AbstractMatrix, caller::AbstractString)
+    p, n = size(Y)
+    (p > 0 && n > 0) && return nothing
+    empty = p == 0 && n == 0 ? "no species and no sites" :
+            p == 0 ? "no species (0 rows)" : "no sites (0 columns)"
+    throw(ArgumentError(
+        "$caller: Y has $empty; Y is $p x $n and a fit needs at least one species and one site"))
+end
+
 """
     fit_gllvm(Y; family = Normal(), K = nothing, num_lv = nothing, Kmax = nothing,
               row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
@@ -602,6 +631,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
                    species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
+    _check_nonempty_Y(Y, "fit_gllvm")
     if family isa AbstractVector
         return _fit_gllvm_per_column(Y, family; K = K, num_lv = num_lv, row_eff = row_eff,
             disp_group = disp_group, pervar = pervar, grouping = grouping, unit = unit,
@@ -708,6 +738,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     end
     _refuse_bool_K(K)
     _refuse_bool_K(num_lv)
+    _check_K_argument(K, "fit_gllvm"; family = family)
 
     # --- K omitted: estimate it (lane auto-d-20260926; docs/design/74). -------
     # Sweep K = 1:Kmax through `select_lv` (guarded: failed, unconverged,
