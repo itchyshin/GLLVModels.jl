@@ -294,3 +294,33 @@ end
     @test only(fit.prior_targets).target === :fixef
     @test isempty(fit.boundary_params)
 end
+
+@testset "source prior table keeps named Psi targets under kernel reordering" begin
+    traits = [:t1, :t2, :t3]
+    Y = [0.8 -0.25 0.6 0.15; -0.1 -0.8 0.5 0.3; 0.35 0.6 -0.2 -0.4]
+    Koak = [1.0 0.2 0.0 0.0; 0.2 1.0 0.2 0.0;
+            0.0 0.2 1.0 0.2; 0.0 0.0 0.2 1.0]
+    Kpine = [1.0 0.0 0.2 0.0; 0.0 1.0 0.0 0.2;
+             0.2 0.0 1.0 0.0; 0.0 0.2 0.0 1.0]
+    oak = SourceCovariance(Koak; groups=1:4, name=:oak, rank=1, unique=true)
+    pine = SourceCovariance(Kpine; groups=1:4, name=:pine, rank=1, unique=true)
+    theta = [0.1, -0.1, 0.2, 0.7, -0.3, 0.4, log(0.15), log(0.4), log(0.2),
+        0.5, 0.1, -0.2, log(0.3), log(0.25), log(0.5)]
+    rows = [
+        (prior="gamma(0.4, 2)", class="unique_variance", coef="", dpar="",
+         scale="natural_sd", trait="t1", kernel="oak"),
+        (prior="gamma(0.6, 3)", class="unique_variance", coef="", dpar="",
+         scale="natural_sd", trait="t2", kernel="pine"),
+    ]
+    first = fit_gaussian_sources(Y; sources=[oak, pine], coefficient_names=traits,
+        sigma_eps_fixed=0.2, trait_names=traits, start=theta,
+        priors=rows, iterations=0)
+    reversed_start = [theta[1:3]; theta[10:15]; theta[4:9]]
+    reversed = fit_gaussian_sources(Y; sources=[pine, oak], coefficient_names=traits,
+        sigma_eps_fixed=0.2, trait_names=traits, start=reversed_start,
+        priors=rows, iterations=0)
+    @test first.logLik ≈ reversed.logLik atol=1e-10 rtol=1e-10
+    @test first.log_prior ≈ reversed.log_prior atol=1e-13
+    @test first.objective ≈ reversed.objective atol=1e-10 rtol=1e-10
+    @test first.prior_targets == reversed.prior_targets
+end
