@@ -92,3 +92,18 @@ end
         @test size(tris, 1) == 2N - 2 - H
     end
 end
+
+@testset "SPDE Delaunay hull coverage with large coordinate offset (#1221)" begin
+    # UTM-style: small cluster far from the origin (offset >> extent).
+    for off in (5e5, 1e6), seed in (1, 2), N in (30, 100)
+        rng = Random.MersenneTwister(seed)
+        pts = 1e3 .* rand(rng, N, 2) .+ [off off / 2]
+        nodes, tris = GLLVModels.spde_mesh_delaunay(pts)
+        hull = _hull_vertices(pts)
+        H = length(hull)
+        hx = pts[hull, 1]; hy = pts[hull, 2]
+        hull_area = 0.5 * abs(sum(hx .* circshift(hy, -1) .- circshift(hx, -1) .* hy))
+        @test _mesh_area(nodes, tris) ≈ hull_area rtol = 1e-6
+        @test size(tris, 1) == 2N - 2 - H
+    end
+end
