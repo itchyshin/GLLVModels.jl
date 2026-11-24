@@ -8,7 +8,11 @@ eval(parse(text = src[s:e]))
 row_fit <- list(dispersion = 2)  # RowEffectFit / RowRandomFit: no r, no α
 stopifnot(isTRUE(all.equal(.convert_dispersion("nb2", row_fit, FALSE)$value, 0.5)))
 stopifnot(isTRUE(all.equal(.convert_dispersion("gamma", row_fit, FALSE)$value, 2)))
+stopifnot(isTRUE(all.equal(.convert_dispersion("nb1", row_fit, FALSE)$value, 2)))
+stopifnot(isTRUE(all.equal(.convert_dispersion("beta", row_fit, FALSE)$value, 2)))
 plain <- list(r = 4, "α" = 3)    # plain fitters keep their own fields
 stopifnot(isTRUE(all.equal(.convert_dispersion("nb2", plain, FALSE)$value, 0.25)))
+stopifnot(isTRUE(all.equal(.convert_dispersion("nb1", list("φ" = 1.5), FALSE)$value, 1.5)))
+stopifnot(isTRUE(all.equal(.convert_dispersion("beta", list("φ" = 7), FALSE)$value, 7)))
 stopifnot(isTRUE(all.equal(.convert_dispersion("gamma", plain, FALSE)$value, 3)))
 cat("ok\n")

@@ -158,7 +158,7 @@ if (!exists(".jl_value", mode = "function")) {
     },
     # NB1: gllvm phi (Var = mu + mu*phi); Julia phi (Var = mu*(1+phi)). Identity map.
     nb1 = {
-      v <- if (grouped) as.numeric(.jl_value(julia_fit[["φ"]])) else as.numeric(.jl_value(julia_fit[["φ"]]))
+      v <- if (grouped) as.numeric(.jl_value(julia_fit[["φ"]])) else .disp_field(julia_fit, "φ")
       list(name = "phi", value = v)                           # identity (maps 1:1)
     },
     # Gamma: gllvm phi == SHAPE (Var = mu^2/phi); Julia alpha == shape (Var = mu^2/alpha).
@@ -169,7 +169,7 @@ if (!exists(".jl_value", mode = "function")) {
     },
     # Beta: precision phi identical in both. Identity.
     beta = {
-      v <- if (grouped) as.numeric(.jl_value(julia_fit[["φ"]])) else as.numeric(.jl_value(julia_fit[["φ"]]))
+      v <- if (grouped) as.numeric(.jl_value(julia_fit[["φ"]])) else .disp_field(julia_fit, "φ")
       list(name = "phi", value = v)                           # identity
     },
     # Tweedie: power and phi both identity; we also surface the power.
