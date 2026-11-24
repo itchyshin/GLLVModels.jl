@@ -263,7 +263,7 @@ end
     psi = (target=:unique_variance, kernel=:oak, trait=:t1,
         parameter_index=2, distribution=:gamma, shape=shape, rate=rate,
         mean=shape/rate, measure=:natural_sd, jacobian=false,
-        once_per_target=true, negative_log_normalizer=loggamma(shape)-shape*log(rate))
+        once_per_target=true, negative_log_normalizer=GLLVModels.loggamma(shape)-shape*log(rate))
     rows = NamedTuple[fixed, psi]
 
     expected = -GLLVModels.logpdf(GLLVModels.Normal(0.0, 1.0), theta[1]) -
