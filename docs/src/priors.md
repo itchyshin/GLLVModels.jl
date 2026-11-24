@@ -63,7 +63,8 @@ For an explicit Gaussian source model, `class="fixef"` resolves against the
 actual `coefficient_names`. A `class="unique_variance"` row identifies its
 response trait and source kernel. Its `gamma(mean, shape)` expression is
 converted to shape/rate, and the normalized density is evaluated on the natural
-SD without a log-SD Jacobian. A single eligible source can be inferred when
+SD without a log-SD Jacobian. This route requires the residual SD to be fixed
+with `sigma_eps_fixed`. A single eligible source can be inferred when
 `kernel` is empty; multi-source fits require an exact kernel name.
 
 ```julia
