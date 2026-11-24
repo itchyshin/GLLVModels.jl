@@ -58,3 +58,28 @@ function _fit_verdict(nll::Real, converged::Bool, iterations::Integer)
     _nll_failed(nll) && return (-Inf, false, Int(iterations))
     return (-Float64(nll), converged, Int(iterations))
 end
+
+"""
+    convergence_status(fit) -> Symbol
+
+Default converged-rule status for fit objects with `converged` and `loglik` (or `logLik`)
+fields (SHINICHI-1753-1118): `:not_converged` when the optimiser did not finish or the
+log-likelihood is not finite; otherwise `:converged`. Family-specific methods may also
+return `:boundary` or `:degenerate`.
+"""
+function convergence_status(fit)
+    conv = if hasproperty(fit, :converged)
+        fit.converged
+    else
+        true
+    end
+    ll = if hasproperty(fit, :loglik)
+        fit.loglik
+    elseif hasproperty(fit, :logLik)
+        fit.logLik
+    else
+        NaN
+    end
+    (conv && isfinite(ll)) || return :not_converged
+    return :converged
+end
