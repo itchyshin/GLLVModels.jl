@@ -36,14 +36,14 @@ using StatsModels: @formula
     Y = Int.(rand(5, 32) .< 0.43)
     from_table = fit_gllvm(Y; family = Binomial(), K = 1, priors = loading,
                            iterations = 80, newton_maxiter = 100)
-    legacy_sd = inv(sqrt(0.5)) # ridge(lambda) maps to loading_ridge = 1/sqrt(lambda)
+    legacy_sd = 0.5 # ridge(4) maps to loading_ridge = 1/sqrt(4)
     from_legacy = fit_gllvm(Y; family = Binomial(), K = 1, loading_ridge = legacy_sd,
                             iterations = 80, newton_maxiter = 100)
     @test only(from_table.prior_metadata.resolved_targets).class == "loading"
-    @test from_table.prior_metadata.input_table.prior == ["ridge(0.5)"]
-    @test from_table.prior_metadata.loading_penalty ≈ 0.25 * sum(abs2, from_table.Λ)
+    @test from_table.prior_metadata.input_table.prior == ["ridge(4)"]
+    @test from_table.prior_metadata.loading_penalty ≈ 2 * sum(abs2, from_table.Λ)
     table_objective = from_table.prior_metadata.total_objective
-    legacy_objective = -from_legacy.loglik + 0.25 * sum(abs2, from_legacy.Λ)
+    legacy_objective = -from_legacy.loglik + 2 * sum(abs2, from_legacy.Λ)
     # The two paths optimize the same criterion, but their latent-factor
     # coordinates are sign-indeterminate and their finite optimizer stops need
     # not return bitwise-identical objective values.
