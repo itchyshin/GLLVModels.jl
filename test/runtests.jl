@@ -564,6 +564,7 @@ println(_SHARD === nothing ?
     _shard_include("test_packing.jl")
     _shard_include("test_none_dep.jl")
     _shard_include("test_phylo_dep.jl")
+    _shard_include("test_phylo_dep_verdict_1163.jl")
     _shard_include("test_animal_dep.jl")
     _shard_include("test_docstring_animal_dep_twin.jl")
     _shard_include("test_animal_latent.jl")

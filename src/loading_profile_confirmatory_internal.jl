@@ -399,7 +399,8 @@ function _fit_confirmatory_lambda_constraint(
         # numerically identical to `base`, only the pin metadata is new.
         pars = merge(base.pars, (lambda_constraint = M_norm,))
         return GllvmFit(base.model, pars, base.logLik, base.n_iter, base.converged,
-                         base.optim_result, base.cputime, base.integration)
+                         base.optim_result, base.cputime, base.integration,
+                         base.optimizer_info, base.stopping_reason)
     end
     ll, ok, θ_red, converged = _profile_refit_with_multi_fixed(base, fixes, Y;
         x_tol = x_tol, f_tol = f_tol, g_tol = g_tol, iterations = iterations)
@@ -420,6 +421,7 @@ function _fit_confirmatory_lambda_constraint(
     u = _derived_unpack(θ_full, spec)
     pars = merge(base.pars, (σ_eps = u.σ_eps, Λ = u.Λ_B, θ_packed = θ_full,
                               lambda_constraint = M_norm))
+    reason = converged ? :converged : :not_converged
     return GllvmFit(base.model, pars, ll, base.n_iter, converged, base.optim_result,
-                     base.cputime, base.integration)
+                     base.cputime, base.integration, base.optimizer_info, reason)
 end

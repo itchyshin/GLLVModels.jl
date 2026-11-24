@@ -168,6 +168,7 @@ include("ordination_uncertainty.jl")      # per-site latent-score uncertainty (c
 
 # Confidence intervals
 include("confint.jl")                    # Wald
+include("gaussian_fit_verdict.jl")       # K_phy > 0 convergence / boundary gate (#1163)
 include("confint_profile.jl")            # profile likelihood
 include("loading_profile_confirmatory_internal.jl")  # D3 confirmatory pins (not exported)
 include("confint_bootstrap.jl")          # parametric bootstrap
