@@ -152,7 +152,8 @@ end
         coefficient_names = ["temperature"], priors = combined,
         iterations = 120, newton_maxiter = 100)
     @test fit.prior_metadata !== nothing
-    @test fit.prior_metadata.resolved_targets == [(class = "fixef", coef = "temperature", dpar = "mu", scale = "link"),
+    @test fit.prior_metadata.resolved_targets == [(class = "fixef", coef = "temperature", dpar = "mu", scale = "link",
+        parameter_role = :covariate),
         (class = "loading", coef = "all", dpar = "mu", scale = "loading_coef")]
     @test fit.prior_metadata.fixed_effect_penalty > 0
     @test fit.prior_metadata.loading_penalty ≈ 2 * sum(abs2, fit.Λ)
@@ -195,7 +196,7 @@ end
         response_names = response_names, priors = intercept_prior,
         iterations = 120, newton_maxiter = 100)
     @test intercept_fit.prior_metadata.resolved_targets ==
-        [(class = "fixef", coef = "taxon_a", dpar = "mu", scale = "link",
+        [(class = "fixef", coef = "taxon_a::(Intercept)", dpar = "mu", scale = "link",
           parameter_role = :response_intercept, response = "taxon_a")]
     @test intercept_fit.prior_metadata.response_names == response_names
     @test intercept_fit.prior_metadata.fixed_effect_penalty ≈
