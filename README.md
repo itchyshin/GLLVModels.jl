@@ -97,6 +97,48 @@ GLLVModels.profile_ci(fit_shared, "sigma_eps"; y = y)                 # profile 
 GLLVModels.bootstrap_ci(fit_shared; y = y, n_boot = 20, seed = 42)    # parametric bootstrap; use 1000 or more for real work
 ```
 
+## Prior-table adapter
+
+The Binomial covariate Laplace route accepts named Normal or Student-t priors
+on shared covariate coefficients and response-specific intercepts, optionally
+together with one blanket loading ridge. Formula fits supply covariate names
+from the model matrix; direct `fit_gllvm_cov` calls can supply
+`coefficient_names` (otherwise names are `x1`, `x2`, …) and `response_names`
+(otherwise names are `trait_1`, …). For wide matrices, response names follow
+the rows of `Y`. The coefficient priors use normalized link-scale densities.
+`ridge(lambda)` remains the unnormalized penalty
+`0.5 * lambda * sum(abs2, Lambda)`. Other families and fitting routes refuse
+these table targets.
+
+```julia
+using GLLVModels, Distributions, Random
+using StatsModels: @formula
+Random.seed!(42)
+Y_binomial = Int.(rand(4, 40) .< 0.35)
+x = randn(40)
+priors = (;
+    prior = ["normal(0,2.5)", "normal(0,1.5)", "ridge(4)"],
+    class = ["fixef", "fixef", "loading"],
+    coef = ["temperature", "species_a", "all"],
+    dpar = ["mu", "mu", "mu"],
+    scale = ["link", "link", "loading_coef"])
+response_names = ["species_a", "species_b", "species_c", "species_d"]
+fit = gllvm(@formula(y ~ 1 + temperature), Y_binomial, (temperature = x,);
+            family = Binomial(), K = 1, priors = priors,
+            response_names = response_names)
+fit.loglik                                  # data-only marginal log likelihood
+fit.prior_metadata.fixed_effect_penalty     # normalized Normal penalty
+fit.prior_metadata.loading_penalty           # blanket loading ridge penalty
+fit.prior_metadata.total_objective           # negative log likelihood + penalties
+```
+
+The `student_t(location, scale, df)` row uses a normalized Student-t density.
+Prior-penalized `GllvmCovFit` objects retain resolved targets and penalty
+components, and `confint` refuses to treat their curvature as calibrated
+uncertainty. Refit without priors for ordinary likelihood intervals. The older
+no-covariate `fit_gllvm(...; priors=loading_table)` adapter still accepts the
+single loading-ridge row for compatibility.
+
 ## Choosing the outer optimizer
 
 The ordinary Gaussian, Poisson Laplace, and shared-r NB2 fitters accept
@@ -246,6 +288,10 @@ with sparse random-effect design matrices. `GLLVModels.jl` solves a
   Gaussian and non-Gaussian covariates; species-specific covariates, fourth-corner
   trait–environment interactions, fixed and random community row effects,
   quadratic response
+- A Tables.jl prior-table adapter for named Normal/Student-t response
+  coefficients plus an optional blanket Binomial loading ridge on the
+  covariate Laplace route; legacy no-covariate loading-ridge tables remain
+  supported.
 - Phylogenetic random effects (with user-supplied Σ_phy) — and a phylogenetic
   GLM fit (`fit_phylo_glm`) for non-Gaussian families via an augmented-state
   joint Laplace

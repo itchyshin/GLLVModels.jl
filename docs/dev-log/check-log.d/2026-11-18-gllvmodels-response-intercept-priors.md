@@ -1,0 +1,12 @@
+# Check-log: GLLVModels response-specific intercept priors (2026-11-18)
+
+| Field | Value |
+|---|---|
+| Branch and base | `codex/generalized-prior-arc-current-20261118` based on `origin/main` `32ab27df19baaeb1908da58cbe43a011d99897b2` |
+| Change | `class="fixef"` selectors now resolve to either a named shared covariate coefficient or a named response-specific intercept. `response_names` is optional for wide numeric matrices and defaults to `trait_1`, ..., `trait_p`; long-format formula fits use sorted species levels. Intercept targets appear explicitly in fit metadata. |
+| Focused tests | Julia 1.13.3: `test/auto/test_prior_table.jl` 76/76; `test/test_formula.jl` 27/27; `test/test_covariates.jl` 30/30; `test/test_cov_analytic_grad.jl` 18/18. These include intercept-only and mixed Normal/Student-t response-intercept, shared-coefficient, and loading-ridge targets, plus unknown, duplicate, ambiguous, and name-length refusals. |
+| Independent numerical checks | The standalone prior oracle self-test, fixture check, base-R cross-check, and SHA256 manifest passed. Its base-R maximum absolute difference was `4.62e-14`; seven deliberate mutations were detected. The package-component comparison passed at five points each for Normal, Student-t, and loading-ridge penalties. The new response-intercept tests independently evaluate the normalized Normal penalty at the fitted response intercept. |
+| Documentation | The isolated Documenter/VitePress build completed in 8.75 seconds using `/tmp/gllv-prior-docs-current-20261118`; the tutorial and response-family pages rendered and the executable example ran. Deployment was skipped. A first invocation using the package environment stopped because Documenter is not a package dependency there; the intended isolated documentation environment passed. |
+| Full suite | Not run on this current-main branch. The four equivalent old-base shards took about 3h04m and had 11 failures that matched a clean baseline. Separate approval for a full current-main run remains pending. |
+| External state | No commit, push, merge, or release. PR #1651 and the preserved prior worktree remain untouched. |
+| Patch identity | Tracked diff from base SHA-256 `d065a52fef7214e115152ae251d03053b412a5d5821bec8cad42a55edea84b6e`; `src/families/covariates.jl` `52fc8357e3b187bebc6f7630f229de1e7938d9b219e14611901b722524f65301`; `src/formula.jl` `7166e33331806c11f11fd47d10be086d0d0ee37428210c251f59c5c26522654c`; `test/auto/test_prior_table.jl` `4a789b8f5ab6466d1065a613e0c72fd1f5694fa73523ea0f7c3e72a0a0b87f61`. |

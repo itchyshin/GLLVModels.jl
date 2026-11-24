@@ -9,6 +9,7 @@ const GLLVM = GLLVModels
 using LinearAlgebra, Optim, ForwardDiff, Random, SparseArrays, Statistics, SHA
 using SpecialFunctions: digamma, trigamma, besselk, gamma, loggamma
 import StatsModels: coef, vcov, nobs, dof, loglikelihood, aic, bic, coeftable, stderror, confint, predict, residuals, fitted, StatsAPI, deviance
+import Tables
 # Import Distributions without `Multinomial` so the Identity marker
 # `GLLVModels.Multinomial` (unordered categorical, twin fid 16) can bind.
 # `Distributions.Multinomial` is the count-vector law — still available qualified.
@@ -33,6 +34,7 @@ include("em_fa.jl")                      # alternative EM solver
 include("na_input.jl")                   # typed ArgumentError for missing / NaN in Y on Gaussian fitters that have no mask
 include("profile.jl")                    # σ_eps profile-out (used by fit)
 include("fixed_coefficients.jl")         # zero masks for fixed-effect coefficients
+include("prior_table.jl")                # explicit adapter for supported coefficient/loading prior rows
 include("fit.jl")
 include("reml.jl")                       # REML for the Gaussian path (restricted ML)
 include("random_effects.jl")             # RE foundation — grouping-factor coding

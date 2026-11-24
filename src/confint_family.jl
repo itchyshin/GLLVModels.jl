@@ -2988,6 +2988,8 @@ function _family_ci(fit::GllvmCovFit, Y::AbstractMatrix;
                     N::Union{Nothing, AbstractMatrix} = nothing,
                     mask = nothing,
                     newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    fit.prior_metadata === nothing || throw(ArgumentError(
+        "confint is not calibrated for prior-penalized GllvmCovFit estimates; refit without priors for ordinary ML intervals"))
     _ci_refuse_mask(fit, mask, Y)
     X === nothing && throw(ArgumentError("confint on a GllvmCovFit needs the design `X` (the same array passed to fit_gllvm_cov): confint(fit, Y; method=…, X=X)"))
     p, K = size(fit.Λ); n = size(Y, 2); q_full = length(fit.γ); rr = rr_theta_len(p, K)

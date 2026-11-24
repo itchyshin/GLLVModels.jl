@@ -38,6 +38,7 @@ makedocs(;
         ],
         "Understand your results" => [
             "Working with a fit" => "working-with-a-fit.md",
+            "Priors and penalties" => "priors.md",
             "Covariance & Correlation" => "covariance-correlation.md",
             "Confidence intervals" => "confidence-intervals.md",
             "Worked example: bootstrap_Sigma_r" => "bootstrap-sigma-r-example.md",

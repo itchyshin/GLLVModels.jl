@@ -337,6 +337,27 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     end
     mm, cnames = _build_site_modelmatrix(formula.rhs, cols; contrasts = contrasts)
     q = size(mm, 2)
+    prior_controls = nothing
+    if get(kwargs, :priors, nothing) !== nothing
+        if family isa Binomial
+            prior_controls = _gllv_prior_table_controls(kwargs[:priors])
+        elseif family isa Normal
+            prior_controls = _resolve_gaussian_intercept_prior_table(
+                kwargs[:priors], p; response_names=get(kwargs, :response_names, nothing))
+        else
+            throw(ArgumentError(
+                "GLLVModels prior tables currently support Binomial Laplace and intercept-only Gaussian K=0 fits"))
+        end
+    elseif haskey(kwargs, :response_names)
+        throw(ArgumentError("response_names is available only with `priors`"))
+    end
+    if family isa Normal && prior_controls !== nothing &&
+       (q > 0 || K != 0 || StatsModels.omitsintercept(formula.rhs))
+        throw(ArgumentError(
+            "Gaussian prior tables currently require an intercept-only formula with K=0"))
+    end
+    haskey(kwargs, :coefficient_names) && throw(ArgumentError(
+        "gllvm(formula, data) derives coefficient_names from the formula; do not supply them"))
     if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing && q > 0 &&
        !(family isa Normal)
         _refuse_optimizer(kwargs[:optimizer], "gllvm", "non-Gaussian covariate formula fits")
@@ -345,8 +366,22 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
     _default_route_no_intercept_error(formula, family)
 
     if q == 0
+        if family isa Normal && prior_controls !== nothing
+            unsupported = filter(k -> !(k in (:priors, :response_names, :g_tol, :iterations, :optimizer)), keys(kwargs))
+            isempty(unsupported) || throw(ArgumentError(
+                "gllvm: the Gaussian intercept-only prior route does not accept: $(join(string.(unsupported), ", "))"))
+            return _fit_gaussian_intercept_prior_table(Y, prior_controls;
+                g_tol=get(kwargs, :g_tol, 1e-6),
+                iterations=get(kwargs, :iterations, 500),
+                optimizer=get(kwargs, :optimizer, nothing))
+        end
         weights === nothing || family isa Poisson ||
             _refuse_weights("gllvm", "family $(nameof(typeof(family)))")
+        if prior_controls !== nothing && !isempty(prior_controls.coefficient_priors)
+            X0 = zeros(Float64, p, n, 0)
+            return fit_gllvm_cov(Y; family = family, X = X0, K = K,
+                coefficient_names = String[], kwargs...)
+        end
         # The Gaussian and zero-inflated fitters below are called directly, not through
         # `fit_gllvm`, so they get the same offset rules here (a scalar broadcasts, a shape
         # that cannot be broadcast or a non-finite value is refused). Every other family goes
@@ -420,7 +455,8 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             "ZIB through @formula is no-X only for now (pass `@formula(y ~ 1)`); " *
             "ZIB+X formula / bridge admission is still OWED"))
     else
-        return fit_gllvm_cov(Y; family = family, X = X, K = K, kwargs...)
+        return fit_gllvm_cov(Y; family = family, X = X, K = K,
+                             coefficient_names = cnames, kwargs...)
     end
 end
 
@@ -510,7 +546,13 @@ function gllvm(formula::FormulaTerm, long_data; family = Normal(),
     end
 
     if K === _FORMULA_K_UNSET
+        if haskey(kwargs, :priors) && !haskey(kwargs, :response_names)
+            kwargs = merge((; kwargs...), (; response_names = String.(splevels)))
+        end
         return gllvm(formula, Y, site_data; family=family, contrasts=contrasts, kwargs...)
+    end
+    if haskey(kwargs, :priors) && !haskey(kwargs, :response_names)
+        kwargs = merge((; kwargs...), (; response_names = String.(splevels)))
     end
     return gllvm(formula, Y, site_data; family=family, K=K,
         contrasts=contrasts, kwargs...)

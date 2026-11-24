@@ -262,7 +262,7 @@ _cov_ad_ok(f)     = true
 # or the AD pass errors; `_optimize_with_analytic` then falls back to a central finite
 # difference at that θ.
 function _cov_negll_grad(family, Yc, Nm, X_fit, θ, p, q, K, rr, has_disp, lk, msk,
-                         maxiter, tol)
+                         maxiter, tol, prior_nll = nothing)
     try
         n = size(Yc, 2)
         β = θ[1:p]; γ = θ[(p + 1):(p + q)]
@@ -297,8 +297,9 @@ function _cov_negll_grad(family, Yc, Nm, X_fit, θ, p, q, K, rr, has_disp, lk, m
             end
             return acc
         end
-        g = ForwardDiff.gradient(marg, θ)
-        return all(isfinite, g) ? -g : nothing
+        g = -ForwardDiff.gradient(marg, θ)
+        prior_nll === nothing || (g .+= ForwardDiff.gradient(prior_nll, θ))
+        return all(isfinite, g) ? g : nothing
     catch
         return nothing
     end
@@ -412,8 +413,11 @@ Result of [`fit_gllvm_cov`](@ref): a GLLVM fit with fixed-effect covariates. Fie
 `family` (the Distributions marker), per-species intercepts `β` (length p), shared
 covariate coefficients `γ` (length q, including fixed-zero entries), `γ_fixed`
 (Bool vector marking fixed-zero entries), loadings `Λ` (p×K), `dispersion`
-(`r`/`φ`/`α`, or `NaN` when the family has none), `link`, the maximised Laplace
-`loglik`, `converged`, and `iterations`.
+(`r`/`φ`/`α`, or `NaN` when the family has none), `link`, the data-only Laplace
+`loglik`, `converged`, and `iterations`. `prior_metadata` is `nothing` without priors; with
+priors it records the input table, resolved targets, separate penalties, and the combined
+penalized objective. `convergence` records the objective, gradient, boundary, and Hessian
+checks used for the final status.
 """
 struct GllvmCovFit
     # Distributions markers (Poisson, NB2, …) plus custom NB1(φ) for the
@@ -428,6 +432,19 @@ struct GllvmCovFit
     loglik::Float64
     converged::Bool
     iterations::Int
+    prior_metadata::Any
+    convergence::FitConvergence
+end
+
+function Base.getproperty(f::GllvmCovFit, name::Symbol)
+    name === :convergence && return getfield(f, :convergence)
+    name in _GLLVM_CONVERGENCE_PROPERTIES &&
+        return getproperty(getfield(f, :convergence), name)
+    return getfield(f, name)
+end
+
+function Base.propertynames(::GllvmCovFit, private::Bool = false)
+    return (fieldnames(GllvmCovFit)..., _GLLVM_CONVERGENCE_PROPERTIES...)
 end
 
 function Base.show(io::IO, f::GllvmCovFit)
@@ -435,11 +452,40 @@ function Base.show(io::IO, f::GllvmCovFit)
     print(io, "GllvmCovFit(", nameof(typeof(f.family)), ", p=", p, ", q=", q, ", K=", K)
     any(f.γ_fixed) && print(io, ", fixed γ=", count(f.γ_fixed))
     isnan(f.dispersion) || print(io, ", disp=", round(f.dispersion; sigdigits = 4))
+    f.prior_metadata === nothing || print(io, ", prior-penalized")
     print(io, ", loglik=", round(f.loglik; sigdigits = 7), f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+function _gllv_cov_prior_nll(spec, value)
+    z = (value - spec.location) / spec.scale
+    if spec.kind === :normal
+        return log(spec.scale) + 0.5 * log(2π) + 0.5 * z^2
+    end
+    df = spec.df
+    return log(spec.scale) + loggamma(df / 2) + 0.5 * log(df * π) -
+           loggamma((df + 1) / 2) + ((df + 1) / 2) * log1p(z^2 / df)
+end
+
+function _gllv_cov_prior_penalties(θ, p, q, K, rr, fixed_priors, loading_ridge)
+    fixed = zero(eltype(θ))
+    for spec in fixed_priors
+        index = spec.parameter_role === :response_intercept ? spec.parameter_index : p + spec.parameter_index
+        fixed += _gllv_cov_prior_nll(spec, θ[index])
+    end
+    loading = if isfinite(loading_ridge)
+        λ = inv(loading_ridge)^2
+        Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
+        0.5 * λ * sum(abs2, Λ)
+    else
+        zero(eltype(θ))
+    end
+    return fixed, loading
+end
+
 """
-    fit_gllvm_cov(Y; family, X, K, link=nothing, N=nothing, γ_fixed=nothing, …) -> GllvmCovFit
+    fit_gllvm_cov(Y; family, X, K, link=nothing, N=nothing, γ_fixed=nothing,
+                  coefficient_names=nothing, response_names=nothing, priors=nothing,
+                  loading_ridge=nothing, …) -> GllvmCovFit
 
 Fit a non-Gaussian GLLVM **with fixed-effect covariates** by L-BFGS over
 `[β; γ; vec(Λ); (log-dispersion)]` on the offset-augmented Laplace marginal, where
@@ -463,6 +509,24 @@ available; NB1 keeps the finite-difference gradient. `γ_fixed` optionally fixes
 pass a Bool vector of length `size(X, 3)`, an integer index vector, or a Dict
 index=>0.
 
+For `class="fixef"`, `coef` may name either a shared covariate coefficient in
+`coefficient_names` or a response-specific intercept in `response_names`. A
+numeric response matrix has no row names, so direct calls default to
+`trait_1`, …, `trait_p`; supply explicit names to target particular responses.
+Formula calls use the same names, and the long-format formula method uses its
+sorted species levels.
+
+For the Binomial Laplace route, `priors` accepts a Tables.jl table with named
+`class="fixef"` rows using `normal(location,scale)` or
+`student_t(location,scale,df)` on `dpar="mu", scale="link"`. It may also
+contain one `class="loading", coef="all"` row using `ridge(lambda)` on
+`scale="loading_coef"`. Direct calls resolve names against
+`coefficient_names`, which defaults to `x1`, `x2`, …; formula calls provide the
+model-matrix names. Response intercept selectors resolve against `response_names`.
+Other families and routes reject this table. Prior fits set
+`prior_metadata` and retain the data-only `loglik`; their `confint` route is
+refused because penalized curvature is not calibrated uncertainty.
+
 ```julia
 # Poisson abundance with one site covariate, shared coefficient:
 X = reshape(repeat(temp', p), p, n, 1)            # X[t,s,1] = temp[s]
@@ -477,7 +541,8 @@ marginal *and* from the warm start, so the fit depends only on the observed cell
 function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         K::Integer, link::Union{Nothing, Link} = nothing,
         N::Union{Nothing, AbstractMatrix} = nothing, mask = nothing,
-        γ_fixed = nothing,
+        γ_fixed = nothing, coefficient_names = nothing, response_names = nothing, priors = nothing,
+        loading_ridge = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     p, n = size(Y)
@@ -485,6 +550,85 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
     q_full = size(X, 3)
     γ_fixed_mask = _fixed_zero_mask(γ_fixed, q_full, "γ_fixed")
+    cnames = coefficient_names === nothing ? ["x$i" for i in 1:q_full] : String.(coefficient_names)
+    length(cnames) == q_full || throw(DimensionMismatch(
+        "coefficient_names must have length $q_full (got $(length(cnames)))"))
+    all(name -> !isempty(name), cnames) || throw(ArgumentError("coefficient_names must not be empty"))
+    length(unique(cnames)) == length(cnames) || throw(ArgumentError("coefficient_names must be unique"))
+    rnames = response_names === nothing ? ["trait_$i" for i in 1:p] : String.(response_names)
+    length(rnames) == p || throw(DimensionMismatch(
+        "response_names must have length $p (got $(length(rnames)))"))
+    all(name -> !isempty(name), rnames) || throw(ArgumentError("response_names must not be empty"))
+    length(unique(rnames)) == length(rnames) || throw(ArgumentError("response_names must be unique"))
+    table_controls = priors === nothing ? nothing : _gllv_prior_table_controls(priors)
+    priors !== nothing && loading_ridge !== nothing && throw(ArgumentError(
+        "pass the loading-ridge row in priors instead of combining priors with loading_ridge"))
+    any_prior = table_controls !== nothing || loading_ridge !== nothing
+    any_prior && !(family isa Binomial) && throw(ArgumentError(
+        "GLLVModels coefficient/loading priors are supported only by the Binomial covariate Laplace route"))
+    resolved_fixed_priors = NamedTuple[]
+    resolved_fixed_targets = NamedTuple[]
+    resolved_targets = NamedTuple[]
+    if table_controls !== nothing
+        free_indices = findall(!, γ_fixed_mask)
+        seen_fixed_targets = Set{Tuple{Symbol,Int}}()
+        for spec in table_controls.coefficient_priors
+            targets = if spec.coef == "all"
+                vcat([(role=:response_intercept, index=i, coef=string(rnames[i], "::(Intercept)"),
+                       response=rnames[i]) for i in eachindex(rnames)],
+                     [(role=:covariate, index=i, coef=cnames[j], response=nothing)
+                      for (i, j) in enumerate(free_indices)])
+            else
+                response_index = findfirst(==(spec.coef), rnames)
+                coefficient_index = findfirst(==(spec.coef), cnames)
+                response_index !== nothing && coefficient_index !== nothing && throw(ArgumentError(
+                    "fixed-effect prior target `$(spec.coef)` is ambiguous between a response intercept and a covariate coefficient"))
+                if response_index !== nothing
+                    [(role=:response_intercept, index=response_index,
+                      coef=string(rnames[response_index], "::(Intercept)"),
+                      response=rnames[response_index])]
+                elseif coefficient_index !== nothing
+                    γ_fixed_mask[coefficient_index] && throw(ArgumentError(
+                        "fixed-effect prior target `$(spec.coef)` is fixed at zero and cannot be estimated"))
+                    free_index = findfirst(==(coefficient_index), free_indices)
+                    [(role=:covariate, index=free_index, coef=cnames[coefficient_index],
+                      response=nothing)]
+                else
+                    throw(ArgumentError("fixed-effect prior target `$(spec.coef)` is absent from both response_names and coefficient_names"))
+                end
+            end
+            for target in targets
+                key = (target.role, target.index)
+                key in seen_fixed_targets && throw(ArgumentError(
+                    "prior_table contains duplicate or overlapping fixed-effect target `$(target.coef)`"))
+                push!(seen_fixed_targets, key)
+                push!(resolved_fixed_priors, merge(spec, (; coef=target.coef,
+                    parameter_index=target.index, parameter_role=target.role)))
+                if target.role === :response_intercept
+                    push!(resolved_fixed_targets, (; class="fixef", coef=target.coef,
+                        dpar="mu", scale="link", parameter_role=target.role,
+                        response=target.response))
+                else
+                    push!(resolved_fixed_targets, (; class="fixef", coef=target.coef,
+                        dpar="mu", scale="link", parameter_role=target.role))
+                end
+            end
+        end
+        append!(resolved_targets, resolved_fixed_targets)
+        append!(resolved_targets, filter(t -> t.class == "loading", table_controls.resolved_targets))
+        any(t -> t.class == "loading", resolved_targets) && K == 0 &&
+            throw(ArgumentError("loading prior requires K > 0"))
+    end
+    tau_loading = if priors !== nothing
+        table_controls.loading_ridge
+    elseif loading_ridge === nothing
+        Inf
+    else
+        value = Float64(loading_ridge)
+        ((isinf(value) && value > 0) || (isfinite(value) && value > 0)) ||
+            throw(ArgumentError("loading_ridge must be positive finite or Inf"))
+        value
+    end
     X_fit, _ = _slice_fixed_X(X, γ_fixed_mask)
     q = size(X_fit, 3)
     rr = rr_theta_len(p, K)
@@ -511,7 +655,7 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
     Λ0 = _lower_triangular_loadings(Λ0)   # #865: pack_lambda truncates the SVD's upper triangle
     θ0 = has_disp ? vcat(β0, zeros(q), pack_lambda(Λ0), log(_cov_disp_init(family))) :
                     vcat(β0, zeros(q), pack_lambda(Λ0))
-    function negll(θ)
+    function data_negll(θ)
         β = θ[1:p]
         γ = θ[(p + 1):(p + q)]
         Λ = unpack_lambda(θ[(p + q + 1):(p + q + rr)], p, K)
@@ -531,12 +675,22 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         end
         return isfinite(v) ? v : 1e12
     end
+    prior_nll = any_prior ? θ -> begin
+        fixed_penalty, loading_penalty = _gllv_cov_prior_penalties(
+            θ, p, q, K, rr, resolved_fixed_priors, tau_loading)
+        fixed_penalty + loading_penalty
+    end : nothing
+    negll(θ) = begin
+        value = data_negll(θ)
+        value >= 1e12 && return value
+        prior_nll === nothing ? value : value + prior_nll(θ)
+    end
     _rescue_disp_start!(negll, θ0, has_disp, family)   # #1200
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = if _cov_ad_ok(family)
         grad = θ -> _cov_negll_grad(family, Yc, Nm, X_fit, θ, p, q, K, rr, has_disp, lk,
-                                    msk, newton_maxiter, newton_tol)
+                                    msk, newton_maxiter, newton_tol, prior_nll)
         _optimize_with_analytic(negll, grad, θ0, _COV_BFGS(), opts)
     else
         Optim.optimize(negll, θ0, ls, opts; autodiff = :finite)
@@ -548,7 +702,63 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     disp̂ = has_disp ? exp(θ̂[p + q + rr + 1]) : NaN
     loglik, conv, iters = _fit_verdict(res)
-    conv = _eta_cap_verdict(conv, lk, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
-                            caller = "fit_gllvm_cov")
-    return GllvmCovFit(family, β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, disp̂, lk, loglik, conv, iters)
+    prior_metadata = if any_prior
+        data_nll = data_negll(θ̂)
+        fixed_penalty, loading_penalty = _gllv_cov_prior_penalties(
+            θ̂, p, q, K, rr, resolved_fixed_priors, tau_loading)
+        total_objective = data_nll + fixed_penalty + loading_penalty
+        loglik = -data_nll
+        metadata = (; input_table = deepcopy(priors), resolved_targets,
+           coefficient_names = copy(cnames),
+           fixed_effect_penalty = Float64(fixed_penalty),
+           loading_penalty = Float64(loading_penalty),
+           total_objective = Float64(total_objective),
+           penalized_loglik = -Float64(total_objective))
+        any(t -> hasproperty(t, :response), resolved_targets) ?
+            merge(metadata, (; response_names = copy(rnames))) : metadata
+    else
+        nothing
+    end
+    eta_cap = _eta_cap_guarded(lk) && _eta_cap_contact(
+        β̂, _build_offset(X_fit, γ̂_free); mask = msk)
+    _eta_cap_verdict(conv, lk, β̂, _build_offset(X_fit, γ̂_free); mask = msk,
+        caller = "fit_gllvm_cov")
+    boundary_params = eta_cap ? ["mu:eta_cap"] : String[]
+    loading_scale = max(1.0, maximum(abs, Λ̂; init = 0.0))
+    for j in 1:min(K, p)
+        abs(Λ̂[j, j]) <= 1e-8 * loading_scale && push!(boundary_params, "loading_factor[$j]")
+    end
+    if has_disp && (!isfinite(disp̂) || disp̂ <= sqrt(eps(Float64)))
+        push!(boundary_params, string(_cov_dispname(family), ":boundary"))
+    end
+    data_nll_at_fit = data_negll(θ̂)
+    fixed_penalty, loading_penalty = _gllv_cov_prior_penalties(
+        θ̂, p, q, K, rr, resolved_fixed_priors, tau_loading)
+    log_prior = -Float64(fixed_penalty + loading_penalty)
+    failed_objective = _nll_failed(negll(θ̂))
+    loglik = _nll_failed(data_nll_at_fit) ? -Inf : -Float64(data_nll_at_fit)
+    prior_targets = [string(hasproperty(t, :class) ? t.class : "prior", ":",
+                           hasproperty(t, :coef) ? t.coef : "")
+                     for t in resolved_targets]
+    if isfinite(tau_loading) && !any(t -> hasproperty(t, :class) && t.class == "loading", resolved_targets)
+        push!(prior_targets, "loading:all")
+    end
+    gradient = failed_objective ? fill(NaN, length(θ̂)) : _fit_objective_gradient(negll, θ̂)
+    hessian = failed_objective ? fill(NaN, length(θ̂), length(θ̂)) : _fit_objective_hessian(negll, θ̂)
+    hessian_unpenalised = failed_objective ? fill(NaN, length(θ̂), length(θ̂)) :
+        _fit_objective_hessian(data_negll, θ̂)
+    diagnostics = _fit_convergence(optimizer_finished = Optim.converged(res),
+        objective = failed_objective ? -Inf : loglik + log_prior,
+        logLik = loglik, log_prior = log_prior,
+        penalized = any_prior, gradient = gradient, hessian = hessian,
+        hessian_unpenalised = hessian_unpenalised, prior_targets = prior_targets,
+        boundary_params = boundary_params, boundary_check_available = true,
+        relative_gradient_tol = g_tol)
+    conv = diagnostics.status === :converged
+    if prior_metadata !== nothing
+        prior_metadata = merge(prior_metadata, (; logLik=loglik,
+            log_prior, objective=loglik + log_prior))
+    end
+    return GllvmCovFit(family, β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, disp̂,
+        lk, loglik, conv, iters, prior_metadata, diagnostics)
 end

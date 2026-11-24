@@ -38,6 +38,199 @@ const _NLL_FAIL_THRESHOLD = 1e11
 
 _nll_failed(nll::Real) = !isfinite(nll) || nll >= _NLL_FAIL_THRESHOLD
 
+"""Diagnostics used by the staged fit-convergence contract.
+
+`objective` is maximised and equals `logLik + log_prior`; `logLik` is always
+the unpenalised data objective. `pd_hessian` describes the objective used for
+the fit, while `pd_hessian_unpenalised` records data-only curvature. A fit can
+remain converged when only the penalised Hessian is positive definite; in that
+case `prior_held_params` names the prior targets that supplied the missing
+curvature.
+"""
+struct FitConvergence
+    status::Symbol
+    optimizer_finished::Bool
+    relative_gradient::Float64
+    pd_hessian::Bool
+    penalized::Bool
+    objective::Float64
+    logLik::Float64
+    log_prior::Float64
+    pd_hessian_unpenalised::Bool
+    prior_held_params::Vector{String}
+    se_type::Symbol
+    boundary_check_available::Bool
+    boundary_params::Vector{String}
+end
+
+const _GLLVM_CONVERGENCE_PROPERTIES = (:status, :optimizer_finished, :relative_gradient,
+    :pd_hessian, :penalized, :objective, :logLik, :log_prior,
+    :pd_hessian_unpenalised, :prior_held_params, :se_type,
+    :boundary_check_available, :boundary_params)
+
+# Used only by legacy/approximate result constructors that cannot supply the
+# optimizer, gradient, boundary scan, and Hessian evidence. Their convergence
+# is therefore unavailable and must fail closed.
+_fit_unavailable_convergence(logLik::Real) = FitConvergence(:degenerate, false,
+    Inf, false, false, Float64(logLik), Float64(logLik), 0.0, false,
+    String[], :ml, false, String[])
+
+"""Return whether a finite symmetric Hessian is positive definite."""
+function _fit_hessian_pd(H)
+    H === nothing && return false
+    H isa AbstractMatrix || return false
+    size(H, 1) == size(H, 2) || return false
+    all(isfinite, H) || return false
+    isapprox(H, H'; rtol = 1e-8, atol = 1e-10) || return false
+    try
+        cholesky(Symmetric((H + H') / 2); check = true)
+        return true
+    catch e
+        e isa PosDefException || rethrow()
+        return false
+    end
+end
+
+"""Central finite-difference gradient for a scalar objective."""
+function _fit_fd_gradient(objective, θ::AbstractVector; step::Float64 = 1e-5)
+    g = Vector{Float64}(undef, length(θ))
+    for j in eachindex(θ)
+        h = step * max(1.0, abs(Float64(θ[j])))
+        plus = Float64.(θ); minus = Float64.(θ)
+        plus[j] += h; minus[j] -= h
+        fp, fm = objective(plus), objective(minus)
+        (fp isa Real && fm isa Real && isfinite(fp) && isfinite(fm)) || return fill(NaN, length(θ))
+        g[j] = (fp - fm) / (2h)
+    end
+    return g
+end
+
+"""Finite-difference a gradient to obtain a symmetric Hessian."""
+function _fit_fd_hessian_from_gradient(gradient, θ::AbstractVector; step::Float64 = 1e-4)
+    d = length(θ)
+    H = Matrix{Float64}(undef, d, d)
+    for j in eachindex(θ)
+        h = step * max(1.0, abs(Float64(θ[j])))
+        plus = Float64.(θ); minus = Float64.(θ)
+        plus[j] += h; minus[j] -= h
+        gp, gm = gradient(plus), gradient(minus)
+        (gp isa AbstractVector && gm isa AbstractVector && length(gp) == d &&
+            length(gm) == d && all(isfinite, gp) && all(isfinite, gm)) ||
+            return fill(NaN, d, d)
+        H[:, j] .= (gp .- gm) ./ (2h)
+    end
+    return (H + H') / 2
+end
+
+function _fit_hessian_from_gradient(gradient, θ::AbstractVector; fd_step::Float64 = 1e-4)
+    H = try
+        ForwardDiff.jacobian(gradient, Float64.(θ))
+    catch
+        nothing
+    end
+    if H === nothing || size(H) != (length(θ), length(θ)) || !all(isfinite, H)
+        H = _fit_fd_hessian_from_gradient(gradient, θ; step = fd_step)
+    else
+        H = (H + H') / 2
+    end
+    return H
+end
+
+function _fit_objective_gradient(objective, θ::AbstractVector)
+    g = try
+        ForwardDiff.gradient(objective, Float64.(θ))
+    catch
+        nothing
+    end
+    if g === nothing || length(g) != length(θ) || !all(isfinite, g)
+        return _fit_fd_gradient(objective, θ)
+    end
+    return g
+end
+
+function _fit_fd_hessian(objective, θ::AbstractVector; step::Float64 = 1e-4)
+    d = length(θ)
+    H = Matrix{Float64}(undef, d, d)
+    x = Float64.(θ)
+    f0 = objective(x)
+    f0 isa Real && isfinite(f0) || return fill(NaN, d, d)
+    hs = step .* max.(1.0, abs.(x))
+    for i in 1:d
+        xp, xm = copy(x), copy(x)
+        xp[i] += hs[i]; xm[i] -= hs[i]
+        fp, fm = objective(xp), objective(xm)
+        (fp isa Real && fm isa Real && isfinite(fp) && isfinite(fm)) || return fill(NaN, d, d)
+        H[i, i] = (fp - 2 * f0 + fm) / hs[i]^2
+        for j in (i + 1):d
+            xpp, xpm, xmp, xmm = copy(x), copy(x), copy(x), copy(x)
+            xpp[i] += hs[i]; xpp[j] += hs[j]
+            xpm[i] += hs[i]; xpm[j] -= hs[j]
+            xmp[i] -= hs[i]; xmp[j] += hs[j]
+            xmm[i] -= hs[i]; xmm[j] -= hs[j]
+            vals = (objective(xpp), objective(xpm), objective(xmp), objective(xmm))
+            all(v -> v isa Real && isfinite(v), vals) || return fill(NaN, d, d)
+            Hij = (vals[1] - vals[2] - vals[3] + vals[4]) / (4hs[i] * hs[j])
+            H[i, j] = Hij
+            H[j, i] = Hij
+        end
+    end
+    return H
+end
+
+function _fit_objective_hessian(objective, θ::AbstractVector)
+    H = try
+        ForwardDiff.hessian(objective, Float64.(θ))
+    catch
+        nothing
+    end
+    if H !== nothing && size(H) == (length(θ), length(θ)) && all(isfinite, H) &&
+       isapprox(H, H'; rtol = 1e-8, atol = 1e-10)
+        return Matrix(Symmetric((H + H') / 2))
+    end
+    return _fit_fd_hessian(objective, θ)
+end
+
+"""Create one fit verdict from objective, gradient, curvature and boundary evidence.
+
+This is the common gate for fitters that provide those quantities. Missing or
+invalid curvature is classified as `:degenerate`; it is never silently treated
+as a successful fit. `relative_gradient` is max-absolute gradient divided by
+`max(1, abs(objective))`.
+"""
+function _fit_convergence(; optimizer_finished::Bool, objective::Real, logLik::Real,
+        log_prior::Real = 0.0, penalized::Bool = !iszero(log_prior),
+        gradient, hessian, hessian_unpenalised = hessian,
+        prior_targets = String[], boundary_params = String[],
+        boundary_check_available::Bool = false,
+        relative_gradient_tol::Real = 1e-5)
+    isfinite(relative_gradient_tol) && relative_gradient_tol > 0 ||
+        throw(ArgumentError("relative_gradient_tol must be positive and finite"))
+    grad = try Float64.(gradient) catch; Float64[] end
+    finite = isfinite(objective) && isfinite(logLik) && isfinite(log_prior) &&
+        !isempty(grad) && all(isfinite, grad)
+    relative_gradient = finite ? maximum(abs, grad) / max(1.0, abs(Float64(objective))) : Inf
+    pd = _fit_hessian_pd(hessian)
+    pd0 = _fit_hessian_pd(hessian_unpenalised)
+    held = pd && !pd0 && penalized ? String.(prior_targets) : String[]
+    boundary = String.(boundary_params)
+    status = if !finite
+        :degenerate
+    elseif !optimizer_finished || relative_gradient > relative_gradient_tol
+        :not_converged
+    elseif !isempty(boundary)
+        :boundary
+    elseif !boundary_check_available
+        :degenerate
+    elseif !pd && isempty(held)
+        :degenerate
+    else
+        :converged
+    end
+    return FitConvergence(status, optimizer_finished, relative_gradient, pd, penalized,
+        Float64(objective), Float64(logLik), Float64(log_prior), pd0, held,
+        penalized ? :penalised : :ml, boundary_check_available, boundary)
+end
+
 """
     _fit_verdict(res) -> (loglik, converged, iterations)
     _fit_verdict(nll, converged, iterations) -> (loglik, converged, iterations)
@@ -52,6 +245,47 @@ object (an `iterations = 0` early return, or a grid search keeping a best record
 """
 function _fit_verdict(res)
     return _fit_verdict(Optim.minimum(res), Optim.converged(res), Optim.iterations(res))
+end
+
+"""Evaluate the universal convergence contract when a fitter supplies its objective.
+
+Routes that call `_fit_verdict(res)` without their objective can only retain the
+legacy optimizer/sentinel check. New and migrated fitters should pass the exact
+minimization objective here, plus their route-specific boundary evidence.
+"""
+function _fit_objective_verdict(res, objective; boundary_params = String[],
+        boundary_check_available::Bool = false, relative_gradient_tol::Real = 1e-5)
+    diagnostics = _fit_objective_diagnostics(Optim.minimizer(res), Optim.converged(res),
+        Optim.iterations(res), objective; boundary_params = boundary_params,
+        boundary_check_available = boundary_check_available,
+        relative_gradient_tol = relative_gradient_tol)
+    return diagnostics.logLik, diagnostics.status === :converged, Optim.iterations(res)
+end
+
+function _fit_objective_diagnostics(θ̂::AbstractVector, optimizer_finished::Bool,
+        iterations::Integer, objective; boundary_params = String[],
+        boundary_check_available::Bool = false, relative_gradient_tol::Real = 1e-5)
+    nll = try objective(θ̂) catch; Inf end
+    failed = !(nll isa Real) || _nll_failed(nll)
+    gradient = failed ? fill(NaN, length(θ̂)) : _fit_objective_gradient(objective, θ̂)
+    hessian = failed ? fill(NaN, length(θ̂), length(θ̂)) :
+        _fit_objective_hessian(objective, θ̂)
+    ll = failed ? -Inf : -Float64(nll)
+    diagnostics = _fit_convergence(optimizer_finished = optimizer_finished,
+        objective = ll, logLik = ll, gradient = gradient, hessian = hessian,
+        boundary_params = boundary_params,
+        boundary_check_available = boundary_check_available,
+        relative_gradient_tol = relative_gradient_tol)
+    return diagnostics
+end
+
+function _fit_objective_verdict(θ̂::AbstractVector, optimizer_finished::Bool,
+        iterations::Integer, objective; boundary_params = String[],
+        boundary_check_available::Bool = false, relative_gradient_tol::Real = 1e-5)
+    diagnostics = _fit_objective_diagnostics(θ̂, optimizer_finished, iterations, objective;
+        boundary_params = boundary_params, boundary_check_available = boundary_check_available,
+        relative_gradient_tol = relative_gradient_tol)
+    return diagnostics.logLik, diagnostics.status === :converged, Int(iterations)
 end
 
 function _fit_verdict(nll::Real, converged::Bool, iterations::Integer)
