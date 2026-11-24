@@ -457,6 +457,7 @@ function profile_ci(fit::GllvmFit, param_index::Integer;
     y === nothing && throw(ArgumentError(
         "profile_ci requires the data matrix `y` (the same matrix passed to fit_gaussian_gllvm)"))
     _confint_reject_missing_response_cells(y, "profile_ci")
+    _has_gaussian_record(fit) || _require_complete_y("profile_ci", y)
     X = _mean_X(fit, X, size(y, 2))
 
     if _has_gaussian_record(fit)
