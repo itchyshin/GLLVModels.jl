@@ -416,6 +416,7 @@ _register_shard_table!(8, (
         "test_totoro_323_track_a_harness.jl", "test_temporal_lowrank.jl", "test_derived_ci_sweep.jl",
         "test_spde_projector_validation.jl", "test_docstring_ref_linebreaks.jl", "test_comparator_targets.jl",
         "test_core070_covariance_registry.jl", "test_predictive_check_binomial.jl", "test_bootstrap_sigma_r.jl",
+        "test_link_residual_undefined_link.jl",
     ),
     (
         "test_W_and_diag.jl", "test_signed_sigma_phy.jl", "test_precision_multivariate.jl",
@@ -1036,6 +1037,7 @@ println(_SHARD === nothing ?
     _shard_include("test_variational_dgamma.jl")
     _shard_include("test_variational_exponential.jl")
     _shard_include("test_fix_1108.jl")
+    _shard_include("test_all_missing_trait.jl")   # a trait with no observed cell is an ArgumentError
     _shard_include("test_va_vs_laplace.jl")
     _shard_include("test_va_objective_missing_nan.jl")
     _shard_include("test_random_slopes.jl")
@@ -1256,6 +1258,7 @@ println(_SHARD === nothing ?
     _shard_include("test_zero_column_warning.jl")
     # Formula covariate columns typed Union{Missing,T} (refs #1190).
     _shard_include("test_formula_missing_covariate.jl")
+    _shard_include("test_temporal_missing_covariate.jl")
     # fit_mixed_gllvm: an unsupported family marker gives the documented ArgumentError, not a default_link MethodError.
     _shard_include("test_mixed_unsupported_family.jl")
     # Temporal parser refusals name the marker the user called (refs #1286).
@@ -1270,6 +1273,9 @@ println(_SHARD === nothing ?
     _shard_include("test_profile_quad_cancellation.jl")
     # PR 1037 layer (#739 twin parity). Appended last so no existing file changes shard.
     _shard_include("test_twin_parity_zip_tweedie_beta_gamma_739.jl")
+    # link_residual on undefined (family, link) pairs throws ArgumentError (refs #1161).
+    # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
+    _shard_include("test_link_residual_undefined_link.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
