@@ -30,6 +30,16 @@ linkinv(::CLogLogLink, η)  = -expm1(-exp(η))
 linkinv(::IdentityLink, η) = η
 linkinv(::LogLink, η)      = exp(η)
 
+# Count families with a positive-mean support (GP1, NB1) accept the log and identity
+# links; logit/probit/cloglog map η into (0, 1) or worse and used to surface as a raw
+# DomainError from the Laplace inner loop (#1161).
+function _require_positive_mean_link(fname::AbstractString, link::Link)
+    (link isa LogLink || link isa IdentityLink) || throw(ArgumentError(
+        "$fname: link = $(nameof(typeof(link))) is not supported for a positive-mean " *
+        "count family; use LogLink() (default) or IdentityLink()."))
+    return nothing
+end
+
 """
     mu_eta(link, η) -> dμ/dη
 

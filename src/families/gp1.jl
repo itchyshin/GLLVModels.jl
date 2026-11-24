@@ -293,6 +293,7 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
         α_bound::Real = 2.0,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _require_positive_mean_link("fit_gp1_gllvm", link)
     _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_gp1_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
