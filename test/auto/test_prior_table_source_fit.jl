@@ -13,6 +13,19 @@ using Test, GLLVModels
          scale="natural_sd", trait="t1", kernel=""),
     ]
 
+    # Table-routed Psi priors must retain the native adapter's fixed-residual
+    # requirement. This guard is independent of the optimizer start.
+    @test_throws ArgumentError fit_gaussian_sources(Y; sources,
+        coefficient_names=traits, trait_names=traits,
+        priors=[rows[2]], iterations=0)
+
+    # Fixed-effect-only tables do not need trait selectors, even when the
+    # source has unique-variance coordinates whose diagnostics need labels.
+    fixed_only_without_traits = fit_gaussian_sources(Y; sources,
+        coefficient_names=traits, sigma_eps_fixed=.2, start=theta,
+        priors=[rows[1]], iterations=0)
+    @test fixed_only_without_traits isa GLLVModels.PenalizedGaussianSourcesFit
+
     fit = try
         fit_gaussian_sources(Y; sources, coefficient_names=traits,
             sigma_eps_fixed=.2, trait_names=traits, start=theta,

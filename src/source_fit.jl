@@ -353,6 +353,8 @@ function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
         residual_fixed || throw(ArgumentError("Psi SD priors currently require sigma_eps_fixed"))
         (_resolve_psi_sd_priors(psi_rows,ss,trait_names,p,q),String.(trait_names))
     end
+    any(row -> row.target === :unique_variance, resolved_priors) && !residual_fixed &&
+        throw(ArgumentError("Psi SD priors currently require sigma_eps_fixed"))
     means=vec(mean(data,dims=2))
     if !residual_fixed
         if default_means

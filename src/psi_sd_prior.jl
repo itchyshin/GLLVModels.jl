@@ -270,7 +270,8 @@ function _psi_sd_prior_fit(fit,data,likelihood,objective,rows,result,g_tol,trait
             n_unique=source.common ? 1 : p
             for trait in 1:n_unique
                 trait_label=source.common ? "common" :
-                    (trait_names === nothing ? "trait$trait" : String(trait_names[trait]))
+                    (trait_names === nothing || length(trait_names) != p ?
+                        "trait$trait" : String(trait_names[trait]))
                 label="$(source.name).unique_sd[$trait_label]"
                 push!(names,label)
                 sd=exp(theta[cursor+trait])

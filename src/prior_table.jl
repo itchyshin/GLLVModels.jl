@@ -174,7 +174,7 @@ function _resolve_gaussian_source_prior_table(table, sources, coefficient_names,
         length(unique(traits)) == p || throw(ArgumentError(
             "trait_names must contain one unique name per response trait for Psi priors"))
     else
-        traits = trait_names === nothing ? String[] : String.(trait_names)
+        traits = trait_names === nothing ? nothing : String.(trait_names)
     end
     resolved = NamedTuple[]
     seen = Set{Tuple{Symbol,String}}()
