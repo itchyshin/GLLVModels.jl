@@ -129,7 +129,6 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family 
         link::Union{Nothing, Link} = nothing, σ_row_init::Real = 1.0,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
-    _refuse_row_route_family(family, "fit_row_random_gllvm")
     _refuse_mask_route("fit_row_random_gllvm", mask)
     p, n = size(Y)
     n >= 1 || throw(ArgumentError("Y must have at least one site (column)"))
@@ -138,7 +137,10 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family 
     lk = link === nothing ? _cov_default_link(family) : link
     Nm = N === nothing ? fill(1, p, n) : N
     has_disp = _cov_has_disp(family)
+    # Support first so a bad cell still names Y[t, i] (#730); then refuse NB1
+    # and the other families this route does not fit (#1238).
     _check_family_response_support(family, Y, nothing; caller = "fit_row_random_gllvm", N = N)
+    _refuse_row_route_family(family, "fit_row_random_gllvm")
 
     # warm start: per-species link-scale row means for β, SVD for Λ, σ_row_init for σ_row.
     Zemp = _cov_zemp(family, Y, Nm, lk)
