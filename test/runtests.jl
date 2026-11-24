@@ -100,6 +100,9 @@ _register_shard_table!(4, (
         "test_mask_missing_763.jl", "test_bootstrap_sigma_r.jl",
         "test_sparse_phy_grad.jl",
         "test_nb_n_init_mite_1022.jl",
+        "test_cov_1124e_fixed_mask.jl", "test_cov_1124e_optimizer.jl",
+        "test_cov_1124e_support.jl", "test_cov_1124e_show.jl",
+        "test_cov_1124e_small_helpers.jl",
     ),
     (
         "test_shard_selection.jl", "test_animal_latent.jl", "test_precision_multivariate.jl",
@@ -285,6 +288,9 @@ _register_shard_table!(8, (
         "test_zip_observed_laplace.jl", "test_convergence_553_554.jl", "test_response_support_730.jl",
         "test_derived_decisions.jl", "test_n_lt_p.jl", "test_random_slope_internals.jl",
         "test_docstring_postfit_mask_offset_750.jl", "test_docstring_confint_lv_effects.jl", "test_mask_missing_763.jl",
+        "test_cov_1124e_fixed_mask.jl", "test_cov_1124e_optimizer.jl",
+        "test_cov_1124e_support.jl", "test_cov_1124e_show.jl",
+        "test_cov_1124e_small_helpers.jl",
     ),
     (
         "test_fixed_effects.jl", "test_sparse_phy.jl", "test_joint_phylo_grouped_gaussian.jl",
@@ -1274,6 +1280,13 @@ println(_SHARD === nothing ?
     # link_residual on undefined (family, link) pairs throws ArgumentError (refs #1161).
     # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
     _shard_include("test_link_residual_undefined_link.jl")
+    # Coverage-gap helpers (1124e). Pinned to shard 1 of the 4-way and 8-way tables
+    # (not shard 4). Appended so no earlier file changes position.
+    _shard_include("test_cov_1124e_fixed_mask.jl")
+    _shard_include("test_cov_1124e_optimizer.jl")
+    _shard_include("test_cov_1124e_support.jl")
+    _shard_include("test_cov_1124e_show.jl")
+    _shard_include("test_cov_1124e_small_helpers.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
