@@ -1,3 +1,9 @@
+2026-11-24: #1179 phylo_unique σ_phy=0 collapse. Σ_phy-scaled default start
+(`0.5/sqrt(mean(diag(Σ_phy)))`), one-shot boundary restart when stalled at the
+no-phylo submodel, `sigma_phy_boundary` + `converged=false` on EM;
+`fit_gaussian_gllvm` refit + converged veto. Test
+`test_phylo_unique_sigma_phy_boundary.jl` (9/9); issue 12-cell grid: 0 collapsed.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:

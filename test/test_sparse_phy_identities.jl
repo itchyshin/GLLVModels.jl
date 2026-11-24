@@ -66,7 +66,7 @@ function warmstart(fx)
     Λ0, σ0 = GLLVModels.ppca_init(Matrix{Float64}(fx.y), 1)
     Λ_B0   = Matrix{Float64}(Λ0)
     σ_eps0 = float(σ0)
-    σ_phy0 = fill(0.1 * sqrt(mean(abs2, fx.y)), p)
+    σ_phy0 = fill(GLLVModels._scaled_sigma_phy_init(fx.Σ_phy), p)
     return Λ_B0, σ_eps0, σ_phy0
 end
 

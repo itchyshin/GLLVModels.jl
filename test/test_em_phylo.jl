@@ -156,7 +156,10 @@ end
         y, Σ = _sim_phylo_unique(tree, Λ_B, fill(0.9, p), 0.5, 400; seed = 17)
 
         fit = fit_gaussian_gllvm(y; K = 1, has_phy_unique = true, Σ_phy = Σ)
-        emf = em_fit_phylo(y, 1, Σ; tol = 1e-10, max_iter = 10_000)
+        # Keep the legacy data-scaled start so this fixture still exercises
+        # sign-pattern divergence from the default Σ-scaled start (#1179).
+        emf = em_fit_phylo(y, 1, Σ; tol = 1e-10, max_iter = 10_000,
+                           σ_phy_init = fill(0.1 * sqrt(mean(abs2, y)), p))
         # EM monotone (its own invariant holds regardless of the dense fit).
         @test minimum(diff(emf.loglik_trace)) ≥ -1e-9
         # Here EM finds a mixed-sign σ_phy optimum.
