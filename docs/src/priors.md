@@ -91,7 +91,9 @@ fit = fit_gaussian_sources(Y; sources, coefficient_names=[:t1,:t2,:t3],
 The explicit source route admits fixed-effect-only, `unique_variance`-only, and
 mixed tables. Psi rows require complete Gaussian data, a fixed positive residual
 SD, and named rank-one latent sources with `unique=true, common=false`; a
-fixed-effect-only table may use a freely estimated residual SD. Its dense covariance has
+fixed-effect-only table may use a freely estimated residual SD. An empty
+`NamedTuple[]` is the no-prior form and preserves the ordinary fit result. Its
+dense covariance has
 quadratic memory and cubic factorization cost in the number of observed cells.
 The legacy `psi_sd_priors` keyword remains available, but it cannot be combined
 with `priors` in one fit.

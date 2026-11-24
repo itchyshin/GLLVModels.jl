@@ -45,6 +45,11 @@ end
 function _parse_gllvm_prior_rows(table)
     Tables.istable(typeof(table)) || throw(ArgumentError(
         "priors must be a Tables.jl table with `prior`, `class`, and `coef` columns"))
+    # `NamedTuple[]` is the row-oriented empty-table spelling used when a
+    # caller builds priors conditionally. It has no schema to validate and
+    # means the same no-prior fit as `priors = nothing`.
+    table isa AbstractVector && isempty(table) && eltype(table) <: NamedTuple &&
+        return GLLVMPriorRow[]
     # NamedTuple vectors are a convenient row-oriented input for mixed prior
     # classes. Their rows may omit selectors that are optional for that class
     # (for example, a `fixef` row has no `trait` or `kernel`, while a
