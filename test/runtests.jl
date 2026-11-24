@@ -1004,6 +1004,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nobs_vector_y_1164.jl")
     _shard_include("test_newick_input_messages_1165.jl")
     _shard_include("test_beta_grouped_ci_y_clamp_1155.jl")
+    _shard_include("test_beta_speciescov_start_1200.jl")
     _shard_include("test_summary_table.jl")
     _shard_include("test_covariates.jl")
     _shard_include("test_cov_mode_search_gamma.jl")
@@ -1036,6 +1037,7 @@ println(_SHARD === nothing ?
     _shard_include("test_variational_dgamma.jl")
     _shard_include("test_variational_exponential.jl")
     _shard_include("test_fix_1108.jl")
+    _shard_include("test_all_missing_trait.jl")   # a trait with no observed cell is an ArgumentError
     _shard_include("test_va_vs_laplace.jl")
     _shard_include("test_va_objective_missing_nan.jl")
     _shard_include("test_random_slopes.jl")
@@ -1256,6 +1258,7 @@ println(_SHARD === nothing ?
     _shard_include("test_zero_column_warning.jl")
     # Formula covariate columns typed Union{Missing,T} (refs #1190).
     _shard_include("test_formula_missing_covariate.jl")
+    _shard_include("test_temporal_missing_covariate.jl")
     # fit_mixed_gllvm: an unsupported family marker gives the documented ArgumentError, not a default_link MethodError.
     _shard_include("test_mixed_unsupported_family.jl")
     # Temporal parser refusals name the marker the user called (refs #1286).

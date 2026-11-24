@@ -198,6 +198,14 @@ For negative-binomial responses, re-measured on the corrected NB2 fitting code
 datasets on average (`:bic` 0.840); its misses, at small n with p = 10 and
 K = 3, pick too few dimensions.
 
+Default against gllvmTMB: the default is kept as `:bic_sites`, where the penalty
+is `log(n)` with `n` the number of sites. gllvmTMB's `select_lv()` defaults to
+`criterion = "bic"`, whose penalty is `log` of the number of observed cells
+(`p·n` with no missing values), which is this package's `:bic`. The two rules can
+choose different `K` on the same data. To reproduce gllvmTMB's choice, pass
+`criterion = :bic`. The `bic` column of the result is always the `log(p·n)`
+version, so the table matches gllvmTMB whichever criterion chose the row.
+
 Binary (single-trial `Binomial`) data get a loading ridge during the sweep:
 every fit in the sweep — including a
 warm-start refit — is called with `loading_ridge = binary_ridge` (default
