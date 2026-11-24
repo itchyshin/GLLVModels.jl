@@ -1,3 +1,5 @@
+2026-11-24: #1210 bootstrap loading alignment. `julia --project=. test/test_bootstrap_loading_alignment.jl`: 11 passed; `test/test_confint_bootstrap.jl`: 9 passed (same Julia 1.13.4 session).
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
