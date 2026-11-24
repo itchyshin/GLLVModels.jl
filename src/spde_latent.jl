@@ -305,11 +305,15 @@ sites) observed at the M rows of `locs`, over the triangular mesh (`nodes`,
 `tris`). The FEM matrices and the projector `A` are built once; each evaluation
 rebuilds the sparse precision `Q = spde_precision(Cdiag, G, exp(logκ), exp(logτ); α)`.
 
-The parameter vector is `θ = [β; pack_lambda(Λ); log κ; log τ; <log-dispersion>]`,
-where the trailing dispersion block is empty for the no-dispersion families
-(Poisson, Bernoulli/Binomial) and a single `log σ²` (Gaussian) or `log r` (negative
-binomial) otherwise — jointly estimated. Supply trial counts `N` (p×M) for
-Binomial. Warm start: empirical link-scale intercepts + an SVD loadings init;
+The parameter vector is `θ = [β; pack_lambda(Λ); log κ; log τ; <log-dispersion>]`.
+The trailing dispersion block has length 0 for families with no free nuisance
+(Poisson, Bernoulli/Binomial, Gamma, Beta, and the other Laplace families
+admitted here): the shape or precision carried by the `family` argument is
+**fixed for the fit** (unlike `fit_gllvm`, which estimates Gamma shape and Beta
+precision). Only `Normal` (one shared `log σ²`) and `NegativeBinomial` (one
+shared `log r`) append a jointly estimated dispersion scalar. Supply trial
+counts `N` (p×M) for Binomial. Warm start: empirical link-scale intercepts + an
+SVD loadings init;
 `κ`, `τ` from `κ_init`, `τ_init`; a family-appropriate dispersion init.
 """
 function fit_spde_latent_gllvm(Y::AbstractMatrix, nodes::AbstractMatrix,
