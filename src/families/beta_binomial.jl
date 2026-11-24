@@ -21,7 +21,9 @@
 # This file therefore runs its OWN per-site Laplace (mirroring ordered_beta.jl):
 # the per-trait score s_t = ∂log p/∂η and weight W_t = −∂²log p/∂η² are obtained
 # by ForwardDiff on the scalar map η → log p (lower risk than the digamma score /
-# Hessian), with W_t clamped to ≥ 1e-8 for SPD. The trial counts N are threaded
+# Hessian). The Laplace log-determinant uses the raw observed weight; the inner
+# mode search floors each W_t to [`BB_LAPLACE_WEIGHT_FLOOR`](@ref) only to keep
+# `Λ'WΛ + I` SPD for Newton steps (#1209). The trial counts N are threaded
 # through the marginal and the fit exactly like families/binomial.jl threads them.
 
 """
@@ -120,14 +122,30 @@ function betabinomial_logp(y, η, N, φ; link::Link = LogitLink())
            _bb_shift(a, y) + _bb_shift(b, N - y) - _bb_shift(φ, N)
 end
 
-# Per-trait score s_t = ∂log p/∂η and weight W_t = −∂²log p/∂η², via ForwardDiff
-# on the scalar map η → log p. W clamped to ≥ 1e-8 to keep Λ'WΛ + I SPD.
-function _bb_score_weight(y, η, N, φ; link::Link = LogitLink())
+"""
+    BB_LAPLACE_WEIGHT_FLOOR
+
+Lower floor (1e-8) applied to the per-trait **observed** Laplace weight only in the
+inner mode search (`_beta_binomial_mode_search`), not in the log-determinant of the
+marginal (`_beta_binomial_loglik_site` uses the raw weight). At the fitted optimum,
+any observed cell with raw weight below this floor is flagged with converged status
+`:boundary` (#1209).
+"""
+const BB_LAPLACE_WEIGHT_FLOOR = 1e-8
+
+# Per-trait score s_t = ∂log p/∂η and raw weight W_t = −∂²log p/∂η².
+function _bb_observed_score_weight(y, η, N, φ; link::Link = LogitLink())
     f = ηv -> betabinomial_logp(y, ηv, N, φ; link = link)
     g = ηv -> ForwardDiff.derivative(f, ηv)
     s = g(η)
     W = -ForwardDiff.derivative(g, η)
-    return s, max(W, 1e-8)
+    return s, W
+end
+
+# Mode-search score/weight: floor W so Λ'WΛ + I stays SPD for Newton steps only.
+function _bb_score_weight(y, η, N, φ; link::Link = LogitLink())
+    s, W = _bb_observed_score_weight(y, η, N, φ; link = link)
+    return s, max(W, BB_LAPLACE_WEIGHT_FLOOR)
 end
 
 # φ can be shared (scalar, existing API) or per-trait (length-p vector, the
@@ -275,11 +293,42 @@ function _beta_binomial_loglik_site(y::AbstractVector, N::AbstractVector,
         end
         φt = _bb_phi_at(φ, t)
         ℓ += betabinomial_logp(y[t], η[t], N[t], φt; link = link)
-        _, Wt = _bb_score_weight(y[t], η[t], N[t], φt; link = link)
+        _, Wt = _bb_observed_score_weight(y[t], η[t], N[t], φt; link = link)
         W[t] = Wt
     end
     A = Symmetric(Λ' * (W .* Λ) + I)
+    (size(A, 1) == 0 || eigmin(A) > 0) || return -Inf
     return ℓ - 0.5 * dot(z, z) - 0.5 * _laplace_logdet(A)
+end
+
+# Post-fit Laplace health: count observed cells whose raw observed weight sits below
+# [`BB_LAPLACE_WEIGHT_FLOOR`](@ref), and the smallest site precision eigenvalue.
+function _bb_laplace_health(Y::AbstractMatrix, N::AbstractMatrix, Λ::AbstractMatrix,
+        β::AbstractVector, φ::Union{Real, AbstractVector}; link::Link = LogitLink(),
+        mask = nothing, offset::Union{Nothing, AbstractMatrix} = nothing,
+        maxiter::Integer = 100, tol::Real = 1e-9)
+    p, n = size(Y)
+    K = size(Λ, 2)
+    n_floor = 0; n_obs = 0
+    mineig = K == 0 ? Inf : Inf
+    @inbounds for i in axes(Y, 2)
+        mi = mask === nothing ? nothing : view(mask, :, i)
+        oi = offset === nothing ? nothing : view(offset, :, i)
+        y = view(Y, :, i)
+        Ni = view(N, :, i)
+        z = _beta_binomial_mode(y, Ni, Λ, β, φ; link = link, mask = mi, offset = oi,
+                                maxiter = maxiter, tol = tol)
+        η = β .+ (oi === nothing ? false : oi) .+ Λ * z
+        W = zeros(p)
+        @inbounds for t in 1:p
+            (mi !== nothing && !mi[t]) && continue
+            n_obs += 1
+            _, W[t] = _bb_observed_score_weight(y[t], η[t], Ni[t], _bb_phi_at(φ, t); link = link)
+            W[t] < BB_LAPLACE_WEIGHT_FLOOR && (n_floor += 1)
+        end
+        K > 0 && (mineig = min(mineig, eigmin(Symmetric(Λ' * (W .* Λ) + I))))
+    end
+    return n_floor, n_obs, mineig
 end
 
 """
@@ -398,12 +447,19 @@ is reported as `loglik = -Inf`, never as a log-likelihood:
   mass at μ and φ is not identifiable from a Binomial fit, whatever `Optim`
   reports. This never fires for a healthy fit — this family's own tests fit
   φ_true=12, orders of magnitude below the boundary.
+- `:boundary` — at least one observed cell has raw observed Laplace weight
+  below [`BB_LAPLACE_WEIGHT_FLOOR`](@ref) at the returned optimum (negative
+  curvature cells whose weight the old kernel clamped in the log-determinant;
+  #1209). The Laplace value now uses the raw weight, but the optimum sits on
+  that breakdown boundary and is reported not converged.
 """
-function _beta_binomial_verdict(optim_converged::Bool, nll::Real, φ::Real)
+function _beta_binomial_verdict(optim_converged::Bool, nll::Real, φ::Real;
+        n_weight_floor::Integer = 0)
     (isfinite(nll) && nll < _BB_FAIL_PENALTY) || return (false, -Inf, :objective_impossible)
     ll = -Float64(nll)
     ll <= _BB_LOGLIK_MAX || return (false, -Inf, :objective_impossible)
     φ < _BB_PHI_STABLE || return (false, ll, :phi_at_boundary)
+    n_weight_floor > 0 && return (false, ll, :boundary)
     return (optim_converged, ll, :ok)
 end
 
@@ -422,9 +478,10 @@ reported `converged = true` with one species at `φ ≈ 7.6e15`. Returns the
 triple in `_fit_verdict`'s order, ready for the result constructors.
 """
 function _beta_binomial_grouped_verdict(nll::Real, optim_converged::Bool,
-        iterations::Integer, φg::AbstractVector{<:Real})
+        iterations::Integer, φg::AbstractVector{<:Real}; n_weight_floor::Integer = 0)
     ll0, conv0, iters = _fit_verdict(nll, optim_converged, iterations)
-    conv, ll, _reason = _beta_binomial_verdict(conv0, -ll0, maximum(φg))
+    conv, ll, _reason = _beta_binomial_verdict(conv0, -ll0, maximum(φg);
+        n_weight_floor = n_weight_floor)
     return (ll, conv, iters)
 end
 
@@ -583,7 +640,13 @@ function fit_beta_binomial_gllvm(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂ = exp(θ̂[p + rr + 1])
-    conv, loglik, _reason = _beta_binomial_verdict(Optim.converged(res), Optim.minimum(res), φ̂)
+    n_floor, _, _ = _bb_laplace_health(Yc, Nm, Λ̂, β̂, φ̂; mask = msk, link = link,
+        maxiter = newton_maxiter, tol = newton_tol)
+    conv, loglik, reason = _beta_binomial_verdict(Optim.converged(res), Optim.minimum(res), φ̂;
+        n_weight_floor = n_floor)
+    reason === :boundary && @warn "fit_beta_binomial_gllvm: $n_floor observed cells have " *
+        "raw Laplace weight below BB_LAPLACE_WEIGHT_FLOOR at the optimum; converged is false " *
+        "(#1209)." maxlog = 1
     return BetaBinomialFit(β̂, Λ̂, link, φ̂, loglik, conv, Optim.iterations(res))
 end
 
@@ -753,9 +816,15 @@ function fit_beta_binomial_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
     φ̂g = exp.(θ̂[(p + rr + 1):(p + rr + G)])
-    return BetaBinomialGroupedFit(β̂, Λ̂, φ̂g, gidx, link,
-                                  _beta_binomial_grouped_verdict(Optim.minimum(res), Optim.converged(res),
-                                                                 Optim.iterations(res), φ̂g)...)
+    φvec = [φ̂g[gidx[t]] for t in 1:p]
+    n_floor, _, _ = _bb_laplace_health(Yc, Nm, Λ̂, β̂, φvec; mask = msk, link = link,
+        maxiter = newton_maxiter, tol = newton_tol)
+    ll, conv, iters = _beta_binomial_grouped_verdict(Optim.minimum(res), Optim.converged(res),
+        Optim.iterations(res), φ̂g; n_weight_floor = n_floor)
+    n_floor > 0 && @warn "fit_beta_binomial_gllvm_grouped: $n_floor observed cells have " *
+        "raw Laplace weight below BB_LAPLACE_WEIGHT_FLOOR at the optimum; converged is false " *
+        "(#1209)." maxlog = 1
+    return BetaBinomialGroupedFit(β̂, Λ̂, φ̂g, gidx, link, ll, conv, iters)
 end
 
 # ===========================================================================
@@ -936,8 +1005,15 @@ function fit_beta_binomial_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
     Λ̂ = unpack_lambda(θ̂[(p + q + 1):(p + q + rr)], p, K)
     φ̂g = exp.(θ̂[(p + q + rr + 1):(p + q + rr + G)])
+    φvec = [φ̂g[gidx[t]] for t in 1:p]
+    Ô = _build_offset(X_fit, γ̂_free)
+    n_floor, _, _ = _bb_laplace_health(Yc, Nm, Λ̂, β̂, φvec; mask = msk, link = link,
+        offset = Ô, maxiter = newton_maxiter, tol = newton_tol)
+    ll, conv, iters = _beta_binomial_grouped_verdict(Optim.minimum(res), Optim.converged(res),
+        Optim.iterations(res), φ̂g; n_weight_floor = n_floor)
+    n_floor > 0 && @warn "fit_beta_binomial_gllvm_grouped_cov: $n_floor observed cells have " *
+        "raw Laplace weight below BB_LAPLACE_WEIGHT_FLOOR at the optimum; converged is false " *
+        "(#1209)." maxlog = 1
     return BetaBinomialGroupedCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, φ̂g, gidx, link,
-                                     _beta_binomial_grouped_verdict(Optim.minimum(res),
-                                                                    Optim.converged(res),
-                                                                    Optim.iterations(res), φ̂g)...)
+                                     ll, conv, iters)
 end

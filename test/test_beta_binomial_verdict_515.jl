@@ -104,6 +104,9 @@ const BB515_FIXTURE_PATH = joinpath(@__DIR__, "fixtures", "beta_binomial_verdict
         @test conv && reason === :ok && loglik ≈ -300.0
         conv, loglik, reason = GM._beta_binomial_verdict(false, 300.0, 5.0)
         @test !conv && reason === :ok && loglik ≈ -300.0
+
+        conv, loglik, reason = GM._beta_binomial_verdict(true, 300.0, 5.0; n_weight_floor = 1)
+        @test !conv && reason === :boundary && loglik ≈ -300.0
     end
 
     @testset "betabinomial_logp at phi >= _BB_PHI_STABLE matches a BigFloat reference" begin
