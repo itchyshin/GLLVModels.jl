@@ -1,3 +1,10 @@
+2026-11-24: #1051 masked Gaussian converged under marginal BLAS gradient noise.
+Julia 1.13.4, `--project=test`, default OpenBLAS (Cooperlake). Before fix:
+`test/test_masked_gaussian_converged_735.jl` 3 passed, 2 failed (`g_residual`
+1.88e-6). After BFGS polish + noise-aware accept: 5 passed, 0 failed, ~19s;
+`test/test_optimizer_selection.jl` 62 passed, 0 failed. Full `Pkg.test()` not run.
+See `docs/dev-log/after-task/2026-11-24-fix-1051-masked-gaussian-bfgs-polish.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
