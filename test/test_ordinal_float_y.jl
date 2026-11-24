@@ -56,4 +56,21 @@ using Random
         fi = fit_ordinal_gllvm_pertrait(Y; K = 1, mask = M)
         @test fm.loglik == fi.loglik
     end
+
+    @testset "Union{Missing,Int} and missing cells (#1191)" begin
+        Ym = Matrix{Union{Missing, Int}}(Y)
+        fm0 = fit_gllvm(Ym; family = Ordinal(), K = 1)
+        fi = fit_gllvm(Y; family = Ordinal(), K = 1)
+        @test fm0.loglik == fi.loglik
+        @test fm0.converged == fi.converged
+
+        Ym1 = copy(Ym)
+        Ym1[2, 3] = missing
+        fm1 = fit_gllvm(Ym1; family = Ordinal(), K = 1)
+        M = trues(p, n)
+        M[2, 3] = false
+        fmask = fit_gllvm(Y; family = Ordinal(), K = 1, mask = M)
+        @test fm1.loglik == fmask.loglik
+        @test fm1.converged == fmask.converged
+    end
 end
