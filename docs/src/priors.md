@@ -109,9 +109,9 @@ Refit without `priors` for ordinary likelihood-based inference and comparisons.
 - `fit_gllvm(Y; family = Binomial(), K = ...)` with the ordinary Laplace fit is
   admitted for complete responses without `X`, `X_lv`, `offset`, `mask`, or
   `weights`. Response intercept targets use `response_name::(Intercept)`; the
-  bare response name is also accepted as a selector. The `response_names` vector follows the rows of `Y` and defaults to
-  `trait_1`, `trait_2`, and so on. `coef = "all"` explicitly selects all
-  response intercepts for that row.
+  bare response name is also accepted as a selector. The `response_names`
+  vector follows the rows of `Y` and defaults to `trait_1`, `trait_2`, and so
+  on. `coef = "all"` explicitly selects all response intercepts for that row.
 - A Binomial `gllvm(@formula(...))` route also admits named response intercept
   and fixed covariate coefficients. There, `coef = "all"` selects every
   estimated response intercept and covariate coefficient.
