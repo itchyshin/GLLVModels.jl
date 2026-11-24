@@ -97,7 +97,8 @@ function _fit_projected_gradient(gradient::AbstractVector; lower = (), upper = (
                                         (upper_indices, upper_scores, max))
         for index in indices
             score = Float64(get(scores, index, projected[index]))
-            isfinite(score) || throw(ArgumentError("boundary score must be finite"))
+            # Preserve non-finite evidence so `_fit_convergence` classifies it
+            # as degenerate instead of throwing from the fit path.
             projected[index] = project(score, 0.0)
         end
     end
@@ -107,7 +108,8 @@ end
 """Convert a log-coordinate score to a finite natural-positive-coordinate score."""
 function _fit_natural_positive_score(log_score::Real, value::Real)
     isfinite(log_score) || return Float64(log_score)
-    value > 0 || return copysign(floatmax(Float64), Float64(log_score))
+    value > 0 || return iszero(log_score) ? NaN :
+        copysign(floatmax(Float64), Float64(log_score))
     score = Float64(log_score) / Float64(value)
     return isfinite(score) ? score : copysign(floatmax(Float64), Float64(log_score))
 end

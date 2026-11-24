@@ -18,6 +18,10 @@ using GLLVModels
     @test_throws ArgumentError GLLVModels._fit_projected_gradient([0.0]; lower=(2,))
     @test_throws ArgumentError GLLVModels._fit_projected_gradient([0.0]; lower=(1,), upper=(1,))
     @test GLLVModels._fit_natural_positive_score(-0.2, 0.1) == -2.0
+    @test isnan(GLLVModels._fit_natural_positive_score(0.0, 0.0))
+    unknown = GLLVModels._fit_projected_gradient([0.0]; lower=(1,),
+        lower_scores=Dict(1 => NaN))
+    @test isnan(only(unknown))
 
     good = GLLVModels._fit_convergence(optimizer_finished=true,
         objective=0.0, logLik=0.0, gradient=[0.2, 0.0],
@@ -31,4 +35,9 @@ using GLLVModels
     @test good.relative_gradient == 0.0
     @test bad.status === :not_converged
     @test bad.relative_gradient > 0.0
+    unknown_boundary = GLLVModels._fit_convergence(optimizer_finished=true,
+        objective=0.0, logLik=0.0, gradient=[0.0],
+        projected_gradient=unknown, hessian=ones(1, 1),
+        boundary_params=["variance"], boundary_check_available=true)
+    @test unknown_boundary.status === :degenerate
 end
