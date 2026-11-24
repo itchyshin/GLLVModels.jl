@@ -23,3 +23,15 @@ function _refuse_na_response(caller::AbstractString, Y::AbstractMatrix; nan::Boo
     end
     return nothing
 end
+
+# #1147: the fitters typed `AbstractMatrix{<:Real}` have no method for a `Union{Missing,T}` eltype, so a
+# `missing` cell was a dispatch MethodError. These forwarding methods apply to that eltype only: a missing
+# cell is a typed ArgumentError, and a Union eltype with nothing missing is converted and fitted as before.
+function _drop_missing_eltype(caller::AbstractString, Y::AbstractMatrix)
+    _refuse_na_response(caller, Y)
+    return Matrix{nonmissingtype(eltype(Y))}(Y)
+end
+fit_gaussian_sources(Y::AbstractMatrix{>:Missing}; kwargs...) =
+    fit_gaussian_sources(_drop_missing_eltype("fit_gaussian_sources", Y); kwargs...)
+fit_phylo_latent_gllvm(Y::AbstractMatrix{>:Missing}, species::AbstractVector; kwargs...) =
+    fit_phylo_latent_gllvm(_drop_missing_eltype("fit_phylo_latent_gllvm", Y), species; kwargs...)
