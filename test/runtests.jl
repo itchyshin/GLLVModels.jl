@@ -1003,6 +1003,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nobs_vector_y_1164.jl")
     _shard_include("test_newick_input_messages_1165.jl")
     _shard_include("test_beta_grouped_ci_y_clamp_1155.jl")
+    _shard_include("test_beta_speciescov_start_1200.jl")
     _shard_include("test_summary_table.jl")
     _shard_include("test_covariates.jl")
     _shard_include("test_cov_mode_search_gamma.jl")
