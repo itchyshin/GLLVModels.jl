@@ -200,6 +200,9 @@ _register_shard_table!(4, (
         "test_tweedie_speed.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
         "test_comparator_targets.jl", "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl",
         "test_confint_na_y.jl",
+        "test_cov_1125x_confint_select.jl", "test_cov_1125x_formula_internal.jl",
+        "test_cov_1125x_links.jl", "test_cov_1125x_cv_show.jl",
+        "test_cov_1125x_mi_lowrank.jl", "test_cov_1125x_postfit_loadings.jl",
     ),
     (
         "test_likelihood.jl", "test_packing.jl", "test_docstring_animal_dep_twin.jl",
@@ -416,6 +419,9 @@ _register_shard_table!(8, (
         "test_spde_projector_validation.jl", "test_docstring_ref_linebreaks.jl", "test_comparator_targets.jl",
         "test_core070_covariance_registry.jl", "test_predictive_check_binomial.jl", "test_bootstrap_sigma_r.jl",
         "test_link_residual_undefined_link.jl",
+        "test_cov_1125x_confint_select.jl", "test_cov_1125x_formula_internal.jl",
+        "test_cov_1125x_links.jl", "test_cov_1125x_cv_show.jl",
+        "test_cov_1125x_mi_lowrank.jl", "test_cov_1125x_postfit_loadings.jl",
     ),
     (
         "test_W_and_diag.jl", "test_signed_sigma_phy.jl", "test_precision_multivariate.jl",
@@ -1278,6 +1284,12 @@ println(_SHARD === nothing ?
     # link_residual on undefined (family, link) pairs throws ArgumentError (refs #1161).
     # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
     _shard_include("test_link_residual_undefined_link.jl")
+    _shard_include("test_cov_1125x_confint_select.jl")
+    _shard_include("test_cov_1125x_formula_internal.jl")
+    _shard_include("test_cov_1125x_links.jl")
+    _shard_include("test_cov_1125x_cv_show.jl")
+    _shard_include("test_cov_1125x_mi_lowrank.jl")
+    _shard_include("test_cov_1125x_postfit_loadings.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
