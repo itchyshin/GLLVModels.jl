@@ -216,7 +216,7 @@ an SVD loadings init + a moderate `φ₀`.
 
 `hessian` selects the Laplace log-det curvature only (`:fisher` expected /
 `:observed` joint — TMB's choice); the inner mode search is always
-Fisher-scored. Default: Beta/logit default `:fisher`. Omitting it is exactly the pre-kwarg
+Fisher-scored. Default: Beta/logit default `:observed`. Omitting it is exactly the pre-kwarg
 behaviour.
 """
 function fit_beta_gllvm(Y::AbstractMatrix; K::Integer,

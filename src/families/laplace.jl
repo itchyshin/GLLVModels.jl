@@ -390,11 +390,12 @@ _glm_weight_matches_observed(family, link::Link) = false
 
 Which curvature the log-det uses when the caller does not choose.
 
-Currently `:fisher` — preserving shipped behaviour exactly. Flipping this to
-`:observed` is a separate, deliberate change that must land together with the
-coupled analytic-gradient paths in `src/laplace_grad.jl` (NB2 `:156`, Gamma
-`:221-222`, Beta `:302-303`); otherwise those gradients stop being the gradient
-of the objective and degrade SILENTLY rather than erroring.
+The generic fallback is `:fisher`, but NB2, NB1, Gamma, Beta/logit, Tweedie,
+Exponential, truncated NB2, Student-t and Binomial with probit or cloglog
+override it to `:observed` (TMB's choice). Changing a family's default must land
+together with the coupled analytic-gradient paths in `src/laplace_grad.jl`;
+otherwise those gradients stop being the gradient of the objective and degrade
+SILENTLY rather than erroring.
 """
 _default_hessian(family, link::Link) = :fisher
 
