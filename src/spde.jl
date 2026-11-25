@@ -292,3 +292,26 @@ function matern_correlation(r::Real, κ::Real; ν::Real = 1.0)
     x = κ * r
     return (x^ν) * besselk(ν, x) / (2.0^(ν - 1) * gamma(ν))
 end
+
+"""Largest axis-aligned span of a 2-D coordinate matrix (rows are points)."""
+function _spde_domain_extent(pts::AbstractMatrix{<:Real})
+    mn = [minimum(view(pts, :, d)) for d in 1:2]
+    mx = [maximum(view(pts, :, d)) for d in 1:2]
+    return maximum(mx .- mn)
+end
+
+# Issue #1220: κ_init and τ_init are absolute; (κ, τ) and (κ/s, τ·s) are equivalent under
+# joint scaling of mesh nodes and site locations. Defaults assume an O(1) domain extent.
+function _spde_warn_absolute_kappa_tau(nodes::AbstractMatrix, locs::AbstractMatrix,
+        κ_init::Real, τ_init::Real, caller::AbstractString)
+    κ_init == 1.0 && τ_init == 1.0 || return
+    ext = max(_spde_domain_extent(nodes), _spde_domain_extent(locs))
+    (ext < 0.05 || ext > 50.0) || return
+    @info (
+        "$caller: defaults κ_init=1 and τ_init=1 are absolute Matérn scales; for domain " *
+        "extent ≈ $(round(ext; sigdigits=3)) (max of nodes and locations) the implied range " *
+        "may be poorly scaled. Under joint rescaling of coordinates, (κ, τ) and (κ/s, τ·s) " *
+        "give the same likelihood; consider scaling κ_init and τ_init with the coordinate units."
+    ) maxlog = 1
+    return nothing
+end
