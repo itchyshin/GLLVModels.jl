@@ -2,6 +2,12 @@
 # to meet `g_tol` outright; an x/f-only stop does not count (#735).
 const _MASKED_GAUSSIAN_POLISH_RESTARTS=5
 _masked_gaussian_g_met(res,g_tol)=(g=Optim.g_residual(res);isfinite(g)&&g<=g_tol)
+_masked_gaussian_polish_accept(res,nxt,g_tol)=begin
+    n0,n1=Optim.minimum(res),Optim.minimum(nxt)
+    n1<=n0 && return true
+    _masked_gaussian_g_met(nxt,g_tol) || return false
+    return n1-n0<=max(1e-8,1e-10*abs(n0))
+end
 
 """
     fit_gaussian_gllvm(Y; K, aghq=false, aghq_control=(;), mask=nothing,
@@ -43,7 +49,8 @@ is used for baseline fitting; omitted entries are never included in the target
 likelihood. Structured masked/offset routes remain separate.
 On a masked or offset fit, `converged` is `true` only if the final gradient meets `g_tol`
 (`Optim.g_residual(fit.optim_result) <= g_tol`); an `x_tol` or `f_tol` stop alone does not
-count, and the optimiser continues on the gradient test (up to 5 restarts) before giving up.
+count, and the optimiser continues on the gradient test (up to 5 restarts, then a
+BFGS polish when the selected outer method is not already BFGS) before giving up.
 A masked fit with `X = nothing` is still a zero-mean model; pass a one-hot trait design
 (`X[t, :, t] .= 1`) for per-trait intercepts. [`predict_missing`](@ref) needs the same
 `mask` passed again (`predict_missing(fit, Y; mask = mask)`).
@@ -224,6 +231,18 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
             _optimizer_stage!(stages,:mask_offset_polish,outer,:forwarddiff,polish_controls,nxt;accepted=better)
             better || break
             res=nxt
+        end
+        # L-BFGS can strand a masked refit on a flat objective with the ForwardDiff gradient
+        # still marginally above `g_tol` (BLAS/kernel dependent; #1051). BFGS from the same
+        # point typically clears the gate without relaxing tolerances (#735).
+        if !_masked_gaussian_g_met(res,g_tol) && !(outer isa Optim.BFGS)
+            bfgs=Optim.BFGS()
+            nxt=Optim.optimize(nll,Optim.minimizer(res),bfgs,polish_opts;autodiff=:forward)
+            total_iters+=Optim.iterations(nxt)
+            accept=_masked_gaussian_polish_accept(res,nxt,g_tol)
+            _optimizer_stage!(stages,:mask_offset_bfgs_polish,bfgs,:forwarddiff,polish_controls,nxt;
+                               accepted=accept)
+            accept && (res=nxt)
         end
         t=Optim.minimizer(res)
         info=_optimizer_record(requested_optimizer,stages;
