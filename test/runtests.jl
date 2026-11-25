@@ -1281,6 +1281,16 @@ println(_SHARD === nothing ?
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
+    # Coverage round 8 (cursor-cloud-1125y8): profile, confint, laplace grad, grouped profile, MI, source, wald, em_squarem.
+    _shard_include("test_cov_1125y8_profile_internals.jl")
+    _shard_include("test_cov_1125y8_confint_profile_names.jl")
+    _shard_include("test_cov_1125y8_laplace_grad_utils.jl")
+    _shard_include("test_cov_1125y8_grouped_profile_helpers.jl")
+    _shard_include("test_cov_1125y8_grouped_profile_validate.jl")
+    _shard_include("test_cov_1125y8_mi_predictor.jl")
+    _shard_include("test_cov_1125y8_source_loglik.jl")
+    _shard_include("test_cov_1125y8_confint_derived_wald.jl")
+    _shard_include("test_cov_1125y8_em_squarem_map.jl")
     # New test files go in test/auto/ and are picked up here; no line to add.
     for _f in _AUTO_FILES
         _auto_in_shard(_f) && include(joinpath("auto", _f))
