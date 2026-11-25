@@ -1288,6 +1288,7 @@ println(_SHARD === nothing ?
     _shard_include("test_cov_1125y12_fit_phylo.jl")
     _shard_include("test_cov_1125y12_loading_profile.jl")
     _shard_include("test_cov_1125y12_jci_helpers.jl")
+    _shard_include("test_cov_1125y12_twolevel_derived.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
