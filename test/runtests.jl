@@ -614,6 +614,7 @@ println(_SHARD === nothing ?
     _shard_include("test_profile_sigma_phy_identity.jl")
     _shard_include("test_profile_rootfind.jl")
     _shard_include("test_confint_bootstrap.jl")
+    _shard_include("test_bootstrap_loading_alignment.jl")
     _shard_include("test_confint_derived.jl")
     _shard_include("test_confint_derived_wald.jl")
     _shard_include("test_confint_method_routes.jl")

@@ -120,6 +120,137 @@ function _confint_all_term_names(fit::GllvmFit)
     return terms, kinds
 end
 
+# ---------------------------------------------------------------------------
+# Procrustes alignment of bootstrap loading replicates (gllvmTMB
+# `loading-ci-bootstrap.R`, issue #1210). Each replicate's Λ may sit in a
+# different orthogonal rotation (or sign flip when a diagonal is near zero);
+# percentile CIs on raw packed entries need Λ_boot aligned to the estimate
+# before taking quantiles.
+# ---------------------------------------------------------------------------
+
+const _LAMBDA_BOOTSTRAP_TERM_RE = r"^(Lambda(?:_[A-Za-z]+)?)\[(\d+),(\d+)\]$"
+
+"""Orthogonal Procrustes: align rows of `L_boot` to `L_ref` (same as gllvmTMB
+`.procrustes_align_lambda`: `svd(L_boot' L_ref)`, `Q = U V'`, `L_boot Q`)."""
+function _procrustes_align_lambda(L_boot::AbstractMatrix, L_ref::AbstractMatrix)
+    size(L_boot) == size(L_ref) || return Matrix{Float64}(L_boot)
+    size(L_ref, 2) < 1 && return Matrix{Float64}(L_boot)
+    A = Matrix{Float64}(L_boot)
+    B = Matrix{Float64}(L_ref)
+    F = try
+        svd(A' * B)
+    catch
+        return A
+    end
+    (isempty(F.S) || !all(isfinite, F.S)) && return A
+    return A * (F.U * F.V')
+end
+
+struct _LambdaBootstrapBlock
+    idx::UnitRange{Int}
+    p::Int
+    K::Int
+    Λ_ref::Matrix{Float64}
+end
+
+function _lambda_rank_from_term_block(terms::AbstractVector{String})
+    isempty(terms) && return 0, 0
+    m = match(_LAMBDA_BOOTSTRAP_TERM_RE, terms[1])
+    m === nothing && return 0, 0
+    prefix = m.captures[1]
+    K = 0
+    for t in terms
+        m2 = match(_LAMBDA_BOOTSTRAP_TERM_RE, t)
+        m2 === nothing && break
+        m2.captures[1] == prefix || break
+        r, c = parse(Int, m2.captures[2]), parse(Int, m2.captures[3])
+        r == c || break
+        K += 1
+    end
+    p = 0
+    for t in terms
+        m2 = match(_LAMBDA_BOOTSTRAP_TERM_RE, t)
+        m2 === nothing && continue
+        m2.captures[1] == prefix || continue
+        p = max(p, parse(Int, m2.captures[2]))
+    end
+    return p, K
+end
+
+function _lambda_bootstrap_blocks_from_names(names::Vector{String}, θ_ref::AbstractVector)
+    blocks = _LambdaBootstrapBlock[]
+    i = 1
+    n = length(names)
+    while i <= n
+        m = match(_LAMBDA_BOOTSTRAP_TERM_RE, names[i])
+        if m === nothing
+            i += 1
+            continue
+        end
+        prefix = m.captures[1]
+        i0 = i
+        while i <= n
+            m2 = match(_LAMBDA_BOOTSTRAP_TERM_RE, names[i])
+            if m2 === nothing || m2.captures[1] != prefix
+                break
+            end
+            i += 1
+        end
+        term_block = @view names[i0:(i - 1)]
+        p, K = _lambda_rank_from_term_block(term_block)
+        rr = rr_theta_len(p, K)
+        length(term_block) == rr || continue
+        idx = i0:(i0 + rr - 1)
+        Λ_ref = Matrix(unpack_lambda(θ_ref[idx], p, K))
+        push!(blocks, _LambdaBootstrapBlock(idx, p, K, Λ_ref))
+    end
+    return blocks
+end
+
+function _gllvmfit_lambda_bootstrap_blocks(fit::GllvmFit, terms::Vector{String})
+    model = fit.model
+    p = model.p
+    blocks = _LambdaBootstrapBlock[]
+    if model.K > 0 && fit.pars.Λ !== nothing
+        names = _confint_lambda_term_names("Lambda_B", p, model.K)
+        i0 = findfirst(==(names[1]), terms)
+        if i0 !== nothing
+            push!(blocks, _LambdaBootstrapBlock(i0:(i0 + length(names) - 1), p, model.K,
+                                              Matrix(fit.pars.Λ)))
+        end
+    end
+    if model.K_W > 0 && fit.pars.Λ_W !== nothing
+        names = _confint_lambda_term_names("Lambda_W", p, model.K_W)
+        i0 = findfirst(==(names[1]), terms)
+        if i0 !== nothing
+            push!(blocks, _LambdaBootstrapBlock(i0:(i0 + length(names) - 1), p, model.K_W,
+                                              Matrix(fit.pars.Λ_W)))
+        end
+    end
+    if model.K_phy > 0 && fit.pars.Λ_phy !== nothing
+        names = _confint_lambda_term_names("Lambda_phy", p, model.K_phy)
+        i0 = findfirst(==(names[1]), terms)
+        if i0 !== nothing
+            push!(blocks, _LambdaBootstrapBlock(i0:(i0 + length(names) - 1), p, model.K_phy,
+                                              Matrix(fit.pars.Λ_phy)))
+        end
+    end
+    return blocks
+end
+
+function _align_bootstrap_lambda_blocks!(reps::AbstractMatrix, blocks::Vector{_LambdaBootstrapBlock})
+    isempty(blocks) && return nothing
+    @inbounds for b in 1:size(reps, 1)
+        for blk in blocks
+            θλ = view(reps, b, blk.idx)
+            all(isfinite, θλ) || continue
+            Λ = unpack_lambda(θλ, blk.p, blk.K)
+            reps[b, blk.idx] .= pack_lambda(_procrustes_align_lambda(Λ, blk.Λ_ref))
+        end
+    end
+    return nothing
+end
+
 # Resolve a single selector string against the term list.
 #   "sigma_eps"           -> matches the single sigma_eps entry
 #   "Lambda"              -> matches all Lambda_* entries (B, W, phy)

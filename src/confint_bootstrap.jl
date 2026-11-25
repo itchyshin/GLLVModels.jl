@@ -469,6 +469,7 @@ function bootstrap_ci(fit::GllvmFit;
     n_used = count(usable)
     n_dropped = n_boot - n_used
     _bootstrap_warn_dropped("bootstrap_ci", n_dropped, n_boot)
+    _align_bootstrap_lambda_blocks!(replicates, _gllvmfit_lambda_bootstrap_blocks(fit, terms))
     α = (1 - level) / 2
     lower = fill(NaN, n_params)
     upper = fill(NaN, n_params)

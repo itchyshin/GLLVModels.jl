@@ -3496,6 +3496,8 @@ function _family_bootstrap(ad::_FamilyCI, sel::Vector{Int}, level::Real,
         end
     end
 
+    _align_bootstrap_lambda_blocks!(reps, _lambda_bootstrap_blocks_from_names(ad.names, ad.θ))
+
     a = (1 - level) / 2
     n_use = count(ok) + count(b -> any(view(bnd, b, :)), 1:n_boot)
     term = String[]; est = Float64[]; lo = Float64[]; hi = Float64[]
