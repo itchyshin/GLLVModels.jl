@@ -1450,12 +1450,20 @@ set `hessian=:fisher` to retain the expected-information approximation.
 `β_init` (length p) and `Λ_init` (p×K) replace the default warm start when given,
 as in [`fit_nb_gllvm`](@ref); the per-group `φ` still starts at `φ₀ = 10`.
 """
+function _check_beta_grouped_link(link::Link, caller::AbstractString)
+    link isa LogitLink || throw(ArgumentError(
+        "$caller: Beta grouped-dispersion Laplace fitters support only LogitLink; " *
+        "got $(nameof(typeof(link)))."))
+    return nothing
+end
+
 function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         group::AbstractVector{<:Integer} = collect(1:size(Y, 1)),
         link::Link = LogitLink(), mask = nothing, offset = nothing,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_beta_grouped_link(link, "fit_beta_gllvm_grouped")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_beta_gllvm_grouped")
@@ -1595,6 +1603,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_beta_grouped_link(link, "fit_beta_gllvm_grouped_cov")
     p, n = size(Y)
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
