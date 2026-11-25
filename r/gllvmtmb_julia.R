@@ -140,28 +140,36 @@ if (!exists(".jl_value", mode = "function")) {
 # Source of truth: docs/src/gllvmtmb-parity.md, table "R bridge: parameterization map".
 # Returns a list(name=<gllvm name>, value=<numeric, possibly vector>).
 # ---------------------------------------------------------------------------------
+# Read a dispersion field from a Julia fit. Row-effect fits (RowEffectFit,
+# RowRandomFit) have no `r` / `φ` / `α` field: they store the value in `dispersion`.
+.disp_field <- function(julia_fit, field) {
+  v <- tryCatch(julia_fit[[field]], error = function(e) NULL)
+  if (is.null(v)) v <- julia_fit[["dispersion"]]
+  as.numeric(.jl_value(v))
+}
+
 .convert_dispersion <- function(disp_kind, julia_fit, grouped) {
   switch(disp_kind,
     # NB2: gllvm phi (Var = mu + mu^2 * phi); Julia r (size, Var = mu + mu^2/r).
     # Bridge rule: phi = 1 / r  (also applies to ZINB / Hurdle-NB / grouped-NB).
     nb2 = {
-      r <- if (grouped) as.numeric(.jl_value(julia_fit$r_group)) else as.numeric(.jl_value(julia_fit$r))
+      r <- if (grouped) as.numeric(.jl_value(julia_fit$r_group)) else .disp_field(julia_fit, "r")
       list(name = "phi", value = 1 / r)                       # r = 1/phi  <=>  phi = 1/r
     },
     # NB1: gllvm phi (Var = mu + mu*phi); Julia phi (Var = mu*(1+phi)). Identity map.
     nb1 = {
-      v <- if (grouped) as.numeric(.jl_value(julia_fit[["φ"]])) else as.numeric(.jl_value(julia_fit[["φ"]]))
+      v <- if (grouped) as.numeric(.jl_value(julia_fit[["φ"]])) else .disp_field(julia_fit, "φ")
       list(name = "phi", value = v)                           # identity (maps 1:1)
     },
     # Gamma: gllvm phi == SHAPE (Var = mu^2/phi); Julia alpha == shape (Var = mu^2/alpha).
     # Relabel only, no inversion.
     gamma = {
-      a <- if (grouped) as.numeric(.jl_value(julia_fit[["α"]])) else as.numeric(.jl_value(julia_fit[["α"]]))
+      a <- .disp_field(julia_fit, "α")
       list(name = "phi", value = a)                           # relabel alpha -> phi
     },
     # Beta: precision phi identical in both. Identity.
     beta = {
-      v <- if (grouped) as.numeric(.jl_value(julia_fit[["φ"]])) else as.numeric(.jl_value(julia_fit[["φ"]]))
+      v <- if (grouped) as.numeric(.jl_value(julia_fit[["φ"]])) else .disp_field(julia_fit, "φ")
       list(name = "phi", value = v)                           # identity
     },
     # Tweedie: power and phi both identity; we also surface the power.
@@ -269,7 +277,9 @@ gllvm_julia <- function(y, X = NULL, family = "negative.binomial", num.lv = 2L,
   fit <- .dispatch_fit(G, family, fmap, Y, K, jl_family, jl_link, method,
                        Nt, row.eff, per_species, shared, p_init, ...)
 
-  grouped <- per_species  # per-species routed through the grouped fitter
+  # per-species routed through the grouped fitter; row-effect fits take the row fitters
+  # first (see .dispatch_fit), so they never carry the grouped fields (r_group, ...).
+  grouped <- per_species && row.eff == "none"
   disp <- .convert_dispersion(fmap$disp, fit, grouped)
 
   # Loadings (p x K), scores (n x K), intercepts, logLik via the engine accessors.
