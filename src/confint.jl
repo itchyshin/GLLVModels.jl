@@ -575,6 +575,21 @@ function _check_unpinned_refit(fit::GllvmFit, fname::AbstractString)
         "intervals"))
 end
 
+function _confint_reject_missing_response_cells(Y::AbstractMatrix, route::AbstractString;
+                                                mask = nothing)
+    mask !== nothing && return nothing
+    for i in axes(Y, 1), j in axes(Y, 2)
+        v = Y[i, j]
+        if ismissing(v) || (v isa Real && isnan(v))
+            throw(ArgumentError(
+                "$route: Y[$i, $j] is $(ismissing(v) ? "missing" : "NaN"); pass the same " *
+                "response matrix used to fit the model, or fit and call confint with missing " *
+                "cells so the objective matches the fit"))
+        end
+    end
+    return nothing
+end
+
 function _confint_gaussian(fit::GllvmFit, y, level::Real, parm, X, Σ_phy,
                            method, kwargs)
     method isa Symbol || throw(ArgumentError(
@@ -587,6 +602,7 @@ function _confint_gaussian(fit::GllvmFit, y, level::Real, parm, X, Σ_phy,
                                                    method, kw, parm)
     label = _confint_fit_label(fit)
     _confint_check_method(method, label, parm)
+    y !== nothing && _confint_reject_missing_response_cells(y, label)
     if method in (:profile, :bootstrap)
         _check_optimizer_refit(fit, "confint(method=:$method)")
     end
