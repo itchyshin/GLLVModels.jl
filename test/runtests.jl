@@ -65,7 +65,7 @@ _register_shard_table!(4, (
         "test_nb_grouped_poisson_ridge.jl", "test_nb_cov_ridge_polish_grad.jl", "test_beta_grouped_convergence.jl",
         "test_gamma_x_identity.jl", "test_gamma_fit.jl", "test_tweedie_engine_health.jl",
         "test_tweedie_grouped_engine_health.jl", "test_tweedie_cdf.jl", "test_exponential.jl",
-        "test_studentt.jl", "test_studentt_input_validation.jl", "test_studentt_boundary_honesty.jl",
+        "test_studentt.jl", "test_studentt_scale_invariance_1154.jl", "test_studentt_input_validation.jl", "test_studentt_boundary_honesty.jl",
         "test_mode_search_623.jl", "test_ordinal_probit.jl", "test_unified_api.jl",
         "test_gaussian_pervar_heywood_736.jl", "test_gaussian_wald_pd_hessian.jl", "test_ordination.jl",
         "test_destination_b_b1_unit_paired_fit.jl", "test_destination_b_b1_balanced_complete_crossed_design.jl", "test_precision_multivariate_fit.jl",
@@ -294,7 +294,7 @@ _register_shard_table!(8, (
         "test_gamma_curvature_cross_kernel.jl", "test_phylo_xlv.jl", "test_laplace_grad.jl",
         "test_destination_b_joint_poisson.jl", "test_destination_b_joint_nb2_replication.jl", "test_nb_shared_r_boundary.jl",
         "test_grouped_dispersion_tweedie_nb1.jl", "test_beta_grouped_mode_search.jl", "test_nb1_x_identity.jl",
-        "test_issue_719_docs_deploy_guard.jl", "test_tweedie_grouped_engine_health.jl", "test_studentt_input_validation.jl",
+        "test_issue_719_docs_deploy_guard.jl", "test_tweedie_grouped_engine_health.jl", "test_studentt_scale_invariance_1154.jl", "test_studentt_input_validation.jl",
         "test_com_poisson_mode_search.jl", "test_formula_pervar.jl", "test_issue_108_anova_docs.jl",
         "test_destination_b_b1_joint_gaussian_paired_fit.jl", "test_phylo_latent_twin.jl", "test_destination_b_phylo_independent_receipt.jl",
         "test_destination_b_pedigree_precision.jl", "test_destination_b_a4_s4_public_dense_bridge.jl", "test_destination_b_phylo_uncertainty.jl",
@@ -781,6 +781,7 @@ println(_SHARD === nothing ?
     _shard_include("test_tweedie_cdf.jl")
     _shard_include("test_exponential.jl")
     _shard_include("test_studentt.jl")
+    _shard_include("test_studentt_scale_invariance_1154.jl")
     _shard_include("test_studentt_input_validation.jl")
     _shard_include("test_studentt_disp_group.jl")
     _shard_include("test_studentt_core070.jl")
