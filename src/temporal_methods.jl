@@ -63,6 +63,16 @@ end
 # Shared pieces
 # ---------------------------------------------------------------------------
 
+# Marker the user called to build this fit (`temporal_indep`, `temporal_dep` or
+# `temporal_latent`). Post-fit refusals name it instead of always naming
+# `temporal_latent()` (issue 1286). For a latent fit every text is unchanged.
+_temporal_fit_marker(f::TemporalGaussianFit) = "temporal_" * String(f.spec.mode)
+_temporal_fit_action(f::TemporalGaussianFit) =
+    "See `$(_temporal_fit_marker(f))()` for the admitted temporal workflow."
+# `_temporal_abort` whose default action line names the fit's own marker.
+_temporal_fit_abort(f::TemporalGaussianFit, message; action=_temporal_fit_action(f), kw...) =
+    _temporal_abort(message; action=action, kw...)
+
 # Convergence code recorded where gllvmTMB records `opt$convergence`: 0 when
 # the fit verdict is `:converged`, otherwise a positive code for the stopping
 # reason (1 iteration limit, 2 gradient not converged, 3 invalid final value).
@@ -187,8 +197,8 @@ requested, `se_fit`.
 function forecast_temporal(fit, newdata; se_fit=false)
     fit isa TemporalGaussianFit ||
         _temporal_abort("`forecast_temporal()` requires a native temporal `gllvmTMB()` fit.")
-    Tables.istable(newdata) || _temporal_abort("`newdata` must be a data frame.")
-    se_fit isa Bool || _temporal_abort("`se.fit` must be TRUE or FALSE.")
+    Tables.istable(newdata) || _temporal_fit_abort(fit, "`newdata` must be a data frame.")
+    se_fit isa Bool || _temporal_fit_abort(fit, "`se.fit` must be TRUE or FALSE.")
     spec = fit.spec
     spec.replicate_col === nothing ||
         _temporal_abort("`forecast_temporal()` does not yet support replicated temporal panels.";
@@ -206,19 +216,19 @@ function forecast_temporal(fit, newdata; se_fit=false)
     nd = Tables.columntable(newdata)
     required = [spec.series_col, spec.time_col, spec.trait_col]
     missing_cols = filter(c -> !haskey(nd, c), required)
-    isempty(missing_cols) || _temporal_abort("`newdata` is missing required temporal column(s): " *
+    isempty(missing_cols) || _temporal_fit_abort(fit, "`newdata` is missing required temporal column(s): " *
         join(String.(missing_cols), ", ") * ".")
     raw_series = nd[spec.series_col]; raw_time = nd[spec.time_col]; raw_trait = nd[spec.trait_col]
     if length(raw_time) == 0 || any(_temporal_isna, raw_series) || any(_temporal_isna, raw_time) ||
             any(_temporal_isna, raw_trait)
-        _temporal_abort("`newdata` needs non-missing series, time, and trait values.")
+        _temporal_fit_abort(fit, "`newdata` needs non-missing series, time, and trait values.")
     end
     all(x -> x isa Real && !(x isa Bool), raw_time) ||
-        _temporal_abort("The temporal forecast time column must be numeric.")
+        _temporal_fit_abort(fit, "The temporal forecast time column must be numeric.")
     times = Float64.(raw_time)
-    all(isfinite, times) || _temporal_abort("The temporal forecast time column must contain finite values.")
+    all(isfinite, times) || _temporal_fit_abort(fit, "The temporal forecast time column must contain finite values.")
     if spec.structure === :ar1 && any(t -> abs(t - round(t)) > sqrt(eps(Float64)), times)
-        _temporal_abort("AR1 temporal forecasts require integer occasions.")
+        _temporal_fit_abort(fit, "AR1 temporal forecasts require integer occasions.")
     end
     series = string.(raw_series); traits = string.(raw_trait)
     unknown = setdiff(unique(series), unique(spec.row_series))
@@ -227,10 +237,10 @@ function forecast_temporal(fit, newdata; se_fit=false)
         info="Unknown series: " * join(unknown, ", ") * ".",
         action="New-series forecasts need a separately validated marginal prediction contract.")
     unknown_trait = setdiff(unique(traits), spec.traits)
-    isempty(unknown_trait) || _temporal_abort("`newdata` names unknown trait(s): " * join(unknown_trait, ", ") * ".")
+    isempty(unknown_trait) || _temporal_fit_abort(fit, "`newdata` names unknown trait(s): " * join(unknown_trait, ", ") * ".")
     keys3 = collect(zip(series, times, traits))
     length(unique(keys3)) == length(keys3) ||
-        _temporal_abort("`newdata` has duplicate series--time--trait rows.")
+        _temporal_fit_abort(fit, "`newdata` has duplicate series--time--trait rows.")
     panels = Dict{Tuple{String,Float64},Vector{String}}()
     for (s, t, j) in keys3; push!(get!(panels, (s, t), String[]), j); end
     all(v -> length(v) == length(spec.traits) && Set(v) == Set(spec.traits), values(panels)) ||
@@ -256,12 +266,12 @@ function forecast_temporal(fit, newdata; se_fit=false)
     C_of = _temporal_cross_covariance(fit, spec.row_series, spec.row_time, spec.trait_id,
         series, times, new_j)
     F = cholesky(Symmetric(C_oo); check=false)
-    issuccess(F) || _temporal_abort("The fitted temporal response covariance was not positive definite for forecasting.")
+    issuccess(F) || _temporal_fit_abort(fit, "The fitted temporal response covariance was not positive definite for forecasting.")
     solved = F \ hcat(residual, C_of)
     est = eta_new .+ C_of' * solved[:, 1]
     se_fit || return merge(nd, (est=est,))
     v = diag(C_ff .- C_of' * solved[:, 2:end])
-    any(<(-1e-8), v) && _temporal_abort("The temporal forecast produced a negative conditional variance.")
+    any(<(-1e-8), v) && _temporal_fit_abort(fit, "The temporal forecast produced a negative conditional variance.")
     return merge(nd, (est=est, se_fit=sqrt.(max.(v, 0.0))))
 end
 
@@ -378,7 +388,7 @@ throws (new-data prediction is not available for temporal fits); use [`forecast_
 occasions.
 """
 function predict(fit::TemporalGaussianFit; newdata=nothing)
-    newdata === nothing || _temporal_abort("`predict()` with `newdata` is not yet available for `temporal_latent()` fits.";
+    newdata === nothing || _temporal_abort("`predict()` with `newdata` is not yet available for `$(_temporal_fit_marker(fit))()` fits.";
         kind=:gllvmTMB_temporal_predict_newdata,
         info="New rows need an explicitly reconstructed series--occasion score index.",
         action="Use `predict(fit)` for the training rows or `re_form = ~0` for fixed-effects-only training predictions.")
@@ -419,12 +429,12 @@ function bootstrap_temporal(fit; n_boot=100, seed=nothing)
         info="The fit also uses covariance tier(s): " * join(other, ", ") * ".",
         action="A parametric bootstrap for temporal source pairs needs its own contract and evidence.")
     (fit.spec.mode === :indep && fit.spec.replicate_col === nothing) ||
-        _temporal_abort("`bootstrap_temporal()` currently supports unreplicated Gaussian `temporal_indep()` fits only.")
+        _temporal_fit_abort(fit, "`bootstrap_temporal()` currently supports unreplicated Gaussian `temporal_indep()` fits only.")
     n_boot isa Real && !(n_boot isa Bool) && isfinite(n_boot) && n_boot >= 1 && isinteger(n_boot) ||
-        _temporal_abort("`n_boot` must be a positive integer.")
+        _temporal_fit_abort(fit, "`n_boot` must be a positive integer.")
     seed === nothing || (seed isa Real && !(seed isa Bool) && isfinite(seed) && seed >= 0 &&
         seed <= typemax(Int32) && isinteger(seed)) ||
-        _temporal_abort("`seed` must be one non-negative whole number or `NULL`.")
+        _temporal_fit_abort(fit, "`seed` must be one non-negative whole number or `NULL`.")
     n = Int(n_boot)
     seed_rng = seed === nothing ? copy(default_rng()) : Random.Xoshiro(Int(seed))
     draw_seeds = rand(seed_rng, 1:Int(typemax(Int32)), n)
@@ -606,9 +616,9 @@ function profile_temporal(fit; level::Real=0.95, ystep::Real=0.5, ytol=nothing,
         parm_range=(-Inf, Inf), h::Real=1e-4)
     fit isa TemporalGaussianFit || _temporal_abort("`profile_temporal()` requires a native temporal fit.")
     (fit.spec.mode === :indep && fit.spec.replicate_col === nothing) ||
-        _temporal_abort("`profile_temporal()` currently supports unreplicated Gaussian `temporal_indep()` fits only.")
+        _temporal_fit_abort(fit, "`profile_temporal()` currently supports unreplicated Gaussian `temporal_indep()` fits only.")
     isempty(_temporal_other_tiers(fit)) ||
-        _temporal_abort("`profile_temporal()` currently requires the temporal source by itself.")
+        _temporal_fit_abort(fit, "`profile_temporal()` currently requires the temporal source by itself.")
     0 < level < 1 || throw(ArgumentError("`level` must be a single value in (0, 1); got $level."))
     crit = quantile(Chisq(1), level) / 2
     tol = ytol === nothing ? crit + 1 : Float64(ytol)
@@ -627,17 +637,17 @@ end
 # (`.temporal_assert_no_iid_inference`, R/temporal.R:455-464)
 # ---------------------------------------------------------------------------
 
-function _temporal_no_iid_inference(method::AbstractString)
-    _temporal_abort("`$(method)()` is not available for `temporal_latent()` fits.";
+function _temporal_no_iid_inference(fit::TemporalGaussianFit, method::AbstractString)
+    _temporal_abort("`$(method)()` is not available for `$(_temporal_fit_marker(fit))()` fits.";
         kind=:gllvmTMB_temporal_inference_unsupported,
         info="Its existing algorithm assumes iid latent scores or an iid refit path.",
         action="Use `extract_temporal()` for fitted parameters. The bounded `profile_temporal()` and `bootstrap_temporal()` helpers have their own contracts; this generic iid route remains unavailable.")
 end
 
-confint(::TemporalGaussianFit, args...; kwargs...) = _temporal_no_iid_inference("confint")
-bootstrap_ci(::TemporalGaussianFit, args...; kwargs...) = _temporal_no_iid_inference("bootstrap_ci")
-ordination_uncertainty(::TemporalGaussianFit, args...; kwargs...) =
-    _temporal_no_iid_inference("ordination_uncertainty")
+confint(fit::TemporalGaussianFit, args...; kwargs...) = _temporal_no_iid_inference(fit, "confint")
+bootstrap_ci(fit::TemporalGaussianFit, args...; kwargs...) = _temporal_no_iid_inference(fit, "bootstrap_ci")
+ordination_uncertainty(fit::TemporalGaussianFit, args...; kwargs...) =
+    _temporal_no_iid_inference(fit, "ordination_uncertainty")
 
 """
     getLV(fit::TemporalGaussianFit)
