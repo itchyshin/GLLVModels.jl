@@ -1278,6 +1278,16 @@ println(_SHARD === nothing ?
     # link_residual on undefined (family, link) pairs throws ArgumentError (refs #1161).
     # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
     _shard_include("test_link_residual_undefined_link.jl")
+    # Lane cursor-cloud-1125y6: low-coverage helpers (fixed coeffs, pins, admission, etc.).
+    _shard_include("test_cov_1125y6_fixed_coefficients.jl")
+    _shard_include("test_cov_1125y6_loading_profile_pins.jl")
+    _shard_include("test_cov_1125y6_symmetric_admission.jl")
+    _shard_include("test_cov_1125y6_gaussian_intercept_internals.jl")
+    _shard_include("test_cov_1125y6_optimizer_guards.jl")
+    _shard_include("test_cov_1125y6_extractors_sigma_parts.jl")
+    _shard_include("test_cov_1125y6_lv_targets.jl")
+    _shard_include("test_cov_1125y6_boundary_bisect.jl")
+    _shard_include("test_cov_1125y6_none_dep.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
