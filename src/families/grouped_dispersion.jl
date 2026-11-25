@@ -2482,6 +2482,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _require_positive_mean_link("fit_nb1_gllvm_grouped", link)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_nb1_gllvm_grouped")
@@ -2633,6 +2634,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _require_positive_mean_link("fit_nb1_gllvm_grouped_cov", link)
     p, n = size(Y)
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
