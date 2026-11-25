@@ -1,18 +1,17 @@
 using GLLVModels, Test, Random, Distributions
 const GM = GLLVModels
 
-# Known gap, #788: fit types that accept `offset` at fit time but do not keep it, so predict /
-# getLV / residuals read a zero offset. #787 and the grouped-dispersion follow-up fixed the Poisson,
-# NB2, binomial, hurdle-Poisson and grouped fits (test_predict_offset*.jl). The zero-truncated
-# fits below still keep none. These are @test_broken: they record the intended behaviour (the
-# training offset is stored and `predict` on the training Y uses it) and flip to an
-# "Unexpected Pass" error when the gap is closed, at which point change them to @test.
-# No default or design is changed here.
+# #788: fit types that accept `offset` at fit time but do not keep it, so predict / getLV /
+# residuals would read a zero offset. #787 and the grouped-dispersion follow-up fixed the Poisson,
+# NB2, binomial, hurdle-Poisson and grouped fits (test_predict_offset*.jl); the zero-truncated
+# count fits (TruncatedPoissonFit, TruncatedNegBin2Fit, TruncatedNegBin2PerTraitFit) now store
+# the training offset and have getLV / predict / residuals (test_truncated_postfit_788.jl).
+# The check below pins that the stored offset is the training offset.
 #
-# Still affected per the issue and not yet pinned here: NBGroupedCovFit and the other *CovFit
-# types, TweedieGrouped, ZIPCovFit / ZINBCovFit / ZIBCovFit, TruncatedNegBin2PerTraitFit.
+# Still without a stored offset or post-fit methods per the issue and not pinned here:
+# CensoredPoissonFit, LognormalFit, TweedieGroupedFit / TweediePerTraitPowerFit.
 
-@testset "ignored offsets on remaining fit types (#788, known gap)" begin
+@testset "truncated Poisson fit stores its training offset (#788)" begin
     p, n, K = 5, 50, 1
     rng = MersenneTwister(788)
     O = 0.8 .* randn(rng, p, n)
@@ -28,8 +27,9 @@ const GM = GLLVModels
     f = fit_truncated_poisson_gllvm(Y; K = K, offset = O)
     @test f isa TruncatedPoissonFit
 
-    # Intended: the fit keeps the offset it was trained with ...
-    @test_broken hasproperty(f, :offset) && f.offset == O
-    # A predict-on-training-Y check is not pinned here: predict(::TruncatedPoissonFit)
-    # has no method yet, so it would raise a MethodError rather than exercise the offset.
+    # The fit keeps the offset it was trained with ...
+    @test hasproperty(f, :offset) && f.offset == O
+    # ... and predict on the training Y uses it by default (see test_truncated_postfit_788.jl
+    # for the full link / response / residual checks).
+    @test predict(f, Y; type = :link) == predict(f, Y; type = :link, offset = O)
 end
