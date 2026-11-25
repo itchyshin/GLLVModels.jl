@@ -122,6 +122,55 @@ function _bridge_get(options, key::AbstractString, default)
     return default
 end
 
+const _BRIDGE_CI_OPTION_KEYS = (
+    "ci_method", "ci_level", "ci_nboot", "ci_seed",
+)
+const _BRIDGE_COEF_FIXED_OPTION_KEYS = (
+    "coef_fixed", "xcoef_fixed", "beta_fixed", "gamma_fixed",
+)
+
+function _bridge_option_key_string(k)
+    return k isa Symbol ? String(k) : String(k)
+end
+
+function _bridge_assert_options_allowed(options, allowed::AbstractSet{String},
+                                        route::AbstractString)
+    options === nothing && return nothing
+    options isa AbstractDict || return nothing
+    for (raw_key, _) in pairs(options)
+        key = _bridge_option_key_string(raw_key)
+        key in allowed && continue
+        throw(ArgumentError(
+            "bridge_fit ($(route)): unsupported option \"$(key)\""))
+    end
+    return nothing
+end
+
+function _bridge_ci_options_allowlist()
+    return Set(string(k) for k in _BRIDGE_CI_OPTION_KEYS)
+end
+
+function _bridge_onepart_route_name(key::AbstractString, X, X_lv, offset)
+    if key == "gaussian"
+        offset !== nothing && return "one-part gaussian (offset)"
+        X !== nothing && return "one-part gaussian (fixed-effect X)"
+        X_lv !== nothing && return "one-part gaussian (predictor X_lv)"
+        return "one-part gaussian"
+    end
+    X_lv !== nothing && return "one-part $(key) (predictor X_lv)"
+    return "one-part $(key)"
+end
+
+function _bridge_onepart_options_allowlist(key::AbstractString, X, X_lv, offset)
+    allowed = _bridge_ci_options_allowlist()
+    if X !== nothing
+        key == "gaussian" && union!(allowed, _BRIDGE_COEF_FIXED_OPTION_KEYS)
+    elseif key == "gaussian" && X_lv === nothing
+        push!(allowed, "reml")
+    end
+    return allowed
+end
+
 # Truthy coercion for bridge option flags coming from R/JuliaCall, where a logical
 # may arrive as Bool `true`, integer `1`, or the string "true"/"TRUE".
 _bridge_truthy(v::Bool) = v
@@ -565,6 +614,8 @@ function bridge_fit(; y,
             return _bridge_fit_precision_multivariate(y, phylo;
                 family=family, d=d, X=X, options=options)
         end
+        _bridge_assert_options_allowed(options,
+            Set(["phylo_model"]), "phylo precision (diagnostic)")
         return _bridge_fit_phylo_precision(y, phylo; family = family, options = options)
     end
     family === nothing && throw(ArgumentError("bridge_fit: family is required"))
@@ -935,6 +986,12 @@ function _bridge_fit_onepart(y, key::AbstractString, K::Integer, N,
     p, n = size(Yf)
     traits = _bridge_names(trait_names, p, "trait")
     units = _bridge_names(unit_names, n, "unit")
+    if !(X !== nothing && key != "gaussian")
+        _bridge_assert_options_allowed(
+            options,
+            _bridge_onepart_options_allowlist(key, X, X_lv, offset),
+            _bridge_onepart_route_name(key, X, X_lv, offset))
+    end
     M = _bridge_mask(mask, p, n)
     O = nothing
     if offset !== nothing
@@ -1678,6 +1735,10 @@ function _bridge_fit_onepart_cov(Yf::AbstractMatrix{Float64}, key::AbstractStrin
                                  K::Integer, N, traits, units, X,
                                  ci_method::AbstractString, ci_level::Real,
                                  ci_nboot::Integer, ci_seed::Integer, options)
+    allowed = _bridge_ci_options_allowlist()
+    union!(allowed, _BRIDGE_COEF_FIXED_OPTION_KEYS)
+    _bridge_assert_options_allowed(options, allowed,
+        "one-part $(key) (fixed-effect X)")
     p, n = size(Yf)
     Xarr = Array{Float64,3}(X)
     size(Xarr, 1) == p && size(Xarr, 2) == n || throw(ArgumentError(
@@ -1993,6 +2054,8 @@ end
 # (gaussian/gamma/beta) pass through as Float64.
 function _bridge_fit_mixed(y, family_strs::AbstractVector, K::Integer, N,
                            trait_names, unit_names, options)
+    _bridge_assert_options_allowed(
+        options, Set(["ci_method", "ci_level"]), "mixed-family")
     Yf = Matrix{Float64}(y)
     p, n = size(Yf)
     length(family_strs) == p || throw(ArgumentError(
@@ -2206,6 +2269,8 @@ end
 
 function _bridge_fit_sources(y, family, K::Integer, sources;
         X, X_lv, mask, N, trait_names, unit_names, options)
+    _bridge_assert_options_allowed(
+        options, Set(["ci_method", "g_tol", "iterations"]), "gaussian sources")
     fam = _bridge_family_key(String(family))
     fam == "gaussian" || throw(ArgumentError(
         "bridge_fit: sources are supported for the gaussian family only"))

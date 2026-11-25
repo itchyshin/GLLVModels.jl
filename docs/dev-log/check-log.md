@@ -1,3 +1,8 @@
+2026-11-22: #936 bridge_fit per-route options allow-list. Julia 1.13.4 (cloud),
+1 thread. `test/test_bridge_options_allowlist.jl`: 14/14. Bridge regression batch
+(14 files incl. new): 704 pass, 0 fail. Not full `Pkg.test()`. See after-task
+`2026-11-22-bridge-options-allowlist-936.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
