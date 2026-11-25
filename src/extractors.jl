@@ -151,7 +151,10 @@ function extract_Sigma(fit::GllvmFit; level::Symbol = :unit, part::Symbol = :tot
         return (Sigma = Matrix(Σ_shared), level = lvl, part = part)
     elseif part === :unique
         p = fit.model.p
-        s = if lvl === :unit
+        s = if lvl === :unit && _r_unit_folds_diag(fit)
+            # Identified unit-tier unique part (#701): diag(Σ_y) - diag(ΛΛ').
+            diag(sigma_y_site(fit)) .- diag(Σ_shared)
+        elseif lvl === :unit
             fit.model.has_diag && fit.pars.σ²_B !== nothing ?
                 collect(Float64, fit.pars.σ²_B) : zeros(Float64, p)
         else
@@ -161,7 +164,11 @@ function extract_Sigma(fit::GllvmFit; level::Symbol = :unit, part::Symbol = :tot
         end
         return (s = s, level = lvl, part = part)
     elseif part === :total
-        Σ = lvl === :unit ? _sigma_unit(fit) : _sigma_unit_obs(fit)
+        Σ = if lvl === :unit && _r_unit_folds_diag(fit)
+            Matrix(sigma_y_site(fit))  # identified total, as R (#701)
+        else
+            lvl === :unit ? _sigma_unit(fit) : _sigma_unit_obs(fit)
+        end
         return (Sigma = Σ, R = _cov2cor(Σ), level = lvl, part = part)
     else
         throw(ArgumentError("part must be one of :total, :shared, :unique; got $(part)"))
