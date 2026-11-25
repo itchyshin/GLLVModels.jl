@@ -283,6 +283,8 @@ function fit_coevolution_glm(Y::AbstractMatrix, K_star::AbstractMatrix;
             throw(ArgumentError("size(N)=$(size(N)) must equal size(Y)=$((T, n))."))
     end
     Ntr = N === nothing ? ones(Float64, T, n) : Matrix{Float64}(N)
+    _check_family_response_support_normal(family, Y, mask;
+        caller = "fit_coevolution_glm", N = Ntr)
     nd = _spde_disp_len(family)
 
     # warm start: per-trait link-scale mean over observed cells; small random Λ.

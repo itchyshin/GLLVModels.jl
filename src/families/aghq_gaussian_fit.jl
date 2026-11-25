@@ -127,6 +127,10 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
     # #1107: derive the mask before the exact-path gate (`mask === nothing` would
     # otherwise copy `missing` into the closed-form fitter).
     mask = _derive_obs_mask(mask, Y; caller = "fit_gaussian_gllvm")
+    # A NaN or Inf at an observed cell is not a missing value: at `K == p` it gave `loglik = NaN`
+    # with no error, and at `K < p` an unnamed LinearAlgebra error. Cells hidden by `mask` or
+    # `missing` are not checked.
+    _check_response_support(:finite, Y, mask; caller = "fit_gaussian_gllvm")
     offset=_normalize_offset(offset,size(Y,1),size(Y,2);Y=Y,mask=mask,caller="fit_gaussian_gllvm")
     if lambda_constraint!==nothing
         aghq===false || throw(ArgumentError(
@@ -252,6 +256,15 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
         return _gaussian_with_integration(base,info)
     end
     sel=result.selected;t=sel.parameters
+    # Unmoved and unconverged: no AGHQ estimate exists; retain Laplace and record the
+    # run's own stop reason (policy and the exact stop reasons: _aghq_unmoved_unconverged).
+    if _aghq_unmoved_unconverged(sel)
+        @warn "AGHQ did not move from its start and did not converge; retained exact Gaussian/Laplace" requested=request reason=sel.stop_reason
+        lap=aghq_gaussian_problem(Y,K;k=1,X=Xfree,mask=data.mask,offset=data.offset)
+        info=AGHQFitInfo(request,:laplace,1,k,1,sel.stop_reason,false,Inf,c,base_controls,result,
+            lap.adapt(base.pars.θ_packed),data,_aghq_data_digest(data),NaN)
+        return _gaussian_with_integration(base,info)
+    end
     info=AGHQFitInfo(request,:aghq,k,k,length(problem.grid.logw),sel.stop_reason,false,Inf,c,base_controls,result,
         deepcopy(sel.adaptation),data,_aghq_data_digest(data),maximum(d.gradient_max for d in problem.mode_diagnostics(t)))
     return _gaussian_with_integration(_gaussian_update(base,t,-sel.objective,sel.passes,sel.converged,result,time()-t0,fixed),info)

@@ -807,6 +807,10 @@ If `Y` is provided, returns `count(mask)` when `mask` is given, otherwise
 does not retain the mask it was fitted with, so pass it explicitly here for a
 masked fit.
 
+For a fit made from a response vector (`PhyloGaussianFit`, `BranchREFit`, `MultinomialFit`),
+`y` may be that vector: it is counted as one column, by the same rule. There is no
+`bic(fit, y)` vector form; use `bic(fit, nobs(fit, y))`.
+
 For fit structs that store observation/level counts instead of a response
 matrix (e.g. two-level, random-slope, SPDE), `nobs(fit)` returns the
 cell-count analogue (`p` times the stored unit count) so the convention holds
@@ -817,12 +821,21 @@ function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     Missing <: eltype(Y) && return count(!ismissing, Y)
     return length(Y)
 end
+# Fits made from a response VECTOR (`fit_phylo_gaussian`, `fit_branch_re`, `fit_branch_re_dense`,
+# a length-n `fit_multinomial_gllvm`): the fallback error below tells the user to call
+# `nobs(fit, Y)`, and a vector `y` has no such method (#1164). Count it as the single column
+# it is; same rule as the matrix method (mask, then `missing`, then `length`).
+StatsAPI.nobs(fit::Union{PhyloGaussianFit, BranchREFit, MultinomialFit}, y::AbstractVector;
+              mask = nothing) = StatsAPI.nobs(fit, reshape(y, :, 1); mask = mask)
 StatsAPI.nobs(fit::TwoLevelFit) = size(fit.Λ_B, 1) * fit.nindiv
 StatsAPI.nobs(fit::GaussianRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::PoissonRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::RowEffectFit) = size(fit.Λ, 1) * length(fit.ρ)
 StatsAPI.nobs(fit::SPDEGaussianFit) = size(fit.nodes, 1)   # univariate spatial GP (p = 1); unchanged
-StatsAPI.nobs(fit::SPDELatentFit) = size(fit.Λ, 1) * size(fit.nodes, 1)
+# p·M observed cells: the fitter stores the p×M trial matrix `N`, so M is its column count.
+# A fit built without `N` (the hand-built dummy constructor) falls back to the mesh-node count.
+StatsAPI.nobs(fit::SPDELatentFit) =
+    size(fit.N, 2) > 0 ? size(fit.N, 1) * size(fit.N, 2) : size(fit.Λ, 1) * size(fit.nodes, 1)
 function StatsAPI.nobs(fit::AnyGllvmFit)
     if hasfield(typeof(fit), :nindiv)
         return fit.nindiv
@@ -833,7 +846,8 @@ function StatsAPI.nobs(fit::AnyGllvmFit)
     elseif hasfield(typeof(fit), :ρ)
         return length(fit.ρ)
     else
-        throw(ArgumentError("nobs for $(typeof(fit)) requires the response matrix Y: nobs(fit, Y)"))
+        throw(ArgumentError("nobs for $(typeof(fit)) requires the response: nobs(fit, Y), " *
+                                "or nobs(fit, y) when the fit was made from a vector y"))
     end
 end
 
@@ -1724,6 +1738,15 @@ function _nparams(fit::OrdinalPerTraitCovFit)
     return p + count(!, fit.γ_fixed) + (p * K - div(K * (K - 1), 2)) + sum(fit.C .- 2)
 end
 
+# A Y whose row count differs from the fit's trait count used to reach an `@inbounds`
+# per-site mode search and read past the end of the column (garbage indices, then a
+# BoundsError with a meaningless index). Refuse it up front, as a DimensionMismatch.
+function _check_trait_rows(fit, Y::AbstractMatrix, who::AbstractString)
+    size(Y, 1) == size(fit.Λ, 1) || throw(DimensionMismatch(
+        "$who: Y has $(size(Y, 1)) rows but the fit has $(size(fit.Λ, 1)) traits"))
+    return nothing
+end
+
 """
     getLV(fit::OrdinalFit, Y; rotate=true) -> n×K matrix
 
@@ -1737,6 +1760,7 @@ function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
                rotate::Bool = true, mask = nothing)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Zmean = _lv_score_mean_for_fit(fit, Y, X_lv)
@@ -1757,6 +1781,7 @@ function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
 end
 function getLV(fit::OrdinalPerTraitFit, Y::AbstractMatrix{<:Integer};
                rotate::Bool = true, mask = nothing)
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     Z = Matrix{Float64}(undef, K, n)
@@ -1777,6 +1802,7 @@ Conditional latent scores at `η = β + Xγ + Λz` with per-trait ordinal cutpoi
 function getLV(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix{<:Integer},
                X::AbstractArray{<:Real, 3};
                rotate::Bool = true, mask = nothing)
+    _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
     O = _build_offset(X, fit.γ)

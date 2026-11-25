@@ -334,6 +334,24 @@ _cov_disp_init(::Beta)             = 10.0
 _cov_disp_init(::Gamma)            = 2.0
 _cov_disp_init(f)                  = 1.0
 
+# #1200: when the objective sits on the 1e12 failure sentinel at the starting point
+# (one site's Laplace mode search fails at the family's default start dispersion),
+# the optimiser has no gradient and exits at iteration 0 with logLik = -Inf. Retry the
+# start with a smaller dispersion (3x, 10x, 30x below the default; a smaller Beta/NB
+# precision gives flatter, easier mode searches). A start that already evaluates
+# finite is never touched, so every fit that worked before is bit-identical.
+function _rescue_disp_start!(negll, θ0::AbstractVector, has_disp::Bool, family)
+    has_disp || return θ0
+    negll(θ0) < 1e12 && return θ0
+    ld0 = θ0[end]
+    for f in (3.0, 10.0, 30.0)
+        θ0[end] = ld0 - log(f)
+        negll(θ0) < 1e12 && return θ0
+    end
+    θ0[end] = ld0
+    return θ0
+end
+
 # Rebuild the family marker carrying the current dispersion (only the relevant
 # field is read by the marginal pieces).
 _cov_family(::Poisson, d)          = Poisson()
@@ -476,6 +494,8 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
 
     # NA handling: derive the observation mask and a sanitized response matrix.
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_gllvm_cov"; obs = msk)
+    _check_family_response_support(family, Y, msk; caller = "fit_gllvm_cov", N = N)
     Yc = _sanitize_missing(Y, _cov_placeholder(family))
 
     Zemp = _cov_zemp(family, Yc, Nm, lk)
@@ -511,6 +531,7 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         end
         return isfinite(v) ? v : 1e12
     end
+    _rescue_disp_start!(negll, θ0, has_disp, family)   # #1200
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = if _cov_ad_ok(family)

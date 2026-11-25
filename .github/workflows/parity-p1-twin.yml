@@ -14,13 +14,19 @@ name: Parity P1 twin tests
 # maintainer does that from the GitHub UI once satisfied) -- ubuntu-only,
 # PR + manual trigger, matching this repo's CI-cost convention (see
 # .github/workflows/CI.yml for the routine-vs-release matrix rationale).
-on: [pull_request, workflow_dispatch]
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   p1-twin-tests:
     name: gllvmTMB P1 twin tests (Julia-only; ${{ matrix.version }})
+    # Draft PRs skip both Julia versions. workflow_dispatch has no draft
+    # flag, so the event guard keeps the manual pair. A ready PR runs both.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

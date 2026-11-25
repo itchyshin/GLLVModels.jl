@@ -26,6 +26,8 @@
 # Beta conditional log-density at η (μ = logistic(η)), shared form with beta.jl.
 @inline function _beta_logpdf_eta(η, y, φ)
     μ = clamp(1.0 / (1.0 + exp(-η)), 1e-12, 1 - 1e-12)
+    # stable form once both shapes are large (the expanded form below cancels, #1143)
+    _beta_stirling_applies(μ * φ, (1 - μ) * φ) && return _beta_logpdf(μ * φ, (1 - μ) * φ, y)
     return loggamma(φ) - loggamma(μ * φ) - loggamma((1 - μ) * φ) +
            (μ * φ - 1) * log(y) + ((1 - μ) * φ - 1) * log1p(-y)
 end
@@ -264,6 +266,7 @@ function beta_marginal_loglik_va(Y::AbstractMatrix, Λ::AbstractMatrix,
     size(Λ, 1) == size(Y, 1) == length(β) ||
         throw(DimensionMismatch("Λ, Y, β must share p = $(size(Y,1)) rows"))
     _va_check_mask(mask, Y)
+    _va_check_response("beta_marginal_loglik_va", Y, mask)
     φ > 0 || throw(ArgumentError("precision φ must be > 0"))
     Λ2 = Λ .^ 2
     x, w = _gauss_hermite(gh)
@@ -301,7 +304,7 @@ function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         maxiter::Integer = 100, tol::Real = 1e-9, mask = nothing)
     _va_require_canonical_link("fit_beta_gllvm_va", link, LogitLink())
-    _va_check_mask(mask, Y)
+    _va_check_fit_mask(mask, Y)
     _check_response_support(:beta, Y, mask; caller = "fit_beta_gllvm_va")
     p, n = size(Y)
     rr = rr_theta_len(p, K)

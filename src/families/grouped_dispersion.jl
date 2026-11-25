@@ -414,8 +414,9 @@ _dispersion_group_lower_boundary(dvec::AbstractVector{<:Real}) =
     Bool[d < 1e-6 for d in dvec]
 
 # Informational upper end for the Gamma shape α (issue #864, maintainer decision
-# 2026-10-25: warn-only). On per-trait USairpollution (K = 1) the `manu` shape stops at
-# 3.7e5 while gllvmTMB reaches 2.8e8; the log-likelihood differs by about 8e-5, so the
+# 2026-10-25: warn-only). On per-trait USairpollution (K = 1) the `manu` shape stopped at
+# 3.7e5 with the cancelling density (near 1e10 with the stable density, #1175) while
+# gllvmTMB reaches 2.8e8; the log-likelihood differs by about 8e-5, so the
 # likelihood is flat in that direction and the large shape is a boundary the user should
 # be told about. This stays separate from `dispersion_boundary` (which is lower-end only
 # for Gamma since 2026-09-29, because a large α is identified when the data really are
@@ -720,7 +721,8 @@ function _fit_nb_gllvm_grouped_start(Y::AbstractMatrix; K::Integer, group::Abstr
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -987,8 +989,9 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_nb_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped_cov")
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -1606,6 +1609,7 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_beta_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
@@ -1838,7 +1842,7 @@ not flagged (2026-09-29); `converged` is forced `false` whenever any group is
 flagged.
 `dispersion_upper` (length G, #864) is informational only: it marks groups whose fitted
 `α[g]` is above `1e5`, where the likelihood can be flat in the shape (on per-trait
-USairpollution `manu` stops at 3.7e5 while gllvmTMB reaches 2.8e8). It comes with a
+USairpollution `manu` stopped at 3.7e5 with the cancelling density, near 1e10 with the stable one, while gllvmTMB reaches 2.8e8). It comes with a
 warning, does not change `dispersion_boundary`, and never changes `converged`.
 `offset` is the p×n training offset the fit was made with (`nothing` when the fit had
 none); [`getLV`](@ref) uses it by default.
@@ -2110,6 +2114,7 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_gamma_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
@@ -2489,7 +2494,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped")
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
     _mask_warmstart!(Zemp, msk)
@@ -2642,7 +2647,9 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
-    Yc = Integer.(_sanitize_missing(Y, 0))
+    _check_finite_covariates(X, "fit_nb1_gllvm_grouped_cov"; obs = msk)
+    _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped_cov")
+    Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
     β0 = vec(sum(Zemp; dims = 2)) ./ n
@@ -2741,9 +2748,10 @@ function _tweedie_grouped_laplace_weight(hessian::Symbol, f::TweedieED, μ, me, 
 end
 
 # Per-site mode search for the Tweedie grouped kernel (#503, the #479 / NB1 pattern).
-# Returns `(z, converged)`. The step is Fisher-scored always: expected information is
-# >= 0, so `Λ'WΛ + I` is SPD and every Newton direction ascends; the converged mode is
-# the fixed point of `Λ's − z = 0`, which does not involve W.
+# Returns `(z, converged)`. The step weight is Fisher, or max(observed, Fisher) on the
+# log link (#1042): either is >= 0, so `Λ'WΛ + I` is SPD and every Newton direction
+# ascends; the converged mode is the fixed point of `Λ's − z = 0`, which does not
+# involve W.
 #
 # Before this change the kernel ran undamped Fisher scoring (`z .+ Δ`) and returned
 # whatever `z` it held when the loop stopped, converged or not, so a site that
@@ -2764,7 +2772,17 @@ function _tweedie_grouped_mode(fams::AbstractVector, y::AbstractVector, n::Abstr
         μ  = _clamp_mu.(fams, linkinv.(Ref(link), η))
         me = mu_eta.(Ref(link), η)
         s  = _glm_score.(fams, μ, n, me, y)
-        W  = _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        # Step weight max(observed, Fisher) on the log link, as the scalar search
+        # does (`_laplace_mode_step_weight(::TweedieED)`, #623): pure Fisher
+        # under-states the curvature when y >> μ and the unchecked small-step
+        # branch below then limit-cycles (#1042). The mode (fixed point of
+        # `Λ's − z = 0`) does not involve W.
+        W  = if link isa LogLink
+            max.(_tweedie_grouped_laplace_weight.(Ref(:observed), fams, μ, me, y, Ref(link), η),
+                 _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η))
+        else
+            _tweedie_grouped_laplace_weight.(Ref(:fisher), fams, μ, me, y, Ref(link), η)
+        end
         if mask !== nothing
             s = ifelse.(mask, s, 0.0)
             W = ifelse.(mask, W, 0.0)
@@ -2808,8 +2826,8 @@ function _tweedie_grouped_loglik_site(fams::AbstractVector, y::AbstractVector, n
         maxiter::Integer = 100, tol::Real = 1e-9)
     p, K = size(Λ)
     off = offset === nothing ? false : offset
-    # Role separation (mirrors NB2/Beta/NB1 above): the MODE SEARCH is Fisher-scored,
-    # always; `hessian` governs only the post-search log-det below.
+    # Role separation (mirrors NB2/Beta/NB1 above): the MODE SEARCH picks its own step
+    # weight; `hessian` governs only the post-search log-det below.
     z, ok = _tweedie_grouped_mode(fams, y, n, Λ, β, link;
                                   mask = mask, offset = offset, maxiter = maxiter, tol = tol)
     # Larger-budget retry from z = 0 (mirrors #507's NB1 retry), only where the default
@@ -2896,7 +2914,9 @@ end
 Result of [`fit_tweedie_gllvm_grouped`](@ref): intercepts `β` (length p), loadings `Λ`
 (p×K), the per-group dispersion vector `φ` (length G), the SHARED `power` ∈ (1,2), the
 species→group map `group` (length p), the `link`, the maximised Laplace `loglik`,
-`converged`, and `iterations`. The per-species dispersion is `φ[group[t]]`
+`converged`, and `iterations`. `offset` is the p×n training offset the fit was made with
+(`nothing` when none was given); `getLV`, `predict` and `residuals` use it by default.
+The per-species dispersion is `φ[group[t]]`
 (`Var_t = φ[group[t]]·μ_t^power`). `converged` uses the same `_tweedie_verdict`
 contract as [`fit_tweedie_gllvm`](@ref): a successfully evaluated objective, a
 strictly interior power, and a gradient residual small relative to the
@@ -2914,6 +2934,7 @@ struct TweedieGroupedFit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     power_fixed::Bool # true only when `power = p0` removed all power coordinates
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
 
 # Positional compatibility constructor (2026-08-28): see NBGroupedFit above.
@@ -2923,6 +2944,10 @@ TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations)
     TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, :observed, false)
 TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian) =
     TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian, false)
+# Pre-offset compat tier (11 positional args, #788): no stored training offset.
+TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian, power_fixed) =
+    TweedieGroupedFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian,
+                      power_fixed, nothing)
 
 function Base.show(io::IO, f::TweedieGroupedFit)
     p, K = size(f.Λ)
@@ -2950,7 +2975,8 @@ end
 
 Result of `fit_tweedie_gllvm_grouped(...; power_group=:species)`.  The grouped
 dispersion vector `φ` is indexed by `group`; `power[t]` is the separately
-estimated Tweedie power for species `t`.
+estimated Tweedie power for species `t`. `offset` is the p×n training offset the fit was
+made with (`nothing` when none was given); `getLV`, `predict` and `residuals` use it by default.
 """
 struct TweediePerTraitPowerFit
     β::Vector{Float64}
@@ -2963,7 +2989,13 @@ struct TweediePerTraitPowerFit
     converged::Bool
     iterations::Int
     hessian::Symbol
+    offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
 end
+
+# Pre-offset compat tier (10 positional args, #788): no stored training offset.
+TweediePerTraitPowerFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian) =
+    TweediePerTraitPowerFit(β, Λ, φ, power, group, link, loglik, converged, iterations, hessian,
+                            nothing)
 
 _loadings(fit::TweediePerTraitPowerFit) = fit.Λ
 _loglik(fit::TweediePerTraitPowerFit) = fit.loglik
@@ -2972,6 +3004,51 @@ function _nparams(fit::TweediePerTraitPowerFit)
     return p + rr_theta_len(p, K) + length(fit.φ) + length(fit.power)
 end
 StatsAPI.dof(fit::TweediePerTraitPowerFit) = _nparams(fit)
+
+# Per-species Tweedie markers, φ[group[t]] and the shared / per-trait power, for post-fit use.
+_tweedie_grouped_fams(fit::TweedieGroupedFit) =
+    [TweedieED(float(fit.φ[fit.group[t]]), float(fit.power)) for t in eachindex(fit.group)]
+_tweedie_grouped_fams(fit::TweediePerTraitPowerFit) =
+    [TweedieED(float(fit.φ[fit.group[t]]), float(fit.power[t])) for t in eachindex(fit.group)]
+
+"""
+    getLV(fit::TweedieGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+    getLV(fit::TweediePerTraitPowerFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for a grouped-dispersion Tweedie fit: the per-site Laplace mode
+`ẑₛ`, found with the fit's own mode search at the per-species dispersion `φ[group[t]]` and the
+shared (`TweedieGroupedFit`) or per-trait (`TweediePerTraitPowerFit`) power. `Y` is the p×n matrix of
+non-negative reals; `rotate=true` applies the canonical [`rotation`](@ref). Pass the `mask` given to
+[`fit_tweedie_gllvm_grouped`](@ref): masked cells do not enter the mode.
+
+On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the stored training
+offset (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass (a p×n matrix,
+a scalar or a length-p vector). New units from an offset fit without an `offset` are refused, as
+gllvmTMB refuses `newdata` that lacks the offset variable.
+"""
+function getLV(fit::Union{TweedieGroupedFit,TweediePerTraitPowerFit}, Y::AbstractMatrix{<:Real};
+               rotate::Bool = true, mask = nothing, offset = nothing)
+    p, n = size(Y)
+    size(fit.Λ, 1) == p || throw(ArgumentError(
+        "getLV: Y has $p rows but the fit has $(size(fit.Λ, 1)) traits"))
+    offset = _grouped_prediction_offset(fit, Y, offset, mask, "getLV")
+    fams = _tweedie_grouped_fams(fit)
+    K = size(fit.Λ, 2)
+    ones_p = ones(Int, p)
+    Z = Matrix{Float64}(undef, K, n)
+    @inbounds for s in 1:n
+        mi = mask === nothing ? nothing : view(mask, :, s)
+        oi = offset === nothing ? nothing : view(offset, :, s)
+        ys = view(Y, :, s)
+        z, ok = _tweedie_grouped_mode(fams, ys, ones_p, fit.Λ, fit.β, fit.link; mask = mi, offset = oi)
+        ok || ((z, ok) = _tweedie_grouped_mode(fams, ys, ones_p, fit.Λ, fit.β, fit.link;
+                                               mask = mi, offset = oi, maxiter = 2000))
+        ok || (z = _grouped_getLV_mode(fams, ys, ones_p, fit.Λ, fit.β, fit.link; mask = mi, offset = oi))
+        Z[:, s] = z
+    end
+    Zt = permutedims(Z)
+    return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
+end
 
 struct _TweediePowerSpec
     values::Vector{Float64}
@@ -3133,8 +3210,8 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_tweedie_gllvm_grouped")
     if spec.mode === :species && !spec.fixed
         return TweediePerTraitPowerFit(β̂, Λ̂, φ̂g, collect(p̂), gidx, link, loglik, conv,
-                                       Optim.iterations(res), hessian)
+                                       Optim.iterations(res), hessian, _stored_offset(offset))
     end
     return TweedieGroupedFit(β̂, Λ̂, φ̂g, p̂[1], gidx, link, loglik, conv,
-                             Optim.iterations(res), hessian, spec.fixed)
+                             Optim.iterations(res), hessian, spec.fixed, _stored_offset(offset))
 end

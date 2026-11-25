@@ -25,7 +25,7 @@
       "reused_idiom_from": "tools/core070_gaussian_postfit.jl"
     },
     "empty_design": {
-      "description": "POST-COEF-EMPTY only. Julia side: fit_gaussian_gllvm(Y; K=1) called with no X (a real native fit, fit.pars.\u03b2===nothing). R side: coef.gllvmTMB_multi's empty-X_fix_names branch is evaluated directly against a synthetic mock object (X_fix_names <- character(0)) by parsing just that one function out of the pinned R source and eval()-ing it in the gllvmTMB namespace -- the same parse-one-function-and-eval technique already proven in tools/core070_postfit_probe.R and tools/core070_data_batch.R. No live gllvmTMB() formula fit with zero fixed effects is attempted; the branch is unconditional on X_fix_names length and needs no fitted TMB object to exercise honestly."
+      "description": "POST-COEF-EMPTY requires public fitted models on both sides with no fixed effects, trait intercepts, and trait intercepts plus a shared covariate. Compare coefficient lengths exactly and record names separately. The row remains unbound until a qualifying receipt is checked and separately authorized."
     }
   },
   "tolerances": {
@@ -40,9 +40,17 @@
       "case_id": "CORE070-POSTFIT-COEF-EMPTY-NATIVE",
       "source_id": "postfit-policy/POST-COEF-EMPTY",
       "julia_surface": "StatsAPI.coef(fit::GllvmFit) (src/postfit.jl:633)",
-      "r_call": "coef.gllvmTMB_multi's empty-X_fix_names branch (R/vcov-coef.R:59-64)",
-      "comparand": "length(coef)==0 on both sides",
-      "check": "length(StatsAPI.coef(fit_no_x))==0 && length(r_empty_coef)==0"
+      "r_call": "coef() on public fitted gllvmTMB models for all three designs",
+      "comparand": "Coefficient lengths [0, 5, 6] on both sides, with names recorded separately",
+      "check": "Three fitted pairs have exact matching lengths [0, 5, 6] and both accessor controls are rejected",
+      "discriminating_comparison": {
+        "implementation_status": "pending_runner_and_receipt_verification",
+        "expected_lengths": [0, 5, 6],
+        "length_tolerance": 0,
+        "fit_designs": ["no_fixed_effects", "trait_intercepts", "trait_intercepts_and_shared_x"],
+        "accessor_controls": ["always_empty", "spurious_coefficient"],
+        "name_comparison": "record_separately"
+      }
     },
     {
       "case_id": "CORE070-POSTFIT-COEF-NAMED-NATIVE",
