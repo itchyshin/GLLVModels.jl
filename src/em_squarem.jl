@@ -358,7 +358,7 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
                 return EMPhyloFit(fb.Λ_B, fb.σ_eps, fb.σ_phy, fb.logLik,
                                   fb.n_iter, fb.converged, fb.loglik_trace,
                                   fb.blup_phy, fb.blup_phi, true,
-                                  fb.sigma_eps_boundary)
+                                  fb.sigma_eps_boundary, fb.sigma_phy_boundary)
             end
         elseif needs_fallback
             fb = em_fit_phylo(yf, K_B, Σ_phy;
@@ -372,7 +372,7 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
                 return EMPhyloFit(fb.Λ_B, fb.σ_eps, fb.σ_phy, fb.logLik,
                                   fb.n_iter, fb.converged, fb.loglik_trace,
                                   fb.blup_phy, fb.blup_phi, true,
-                                  fb.sigma_eps_boundary)
+                                  fb.sigma_eps_boundary, fb.sigma_phy_boundary)
             end
             # θ_polish is the best candidate: fall through to the common tail,
             # which recomputes BLUPs and log-lik at θ.
@@ -408,9 +408,16 @@ function em_fit_phylo_squarem(y::AbstractMatrix, K_B::Integer,
         sigma_eps_boundary = true
     end
     converged = converged && !sigma_eps_boundary
+    sigma_phy_boundary = false
+    if !sigma_eps_boundary &&
+            _phy_unique_stalled_at_origin(σ_phy, ll_final, yf, Λ_B, σ_eps)
+        sigma_phy_boundary = true
+    end
+    converged = converged && !sigma_phy_boundary
     return EMPhyloFit(Matrix{Float64}(Λ_B), σ_eps, Vector{Float64}(σ_phy),
                       ll_final, cycles_run, converged, loglik_trace,
-                      blup_phy, blup_phi, fallback_used, sigma_eps_boundary)
+                      blup_phy, blup_phi, fallback_used, sigma_eps_boundary,
+                      sigma_phy_boundary)
 end
 
 """

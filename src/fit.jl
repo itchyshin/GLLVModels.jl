@@ -92,7 +92,7 @@ _reset_unidentified_warnings!() = (lock(() -> empty!(_UNIDENTIFIED_WARNED), _UNI
                        X_lv=nothing,
                        σ_eps_init=1.0, λ_init=nothing, λ_W_init=nothing,
                        λ_phy_init=nothing,
-                       σ²_B_init=0.1, σ²_W_init=0.1, σ_phy_init=0.1,
+                       σ²_B_init=0.1, σ²_W_init=0.1, σ_phy_init=nothing,
                        β_init=nothing, β_fixed=nothing, alpha_lv_init=nothing,
                        x_tol=1e-8, f_tol=0.0,
                        g_tol=1e-6, iterations=500, optimizer=nothing) -> GllvmFit
@@ -213,7 +213,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             λ_phy_init = nothing,
                             σ²_B_init = 0.1,
                             σ²_W_init = 0.1,
-                            σ_phy_init = 0.1,
+                            σ_phy_init = nothing,
+                            phy_unique_boundary_restart::Bool = true,
                             β_init = nothing,
                             β_fixed = nothing,
                             alpha_lv_init = nothing,
@@ -448,7 +449,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         end
         # Model A phylo block init (same packed order as gaussian_lv_nll_packed:
         # σ_phy then θ_rr_phy, appended after Λ_B).
-        σ_phy₀ = has_phy_unique ? fill(Float64(σ_phy_init), p) : Float64[]
+        σ_phy₀ = has_phy_unique ? _resolve_sigma_phy_init(σ_phy_init, Σ_phy, p) : Float64[]
         θ_phy₀ = K_phy > 0 ? init_theta_rr(p, K_phy) : Float64[]
         params₀ = vcat(β₀, vec(alpha₀), [log(σ_e₀)], θ_B₀, σ_phy₀, θ_phy₀)
         # The explicit (non-profiled) objective carries a free log σ_eps (required
@@ -558,7 +559,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
 
     # ρ_phy on identity (signed) scale: ρ_phy = σ_phy / σ_eps. Signed because
     # σ_phy now uses an identity link — see src/likelihood.jl, src/profile.jl.
-    ρ_phy₀ = has_phy_unique ? fill(σ_phy_init / σ_e₀, p) : Float64[]
+    σ_phy₀_abs = has_phy_unique ? _resolve_sigma_phy_abs_init(σ_phy_init, Σ_phy) : 0.0
+    ρ_phy₀ = has_phy_unique ? fill(σ_phy₀_abs / σ_e₀, p) : Float64[]
 
     θ_phy₀ = if K_phy > 0
         if isnothing(λ_phy_init)
@@ -709,6 +711,30 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
     end
     θ_packed_legacy = reduce(vcat, legacy_pieces)
 
+    if has_phy_unique && phy_unique_boundary_restart && Σ_phy !== nothing &&
+            rec.σ_phy !== nothing &&
+            _phy_unique_stalled_at_origin(rec.σ_phy, rec.logLik, y, rec.Λ_B, rec.σ_eps)
+        s0 = _scaled_sigma_phy_init(Σ_phy)
+        return _fit_gaussian_gllvm_exact(y;
+            K = K, K_W = K_W, has_diag = has_diag, K_phy = K_phy,
+            has_phy_unique = true, Σ_phy = Σ_phy, X = X, X_lv = X_lv,
+            σ_eps_init = rec.σ_eps, λ_init = rec.Λ_B,
+            λ_W_init = rec.Λ_W === nothing ? λ_W_init : rec.Λ_W,
+            λ_phy_init = rec.Λ_phy === nothing ? λ_phy_init : rec.Λ_phy,
+            σ²_B_init = σ²_B_init, σ²_W_init = σ²_W_init,
+            σ_phy_init = s0, β_init = β_init, β_fixed = β_fixed,
+            alpha_lv_init = alpha_lv_init, x_tol = x_tol, f_tol = f_tol,
+            g_tol = g_tol, iterations = iterations, optimizer = optimizer,
+            _sufficient_stat = _sufficient_stat,
+            phy_unique_boundary_restart = false)
+    end
+
+    converged_out = _fit_verdict(res)[2]
+    if has_phy_unique && rec.σ_phy !== nothing &&
+            _phy_unique_stalled_at_origin(rec.σ_phy, rec.logLik, y, rec.Λ_B, rec.σ_eps)
+        converged_out = false
+    end
+
     return GllvmFit(
         GllvmModel(Int(p), Int(K), Int(K_W), has_diag,
                    Int(K_phy), has_phy_unique),
@@ -729,7 +755,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         # (gaussian_profile_nll) has no catch/sentinel return today, so the
         # screen only guards against a future one; logLik stays the
         # recomputed closed-form value.
-        (_fit_verdict(res)[2]),
+        converged_out,
         res,
         t1 - t0,
         nothing,

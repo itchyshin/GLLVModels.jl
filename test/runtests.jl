@@ -193,6 +193,7 @@ _register_shard_table!(4, (
         "test_bridge_integer_counts.jl", "test_lv_ci.jl", "test_lv_profile_pd_hessian.jl",
         "test_bridge_gaussian_offset.jl", "test_confint_hessian_consistency.jl", "test_curvature_census.jl",
         "test_phylo_contrasts_struct.jl", "test_parity_trial_inputs.jl", "test_em_phylo_sigma_eps_floor.jl",
+        "test_phylo_unique_sigma_phy_boundary.jl",
         "test_nparams_em_branch_re.jl", "test_spatial_cov.jl", "test_cv.jl", "test_cv_species_binomial_trials.jl",
         "test_namespace_numeric_p1_twin.jl", "test_mc_simulate_p1.jl", "test_variance_decomp_p1.jl",
         "test_off_all_count_twin_p1.jl", "test_weights_twins_p1.jl", "test_temporal_lowrank.jl",
@@ -1087,6 +1088,7 @@ println(_SHARD === nothing ?
     _shard_include("test_parity_trial_inputs.jl")
     _shard_include("test_em_phylo.jl")
     _shard_include("test_em_phylo_sigma_eps_floor.jl")
+    _shard_include("test_phylo_unique_sigma_phy_boundary.jl")
     _shard_include("test_nparams_em_branch_re.jl")
     _shard_include("test_sparse_phy_identities.jl")
     _shard_include("test_em_squarem.jl")

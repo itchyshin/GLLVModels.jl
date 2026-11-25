@@ -66,6 +66,7 @@ include("likelihood_contrasts.jl")       # Gaussian marginal log-lik on contrast
 include("edge_incidence.jl")             # Edge-node incidence sparse representation (Bolker phylog.rmd)
 include("likelihood_edge_incidence.jl")  # Gaussian marginal log-lik via edge-node incidence
 include("phylo_branch_re.jl")            # Single-variance branch random-effects model
+include("phylo_unique_safeguards.jl")    # σ_phy origin stall / scaled start (#1179)
 include("em_phylo.jl")                   # Gradient-free EM for Gaussian phylogenetic GLLVM
 include("em_squarem.jl")                 # SQUAREM acceleration for phylogenetic EM
 include("relaxed_clock.jl")              # Relaxed-clock per-branch evolution rates

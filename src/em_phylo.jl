@@ -776,6 +776,10 @@ Result of `em_fit_phylo`. Fields:
 * `sigma_eps_boundary` – `true` iff an M-step replaced `σ_eps²` with the
                  data-relative floor `1e-8 * mean(y.^2)` (rank-K or
                  over-specified `K_B` data). `converged` is then false.
+* `sigma_phy_boundary` – `true` iff the fit stalled with every `|σ_phy[t]|`
+                 below `1e-6` and a log-likelihood equal to the no-phylogeny
+                 submodel at the same `(Λ_B, σ_eps)` (refs #1179).
+                 `converged` is then false.
 """
 struct EMPhyloFit
     Λ_B::Matrix{Float64}
@@ -789,13 +793,16 @@ struct EMPhyloFit
     blup_phi::Vector{Float64}
     fallback_used::Bool
     sigma_eps_boundary::Bool
+    sigma_phy_boundary::Bool
     # Defaults keep existing 9- and 10-argument positional constructions
     # (this file, em_squarem.jl, and the tests) unchanged.
     function EMPhyloFit(Λ_B, σ_eps, σ_phy, logLik, n_iter, converged,
                         loglik_trace, blup_phy, blup_phi,
-                        fallback_used = false, sigma_eps_boundary = false)
+                        fallback_used = false, sigma_eps_boundary = false,
+                        sigma_phy_boundary = false)
         new(Λ_B, σ_eps, σ_phy, logLik, n_iter, converged,
-            loglik_trace, blup_phy, blup_phi, fallback_used, sigma_eps_boundary)
+            loglik_trace, blup_phy, blup_phi, fallback_used, sigma_eps_boundary,
+            sigma_phy_boundary)
     end
 end
 
@@ -869,7 +876,8 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
                       σ_phy_init = nothing,
                       tol = EM_DEFAULT_TOL, max_iter = 1000, assert_monotone = true,
                       phy::Union{Nothing,GLLVModels.AugmentedPhy{Float64}} = nothing,
-                      force_dense_estep::Bool = false)
+                      force_dense_estep::Bool = false,
+                      boundary_restart::Bool = true)
     _refuse_na_response("em_fit_phylo", y)
     p, n = size(y)
     K_B ≥ 1 || throw(ArgumentError("K_B must be ≥ 1"))
@@ -920,12 +928,7 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
         Λ_B   = Matrix{Float64}(λ_init)
         σ_eps = float(σ_eps_init)
     end
-    σ_phy = if σ_phy_init === nothing
-        # Start the phylo SD from the marginal scale of the data.
-        fill(0.1 * sqrt(mean(abs2, yf)), p)
-    else
-        Vector{Float64}(σ_phy_init)
-    end
+    σ_phy = _resolve_sigma_phy_init(σ_phy_init, Σ_phy, p)
 
     loglik_trace = Float64[]
     loglik_prev  = -Inf
@@ -995,9 +998,26 @@ function em_fit_phylo(y::AbstractMatrix, K_B::Integer, Σ_phy::AbstractMatrix;
     if σ_eps^2 <= _sigma_eps2_data_floor(yf)
         sigma_eps_boundary = true
     end
-    converged = converged && !sigma_eps_boundary
+    sigma_phy_boundary = false
+    if !sigma_eps_boundary &&
+            _phy_unique_stalled_at_origin(σ_phy, ll_final, yf, Λ_B, σ_eps)
+        if boundary_restart
+            s0 = _scaled_sigma_phy_init(Σ_phy)
+            alt = em_fit_phylo(yf, K_B, Σ_phy;
+                               λ_init = Λ_B, σ_eps_init = σ_eps,
+                               σ_phy_init = fill(s0, p),
+                               tol, max_iter, assert_monotone, phy,
+                               force_dense_estep, boundary_restart = false)
+            if alt.logLik > ll_final + 1e-8 && !_sigma_phy_collapsed(alt.σ_phy)
+                return alt
+            end
+        end
+        sigma_phy_boundary = true
+    end
+    converged = converged && !sigma_eps_boundary && !sigma_phy_boundary
     return EMPhyloFit(Λ_B, σ_eps, σ_phy, ll_final, iters_run, converged,
-                      loglik_trace, blup_phy, blup_phi, false, sigma_eps_boundary)
+                      loglik_trace, blup_phy, blup_phi, false, sigma_eps_boundary,
+                      sigma_phy_boundary)
 end
 
 # Internal PD check for SEM I_obs (comment only; a docstring would trip missing_docs).
