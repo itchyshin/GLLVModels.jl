@@ -71,3 +71,25 @@ default_link(::Poisson)  = LogLink()
 default_link(::NegativeBinomial) = LogLink()
 default_link(::Beta)     = LogitLink()
 default_link(::Gamma)    = LogLink()
+
+"""Refuse unsupported links before Laplace optimisation (refs #1161)."""
+function _check_binomial_laplace_link(link::Link, caller::AbstractString)
+    link isa Union{LogitLink, ProbitLink, CLogLogLink} || throw(ArgumentError(
+        "$caller: Binomial Laplace fitters support only LogitLink, ProbitLink, and CLogLogLink; " *
+        "got $(nameof(typeof(link)))."))
+    return nothing
+end
+
+function _check_betabinomial_laplace_link(link::Link, caller::AbstractString)
+    link isa Union{LogitLink, ProbitLink, CLogLogLink} || throw(ArgumentError(
+        "$caller: Beta-binomial Laplace fitters support only LogitLink, ProbitLink, and CLogLogLink; " *
+        "got $(nameof(typeof(link)))."))
+    return nothing
+end
+
+function _check_studentt_laplace_link(link::Link, caller::AbstractString)
+    link isa IdentityLink || throw(ArgumentError(
+        "$caller: Student-t Laplace fitters support only IdentityLink (twin student); " *
+        "got $(nameof(typeof(link)))."))
+    return nothing
+end

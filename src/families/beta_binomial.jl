@@ -533,6 +533,7 @@ function fit_beta_binomial_gllvm(Y::AbstractMatrix; K::Integer,
         β_init = nothing, Λ_init = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_betabinomial_laplace_link(link, "fit_beta_binomial_gllvm")
     _check_response_support(:binomial, Y, _resolve_obs_mask(mask, Y); caller = "fit_beta_binomial_gllvm", N = N)
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
@@ -706,6 +707,7 @@ function fit_beta_binomial_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         link::Link = LogitLink(), mask = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_betabinomial_laplace_link(link, "fit_beta_binomial_gllvm_grouped")
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
@@ -878,6 +880,7 @@ function fit_beta_binomial_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray
         link::Link = LogitLink(), mask = nothing, γ_fixed = nothing, φ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_betabinomial_laplace_link(link, "fit_beta_binomial_gllvm_grouped_cov")
     p, n = size(Y)
     Nm = N === nothing ? fill(1, p, n) : N
     size(Nm) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
