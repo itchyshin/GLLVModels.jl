@@ -132,6 +132,71 @@ _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentErr
     "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
     "zero-inflated (ZIPoisson, ZINegBin, ZIB) routes listed in ?fit_gllvm."))
 
+# Fitters that take neither `mask` nor `missing` responses: every cell enters the likelihood.
+# A mask, or a `missing` cell in `Y`, is refused here, before any work, with the same
+# `ArgumentError` on every such route; without this the call ended in a raw `MethodError`
+# that named an internal signature (#1217). Mask SUPPORT on these routes is a separate
+# question and is not added here.
+function _refuse_mask_route(caller::AbstractString, mask, Y = nothing)
+    mask === nothing || throw(ArgumentError(
+        "$caller: mask is not supported on this route (the fitter takes no mask and no missing " *
+        "responses, so every cell enters the likelihood); drop the mask, or use a route that " *
+        "accepts one (see ?fit_gllvm)"))
+    Y === nothing && return nothing
+    k = findfirst(ismissing, Y)
+    k === nothing || throw(ArgumentError(
+        "$caller: missing responses are not supported on this route (the fitter takes no mask " *
+        "and no missing responses, so every cell enters the likelihood); Y is missing at " *
+        "trait $(k[1]), unit $(k[2]). Remove the unobserved cells, or use a route that " *
+        "accepts a mask (see ?fit_gllvm)"))
+    return nothing
+end
+
+# `fit_gaussian_reml` refuses `missing` in `Y` with the text used by draft PR 1252 (`_refuse_na_response`
+# in `src/na_input.jl`), word for word, so that the two drafts give one message whichever lands
+# first; this copy is dropped once that file is on main.
+function _refuse_missing_gaussian_reml(caller::AbstractString, Y::AbstractMatrix)
+    Missing <: eltype(Y) && any(ismissing, Y) || return nothing
+    bad = findall(ismissing, Y)
+    throw(ArgumentError("$caller does not accept `missing` in `Y`: $(length(bad)) missing " *
+        "cell(s), first at (row, column) = ($(bad[1][1]), $(bad[1][2])). This fitter has no " *
+        "`mask`; remove or impute the missing cells, or use `fit_gaussian_gllvm`, which " *
+        "derives a mask from `missing`."))
+end
+
+# The same refusal for a `Y` typed `Union{Missing, Real}` (these fitters are typed
+# `AbstractMatrix{<:Real}`, so such a `Y` found no method at all). A matrix of that type with
+# no missing cell is passed on as a plain real matrix.
+for _f in (:fit_row_random_gllvm, :fit_rrr_gllvm, :fit_constrained_gllvm, :fit_quadratic_gllvm,
+           :fit_studentt_gllvm, :fit_beta_hurdle_gllvm, :fit_delta_lognormal_gllvm,
+           :fit_hurdle_poisson_gllvm, :fit_hurdle_nb_gllvm, :fit_delta_gamma_gllvm,
+           :fit_zip_gllvm, :fit_zip_gllvm_cov, :fit_zinb_gllvm, :fit_zinb_gllvm_cov,
+           :fit_zib_gllvm, :fit_zib_gllvm_cov, :fit_grouped_gaussian, :fit_grouped_nongaussian,
+           :fit_lognormal_gllvm)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}; kwargs...)
+        _refuse_mask_route($(string(_f)), nothing, Y)
+        return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y); kwargs...)
+    end
+end
+# The second argument is typed `PrecisionPhy`: untyped, a plain real matrix with any other second
+# argument would find only this method and recurse into itself until the stack overflows.
+for _f in (:fit_precision_multivariate, :fit_joint_phylo_grouped_gaussian)
+    @eval function $_f(Y::AbstractMatrix{<:Union{Missing, Real}}, phy::PrecisionPhy; kwargs...)
+        _refuse_mask_route($(string(_f)), nothing, Y)
+        return $_f(convert(Matrix{nonmissingtype(eltype(Y))}, Y), phy; kwargs...)
+    end
+end
+
+# `fit_precision_multivariate` takes no `mask` keyword. Its source file is byte-pinned by frozen
+# receipts (`test_destination_b_phylo_uncertainty.jl`), so the refusal for a mask is a method
+# here and the fitter's own file is untouched. It covers a dense real `Y`; any other matrix type
+# with a `mask` still ends in the fitter's own `MethodError`.
+function fit_precision_multivariate(Y::Matrix{<:Real}, phy::PrecisionPhy; mask = nothing, kwargs...)
+    _refuse_mask_route("fit_precision_multivariate", mask)
+    return invoke(fit_precision_multivariate, Tuple{AbstractMatrix{<:Real}, PrecisionPhy},
+                  Y, phy; kwargs...)
+end
+
 # Drop `offset = nothing` (no offset; some routes would otherwise reject the keyword), and
 # normalise any other offset once. Shared by `fit_gllvm` and the `gllvm` formula front end,
 # which calls some fitters directly.
@@ -277,6 +342,35 @@ function _fit_gllvm_per_column(Y, family::AbstractVector; K, num_lv, row_eff, di
     haskey(kw, :offset) && kw.offset === nothing &&
         (kw = Base.structdiff(kw, NamedTuple{(:offset,)}))
     return fit_mixed_gllvm(Y; families = family, K = K, kw...)
+end
+
+# `K` (or `num_lv`) must be an integer. Below zero it used to surface as "invalid Array
+# dimensions" from inside a fitter, and a non-integer as a `TypeError` on the fitter's
+# keyword. `K = 0` is a valid GLM fit and is not touched here; `K > p` keeps the
+# range message of the fitter (`_check_lambda_rank`). A negative Gaussian `K` is left to
+# the Gaussian fitter, whose message already states its own range (`1:p`). Multinomial
+# refuses any `K` other than 0 with its own message, which says why, so it is skipped too.
+function _check_K_argument(K, caller::AbstractString; family = nothing)
+    K === nothing && return nothing
+    family isa Multinomial && return nothing
+    K isa Integer || throw(ArgumentError(
+        "$caller: K must be a non-negative integer (got K = $K of type $(typeof(K)))"))
+    (K >= 0 || family isa Normal) || throw(ArgumentError(
+        "$caller: K must be a non-negative integer (got K = $K)"))
+    return nothing
+end
+
+# A response matrix with no sites or no species is refused up front (P81 ZERO-SITES,
+# issue #1188). Before, `p x 0` returned `logLik = 0.0` (`converged = true` for several
+# families) and `0 x n` ended in a raw `BoundsError` or an empty-reduction error from
+# inside the fitter. The message names the empty dimension.
+function _check_nonempty_Y(Y::AbstractMatrix, caller::AbstractString)
+    p, n = size(Y)
+    (p > 0 && n > 0) && return nothing
+    empty = p == 0 && n == 0 ? "no species and no sites" :
+            p == 0 ? "no species (0 rows)" : "no sites (0 columns)"
+    throw(ArgumentError(
+        "$caller: Y has $empty; Y is $p x $n and a fit needs at least one species and one site"))
 end
 
 """
@@ -528,6 +622,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
                    species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
+    _check_nonempty_Y(Y, "fit_gllvm")
     if family isa AbstractVector
         return _fit_gllvm_per_column(Y, family; K = K, num_lv = num_lv, row_eff = row_eff,
             disp_group = disp_group, pervar = pervar, grouping = grouping, unit = unit,
@@ -632,6 +727,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         end
         K = num_lv
     end
+    _check_K_argument(K, "fit_gllvm"; family = family)
 
     # --- K omitted: estimate it (lane auto-d-20260926; docs/design/74). -------
     # Sweep K = 1:Kmax through `select_lv` (guarded: failed, unconverged,

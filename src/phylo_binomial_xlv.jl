@@ -361,6 +361,7 @@ function _fit_phylo_binomial_xlv(Y::AbstractMatrix, N::AbstractMatrix,
     size(X_lv, 1) == n ||
         throw(ArgumentError("X_lv rows ($(size(X_lv, 1))) must equal size(Y,2)=$n"))
     q_lv = size(X_lv, 2)
+    _check_response_support(:binomial, Y, nothing; caller = "_fit_phylo_binomial_xlv", N = N)
     theta0 = _phylo_binomial_xlv_theta0(Y, N, K, X_lv;
                                         beta_init = beta_init,
                                         Lambda_init = Lambda_init,
