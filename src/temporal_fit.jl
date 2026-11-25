@@ -69,6 +69,7 @@ function _temporal_design(formula, cols::NamedTuple)
     lhs isa StatsModels.Term ||
         throw(ArgumentError("the temporal fit needs one response column on the left-hand side"))
     response = lhs.sym
+    cols = _formula_narrow_union_cols(formula.rhs, cols)
     sch = StatsModels.schema(formula, cols)
     applied = StatsModels.apply_schema(formula, sch, StatsModels.StatisticalModel)
     _, X = StatsModels.modelcols(applied, cols)
