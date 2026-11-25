@@ -1,3 +1,5 @@
+2026-11-25: Coverage lane cursor-cloud-1125y10. Six new `test/test_cov_1125y10_*.jl` files (140 passing cases, ~69s local Julia 1.10.14); `test/runtests.jl` append only; no `src/` edits. After-task `docs/dev-log/after-task/2026-11-25-coverage-1125y10.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
