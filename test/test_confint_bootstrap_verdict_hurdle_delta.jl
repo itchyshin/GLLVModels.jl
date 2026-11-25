@@ -77,17 +77,25 @@ end
 
 # A draw no fit on the route can evaluate, so each fitter ends on its failure
 # sentinel (`converged = false`, `loglik = -Inf`, finite θ, no throw), with or
-# without bounds checking. Data-driven, not RNG-driven: one cell holds 1e300.
-# On the hurdle routes the count log-density converts `y` with `Int(y)` and the
-# `InexactError` is caught by the objective; on the delta routes the objective
-# already returns the sentinel at the warm start and the optimiser never leaves
-# it. Not failing draws: a negative value or NaN (`y > 0` is false, so it is
+# without bounds checking. Data-driven, not RNG-driven. On the hurdle and
+# delta-gamma routes one cell holds 1e300: the hurdle count log-density converts
+# `y` with `Int(y)` and the `InexactError` is caught by the objective, and the
+# delta-gamma objective already returns the sentinel at the warm start. A single
+# 1e300 is a valid response on the delta-lognormal routes (log y = 690 is finite
+# since the eta^c clamp follows log y, #1243), so there every cell of trait 1
+# holds 1e300 (a constant trait at 1e300 has no finite delta-lognormal fit; both
+# `:delta_lognormal` routes end on the sentinel).
+# Not failing draws: a negative value or NaN (`y > 0` is false, so it is
 # scored as a zero and the fit converges), a half count on the delta routes (a
 # valid positive value), and Inf (the fitter throws an `ArgumentError`, so the
 # refit returns `nothing`, which main already rejects).
-function _hd504_bad(Y)
+function _hd504_bad(Y, route = :other)
     B = Float64.(Y)
-    B[1, 1] = 1e300
+    if route in (:delta_lognormal, :delta_lognormal_shared)
+        B[1, :] .= 1e300
+    else
+        B[1, 1] = 1e300
+    end
     return B
 end
 
@@ -112,7 +120,7 @@ end
     end
 
     @testset "a failed refit is rejected ($route)" for (route, fit, Y, ad, direct, pack) in routes
-        Y_bad = _hd504_bad(Y)
+        Y_bad = _hd504_bad(Y, route)
         fb_bad = direct(Y_bad)
         @test !fb_bad.converged && fb_bad.loglik == -Inf   # a genuine failure
         raw_bad = ad.refit(Y_bad)
@@ -123,7 +131,7 @@ end
     end
 
     @testset "end to end: n_converged counts only converged replicates ($route)" for (route, fit, Y, ad, direct, pack) in routes
-        Y_bad = _hd504_bad(Y)
+        Y_bad = _hd504_bad(Y, route)
         m = length(ad.θ)
         ad_mixed = GM._FamilyCI(ad.θ, ad.nll, ad.names, ad.kinds,
                                 rng -> rand(rng) < 0.5 ? Y : Y_bad, ad.refit)

@@ -64,3 +64,31 @@ using GLLVModels, Test, Random, Distributions, Statistics
         @test ff.loglik ≈ fn.loglik atol = 1e-10
     end
 end
+
+@testset "DeltaLogNormal tiny positive response stays finite (#1243)" begin
+    G = GLLVModels
+    # Site level: zero occurrence loadings, equal occurrence prob 1/2, so the site marginal
+    # has a closed form. y = 1e-300 puts the exact mode at |eta| ~ 82, outside the old ±30 clamp.
+    p = 6
+    rng = MersenneTwister(1); λ = 0.5 .+ 0.4 .* rand(rng, p); b = 0.3 .* randn(rng, p)
+    σ = 0.8
+    y = exp.(b .+ σ .* randn(rng, p)); y[1] = 1e-300
+    r = log.(y) .- b
+    A = 1 + sum(λ .^ 2) / σ^2
+    zhat = sum(λ .* r) / σ^2 / A
+    ll = sum(logpdf.(Normal.(b .+ λ .* zhat, σ), log.(y))) - sum(log.(y)) + p * log(0.5) -
+         0.5 * zhat^2 - 0.5 * log(A)
+    fams = G.DeltaLogNormal.(fill(σ, p))
+    got = G.twopart_loglik_site(fams, y, zeros(p, 1), reshape(λ, p, 1), zeros(p), b)
+    @test isfinite(got)
+    @test got ≈ ll rtol = 1e-8
+    # Fit level: three positive cells set to 1e-50 used to give logLik -Inf, converged = false.
+    rng = MersenneTwister(1); p, n = 6, 60
+    z = randn(rng, n); λ = 0.5 .+ 0.4 .* rand(rng, p); b = 0.3 .* randn(rng, p)
+    Y = [rand(rng) < 0.25 ? 0.0 : exp(b[j] + λ[j] * z[i] + 0.8 * randn(rng)) for j in 1:p, i in 1:n]
+    pos = findall(>(0), Y)
+    Y[pos[[5, 17, 29]]] .= 1e-50
+    r = fit_gllvm(Y; family = G.DeltaLogNormal(), K = 1)
+    @test isfinite(r.loglik)
+    @test r.converged
+end
