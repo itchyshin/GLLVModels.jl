@@ -277,7 +277,9 @@ gllvm_julia <- function(y, X = NULL, family = "negative.binomial", num.lv = 2L,
   fit <- .dispatch_fit(G, family, fmap, Y, K, jl_family, jl_link, method,
                        Nt, row.eff, per_species, shared, p_init, ...)
 
-  grouped <- per_species  # per-species routed through the grouped fitter
+  # per-species routed through the grouped fitter; row-effect fits take the row fitters
+  # first (see .dispatch_fit), so they never carry the grouped fields (r_group, ...).
+  grouped <- per_species && row.eff == "none"
   disp <- .convert_dispersion(fmap$disp, fit, grouped)
 
   # Loadings (p x K), scores (n x K), intercepts, logLik via the engine accessors.
