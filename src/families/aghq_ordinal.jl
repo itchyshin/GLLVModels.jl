@@ -109,6 +109,14 @@ function aghq_ordinal_problem(Y::AbstractMatrix, K; k, link::Link=LogitLink(), C
             logjoint=v->joint(v,beta,loading,tau,s)
             gradient=ForwardDiff.gradient(logjoint,z)
             g=maximum(abs,gradient)
+            refined=false
+            if isfinite(g) && g>mode_gradient_tol && all(isfinite,z)
+                nll=v->-logjoint(v)
+                grad! = (out,v)->ForwardDiff.gradient!(out,nll,v)
+                opt=Optim.optimize(nll,grad!,copy(z),Optim.BFGS(linesearch=Optim.LineSearches.BackTracking(order=3)),
+                    Optim.Options(iterations=mode_maxiter,g_tol=mode_gradient_tol/10))
+                z=Optim.minimizer(opt);g=maximum(abs,ForwardDiff.gradient(logjoint,z));refined=true
+            end
             all(isfinite,z) && isfinite(logjoint(z)) && isfinite(g) && g<=mode_gradient_tol ||
                 error("AGHQ ordinal conditional mode failed at site $s (gradient_max=$g, tolerance=$mode_gradient_tol)")
             H=-ForwardDiff.hessian(logjoint,z)
@@ -117,7 +125,7 @@ function aghq_ordinal_problem(Y::AbstractMatrix, K; k, link::Link=LogitLink(), C
             cache=aghq_adaptation(z,H)
             push!(caches,cache)
             push!(diagnostics,(site=s,gradient_max=g,minimum_eigenvalue=cache.minimum_eigenvalue,
-                curvature_repaired=cache.curvature_repaired))
+                curvature_repaired=cache.curvature_repaired,mode_refined=refined))
         end
         return caches,diagnostics
     end
