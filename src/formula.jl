@@ -62,12 +62,35 @@ function _formula_bare_symbols(term)
     return Symbol[s for t in parts for s in _formula_bare_symbols(t)]
 end
 
+# A `Union{Missing,T}` column with no `missing` value is passed to StatsModels as `T` when
+# `T <: Number`, so a complete numeric column is read as continuous rather than categorical.
+function _narrow_union_missing_numeric(v)
+    T = eltype(v)
+    Missing <: T || return v
+    U = Base.nonmissingtype(T)
+    U <: Number || return v
+    # A real `missing` cannot be stored in `Vector{U}`. Leave it: a bare term is
+    # refused by `_formula_covariate_columns`, and a term used only inside a
+    # function (e.g. `coalesce(x, 0.0)`) must still see the missing values.
+    any(ismissing, v) && return v
+    return convert(AbstractVector{U}, v)
+end
+
+function _formula_narrow_union_cols(rhs, cols::NamedTuple)
+    need = Set(unique(_extract_formula_symbols(rhs)))
+    newvals = ntuple(i -> begin
+            k = keys(cols)[i]
+            v = cols[k]
+            k in need ? _narrow_union_missing_numeric(v) : v
+        end, length(cols))
+    return NamedTuple{keys(cols)}(newvals)
+end
+
 # Covariate columns used as bare terms in the formula RHS. A bare column holding a `missing`
 # stopped with `KeyError: key missing not found` inside StatsModels; `gllvm` does not drop or
 # impute sites, so it refuses such a column with a message that names it. A column used only
-# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. A column whose
-# type allows `Missing` but holds none is passed through unchanged (how it is read is a
-# separate, undecided question), and columns the formula does not use are not looked at.
+# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. Columns the
+# formula does not use are not looked at.
 # `long_route` names a long-data fitter (one data row per observation); its message speaks of
 # rows of the data instead of `gllvm`, `Y` and sites.
 function _formula_covariate_columns(rhs, cols::NamedTuple; long_route::Union{Nothing, String} = nothing)
