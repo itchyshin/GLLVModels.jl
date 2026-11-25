@@ -14,15 +14,15 @@ function check(id,f,expected)
  @test actual==expected
 end
 @testset "Native nonreference link admission" begin
-check("FAMILY-01-REJECT-LINK",()->fit_gllvm(Y;family=GLLVModels.Binomial(),K=1,link=IdentityLink()),"RESPONSE_READ_SENTINEL")
+check("FAMILY-01-REJECT-LINK",()->fit_gllvm(Y;family=GLLVModels.Binomial(),K=1,link=IdentityLink()),"ArgumentError")
 check("FAMILY-02-REJECT-LINK",()->fit_poisson_gllvm(Y;K=1,link=IdentityLink()),"RESPONSE_READ_SENTINEL")
 check("FAMILY-03-REJECT-LINK",()->fit_lognormal_gllvm(Y;K=1,link=IdentityLink()),"ArgumentError")
 check("FAMILY-04-REJECT-LINK",()->fit_gamma_gllvm(Y;K=1,link=IdentityLink()),"RESPONSE_READ_SENTINEL")
 check("FAMILY-05-REJECT-LINK",()->fit_gllvm(Y;family=GLLVModels.NegativeBinomial(),K=1,link=IdentityLink()),"RESPONSE_READ_SENTINEL")
 check("FAMILY-06-REJECT-LINK",()->fit_tweedie_gllvm_grouped(Y;K=1,link=IdentityLink()),"RESPONSE_READ_SENTINEL")
 check("FAMILY-07-REJECT-LINK",()->fit_gllvm(Y;family=GLLVModels.Beta(),K=1,link=IdentityLink()),"RESPONSE_READ_SENTINEL")
-check("FAMILY-08-REJECT-LINK",()->fit_gllvm(Y;family=BetaBinom(),N=N,K=1,link=IdentityLink()),"RESPONSE_READ_SENTINEL")
-check("FAMILY-09-REJECT-LINK",()->fit_gllvm(Y;family=StudentTFamily(),K=1,link=LogLink()),"RESPONSE_READ_SENTINEL")
+check("FAMILY-08-REJECT-LINK",()->fit_gllvm(Y;family=BetaBinom(),N=N,K=1,link=IdentityLink()),"ArgumentError")
+check("FAMILY-09-REJECT-LINK",()->fit_gllvm(Y;family=StudentTFamily(),K=1,link=LogLink()),"ArgumentError")
 check("FAMILY-10-REJECT-LINK",()->fit_truncated_poisson_gllvm(Y;K=1,link=IdentityLink()),"ArgumentError")
 check("FAMILY-11-REJECT-LINK",()->fit_truncated_nbinom2_gllvm_pertrait(Y;K=1,link=IdentityLink()),"ArgumentError")
 check("FAMILY-14-REJECT-LINK",()->fit_ordinal_gllvm_pertrait(Y;K=1,link=IdentityLink()),"ArgumentError")

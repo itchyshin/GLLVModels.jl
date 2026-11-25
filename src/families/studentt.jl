@@ -487,6 +487,7 @@ function fit_studentt_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Intege
         β_init = nothing, Λ_init = nothing, σ_init = nothing, nu_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_studentt_laplace_link(link, "fit_studentt_gllvm")
     _refuse_mask_route("fit_studentt_gllvm", mask)
     p, n = size(Y)
     if nu !== nothing

@@ -420,6 +420,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         loading_ridge::Real = Inf,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_binomial_laplace_link(link, "fit_binomial_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "_fit_binomial_gllvm_laplace")
