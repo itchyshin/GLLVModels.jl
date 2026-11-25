@@ -1,3 +1,8 @@
+2026-11-24: #1163 `fit_phylo_dep_gllvm` / `K_phy > 0` Gaussian path. Post-fit
+verdict (`stopping_reason`, Shinichi gate) flags `Λ_phy ≈ 0` stalls as
+`:boundary` instead of `converged = true`. `julia --project=.`
+`test/test_phylo_dep_verdict_1163.jl` 5/5; `test/test_phylo_dep.jl` 16/16.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:

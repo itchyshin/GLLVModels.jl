@@ -270,12 +270,13 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
     return _gaussian_with_integration(_gaussian_update(base,t,-sel.objective,sel.passes,sel.converged,result,time()-t0,fixed),info)
 end
 _gaussian_with_integration(f,i)=GllvmFit(f.model,f.pars,f.logLik,f.n_iter,f.converged,
-    f.optim_result,f.cputime,i,f.optimizer_info)
+    f.optim_result,f.cputime,i,f.optimizer_info,f.stopping_reason)
 function _gaussian_update(base,t,ll,it,conv,res,elapsed,fixed;optimizer_info=base.optimizer_info)
     q=count(!,fixed);p,K=base.model.p,base.model.K
     pars=merge(base.pars,(β=_expand_fixed_zero(t[1:q],fixed),β_fixed=copy(fixed),σ_eps=exp(t[q+1]),
         Λ=unpack_lambda(t[q+2:end],p,K),θ_packed=copy(t)))
-    return GllvmFit(base.model,pars,ll,it,conv,res,elapsed,base.integration,optimizer_info)
+    reason = conv ? :converged : :not_converged
+    return GllvmFit(base.model,pars,ll,it,conv,res,elapsed,base.integration,optimizer_info,reason)
 end
 _has_gaussian_record(f)=f isa GllvmFit && f.integration!==nothing && f.integration.data isa AGHQGaussianData
 _is_gaussian_aghq(f)=_has_gaussian_record(f) && f.integration.actual===:aghq

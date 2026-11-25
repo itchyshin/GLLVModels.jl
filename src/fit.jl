@@ -60,11 +60,17 @@ struct GllvmFit
     cputime::Float64
     integration::Union{Nothing,AbstractIntegrationInfo}
     optimizer_info::Union{Nothing,OptimizerRecord}
+    stopping_reason::Symbol
 end
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
-    GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing,nothing)
+    GllvmFit(model, pars, logLik, n_iter, converged, optim_result, cputime, nothing,
+             nothing, converged ? :converged : :not_converged)
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration)=
-    GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration,nothing)
+    GllvmFit(model, pars, logLik, n_iter, converged, optim_result, cputime, integration,
+             nothing, converged ? :converged : :not_converged)
+GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration,optimizer_info)=
+    GllvmFit(model, pars, logLik, n_iter, converged, optim_result, cputime, integration,
+             optimizer_info, converged ? :converged : :not_converged)
 
 # Warn once per Julia session per key: refits inside bootstrap and profile
 # loops call the fitter many times and must not repeat the message.
@@ -525,30 +531,38 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         # admitted.
         θ_packed_lv = collect(Float64, params_hat)
 
+        model_lv = GllvmModel(Int(p), Int(K), 0, false, Int(K_phy), has_phy_unique)
+        pars_lv = (σ_eps = σ_eps_hat,
+                   Λ = Λ_hat,
+                   β = β_full,
+                   β_fixed = collect(Bool, β_fixed_mask),
+                   alpha_lv = alpha_hat,
+                   Λ_W = nothing,
+                   σ²_B = nothing,
+                   σ²_W = nothing,
+                   Λ_phy = Λ_phy_hat,
+                   σ_phy = σ_phy_hat,
+                   Σ_phy = Σ_phy,
+                   θ_packed = θ_packed_lv)
+        loglik_lv = _fit_verdict(res)[1]
+        conv_lv, reason_lv = if K_phy > 0
+            _gaussian_gllvm_convergence_verdict(model_lv, pars_lv, y, X, Σ_phy, res, g_tol)
+        else
+            (_fit_verdict(res)[2], _fit_verdict(res)[2] ? :converged : :not_converged)
+        end
+
         return GllvmFit(
-            GllvmModel(Int(p), Int(K), 0, false, Int(K_phy), has_phy_unique),
-            (σ_eps = σ_eps_hat,
-             Λ = Λ_hat,
-             β = β_full,
-             β_fixed = collect(Bool, β_fixed_mask),
-             alpha_lv = alpha_hat,
-             Λ_W = nothing,
-             σ²_B = nothing,
-             σ²_W = nothing,
-             Λ_phy = Λ_phy_hat,
-             σ_phy = σ_phy_hat,
-             Σ_phy = Σ_phy,
-             θ_packed = θ_packed_lv),
-            # screened verdict (2026-08-28): a run stranded on the PosDef
-            # sentinel plateau must not report converged=true.
-            _fit_verdict(res)[1],
+            model_lv,
+            pars_lv,
+            loglik_lv,
             Optim.iterations(res),
-            _fit_verdict(res)[2],
+            conv_lv,
             res,
             t1 - t0,
             nothing,
             _optimizer_record(optimizer, stages; controls = controls, derivative = :forwarddiff,
                               actual = outer_optimizer),
+            reason_lv,
         )
     end
 
@@ -709,31 +723,37 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
     end
     θ_packed_legacy = reduce(vcat, legacy_pieces)
 
+    model = GllvmModel(Int(p), Int(K), Int(K_W), has_diag, Int(K_phy), has_phy_unique)
+    pars_out = (σ_eps = rec.σ_eps,
+                Λ = rec.Λ_B,
+                β = β_full,
+                β_fixed = collect(Bool, β_fixed_mask),
+                alpha_lv = nothing,
+                Λ_W = rec.Λ_W,
+                σ²_B = rec.σ²_B,
+                σ²_W = rec.σ²_W,
+                Λ_phy = rec.Λ_phy,
+                σ_phy = rec.σ_phy,
+                θ_packed = θ_packed_legacy)
+    loglik = rec.logLik
+    conv, reason = if K_phy > 0 && isfinite(loglik)
+        _gaussian_gllvm_convergence_verdict(model, pars_out, y, X, Σ_phy, res, g_tol)
+    else
+        base_conv = _fit_verdict(res)[2]
+        (base_conv, base_conv ? :converged : :not_converged)
+    end
+
     return GllvmFit(
-        GllvmModel(Int(p), Int(K), Int(K_W), has_diag,
-                   Int(K_phy), has_phy_unique),
-        (σ_eps = rec.σ_eps,
-         Λ = rec.Λ_B,
-         β = β_full,
-         β_fixed = collect(Bool, β_fixed_mask),
-         alpha_lv = nothing,
-         Λ_W = rec.Λ_W,
-         σ²_B = rec.σ²_B,
-         σ²_W = rec.σ²_W,
-         Λ_phy = rec.Λ_phy,
-         σ_phy = rec.σ_phy,
-         θ_packed = θ_packed_legacy),
-        rec.logLik,
+        model,
+        pars_out,
+        loglik,
         Optim.iterations(res),
-        # screened (2026-08-28), defensively: this legacy path's objective
-        # (gaussian_profile_nll) has no catch/sentinel return today, so the
-        # screen only guards against a future one; logLik stays the
-        # recomputed closed-form value.
-        (_fit_verdict(res)[2]),
+        conv,
         res,
         t1 - t0,
         nothing,
         _optimizer_record(optimizer, stages; controls = controls, derivative = :forwarddiff,
                           actual = outer_optimizer),
+        reason,
     )
 end
