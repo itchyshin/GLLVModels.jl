@@ -221,6 +221,7 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
             throw(ArgumentError("X_lv first dim ($(size(X_lv, 1))) must equal n_sites ($n)"))
         q_lv = size(X_lv, 2)
         q_lv > 0 || throw(ArgumentError("X_lv must have at least one predictor column"))
+        _check_finite_covariates(X_lv, "fit_gamma_gllvm"; unit = :site, name = "X_lv")
         X_lv_fit = Matrix{Float64}(X_lv)
         if alpha_lv_init !== nothing
             size(alpha_lv_init, 1) == q_lv ||
