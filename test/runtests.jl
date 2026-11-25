@@ -1259,6 +1259,7 @@ println(_SHARD === nothing ?
     # Formula covariate columns typed Union{Missing,T} (refs #1190).
     _shard_include("test_formula_missing_covariate.jl")
     _shard_include("test_temporal_missing_covariate.jl")
+    _shard_include("test_temporal_union_numeric_covariate_1283.jl")
     # fit_mixed_gllvm: an unsupported family marker gives the documented ArgumentError, not a default_link MethodError.
     _shard_include("test_mixed_unsupported_family.jl")
     # Temporal parser refusals name the marker the user called (refs #1286).
