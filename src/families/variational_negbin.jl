@@ -312,7 +312,7 @@ function fit_nb_gllvm_va(Y::AbstractMatrix{<:Integer}; K::Integer,
     end
     logr0 = log(10.0)
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logr0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logr0)
     x, w = _gauss_hermite(20)
     # Combined objective/gradient: ONE inner-solve pass per evaluation. The outer
     # gradient is exact via the envelope theorem (∂ELBO/∂(m,v)=0 at the inner

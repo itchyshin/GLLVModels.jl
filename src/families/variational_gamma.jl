@@ -145,7 +145,7 @@ function fit_gamma_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
     end
     logα0 = log(2.0)
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logα0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logα0)
     # Shape bounds: α·logα − logΓ(α) suffers catastrophic cancellation at very large
     # α, which lets the optimiser run α away to nonsense (e.g. 1e125). Confine the
     # shape to a generous, numerically safe range; the true shape is always inside it.

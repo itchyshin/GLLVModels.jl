@@ -342,7 +342,7 @@ function fit_spde_latent_gllvm(Y::AbstractMatrix, nodes::AbstractMatrix,
 
     nd = _spde_disp_len(family)
     dbase = p + rr + 2                                # index of the last (logτ) slot
-    θ0 = vcat(β0, pack_lambda(Λ0), log(float(κ_init)), log(float(τ_init)),
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), log(float(κ_init)), log(float(τ_init)),
               _spde_disp_init(family, Y))
 
     function negll(θ)

@@ -427,7 +427,7 @@ function fit_gaussian_pervar_gllvm(Y::AbstractMatrix;
     else
         unpack_lambda(init_theta_rr(p, K), p, K)
     end
-    θ_Λ0 = pack_lambda(Λ0)
+    θ_Λ0 = _pack_lambda_start(Λ0)
     rrlen = rr_theta_len(p, K)
 
     # Per-species variance init: per-species sample variance of the centred data,
@@ -607,7 +607,7 @@ function _fit_gaussian_pervar_masked(Y, msk; K, X, c, c², request,
     end
     φ²_0 = max.(0.5 .* col_var .- c², 1e-3)
     rrlen = rr_theta_len(p, K)
-    params0 = vcat(pack_lambda(Λ0), log.(φ²_0))
+    params0 = vcat(_pack_lambda_start(Λ0), log.(φ²_0))
     obs_by_site = [findall(@view msk[:, s]) for s in 1:n]
     rejected_covariances = Ref(0)
     function nll(params)

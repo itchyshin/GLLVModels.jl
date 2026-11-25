@@ -187,7 +187,7 @@ function fit_exponential_gllvm(Y::AbstractMatrix; K::Integer,
         collect(float.(Λ_init))
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0))
+    θ0 = vcat(β0, _pack_lambda_start(Λ0))
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)

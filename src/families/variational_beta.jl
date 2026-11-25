@@ -326,7 +326,7 @@ function fit_beta_gllvm_va(Y::AbstractMatrix{<:Real}; K::Integer,
     end
     logφ0 = φ_init === nothing ? log(10.0) : log(float(φ_init))
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logφ0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logφ0)
     x, w = _gauss_hermite(20)
     # Combined objective/gradient: ONE inner-solve pass per evaluation. The outer
     # gradient is exact via the envelope theorem (∂ELBO/∂(m,v)=0 at the inner

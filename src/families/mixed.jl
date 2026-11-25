@@ -680,7 +680,7 @@ function fit_mixed_gllvm(Y::AbstractMatrix; mask = nothing, families::AbstractVe
         end
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logdisp0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logdisp0)
     families_bare = collect(Any, families)
 
     # Direct ForwardDiff gradient straight through the mixed dense-Laplace

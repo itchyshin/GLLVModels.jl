@@ -639,7 +639,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K:
     logσ0 = disp_group === :shared ? [log(σ0)] : log.(σ0vec)
 
     if predictor === :separate
-        θ0 = vcat(βz0, βc0, pack_lambda(Λc0), logσ0)
+        θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0), logσ0)
         negll = θ -> begin
             βz = θ[1:p]
             βc = θ[(p + 1):(2p)]
@@ -656,7 +656,7 @@ function fit_delta_lognormal_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K:
         end
     else # :shared — one η = β + Λz drives both parts; offset threads to both parts symmetrically.
         β0 = 0.5 .* (βz0 .+ βc0)
-        θ0 = vcat(β0, pack_lambda(Λc0), logσ0)
+        θ0 = vcat(β0, _pack_lambda_start(Λc0), logσ0)
         negll = θ -> begin
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
@@ -814,7 +814,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::
         Λc0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
-    θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
+    θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
@@ -980,7 +980,7 @@ function fit_hurdle_nb_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integ
     @inbounds for j in 1:kk
         Λc0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
-    θ0 = vcat(βz0, βc0, pack_lambda(Λc0), log(10.0))
+    θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0), log(10.0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
@@ -1270,7 +1270,7 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Int
     logα0 = disp_group === :shared ? [log(α0)] : log.(α0vec)
 
     if predictor === :separate
-        θ0 = vcat(βz0, βc0, pack_lambda(Λc0), logα0)
+        θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0), logα0)
         negll = θ -> begin
             βz = θ[1:p]; βc = θ[(p + 1):(2p)]
             Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
@@ -1287,7 +1287,7 @@ function fit_delta_gamma_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Int
         end
     else # :shared — one η = β + Λz drives both parts; offset threads to both parts symmetrically.
         β0 = 0.5 .* (βz0 .+ βc0)
-        θ0 = vcat(β0, pack_lambda(Λc0), logα0)
+        θ0 = vcat(β0, _pack_lambda_start(Λc0), logα0)
         negll = θ -> begin
             β = θ[1:p]
             Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
@@ -1569,7 +1569,7 @@ function fit_zip_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
     _warn_zero_columns && _warn_all_zero_count_columns(Y, nothing; caller = "fit_zip_gllvm")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zi_warmstart(Y, K; offset = offset)
-    θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
+    θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
@@ -1720,7 +1720,7 @@ function fit_zip_gllvm_cov(Y::AbstractMatrix{<:Real}; mask = nothing, X::Abstrac
     _check_twopart_support("fit_zip_gllvm_cov", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zi_warmstart(Y, K)
-    θ0 = vcat(βz0, zeros(q), βc0, zeros(q), pack_lambda(Λc0))
+    θ0 = vcat(βz0, zeros(q), βc0, zeros(q), _pack_lambda_start(Λc0))
     function negll(θ)
         βz = θ[1:p]
         γz = θ[(p + 1):(p + q)]
@@ -1878,7 +1878,7 @@ function fit_zinb_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer,
     _check_twopart_support("fit_zinb_gllvm", Y, _tp_count_ok, "non-negative integer counts")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zi_warmstart(Y, K; offset = offset)
-    θ0 = vcat(βz0, βc0, pack_lambda(Λc0), log(10.0))
+    θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0), log(10.0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
@@ -2016,7 +2016,7 @@ function fit_zinb_gllvm_cov(Y::AbstractMatrix{<:Real}; mask = nothing, X::Abstra
     nθ = 2p + 2q + rr + 1
     θ0 = if θ_init === nothing
         βz0, βc0, Λc0 = _zi_warmstart(Y, K)
-        vcat(βz0, zeros(q), βc0, zeros(q), pack_lambda(Λc0), log(10.0))
+        vcat(βz0, zeros(q), βc0, zeros(q), _pack_lambda_start(Λc0), log(10.0))
     else
         θin = collect(Float64, θ_init)
         length(θin) == nθ || throw(ArgumentError(
@@ -2237,7 +2237,7 @@ function fit_zib_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::Integer, N:
     _check_twopart_support("fit_zib_gllvm", Y, _tp_count_ok, "integer counts 0..N")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zib_warmstart(Y, N, K; offset = offset)
-    θ0 = vcat(βz0, βc0, pack_lambda(Λc0))
+    θ0 = vcat(βz0, βc0, _pack_lambda_start(Λc0))
     function negll(θ)
         βz = θ[1:p]; βc = θ[(p + 1):(2p)]
         Λc = unpack_lambda(θ[(2p + 1):(2p + rr)], p, K)
@@ -2331,7 +2331,7 @@ function fit_zib_gllvm_cov(Y::AbstractMatrix{<:Real}; mask = nothing, X::Abstrac
     _check_twopart_support("fit_zib_gllvm_cov", Y, _tp_count_ok, "integer counts 0..N")
     rr = rr_theta_len(p, K)
     βz0, βc0, Λc0 = _zib_warmstart(Y, N, K)
-    θ0 = vcat(βz0, zeros(q), βc0, zeros(q), pack_lambda(Λc0))
+    θ0 = vcat(βz0, zeros(q), βc0, zeros(q), _pack_lambda_start(Λc0))
     function negll(θ)
         βz = θ[1:p]
         γz = θ[(p + 1):(p + q)]

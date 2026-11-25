@@ -114,6 +114,14 @@ function _lower_triangular_loadings(Λ::AbstractMatrix)
 end
 
 """
+    _pack_lambda_start(Λ0::AbstractMatrix) -> Vector
+
+`pack_lambda(_lower_triangular_loadings(Λ0))`: pack an SVD-derived loadings
+start without distorting `Λ0 Λ0'` for K ≥ 2 (#865).
+"""
+_pack_lambda_start(Λ0::AbstractMatrix) = pack_lambda(_lower_triangular_loadings(Λ0))
+
+"""
     init_theta_rr(p::Integer, K::Integer) -> Vector{Float64}
 
 Default initial values matching gllvmTMB::init_rr_theta (R/fit-multi.R:1291-1295):

@@ -664,7 +664,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
         ψ0[c] = log(max(τ0[c] - τ0[c - 1], 1e-3))
     end
 
-    θ0 = vcat(pack_lambda(Λ0), ψ0)
+    θ0 = vcat(_pack_lambda_start(Λ0), ψ0)
     function negll(θ)
         Λ = unpack_lambda(θ[1:rr], p, K)
         τ = _unpack_cutpoints(θ[(rr + 1):(rr + C - 1)])
@@ -680,7 +680,7 @@ function fit_ordinal_gllvm(Y::AbstractMatrix{<:Integer}; K::Integer,
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     opts = Optim.Options(g_tol = g_tol, iterations = iterations)
     res = if X_lv_fit !== nothing
-        θ0_lv = vcat(vec(alpha0), pack_lambda(Λ0), ψ0)
+        θ0_lv = vcat(vec(alpha0), _pack_lambda_start(Λ0), ψ0)
         negll_lv = θ -> begin
             v = try
                 ordinal_lv_nll_packed(θ, Y, p, K, link, C;
@@ -758,7 +758,7 @@ function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Integer}; K::Integer,
     end
 
     β0, ψ0 = _pack_initial_ordinal_pertrait(Ys, obs, C, link)
-    θ0 = vcat(β0, pack_lambda(Λ0), ψ0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), ψ0)
     ncut = sum(C .- 2)
     function negll(θ)
         β = @view θ[1:p]
@@ -877,7 +877,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     end
 
     β0, ψ0 = _pack_initial_ordinal_pertrait(Ys, obs, C, link)
-    θ0 = vcat(β0, zeros(q), pack_lambda(Λ0), ψ0)
+    θ0 = vcat(β0, zeros(q), _pack_lambda_start(Λ0), ψ0)
     function negll(θ)
         β = @view θ[1:p]
         γ = @view θ[(p + 1):(p + q)]

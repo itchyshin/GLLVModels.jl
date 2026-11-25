@@ -329,7 +329,7 @@ function _fit_nb_gllvm_start(Y::AbstractMatrix; K::Integer,
         Matrix{Float64}(alpha_lv_init)
     end
 
-    θ0 = vcat(β0, pack_lambda(Λ0), logr0)
+    θ0 = vcat(β0, _pack_lambda_start(Λ0), logr0)
     N1 = ones(Int, size(Yc))                     # unit trials, hoisted out of the per-eval closure
     function negll(θ)
         β = θ[1:p]
@@ -357,7 +357,7 @@ function _fit_nb_gllvm_start(Y::AbstractMatrix; K::Integer,
         derivative_route = :finite
         # Predictor-informed latent-score route: joint (β, alpha_lv, Λ, log r) by
         # finite differences — the offset depends jointly on Λ and alpha_lv.
-        θ0_lv = vcat(β0, vec(alpha0), pack_lambda(Λ0), logr0)
+        θ0_lv = vcat(β0, vec(alpha0), _pack_lambda_start(Λ0), logr0)
         negll_lv = θ -> begin
             if _eta_cap_guarded(link)   # #869: the additive η term is offset + the X_lv mean
                 Λ_g = unpack_lambda(view(θ, (p + q_lv * K + 1):(p + q_lv * K + rr)), p, K)

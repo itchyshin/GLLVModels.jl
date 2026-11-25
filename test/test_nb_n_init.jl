@@ -1,6 +1,6 @@
 # Issue #1022: `n_init` best-of-starts for the NB2 Laplace fitters (shared and grouped r),
 # mirroring `n_init` on `fit_poisson_gllvm` (#915 / #1012; see test_poisson_n_init.jl).
-using Test, GLLVModels, Distributions, Random
+using Test, GLLVModels, Distributions, Random, DelimitedFiles
 
 @testset "NB n_init (#1022)" begin
     rng = Random.Xoshiro(11)
@@ -93,11 +93,27 @@ const _SPIDER1022 = [
     grp = collect(1:12)
     g1 = fit_nb_gllvm_grouped(_SPIDER1022; K = 2, group = grp)
     g5 = fit_nb_gllvm_grouped(_SPIDER1022; K = 2, group = grp, n_init = 5)
-    # The default start reports converged = true at a local optimum 0.64 below the best
-    # of 5 starts, which is gllvmTMB's optimum (-705.786785, nbinom2 with per-species dispersion).
+    # Before the QR-rotated SVD start (#865) the default start stopped at a local optimum
+    # 0.64 below the best of 5 starts, which is gllvmTMB's optimum (-705.786785, nbinom2 with
+    # per-species dispersion). The rotated start now reaches it in one start, so the check is
+    # that 5 starts are no worse than 1; the harder fixture below keeps the real gain.
+    # (Shinichi decision 24 Nov 7:39 AM MT (via Brian), DECISIONS-0739-1124)
     @test g1.converged && g5.converged
-    @test g5.loglik > g1.loglik + 0.3
+    @test g5.loglik >= g1.loglik - 1e-9
     @test g5.loglik ≈ -705.786785 atol = 1e-3
     @test fit_gllvm(_SPIDER1022; family = NegativeBinomial(), K = 2, disp_group = grp,
                     n_init = 5).loglik == g5.loglik
+end
+
+# Harder fixture that still exercises the multistart: simulated NB2 counts (p = 14, n = 30,
+# true K = 3, r = 1) fitted at K = 4 with per-species dispersion. The default start stops at
+# a local optimum 3.7 below the best of 5 starts (seed 2208; data stored so the check does not
+# depend on the RNG stream of the Julia version).
+@testset "NB n_init: harder K = 4 fixture keeps the multistart gain (#1022)" begin
+    Y = Int.(readdlm(joinpath(@__DIR__, "data", "nb_ninit_multistart_Y.csv"), ','))
+    grp = collect(1:size(Y, 1))
+    g1 = fit_nb_gllvm_grouped(Y; K = 4, group = grp)
+    g5 = fit_nb_gllvm_grouped(Y; K = 4, group = grp, n_init = 5)
+    @test g1.converged && g5.converged
+    @test g5.loglik > g1.loglik + 0.3
 end
