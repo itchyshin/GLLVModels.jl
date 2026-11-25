@@ -3803,12 +3803,18 @@ or `locs` that differ from the fit. The check is skipped when an explicit `α` o
 `N` differs from the fit's own, since that asks for a different model. β and Λ are reported on their natural scale; κ, τ, and any dispersion
 on the positive scale. SEs come from the observed information (finite-difference
 Hessian of the θ-marginal, which rebuilds the Matérn precision each evaluation).
+
+The field enters only through `Lambda * u` with precision scaling `tau`; `Lambda`
+and `tau` are scale-identified as a ratio (`Lambda/tau` is identified). Wald
+intervals for individual `Lambda` entries and for `tau` can therefore be
+numerically misleading even when `kappa` intervals are sensible.
 """
 function confint_spde_latent(fit::SPDELatentFit, Y::AbstractMatrix, locs::AbstractMatrix;
                              level::Real = 0.95, parm = nothing,
                              α::Union{Nothing, Integer} = nothing,
                              N::Union{Nothing, AbstractMatrix} = nothing,
                              newton_maxiter::Integer = 50, newton_tol::Real = 1e-9)
+    @warn "confint_spde_latent: Lambda and tau are scale-identified as a ratio; Wald intervals for Lambda rows and tau are not separately interpretable (beta, kappa, and dispersion rows are the usual parameters)." maxlog = 1
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     p, K = size(fit.Λ); rr = rr_theta_len(p, K)
     Cdiag, G = spde_fem(fit.nodes, fit.tris)
