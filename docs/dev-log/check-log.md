@@ -1,3 +1,7 @@
+2026-11-25: #1161 rows rest (Student-t, Binomial, Beta-binomial). Branch
+`cursor/1125x-1161-rows-rest` @ `e5fb70eaf`. `julia --project=. test/test_fix_1161_rows_rest.jl` 41/41;
+`test_core070_link_boundaries.jl` 21/21; `test_link_honoured.jl` (via include) unchanged pass.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
