@@ -199,6 +199,7 @@ function fit_gamma_gllvm(Y::AbstractMatrix; K::Integer,
         alpha_lv_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _check_count_laplace_links(link, "fit_gamma_gllvm", "Gamma"; allow_identity = true)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_gamma_gllvm")

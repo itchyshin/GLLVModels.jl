@@ -71,3 +71,23 @@ default_link(::Poisson)  = LogLink()
 default_link(::NegativeBinomial) = LogLink()
 default_link(::Beta)     = LogitLink()
 default_link(::Gamma)    = LogLink()
+
+"""Refuse unsupported links before Laplace optimisation (refs #1161)."""
+function _check_laplace_log_link_only(link::Link, caller::AbstractString, family_label::AbstractString)
+    link isa LogLink || throw(ArgumentError(
+        "$caller: $family_label Laplace fitters support only LogLink; " *
+        "got $(nameof(typeof(link)))."))
+    return nothing
+end
+
+function _check_count_laplace_links(link::Link, caller::AbstractString, family_label::AbstractString;
+        allow_identity::Bool = false)
+    if allow_identity
+        link isa Union{LogLink, IdentityLink} || throw(ArgumentError(
+            "$caller: $family_label Laplace fitters support only LogLink and IdentityLink; " *
+            "got $(nameof(typeof(link)))."))
+    else
+        _check_laplace_log_link_only(link, caller, family_label)
+    end
+    return nothing
+end

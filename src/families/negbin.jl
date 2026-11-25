@@ -246,6 +246,7 @@ function _fit_nb_gllvm_start(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
         optimizer = nothing)
+    _check_count_laplace_links(link, "fit_nb_gllvm", "NB2"; allow_identity = true)
     _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_nb_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
