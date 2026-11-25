@@ -256,6 +256,10 @@ _register_shard_table!(4, (
         "test_core070_covariance_registry.jl", "test_core070_covariance_formula_registry.jl",
         "parity/test_core070_pin.jl",
         "test_na_input_maskless_gaussian.jl",
+        "test_cov_1125y_anova_guards.jl", "test_cov_1125y_temporal_marker.jl",
+        "test_cov_1125y_lognormal_misc.jl", "test_cov_1125y_link_residual_misc.jl",
+        "test_cov_1125y_re_sd_guards.jl", "test_cov_1125y_relaxed_grouped_show.jl",
+        "test_cov_1125y_reml_misc.jl", "test_cov_1125y_zi_fit_show.jl",
     ),
 ))
 
@@ -416,6 +420,10 @@ _register_shard_table!(8, (
         "test_spde_projector_validation.jl", "test_docstring_ref_linebreaks.jl", "test_comparator_targets.jl",
         "test_core070_covariance_registry.jl", "test_predictive_check_binomial.jl", "test_bootstrap_sigma_r.jl",
         "test_link_residual_undefined_link.jl",
+        "test_cov_1125y_anova_guards.jl", "test_cov_1125y_temporal_marker.jl",
+        "test_cov_1125y_lognormal_misc.jl", "test_cov_1125y_link_residual_misc.jl",
+        "test_cov_1125y_re_sd_guards.jl", "test_cov_1125y_relaxed_grouped_show.jl",
+        "test_cov_1125y_reml_misc.jl", "test_cov_1125y_zi_fit_show.jl",
     ),
     (
         "test_W_and_diag.jl", "test_signed_sigma_phy.jl", "test_precision_multivariate.jl",
@@ -1278,6 +1286,15 @@ println(_SHARD === nothing ?
     # link_residual on undefined (family, link) pairs throws ArgumentError (refs #1161).
     # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
     _shard_include("test_link_residual_undefined_link.jl")
+  # Coverage round 4 (cursor/1125y-coverage-gjl): new surfaces only; avoids open PR #1385/#1386/#1391 lanes.
+    _shard_include("test_cov_1125y_anova_guards.jl")
+    _shard_include("test_cov_1125y_temporal_marker.jl")
+    _shard_include("test_cov_1125y_lognormal_misc.jl")
+    _shard_include("test_cov_1125y_link_residual_misc.jl")
+    _shard_include("test_cov_1125y_re_sd_guards.jl")
+    _shard_include("test_cov_1125y_relaxed_grouped_show.jl")
+    _shard_include("test_cov_1125y_reml_misc.jl")
+    _shard_include("test_cov_1125y_zi_fit_show.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
