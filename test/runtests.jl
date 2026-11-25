@@ -1278,6 +1278,15 @@ println(_SHARD === nothing ?
     # link_residual on undefined (family, link) pairs throws ArgumentError (refs #1161).
     # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
     _shard_include("test_link_residual_undefined_link.jl")
+    # Coverage round 7 (cursor-cloud-1125y7): packing/lowrank, bridge PMV options, edge guards, verdict/NA, select_lv helpers, precision admission, Procrustes, kernel dep rails.
+    _shard_include("test_cov_1125y7_packing_lowrank.jl")
+    _shard_include("test_cov_1125y7_bridge_pmv_options.jl")
+    _shard_include("test_cov_1125y7_edge_validation.jl")
+    _shard_include("test_cov_1125y7_verdict_na_flag.jl")
+    _shard_include("test_cov_1125y7_lv_helpers.jl")
+    _shard_include("test_cov_1125y7_precision_admission.jl")
+    _shard_include("test_cov_1125y7_procrustes_ordination.jl")
+    _shard_include("test_cov_1125y7_kernel_dep_guards.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
