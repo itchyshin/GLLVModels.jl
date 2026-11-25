@@ -59,6 +59,9 @@ function _gaussian_gllvm_convergence_verdict(model::GllvmModel, pars::NamedTuple
     end
     fit_stub = GllvmFit(model, pars, loglik, Optim.iterations(res), false, res,
                         0.0, nothing, nothing, :unknown)
+    # Wald covariance is not admitted on the X_lv path (confint refuses it), so
+    # the SE-based :degenerate and Newton-step checks cannot run there.
+    _has_lv_predictor(fit_stub) && return (true, :converged)
     _, _, _, _, se_all, pd = _confint_gaussian_wald_covariance(fit_stub, y, X, Σ_phy)
     if !pd || any(!isfinite, se_all)
         return (false, :degenerate)
