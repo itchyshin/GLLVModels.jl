@@ -1025,6 +1025,7 @@ println(_SHARD === nothing ?
     _shard_include("test_rrr_dispersion_underflow.jl")
     _shard_include("test_quadratic_dispersion_underflow.jl")
     _shard_include("test_ordination_uncertainty.jl")
+    _shard_include("test_ordination_uncertainty_seed_1484.jl")
     _shard_include("test_structural_confint.jl")
     _shard_include("test_structural_confint_edge.jl")
     _shard_include("test_ordered_beta.jl")
