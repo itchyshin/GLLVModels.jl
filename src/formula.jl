@@ -224,7 +224,8 @@ The default shared-variance route uses the same design when the formula has
 covariates.
 With no covariates it reduces to the intercept-only fit. Supplied table columns
 must still have one entry per site; an empty table is allowed for an
-intercept-only formula because `Y` supplies the site count.
+intercept-only formula because `Y` supplies the site count. Julia's empty tuple
+`()` is not accepted (use `NamedTuple()` instead).
 With explicit `sources`, only `Normal()` is admitted and `K`, `pervar=true`, and
 an explicit `X` are rejected. The formula then supplies the complete source-model
 mean design: trait-specific intercept columns (when present) and shared
@@ -260,6 +261,13 @@ value at an observed cell throws an `ArgumentError`). With covariates in the for
 `family = Normal()` takes an offset; the other covariate routes, explicit `sources` and the
 families `fit_gllvm` lists as taking none refuse it with an `ArgumentError`.
 """
+function _wide_formula_site_data(data)
+    data === () && throw(ArgumentError(
+        "site-level `data` must not be the empty tuple `()`; use `NamedTuple()` when there " *
+        "are no covariate columns, or a tables-compatible site table (e.g. a `NamedTuple` or `DataFrame`)"))
+    return Tables.columntable(data)
+end
+
 function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                family = Normal(), K::Union{Integer, _FormulaKUnset} = _FORMULA_K_UNSET,
                sources = nothing, grouping=nothing,
@@ -286,7 +294,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
         _refuse_weights("gllvm", "explicit grouping or phylo terms")
     weights === nothing || sources === nothing || _refuse_weights("gllvm", "explicit Gaussian sources")
     weights === nothing || !pervar || _refuse_weights("gllvm", "pervar = true")
-    cols = Tables.columntable(data)
+    cols = _wide_formula_site_data(data)
     for (name, column) in pairs(cols)
         length(column) == n || throw(DimensionMismatch(
             "`data` column `$name` has $(length(column)) rows but Y has $n sites (columns)"))
