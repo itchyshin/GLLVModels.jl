@@ -1089,7 +1089,7 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
         end
         return _poisson_aghq_scores(fit,Y;rotate=rotate,mask=mask,offset=offset)
     end
-    eltype(Y)<:Integer || throw(ArgumentError("Laplace Poisson getLV currently requires integer responses"))
+    _require_integer_responses(Y, "Laplace Poisson getLV")
     p, n = size(Y)
     # A weighted fit's modes are those of the weighted joint (as gllvmTMB's), which are
     # defined for the training cells only.
@@ -1260,13 +1260,14 @@ stored training offset (`fit.offset`) when `Y` has the training size, otherwise 
 New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
 `newdata` that lacks the offset variable.
 """
-function getLV(fit::NBFit, Y::AbstractMatrix{<:Integer};
+function getLV(fit::NBFit, Y::AbstractMatrix;
                N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing, offset = nothing)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
+    _require_integer_responses(Y, "Laplace NB getLV")
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
@@ -1303,7 +1304,7 @@ New units from an offset fit without an `offset` are refused (see [`getLV`](@ref
 be the training response. The default `modes = :refit` re-solves the modes (see the
 `PoissonFit` method).
 """
-function predict(fit::NBFit, Y::AbstractMatrix{<:Integer};
+function predict(fit::NBFit, Y::AbstractMatrix;
                  type::Symbol = :response,
                  N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                  X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing,
@@ -1327,7 +1328,7 @@ randomized quantile residuals — `Φ⁻¹(u)`, `u` uniform on `[F(y−1), F(y)]
 `NegativeBinomial(r, r/(r+μ))` — ≈ N(0,1) under a correct model (pass a fixed
 `rng` to reproduce). `:pearson` returns `(Y − μ) / √(μ + μ²/r)`.
 """
-function residuals(fit::NBFit, Y::AbstractMatrix{<:Integer};
+function residuals(fit::NBFit, Y::AbstractMatrix;
                    type::Symbol = :dunnsmyth,
                    X_lv::Union{Nothing, AbstractMatrix} = nothing,
                    rng::AbstractRNG = Random.default_rng(), offset = nothing)

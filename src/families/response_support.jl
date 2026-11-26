@@ -5,6 +5,24 @@
 # an `InexactError` that does not mention the data. Only observed cells are checked, so
 # `missing` entries and `mask = false` cells (the documented NA route) are untouched.
 
+# True when every entry of `Y` is a finite integer count (Integral eltype or
+# Float64 0.0 / 1.0 style promotion after fit).
+function _matrix_integer_responses(Y::AbstractMatrix)
+    eltype(Y) <: Integer && return true
+    @inbounds for t in axes(Y, 1), i in axes(Y, 2)
+        v = Y[t, i]
+        v isa Real && isfinite(v) && v >= 0 && isinteger(v) || return false
+    end
+    return true
+end
+
+function _require_integer_responses(Y::AbstractMatrix, caller::AbstractString)
+    _matrix_integer_responses(Y) && return nothing
+    throw(ArgumentError("$caller requires integer-valued responses " *
+        "(AbstractMatrix{<:Integer} or a real matrix whose entries are whole numbers); " *
+        "got eltype $(eltype(Y)) with a non-integral entry."))
+end
+
 # Does the response `y` lie in the support named by `kind`?
 function _in_support(kind::Symbol, y, Nti)
     y isa Real && isfinite(y) || return false
