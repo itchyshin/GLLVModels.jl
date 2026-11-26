@@ -2066,6 +2066,17 @@ function _nparams(fit::GammaGroupedCovFit)
 end
 
 """
+    predict(fit::GammaGroupedCovFit, Y; ...) -> p×n matrix
+
+Refused when the fit estimated covariates: pass the same `(p, n, q)` design `X`
+as in the three-argument `predict(fit, Y, X)`.
+"""
+function predict(fit::GammaGroupedCovFit, Y::AbstractMatrix{<:Real}; kwargs...)
+    throw(ArgumentError(
+        "this fit estimated fixed effects β; provide the same X to getLV, predict, fitted, or residuals"))
+end
+
+"""
     getLV(fit::GammaGroupedCovFit, Y, X; rotate=true, mask=nothing) -> n×K matrix
 
 Conditional latent scores at `η = β + Xγ + Λz` with per-trait Gamma shape.
