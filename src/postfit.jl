@@ -1089,6 +1089,7 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
         end
         return _poisson_aghq_scores(fit,Y;rotate=rotate,mask=mask,offset=offset)
     end
+    Y, mask = _laplace_count_postfit(Y; mask = mask)
     eltype(Y)<:Integer || throw(ArgumentError("Laplace Poisson getLV currently requires integer responses"))
     p, n = size(Y)
     # A weighted fit's modes are those of the weighted joint (as gllvmTMB's), which are
@@ -1187,6 +1188,7 @@ function residuals(fit::PoissonFit, Y::AbstractMatrix;
                    rng::AbstractRNG = Random.default_rng(),mask=nothing,offset=nothing)
     type in (:dunnsmyth, :pearson) ||
         throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    Y, mask = _laplace_count_postfit(Y; mask = mask)
     p, n = size(Y)
     μ = predict(fit,Y;type=:response,X_lv=X_lv,mask=mask,offset=offset)
     if _is_poisson_aghq(fit)

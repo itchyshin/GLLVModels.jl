@@ -595,6 +595,26 @@ function _sanitize_missing(Y::AbstractMatrix, placeholder)
     return map(y -> ismissing(y) ? placeholder : y, Y)
 end
 
+# Integer response matrix and observation mask for Laplace count post-fit (`predict`, `getLV`,
+# `residuals`, `confint`) when `Y` still carries `missing` or has a concrete eltype after fit-time
+# sanitisation (#1409).
+function _laplace_count_postfit(Y::AbstractMatrix; mask = nothing, placeholder::Integer = 0)
+    m = mask
+    if m === nothing && Missing <: eltype(Y) && any(ismissing, Y)
+        m = observed_mask(Y)
+    end
+    if m !== nothing
+        Yc = Integer.(_sanitize_unobserved(Y, m, placeholder))
+        all(m) && (m = nothing)
+        return Yc, m
+    end
+    if any(ismissing, Y)
+        Y = _sanitize_missing(Y, placeholder)
+    end
+    Missing <: eltype(Y) && return round.(Int, Y), nothing
+    return Y, nothing
+end
+
 # Resolve an observation mask: derive it from `missing` entries in `Y` (or `nothing` when `Y` is
 # fully observed) when no `mask` is given. An explicit `mask` is returned untouched, but it must not
 # mark a `missing` cell as observed (#763): that cell is a placeholder (0 / 1) by the time it reaches
