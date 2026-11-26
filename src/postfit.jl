@@ -1754,10 +1754,11 @@ Conditional latent-variable scores for an ordinal fit: the per-site Laplace mode
 `ẑₛ` (at the fitted cutpoints). `Y` is the p×n matrix of ordinal responses (`1:C`);
 `rotate=true` applies the canonical [`rotation`](@ref).
 """
-function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
+function getLV(fit::OrdinalFit, Y::AbstractMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing)
+    Y, mask = _ordinal_prepare_postfit_y(Y, mask, "getLV")
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     _check_trait_rows(fit, Y, "getLV")
@@ -1779,8 +1780,9 @@ function getLV(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
     Zout = component === :innovation ? Zt : Zmean .+ Zt
     return rotate ? Zout * _svd_rotation(fit.Λ) : Zout
 end
-function getLV(fit::OrdinalPerTraitFit, Y::AbstractMatrix{<:Integer};
+function getLV(fit::OrdinalPerTraitFit, Y::AbstractMatrix;
                rotate::Bool = true, mask = nothing)
+    Y, mask = _ordinal_prepare_postfit_y(Y, mask, "getLV")
     _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
@@ -1799,9 +1801,10 @@ end
 
 Conditional latent scores at `η = β + Xγ + Λz` with per-trait ordinal cutpoints.
 """
-function getLV(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix{<:Integer},
+function getLV(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix,
                X::AbstractArray{<:Real, 3};
                rotate::Bool = true, mask = nothing)
+    Y, mask = _ordinal_prepare_postfit_y(Y, mask, "getLV")
     _check_trait_rows(fit, Y, "getLV")
     p, n = size(Y)
     K = size(fit.Λ, 2)
@@ -1826,13 +1829,14 @@ linear predictor `η` (p×n); `type=:prob` the category probabilities (p×n×C a
 summing to 1 over the last axis); `type=:class` / `:response` the modal category
 (p×n integer matrix).
 """
-function predict(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
+function predict(fit::OrdinalFit, Y::AbstractMatrix;
                  X_lv::Union{Nothing, AbstractMatrix} = nothing,
-                 type::Symbol = :class)
+                 type::Symbol = :class, mask = nothing)
+    Y, mask = _ordinal_prepare_postfit_y(Y, mask, "predict")
     type in (:link, :prob, :class, :response) ||
         throw(ArgumentError("type must be :link, :prob, :class, or :response; got :$type"))
     p, n = size(Y); C = fit.C
-    Z = getLV(fit, Y; X_lv = X_lv, rotate = false)
+    Z = getLV(fit, Y; X_lv = X_lv, rotate = false, mask = mask)
     η = fit.Λ * Z'                                   # p×n
     type === :link && return η
     if type === :prob
@@ -1853,13 +1857,14 @@ function predict(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
     end
     return M
 end
-function predict(fit::OrdinalPerTraitFit, Y::AbstractMatrix{<:Integer};
-                 type::Symbol = :class)
+function predict(fit::OrdinalPerTraitFit, Y::AbstractMatrix;
+                 type::Symbol = :class, mask = nothing)
+    Y, mask = _ordinal_prepare_postfit_y(Y, mask, "predict")
     type in (:link, :prob, :class, :response) ||
         throw(ArgumentError("type must be :link, :prob, :class, or :response; got :$type"))
     p, n = size(Y)
     Cmax = maximum(fit.C)
-    Z = getLV(fit, Y; rotate = false)
+    Z = getLV(fit, Y; rotate = false, mask = mask)
     η = fit.β .+ fit.Λ * Z'
     type === :link && return η
     if type === :prob
@@ -1894,12 +1899,14 @@ on `[P(Y≤c−1), P(Y≤c)]` under the fitted cumulative-logit model at the Lap
 — ≈ N(0,1) under a correct model (pass a fixed `rng` to reproduce). Only
 `:dunnsmyth` is defined for ordered categories.
 """
-function residuals(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
-                   type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng())
+function residuals(fit::OrdinalFit, Y::AbstractMatrix;
+                   type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng(),
+                   mask = nothing)
+    Y, mask = _ordinal_prepare_postfit_y(Y, mask, "residuals")
     type === :dunnsmyth ||
         throw(ArgumentError("ordinal residuals support type=:dunnsmyth only; got :$type"))
     p, n = size(Y); C = fit.C
-    Z = getLV(fit, Y; rotate = false)
+    Z = getLV(fit, Y; rotate = false, mask = mask)
     η = fit.Λ * Z'
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
@@ -1913,12 +1920,14 @@ function residuals(fit::OrdinalFit, Y::AbstractMatrix{<:Integer};
     end
     return R
 end
-function residuals(fit::OrdinalPerTraitFit, Y::AbstractMatrix{<:Integer};
-                   type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng())
+function residuals(fit::OrdinalPerTraitFit, Y::AbstractMatrix;
+                   type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng(),
+                   mask = nothing)
+    Y, mask = _ordinal_prepare_postfit_y(Y, mask, "residuals")
     type === :dunnsmyth ||
         throw(ArgumentError("ordinal residuals support type=:dunnsmyth only; got :$type"))
     p, n = size(Y)
-    Z = getLV(fit, Y; rotate = false)
+    Z = getLV(fit, Y; rotate = false, mask = mask)
     η = fit.β .+ fit.Λ * Z'
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
