@@ -341,6 +341,84 @@ function simulate(fit::TweedieFit, n::Integer; rng::AbstractRNG = default_rng())
     return Y
 end
 
+# Count offset on two-part fits (`ZIPFit`, `ZINBFit`, `HurdlePoissonFit`): only the
+# stored p×n training matrix applies, and `n` must match its site count.
+function _twopart_sim_offset(fit, n::Integer)
+    off = fit.offset
+    off === nothing && return nothing
+    p = size(fit.Λc, 1)
+    (size(off, 1) == p && size(off, 2) == n) ||
+        throw(ArgumentError(
+            "stored training offset is $(p)×$(size(off, 2)); simulate with n=$(size(off, 2)) or refit without an offset"))
+    return off
+end
+
+"""
+    simulate(fit::ZIPFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Zero-inflated Poisson simulation: per site draw `z ~ N(0, I_K)`, form the count
+linear predictor `η^c = β^c + Λ^c z` (plus the stored training offset when
+present), structural zero with probability `π_t = logistic(β^z_t)`, otherwise
+`Poisson(exp(η^c_t))`. Pass a fixed `rng` to reproduce.
+"""
+function simulate(fit::ZIPFit, n::Integer; rng::AbstractRNG = default_rng())
+    offset = _twopart_sim_offset(fit, n)
+    p, K = size(fit.Λc)
+    Y = zeros(Int, p, n)
+    @inbounds for s in 1:n
+        ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
+        for t in 1:p
+            π = inv(1 + exp(-fit.βz[t]))
+            Y[t, s] = rand(rng) < π ? 0 : rand(rng, Poisson(exp(ηc[t])))
+        end
+    end
+    return Y
+end
+
+"""
+    simulate(fit::ZINBFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Zero-inflated NB2 simulation. As [`simulate(::ZIPFit, …)`](@ref), with count draws
+`NegativeBinomial(r, r/(r+μ))` at `μ = exp(η^c_t)`.
+"""
+function simulate(fit::ZINBFit, n::Integer; rng::AbstractRNG = default_rng())
+    offset = _twopart_sim_offset(fit, n)
+    p, K = size(fit.Λc)
+    Y = zeros(Int, p, n)
+    r = fit.r
+    @inbounds for s in 1:n
+        ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
+        for t in 1:p
+            π = inv(1 + exp(-fit.βz[t]))
+            μ = exp(ηc[t])
+            Y[t, s] = rand(rng) < π ? 0 :
+                      rand(rng, NegativeBinomial(r, r / (r + μ)))
+        end
+    end
+    return Y
+end
+
+"""
+    simulate(fit::HurdlePoissonFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Hurdle-Poisson simulation: `π_t = logistic(β^z_t)`; if the occurrence draw passes,
+sample from a zero-truncated Poisson at `exp(η^c_t)` (otherwise `0`). Pass a fixed
+`rng` to reproduce.
+"""
+function simulate(fit::HurdlePoissonFit, n::Integer; rng::AbstractRNG = default_rng())
+    offset = _twopart_sim_offset(fit, n)
+    p, K = size(fit.Λc)
+    Y = zeros(Int, p, n)
+    @inbounds for s in 1:n
+        ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
+        for t in 1:p
+            π = inv(1 + exp(-fit.βz[t]))
+            rand(rng) < π && (Y[t, s] = _rand_ztpois(rng, exp(ηc[t])))
+        end
+    end
+    return Y
+end
+
 """
     simulate(fit::GllvmCovFit, X; N=nothing, rng=Random.default_rng()) -> p×n matrix
 

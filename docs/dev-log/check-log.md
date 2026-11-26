@@ -1,3 +1,9 @@
+2026-11-26: #1493 `simulate(fit, n)` for `ZIPFit`, `ZINBFit`, `HurdlePoissonFit`.
+Julia 1.13.4, `JULIA_NUM_THREADS` default, cloud VM. New file
+`test/test_simulate_twopart.jl`: 9 passed, 0 failed, 31.3s. Neighbor
+`test/test_simulate.jl`: 5 passed, 0 failed, 27.0s. Full `Pkg.test` not run.
+See after-task `2026-11-26-simulate-twopart-1493.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
