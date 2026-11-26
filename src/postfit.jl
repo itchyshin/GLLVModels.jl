@@ -3196,6 +3196,17 @@ function getLV(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:R
 end
 
 """
+    predict(fit::GllvmCovFit, Y; ...) -> p×n matrix
+
+Refused when the fit estimated covariates: pass the same `(p, n, q)` design `X`
+as in the three-argument [`predict(fit, Y, X)`](@ref).
+"""
+function predict(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}; kwargs...)
+    throw(ArgumentError(
+        "this fit estimated fixed effects β; provide the same X to getLV, predict, fitted, or residuals"))
+end
+
+"""
     predict(fit::GllvmCovFit, Y, X; type=:response, N=nothing) -> p×n matrix
 
 `:link` = the linear predictor `η = β + Xγ + Λẑ`; `:response` (= `:mean`) = the

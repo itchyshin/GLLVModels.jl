@@ -150,4 +150,35 @@ using GLLVModels, Test, Random, Distributions, Statistics, StatsModels
                                          family = ZIB(Ntr), K = K, iterations = 20)
     end
 
+    @testset "GllvmCovFit predict(fit, Y) requires X (refs #1416)" begin
+        msg = "this fit estimated fixed effects β; provide the same X"
+        Random.seed!(2001)
+        p, K, n = 4, 1, 60
+        x = randn(n)
+        Yp = reshape([rand(Poisson(2)) for _ in 1:(p * n)], p, n)
+        fit_p = gllvm(@formula(y ~ 1 + x), Yp, (x = x,); family = Poisson(), K = K, iterations = 80)
+        @test fit_p isa GllvmCovFit
+        err = try
+            predict(fit_p, Yp)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin(msg, sprint(showerror, err))
+
+        Yg = abs.(randn(p, n)) .+ 0.1
+        fit_g = gllvm(@formula(y ~ 1 + x), Yg, (x = x,); family = Gamma(), K = K, iterations = 80)
+        err_g = try
+            predict(fit_g, Yg)
+            nothing
+        catch e
+            e
+        end
+        @test err_g isa ArgumentError
+        @test occursin(msg, sprint(showerror, err_g))
+
+        @test fit_g isa GammaGroupedCovFit
+    end
+
 end
