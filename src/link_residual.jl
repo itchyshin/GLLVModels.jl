@@ -86,6 +86,8 @@ _link_residual_one(::Binomial, link::Link, μ̂::Real, dispersion) =
 _link_residual_one(::NegativeBinomial, ::LogLink, μ̂::Real, dispersion::Real) =
     trigamma(max(dispersion, 1e-12))
 
+_fit_dispersion_at(disp, t::Integer) = disp isa Real ? disp : disp[t]
+
 # Gamma-log: trigamma(shape). extract-sigma.R 182–183 (nu_hat = 1/σ², the shape).
 # GLLVModels.jl carries the shape α directly (Var = μ²/α), so dispersion == α.
 _link_residual_one(::Gamma, ::LogLink, μ̂::Real, dispersion::Real) =
@@ -183,6 +185,14 @@ function _trait_mean_fitted(fit::NBFit, Y::AbstractMatrix; mask = nothing)
     μ = linkinv.(Ref(fit.link), η)
     return _masked_trait_mean(μ, mask)
 end
+function _trait_mean_fitted(fit::NBGroupedFit, Y::AbstractMatrix; mask = nothing)
+    Z = getLV(fit, Y; rotate = false, mask = mask)
+    η = fit.β .+ fit.Λ * Z'
+    O = _laplace_prediction_offset(fit.offset, Y, nothing, mask, "link_residual")
+    O === nothing || (η .+= O)
+    μ = linkinv.(Ref(fit.link), η)
+    return _masked_trait_mean(μ, mask)
+end
 function _trait_mean_fitted(fit::GammaFit, Y::AbstractMatrix; mask = nothing)
     if _has_lv_predictor(fit)
         # X_lv fit: per-site scores need X_lv (absent here); the marginal per-trait
@@ -223,6 +233,7 @@ end
 _fit_dispersion(::PoissonFit)  = nothing
 _fit_dispersion(::BinomialFit) = nothing
 _fit_dispersion(fit::NBFit)    = fit.r
+_fit_dispersion(fit::NBGroupedFit) = fit.r_group[fit.group]
 _fit_dispersion(fit::GammaFit) = fit.α
 _fit_dispersion(fit::BetaFit)  = fit.φ
 _fit_dispersion(fit::StudentTFit) = fit.σ
@@ -233,6 +244,7 @@ _fit_dispersion(::OrdinalPerTraitFit) = nothing
 _fit_family(::PoissonFit)  = Poisson()
 _fit_family(::BinomialFit) = Binomial()
 _fit_family(fit::NBFit)    = NegativeBinomial(fit.r, 0.5)
+_fit_family(::NBGroupedFit) = NegativeBinomial(1.0, 0.5)
 _fit_family(fit::GammaFit) = Gamma(fit.α, 1.0)
 _fit_family(fit::BetaFit)  = Beta(fit.φ, 1.0)
 _fit_family(fit::StudentTFit) = StudentTFamily(fit.ν isa Vector ? fit.ν[1] : fit.ν, fit.σ isa Vector ? fit.σ[1] : fit.σ)
@@ -287,13 +299,13 @@ Returns the vector added to `diag(ΛΛᵀ)` to form the latent-scale
 `Σ_latent = ΛΛᵀ + diag(σ²_d)` (see [`sigma_y_site`](@ref)). Rotation-invariant
 and family-agnostic on the latent scale (matches gllvmTMB `link_residual="auto"`).
 """
-function link_residual(fit::Union{PoissonFit, NBFit, BetaFit, GammaFit}, Y::AbstractMatrix;
+function link_residual(fit::Union{PoissonFit, NBFit, NBGroupedFit, BetaFit, GammaFit}, Y::AbstractMatrix;
                        mask = nothing)
     link = fit.link
     fam  = _fit_family(fit)
     disp = _fit_dispersion(fit)
     μ̂    = _trait_mean_fitted(fit, Y; mask = mask)
-    return [Float64(_link_residual_one(fam, link, μ̂[t], disp)) for t in eachindex(μ̂)]
+    return [Float64(_link_residual_one(fam, link, μ̂[t], _fit_dispersion_at(disp, t))) for t in eachindex(μ̂)]
 end
 
 function link_residual(fit::BinomialFit, Y::AbstractMatrix;
@@ -344,7 +356,7 @@ end
 # Union of the one-part non-Gaussian fit types that share the ΛΛᵀ + diag(σ²_d)
 # latent-scale construction. (Ordinal and Binomial are listed in their own method
 # signatures below because they take/forward different keyword args.)
-const _NonGaussianLatentFit = Union{PoissonFit, NBFit, BetaFit, GammaFit}
+const _NonGaussianLatentFit = Union{PoissonFit, NBFit, NBGroupedFit, BetaFit, GammaFit}
 
 # Assemble the symmetric latent-scale Σ = ΛΛᵀ + diag(σ²_d) from a loadings matrix
 # and a per-trait residual vector.
