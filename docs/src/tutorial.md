@@ -288,29 +288,36 @@ delta-Gamma).
 ## 3. Ordination and post-fit
 
 All single- and two-part fits share one post-fit API. The headline ecology
-summary is `ordination`, which returns the site/species coordinates in the shared
-latent space as a named tuple:
+summary is `ordination`, which returns site and species coordinates rotated
+together for biplots:
 
 ```julia
 o = ordination(fp, Y)        # Y must match the matrix passed to the fitter
-o.sites                       # n×K site scores (the ordination point cloud)
-o.species                     # p×K species loadings (the "arrows")
-o.rotation                    # K×K canonical (principal-axis) rotation
+o.sites                       # n×K site scores (principal rotation of scores)
+o.species                     # p×K species loadings rotated with the same R
+o.rotation                    # K×K rotation (SVD of centred site scores)
 ```
 
-The two coordinate sets are also available directly:
+Use `o.sites` with `o.species` (or `ordiplot(fp, Y)`) so the biplot stays
+internally consistent.
+
+The loading-based accessors share a different default rotation (sign-fixed SVD
+of the fitted loadings Λ):
 
 ```julia
-getLV(fp, Y)                  # n×K conditional latent scores (site ordination)
-getLoadings(fp)               # p×K species loadings, canonically rotated
+getLV(fp, Y)                  # n×K conditional latent scores
+getLoadings(fp)               # p×K species loadings (Λ R)
 getLoadings(fp; rotate = false)   # raw fitted Λ
-rotation(fp)                  # the canonical K×K rotation alone
+rotation(fp)                  # loading SVD rotation R (shared by the pair above)
 ```
 
-Latent factors are identified only up to a `K×K` orthogonal rotation, so
-`getLV` / `getLoadings` / `ordination` apply a canonical principal-axis,
-sign-fixed rotation by default (`rotate = false` returns the raw fitted
-orientation).
+Pair `getLV(fp, Y)` with `getLoadings(fp)` for loading-based biplots.
+
+Latent factors are identified only up to a `K×K` orthogonal rotation. With
+default `rotate = true`, `ordination` and `getLV` / `getLoadings` use **different**
+canonical rotations, so `ordination(...).sites` is not generally equal to
+`getLV(fp, Y)` and must not be combined with `getLoadings(fp)`. Pass
+`rotate = false` on either path to work in the raw fitted orientation.
 
 Fitted values come from `predict`, on the link or the response scale; `fitted` is
 the response-scale shorthand:

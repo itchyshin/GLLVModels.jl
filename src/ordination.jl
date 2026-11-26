@@ -36,6 +36,11 @@ returned unrotated.
 The rotation is orthogonal, so the fit is preserved exactly: the linear-predictor
 contribution `sites * species' == S * L'` for any `R` with `R'R = I`.
 
+This principal site-score rotation differs from the loading SVD used by
+[`getLV`](@ref), [`getLoadings`](@ref), and [`rotation`](@ref) at default
+`rotate=true`. For biplots, pair `sites` with `species` from this call—not with
+[`getLoadings`](@ref).
+
 `Y` (the `p×n` response matrix) must match what was passed to the fitting call — the
 fit does not store the data. Any other keyword (`X`, `N`, `X_lv`, `mask`, ...) is
 forwarded to `getLV`, so pass the same design the fit used: a `GllvmFit` with fixed
