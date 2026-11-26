@@ -821,6 +821,35 @@ function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     Missing <: eltype(Y) && return count(!ismissing, Y)
     return length(Y)
 end
+
+# Training response shape for post-fit routes that accept `Y` (e.g. `deviance(fit, Y)`).
+function _fit_training_shape(fit::AnyGllvmFit)
+    p = size(_loadings(fit), 1)
+    n = nothing
+    if hasfield(typeof(fit), :offset) && fit.offset !== nothing && ndims(fit.offset) == 2
+        n = size(fit.offset, 2)
+    elseif hasfield(typeof(fit), :weights) && fit.weights !== nothing
+        n = size(fit.weights, 2)
+    elseif hasfield(typeof(fit), :integration) && fit.integration !== nothing
+        data = getfield(fit.integration, :data)
+        if hasfield(typeof(data), :responses)
+            n = size(data.responses, 2)
+        end
+    end
+    return p, n
+end
+
+function _check_training_response(fit::AnyGllvmFit, Y::AbstractMatrix, caller::AbstractString)
+    p, n = _fit_training_shape(fit)
+    py, ny = size(Y)
+    py == p || throw(ArgumentError(
+        "$caller: response `Y` has $py species (rows), but this fit was made with $p."))
+    if n !== nothing && ny != n
+        throw(ArgumentError(
+            "$caller: response `Y` has $ny sites (columns), but this fit's training data had $n."))
+    end
+    return nothing
+end
 # Fits made from a response VECTOR (`fit_phylo_gaussian`, `fit_branch_re`, `fit_branch_re_dense`,
 # a length-n `fit_multinomial_gllvm`): the fallback error below tells the user to call
 # `nobs(fit, Y)`, and a vector `y` has no such method (#1164). Count it as the single column
