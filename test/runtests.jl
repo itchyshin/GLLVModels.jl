@@ -118,7 +118,7 @@ _register_shard_table!(4, (
         "test_zip_x_identity.jl", "test_issue_719_docs_deploy_guard.jl", "test_tweedie.jl",
         "test_tweedie_grouped_mode_search_503.jl", "test_tweedie_grouped_k1_mode_1042.jl", "test_studentt_core070.jl", "test_lognormal.jl",
         "test_zib_x_identity.jl", "test_ordinal_fit.jl", "test_ordinal_logit_twin.jl",
-        "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
+        "test_issue_749_fit_gllvm_doc.jl", "test_issue_1421_binomial_n_scalar.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
         "test_formula_pervar.jl", "test_formula_default_x_guard.jl", "test_statsapi.jl",
         "test_postfit_zib_tweedie.jl", "test_extract_latent_scores.jl", "test_select_lv_759.jl",
         "test_select_lv_p1_twin.jl", "test_issue_108_anova_docs.jl", "test_cross_kernel.jl",
@@ -317,7 +317,7 @@ _register_shard_table!(8, (
         "test_confint_derived.jl", "test_takahashi_selinv.jl", "test_fit_phylo.jl",
         "test_cloglog_likelihood.jl", "test_aghq_binomial.jl", "test_laplace_curvature_contract.jl",
         "test_grouped_analytic_grad.jl", "test_destination_b_joint_identification.jl", "test_gp1_verdict.jl",
-        "test_studentt_boundary.jl", "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_wald_pd_hessian.jl",
+        "test_studentt_boundary.jl", "test_issue_749_fit_gllvm_doc.jl", "test_issue_1421_binomial_n_scalar.jl", "test_gaussian_wald_pd_hessian.jl",
         "test_model_selection.jl", "test_source_covariance.jl", "test_destination_b_public.jl",
         "test_destination_b_b1_cluster2_paired_fit.jl", "test_b1_fixed_point_marginal_curvature_protocol.jl", "test_precision_multivariate_fit.jl",
         "test_destination_b_phylo_reference_checker.jl", "test_destination_b_phylo_uncertainty_cli.jl", "test_destination_b_dense_uncertainty.jl",
@@ -805,6 +805,7 @@ println(_SHARD === nothing ?
     _shard_include("test_getlv_rowcheck.jl")
     _shard_include("test_fit_gllvm.jl")
     _shard_include("test_issue_749_fit_gllvm_doc.jl")
+    _shard_include("test_issue_1421_binomial_n_scalar.jl")
     _shard_include("test_truncated_formula.jl")
     _shard_include("test_unified_api.jl")
     _shard_include("test_com_poisson.jl")
