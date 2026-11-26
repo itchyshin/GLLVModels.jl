@@ -121,7 +121,8 @@ _register_shard_table!(4, (
         "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
         "test_formula_pervar.jl", "test_formula_default_x_guard.jl", "test_statsapi.jl",
         "test_postfit_zib_tweedie.jl", "test_extract_latent_scores.jl", "test_select_lv_759.jl",
-        "test_select_lv_p1_twin.jl", "test_issue_108_anova_docs.jl", "test_cross_kernel.jl",
+        "test_select_lv_p1_twin.jl", "test_issue_108_anova_docs.jl",
+        "test_issue_1425_grouped_models_docs.jl", "test_cross_kernel.jl",
         "test_source_covariance.jl", "test_grouped_gaussian.jl", "test_destination_b_public.jl",
         "test_destination_b_b1_unit_obs_paired_fit.jl", "test_destination_b_b1_cluster2_paired_fit.jl", "test_b1_fixed_point_marginal_curvature_protocol.jl",
         "test_precision_shared_residual.jl", "test_phylo_latent_rounding_floor.jl", "test_destination_b_dense_uncertainty.jl",
@@ -296,6 +297,7 @@ _register_shard_table!(8, (
         "test_grouped_dispersion_tweedie_nb1.jl", "test_beta_grouped_mode_search.jl", "test_nb1_x_identity.jl",
         "test_issue_719_docs_deploy_guard.jl", "test_tweedie_grouped_engine_health.jl", "test_studentt_input_validation.jl",
         "test_com_poisson_mode_search.jl", "test_formula_pervar.jl", "test_issue_108_anova_docs.jl",
+        "test_issue_1425_grouped_models_docs.jl",
         "test_destination_b_b1_joint_gaussian_paired_fit.jl", "test_phylo_latent_twin.jl", "test_destination_b_phylo_independent_receipt.jl",
         "test_destination_b_pedigree_precision.jl", "test_destination_b_a4_s4_public_dense_bridge.jl", "test_destination_b_phylo_uncertainty.jl",
         "test_bridge_precision_multivariate.jl", "test_cross_objective_known_answer.jl", "test_cross_objective_helpers.jl",
@@ -836,6 +838,7 @@ println(_SHARD === nothing ?
     _shard_include("test_model_comparison.jl")
     # #108: tutorial gllvm_anova section (status vocabulary, claim boundary) and the behaviour it states.
     _shard_include("test_issue_108_anova_docs.jl")
+    _shard_include("test_issue_1425_grouped_models_docs.jl")
     # P1 behavioural twins (itchyshin/GLLVModels.jl#684 item 2): print.anova table fields and the
     # extract_latent_scores refusal vs gllvmTMB R/aghq-report.R and R/extract-latent-scores.R.
     _shard_include("test_c1_behaviour_p1.jl")
