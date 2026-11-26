@@ -2064,6 +2064,70 @@ function residuals(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dun
     return R
 end
 
+# --- Lognormal post-fit (one-part, log link on E[log y]) --------------------
+_loadings(fit::LognormalFit) = fit.Λ
+_loglik(fit::LognormalFit)   = fit.loglik
+
+"""
+    getLV(fit::LognormalFit, Y; rotate=true) -> n×K matrix
+
+Conditional latent-variable scores for a one-part Lognormal fit: the per-site
+Laplace mode `ẑₛ` on the log scale at residual SD `σ`.
+"""
+function getLV(fit::LognormalFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+    p, n = size(Y)
+    all(>(0), Y) || throw(ArgumentError("Lognormal post-fit requires strictly positive Y"))
+    Λ = fit.Λ
+    Ψ = fit.σ^2 * I(p)
+    Zlog = log.(Y)
+    R = Zlog .- fit.β
+    ΨiΛ = Ψ \ Λ
+    M = Symmetric(I + Λ' * ΨiΛ)
+    Z = M \ (ΨiΛ' * R)                  # K×n
+    Zt = permutedims(Z)
+    return rotate ? Zt * _svd_rotation(Λ) : Zt
+end
+
+"""
+    predict(fit::LognormalFit, Y; type=:response) -> p×n matrix
+
+`:link` returns the log-mean predictor `η = β + Λ ẑ`; `:response` the fitted
+conditional mean `E[y | η] = exp(η + σ²/2)`.
+"""
+function predict(fit::LognormalFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+    type in (:link, :response) ||
+        throw(ArgumentError("type must be :link or :response; got :$type"))
+    all(>(0), Y) || throw(ArgumentError("Lognormal post-fit requires strictly positive Y"))
+    Z = getLV(fit, Y; rotate = false)
+    η = fit.β .+ fit.Λ * Z'
+    type === :link && return η
+    return exp.(η .+ fit.σ^2 / 2)
+end
+
+"""
+    residuals(fit::LognormalFit, Y; type=:dunnsmyth) -> p×n matrix
+
+`:dunnsmyth` randomized quantile residuals on the log scale (deterministic PIT,
+Lognormal CDF continuous); `:pearson` returns `(log Y − η) / σ`.
+"""
+function residuals(fit::LognormalFit, Y::AbstractMatrix{<:Real}; type::Symbol = :dunnsmyth)
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    all(>(0), Y) || throw(ArgumentError("Lognormal post-fit requires strictly positive Y"))
+    p, n = size(Y)
+    η = predict(fit, Y; type = :link)
+    if type === :pearson
+        return (log.(Y) .- η) ./ fit.σ
+    end
+    R = Matrix{Float64}(undef, p, n)
+    σ = fit.σ
+    @inbounds for s in 1:n, t in 1:p
+        d = LogNormal(η[t, s], σ)
+        R[t, s] = _ds_z_continuous(d, Y[t, s])
+    end
+    return R
+end
+
 # --- Exponential post-fit (positive continuous, Var = μ², no dispersion) ---
 _loadings(fit::ExponentialFit) = fit.Λ
 _loglik(fit::ExponentialFit)   = fit.loglik
