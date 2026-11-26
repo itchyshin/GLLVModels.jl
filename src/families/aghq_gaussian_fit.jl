@@ -14,6 +14,10 @@ means **zero mean**; a complete `X[p,n,q]` defines all fixed effects. `β_fixed`
 retains the existing fixed-zero coefficient convention. The public route
 `fit_gllvm(Y; family = Normal(), K)` without `X` instead estimates one intercept
 per trait (stored in `pars.β`, and applied by post-fit helpers without `X`).
+On the zero-mean path, `dof`/`aic`/`bic` omit those `p` intercepts; do not
+compare them to `fit_gllvm(Normal())` or gllvmTMB without that gap. When
+`|mean|/sd` exceeds 3 for any trait, the fitter warns once per session (Y is
+never centred automatically).
 
 **W tier (`K_W`, `has_diag`; #135):** `K_W > 0` adds a second loading block
 `Λ_W` whose scores are shared by all traits of a unit, so it contributes the

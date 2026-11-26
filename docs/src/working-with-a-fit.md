@@ -86,6 +86,13 @@ rp = residuals(fit, Y; type = :pearson)
 
 A normal quantile–quantile plot of `r` is the usual goodness-of-fit check.
 
+For a Gaussian fit with missing cells, `fit_gaussian_gllvm` derives a mask from
+`missing` in `Y`. **By design**, [`fitted`](@ref) and [`predict`](@ref) still return
+finite conditional means at masked cells (the same in-sample predictor as at observed
+cells), while [`residuals`](@ref) with `type = :pearson` or Dunn–Smyth returns `NaN`
+there because no residual is defined without an observation. Pass the same `mask` when
+you need masked post-fit behaviour on integration routes.
+
 ## Model comparison
 
 ```julia
@@ -95,10 +102,25 @@ bic(fit, n)         # k·log(n_sites) − 2·logLik   (n_sites passed explicitly
 
 `k` is the free-parameter count (loadings counted modulo the `K(K−1)/2` rotational
 identifiability). Lower is better — compare fits with different `K` (or different
-families) to choose a model. For non-Gaussian fits with `K ≥ 2`, make sure each
-candidate is the best of several starts first; a fit stuck at a local optimum
-(still `converged = true`) distorts the comparison. Displaying the fit shows family, dimensions, the
-log-likelihood, AIC, and convergence:
+families) to choose a model.
+
+### Gaussian: zero-mean direct fit vs `fit_gllvm(Normal())`
+
+[`fit_gaussian_gllvm`](@ref) with no covariate design (`X = nothing`) is a **zero-mean**
+factor model: per-trait intercepts are not estimated, and `dof` / `aic` / `bic` omit
+those `p` parameters. That differs from gllvmTMB's default `value ~ 0 + trait + latent(...)`
+and from [`fit_gllvm`](@ref) with `family = Normal()` (which estimates one intercept per
+trait and counts them in `k`). At matched log-likelihood, AIC on the zero-mean route is
+exactly `2p` below the trait-intercept route. Use `fit_gllvm(Y; family = Normal(), K)`,
+a trait one-hot `X`, or `@formula(y ~ 1)` when you want intercepts and twin-comparable
+model comparison. The direct fitter **does not centre** `Y`; if trait means are large
+relative to within-trait SD, you may see a once-per-session warning — prefer the
+`Normal()` route for strongly offset data.
+
+For non-Gaussian fits with `K ≥ 2`, make sure each candidate is the best of several
+starts first; a fit stuck at a local optimum (still `converged = true`) distorts the
+comparison. Displaying the fit shows family, dimensions, the log-likelihood, AIC, and
+convergence:
 
 ```julia
 fit        # rich summary in the REPL
