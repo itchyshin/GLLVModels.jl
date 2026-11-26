@@ -847,6 +847,15 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     end
 
     # --- default: family dispatch (unchanged behaviour). ---------------------
+    if family isa Binomial
+        p, n = size(Y)
+        Nkw = get(kwargs, :N, nothing)
+        if Nkw !== nothing && !(Nkw isa AbstractMatrix)
+            throw(ArgumentError(
+                "fit_gllvm: family Binomial needs `N` as a $(p)×$(n) matrix, got " *
+                "$(typeof(Nkw))"))
+        end
+    end
     K === nothing ? _fit_gllvm(family, Y; kwargs...) :
                     _fit_gllvm(family, Y; K = K, kwargs...)
 end
