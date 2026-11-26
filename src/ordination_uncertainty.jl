@@ -111,7 +111,11 @@ u   = ordination_uncertainty(fit, Y; n_boot = 200)
 function ordination_uncertainty(fit::Union{_ScalarMuFit, BinomialFit},
         Y::AbstractMatrix; n_boot::Integer = 200, level::Real = 0.95,
         rotate::Bool = true, rng::AbstractRNG = default_rng(),
-        N::Union{Nothing, AbstractMatrix} = nothing)
+        N::Union{Nothing, AbstractMatrix} = nothing, kw...)
+    haskey(kw, :seed) && throw(ArgumentError(
+        "ordination_uncertainty does not accept `seed`; pass `rng = Random.MersenneTwister(seed)` " *
+        "for reproducible bootstrap replicates."))
+    isempty(kw) || throw(MethodError(ordination_uncertainty, (fit, Y), kw))
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     n_boot ≥ 2 || throw(ArgumentError("n_boot must be ≥ 2; got $n_boot"))
 
