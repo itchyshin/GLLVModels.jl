@@ -606,6 +606,9 @@ function _resolve_obs_mask(mask, Y)
     return msk
 end
 
+# Retain a training mask on the fit for post-fit `nobs` / `bic`; `nothing` when fully observed.
+_stored_obs_mask(msk) = msk === nothing ? nothing : Matrix{Bool}(msk)
+
 # Every trait (row of the p x n response) needs at least one observed cell: its
 # intercept is not identified otherwise, and the fit used to keep the start value
 # and report convergence. One shared check and message for the Laplace and VA fitters
