@@ -1,3 +1,5 @@
+2026-11-26: #1473 OrderedBeta / COMPoisson post-fit. Julia 1.10.14, `julia --project=. test/test_ordered_beta_postfit.jl`: 7 passed, 0 failed, ~11 s. See after-task `2026-11-26-ordered-beta-postfit-1473.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
