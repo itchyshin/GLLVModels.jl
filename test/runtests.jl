@@ -59,6 +59,7 @@ _register_shard_table!(4, (
         "test_poisson_laplace.jl", "test_truncnb2_dispersion_boundary.jl", "test_truncnb2_pertrait_boundary_restart.jl",
         "test_nb2_precision.jl", "test_negbin_laplace.jl", "test_beta_laplace.jl",
         "test_binomial_fit.jl", "test_poisson_fit.jl", "test_nb_n_init.jl", "test_zero_column_warning.jl",
+        "test_issue_1464_zip_zinb_converged.jl",
         "test_issue_783_curvature_docs.jl", "test_chibar2_variance_lrt_p1_twin.jl", "test_poisson_grad_perf.jl",
         "test_latte_kernel_identity.jl", "test_grouped_analytic_grad.jl", "test_destination_b_joint_nb2_replication.jl",
         "test_destination_b_quadrature.jl", "test_laplace_alloc_equiv.jl", "test_grouped_dispersion.jl",
@@ -1258,6 +1259,7 @@ println(_SHARD === nothing ?
     _shard_include("parity/test_core070_pin.jl")
     # All-zero count column warning on the Poisson and ZIP fitters (shard 1, with test_poisson_fit.jl).
     _shard_include("test_zero_column_warning.jl")
+    _shard_include("test_issue_1464_zip_zinb_converged.jl")
     # Formula covariate columns typed Union{Missing,T} (refs #1190).
     _shard_include("test_formula_missing_covariate.jl")
     _shard_include("test_temporal_missing_covariate.jl")
