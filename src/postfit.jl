@@ -323,7 +323,7 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
         end
         return _binomial_aghq_scores(fit,Y;N=N,rotate=rotate,mask=mask,offset=offset)
     end
-    eltype(Y)<:Integer || throw(ArgumentError("Laplace binomial getLV requires integer responses"))
+    _require_integer_responses(Y, "Laplace binomial getLV")
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
