@@ -186,7 +186,7 @@ _register_shard_table!(4, (
         "test_confint_bootstrap_verdict_poisson.jl", "test_confint_bootstrap_verdict_beta.jl", "test_confint_bootstrap_verdict_hurdle_delta.jl",
         "test_truncnb2_ci_boundary.jl", "test_confint_bootstrap_ordered_beta.jl", "test_confint_bootstrap_verdict_rest.jl",
         "test_confint_bootstrap_boundary_per_param.jl", "test_second_order_tweedie_grouped_ci.jl", "test_diagnostics.jl",
-        "test_summary_table.jl", "test_formula.jl", "test_simulate.jl",
+        "test_summary_table.jl", "test_formula.jl", "test_simulate.jl", "test_simulate_twopart.jl",
         "test_species_covariates.jl", "test_fourthcorner.jl", "test_structural_confint.jl",
         "test_variational_negbin.jl", "test_variational_dgamma.jl", "test_bridge_grouped_dispersion.jl",
         "test_bridge_x.jl", "test_bridge_lognormal.jl", "test_bridge_truncated_input.jl",
@@ -433,7 +433,7 @@ _register_shard_table!(8, (
         "test_beta_binomial.jl", "test_beta_binomial_phi_continuity_872.jl", "test_zi_twin.jl",
         "test_zi_recovery.jl", "test_confint_bootstrap_verdict_betabinomial.jl", "test_confint_bootstrap_boundary_per_param.jl",
         "test_second_order_delta_followup.jl", "test_second_order_truncpois_ci.jl", "test_diagnostics.jl",
-        "test_cov_analytic_grad.jl", "test_formula_no_intercept_default.jl", "test_simulate.jl",
+        "test_cov_analytic_grad.jl", "test_formula_no_intercept_default.jl", "test_simulate.jl", "test_simulate_twopart.jl",
         "test_ordination_uncertainty.jl", "test_variational_dgamma.jl", "test_random_slopes.jl",
         "test_bridge_grouped_dispersion.jl", "test_phylo_eta_realized.jl", "test_edge_incidence_solveQ.jl",
         "test_branch_re_marginal_fallback.jl", "test_em_phylo.jl", "test_em_squarem.jl",
@@ -1015,6 +1015,7 @@ println(_SHARD === nothing ?
     _shard_include("test_optimizer_selection.jl")
     _shard_include("test_formula_no_intercept_default.jl")
     _shard_include("test_simulate.jl")
+    _shard_include("test_simulate_twopart.jl")
     _shard_include("test_species_covariates.jl")
     _shard_include("test_fourthcorner.jl")
     _shard_include("test_row_effects.jl")
