@@ -80,10 +80,15 @@ estimates can still prevent valid intervals.
 Known coordinate redundancy returns the explicit interval status
 `:nonidentifiable`, even if roundoff happens to make a fitted Hessian positive.
 
-`predict(fit)` and `fitted(fit)` return the fixed-effect population mean with
-random effects set to zero. `residuals(fit)` returns observations minus that
-mean, not conditional or standardized residuals. For new observations, pass a
-complete trait-major design matrix to `predict(fit, design)`; automatic formula
+Grouped Gaussian fits on this page (`GroupedGaussianFit`) retain the training
+response matrix, so in-sample `predict(fit)`, `fitted(fit)`, and `residuals(fit)`
+need no data argument. They return the fixed-effect population mean with random
+effects set to zero. `residuals(fit)` returns observations minus that mean, not
+conditional or standardized residuals. Ungrouped Laplace family routes
+(for example `fit_gllvm(Y; family=Poisson(), K=k)` without `grouping=`) do not
+store `Y` on the fit object; use `predict(fit, Y)`, `fitted(fit, Y)`, and
+`residuals(fit, Y)` there. For new grouped observations, pass a complete
+trait-major design matrix to `predict(fit, design)`; automatic formula
 reconstruction for new tables is not implemented. Printed summaries distinguish
 point convergence from valid marginal curvature. `extract_Sigma` returns a
 selected term's trait covariance, not the covariance across all observations.
@@ -145,10 +150,14 @@ extractor inherits that choice. For Binomial, supply `N` with the same shape as
 `Y` to both fitting and interval extraction. No grouped arbitrary dispersion
 partition, alternative link, or profile fallback is supplied by this route.
 
-Non-Gaussian `predict(fit)` and `fitted(fit)` return the response mean with random
-effects set to zero. This is **not** the mean integrated over random effects:
-nonlinear links make those different. `predict(fit; type=:link)` returns the
-fixed linear predictor. Raw residuals subtract the zero-effect response mean.
+Non-Gaussian grouped fits here (`GroupedNonGaussianFit`) also retain the training
+response, so in-sample `predict(fit)`, `fitted(fit)`, and `residuals(fit)` work
+without a data argument. They return the response mean with random effects set to
+zero. This is **not** the mean integrated over random effects: nonlinear links
+make those different. For ungrouped Laplace Poisson, NB2, Beta, and related
+fits, pass the training matrix `Y` as in `predict(fit, Y)` and `fitted(fit, Y)`.
+`predict(fit; type=:link)` returns the fixed linear predictor. Raw residuals
+subtract the zero-effect response mean.
 For a new complete design, Binomial prediction requires an explicit new trials
 matrix `N`; training trials are not silently reused. Overflow gives an explicit
 error. Covariance extraction selects the latent-scale covariance of a fitted

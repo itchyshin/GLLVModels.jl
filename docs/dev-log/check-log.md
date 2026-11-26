@@ -1,3 +1,7 @@
+2026-11-26: #1425 grouped-models postfit docs. Julia 1.13.4, `JULIA_NUM_THREADS` default.
+`julia --project=. --startup-file=no -e 'include("test/test_issue_1425_grouped_models_docs.jl")'`.
+19 passed, 0 failed, 30.8s. Docs-only; see after-task `2026-11-26-grouped-models-postfit-docs-1425.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
