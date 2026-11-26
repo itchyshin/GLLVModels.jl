@@ -224,6 +224,11 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             optimizer = nothing,
                             _sufficient_stat::Bool = false)
     p, n = size(y)
+    y = Matrix{Float64}(y)
+    # Documented zero-mean fits (`X = nothing`) match gllvmTMB / bridge convention:
+    # trait means are removed before optimisation so PPCA warm starts and the
+    # profiled objective are not driven by large per-trait constants (#1419).
+    X === nothing && (y .-= mean(y, dims = 2))
     default_optimizer = Optim.LBFGS()
     outer_optimizer = _optimizer_method(optimizer, default_optimizer; route = "fit_gaussian_gllvm")
     stages = OptimizerStage[]
