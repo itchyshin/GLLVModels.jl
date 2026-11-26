@@ -63,7 +63,8 @@ _register_shard_table!(4, (
         "test_latte_kernel_identity.jl", "test_grouped_analytic_grad.jl", "test_destination_b_joint_nb2_replication.jl",
         "test_destination_b_quadrature.jl", "test_laplace_alloc_equiv.jl", "test_grouped_dispersion.jl",
         "test_nb_grouped_poisson_ridge.jl", "test_nb_cov_ridge_polish_grad.jl", "test_beta_grouped_convergence.jl",
-        "test_gamma_x_identity.jl", "test_gamma_fit.jl", "test_tweedie_engine_health.jl",
+        "test_gamma_x_identity.jl", "test_gamma_cov_dispersion_routes_1450.jl", "test_gamma_fit.jl",
+        "test_tweedie_engine_health.jl",
         "test_tweedie_grouped_engine_health.jl", "test_tweedie_cdf.jl", "test_exponential.jl",
         "test_studentt.jl", "test_studentt_input_validation.jl", "test_studentt_boundary_honesty.jl",
         "test_mode_search_623.jl", "test_ordinal_probit.jl", "test_unified_api.jl",
@@ -426,6 +427,7 @@ _register_shard_table!(8, (
         "test_truncnb2_pertrait_boundary_restart.jl", "test_nb2_precision.jl", "test_beta_laplace.jl",
         "test_boundary_inference.jl", "test_masked_dispersion_grad.jl", "test_grouped_dispersion.jl",
         "test_nb_grouped_upper_warn.jl", "test_grouped_init_kwargs.jl", "test_gamma_x_identity.jl",
+        "test_gamma_cov_dispersion_routes_1450.jl",
         "test_grouped_getlv_offset.jl", "test_zinb_cov_iterations.jl", "test_tweedie.jl",
         "test_exponential.jl", "test_mode_search_623.jl", "test_ordination.jl",
         "test_c1_behaviour_p1.jl", "test_destination_b_a4_s4_public_r_formula_receipt.jl", "test_formula_sources.jl",
@@ -757,6 +759,7 @@ println(_SHARD === nothing ?
     _shard_include("test_grouped_getlv_mode.jl")
     _shard_include("test_nb_beta_x_identity.jl")
     _shard_include("test_gamma_x_identity.jl")
+    _shard_include("test_gamma_cov_dispersion_routes_1450.jl")
     _shard_include("test_gamma_grouped_mode_search.jl")
     _shard_include("test_beta_grouped_mode_search.jl")
     _shard_include("test_grouped_getlv_offset.jl")

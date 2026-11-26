@@ -447,13 +447,19 @@ the linear predictor is `η_{ts} = β_t + Σ_k X[t,s,k]·γ_k + (Λ z_s)_t`.
 
 `family` is a `Distributions` marker — `Poisson()`, `NegativeBinomial()`,
 `Binomial()`, `Beta()`, or `Gamma()` — or the custom `NB1` marker —
-and dispatches the marginal (the dispersion, where present, is a **shared
-scalar** jointly estimated). For NB2/Beta/Gamma/NB1 the public and bridge
-default under X is per-trait dispersion via
+and dispatches the marginal. Where the family has dispersion, this route packs
+**one shared scalar** in `θ` (returned as `dispersion` on [`GllvmCovFit`](@ref));
+Poisson and Binomial have none. That shared-dispersion estimand is **not** what
+[`gllvm`](@ref) uses for NB2, Beta, Gamma, or NB1 once the formula includes
+covariates: those families are routed to per-trait dispersion on
 [`fit_nb_gllvm_grouped_cov`](@ref) / [`fit_beta_gllvm_grouped_cov`](@ref) /
-[`fit_gamma_gllvm_grouped_cov`](@ref) / [`fit_nb1_gllvm_grouped_cov`](@ref);
-this shared-dispersion path remains the explicit opt-in. `X` is the `(p, n, q)`
-covariate array
+[`fit_gamma_gllvm_grouped_cov`](@ref) / [`fit_nb1_gllvm_grouped_cov`](@ref)
+(twin / bridge default under X; e.g. `GammaGroupedCovFit.α` has length `p` when
+`group = 1:p`). Calling `fit_gllvm_cov(Y; family = Gamma(), X = X, …)` is the
+explicit shared-shape opt-in; its maximised `loglik` need not match
+`gllvm(@formula(…), …; family = Gamma())` or `fit_gamma_gllvm_grouped_cov` on
+the same `Y` and `X`. Use the grouped covariate fitter when you want the
+per-trait route. `X` is the `(p, n, q)` covariate array
 (same contract as the Gaussian engine); `γ` (length q) are coefficients shared
 across species (encode species-specific responses by block-expanding `X`). `Y` is
 `p × n`; `N` supplies Binomial trial counts (default all-ones). Exact gradient
@@ -468,6 +474,10 @@ index=>0.
 X = reshape(repeat(temp', p), p, n, 1)            # X[t,s,1] = temp[s]
 fit = fit_gllvm_cov(Y; family = Poisson(), X = X, K = 2)
 fit.γ            # estimated environmental coefficient(s)
+
+# Gamma + X: shared shape φ (one scalar) vs per-trait α on the @formula route:
+fit_shared = fit_gllvm_cov(Yp; family = Gamma(), X = X, K = 1)   # GllvmCovFit; one φ
+fit_trait  = fit_gamma_gllvm_grouped_cov(Yp; X = X, K = 1)       # length(fit_trait.α) == p
 ```
 
 Missing data: pass a `mask` (p×n Bool, `false` = unobserved) or simply include
