@@ -4,8 +4,9 @@ contract, warn when |mean|/sd > 3 on `fit_gaussian_gllvm` without X (no silent
 centring, no dof change), point users to `fit_gllvm(Normal())`; docs-only note
 that masked Pearson residuals are NaN while fitted/predict stay finite.
 Julia 1.10.x, `julia --project=. --startup-file=no -e
-'include("test/test_zero_mean_contract.jl")'`: tally recorded in after-task
-`2026-11-26-zero-mean-contract-1419.md`. Full `Pkg.test()` not run.
+'include("test/test_zero_mean_contract.jl")'`: 9 passed, 0 failed, 0 errored
+(Julia 1.13.4, ~43s). Full `Pkg.test()` not run. After-task
+`2026-11-26-zero-mean-contract-1419.md`.
 
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
