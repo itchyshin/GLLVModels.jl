@@ -186,7 +186,7 @@ _register_shard_table!(4, (
         "test_confint_bootstrap_verdict_poisson.jl", "test_confint_bootstrap_verdict_beta.jl", "test_confint_bootstrap_verdict_hurdle_delta.jl",
         "test_truncnb2_ci_boundary.jl", "test_confint_bootstrap_ordered_beta.jl", "test_confint_bootstrap_verdict_rest.jl",
         "test_confint_bootstrap_boundary_per_param.jl", "test_second_order_tweedie_grouped_ci.jl", "test_diagnostics.jl",
-        "test_summary_table.jl", "test_formula.jl", "test_simulate.jl",
+        "test_summary_table.jl", "test_formula.jl", "test_formula_interaction_design.jl", "test_simulate.jl",
         "test_species_covariates.jl", "test_fourthcorner.jl", "test_structural_confint.jl",
         "test_variational_negbin.jl", "test_variational_dgamma.jl", "test_bridge_grouped_dispersion.jl",
         "test_bridge_x.jl", "test_bridge_lognormal.jl", "test_bridge_truncated_input.jl",
@@ -328,7 +328,7 @@ _register_shard_table!(8, (
         "test_confint_family.jl", "test_predict_offset.jl", "test_confint_bootstrap_verdict_nb1.jl",
         "test_confint_bootstrap_verdict_hurdle_delta.jl", "test_confint_bootstrap_verdict_truncated.jl", "test_confint_bootstrap_verdict_bhob.jl",
         "test_confint_bootstrap_ordered_beta.jl", "test_confint_bootstrap_verdict_rest.jl", "test_second_order_ordinal_pertrait_ci.jl",
-        "test_formula.jl", "test_optimizer_selection.jl", "test_row_random.jl",
+        "test_formula.jl", "test_formula_interaction_design.jl", "test_optimizer_selection.jl", "test_row_random.jl",
         "test_ordered_beta.jl", "test_variational_beta.jl", "test_bridge_capabilities.jl",
         "test_mixed_contract.jl", "test_confint_hessian_consistency.jl", "test_grouped_hessian_consistency.jl",
         "test_branch_re_convergence.jl", "test_nparams_em_branch_re.jl", "test_docs_snippets_734_738.jl",
@@ -1012,6 +1012,7 @@ println(_SHARD === nothing ?
     _shard_include("test_cov_analytic_grad.jl")
     _shard_include("test_formula_input.jl")
     _shard_include("test_formula.jl")
+    _shard_include("test_formula_interaction_design.jl")
     _shard_include("test_optimizer_selection.jl")
     _shard_include("test_formula_no_intercept_default.jl")
     _shard_include("test_simulate.jl")

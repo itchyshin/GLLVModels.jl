@@ -109,14 +109,20 @@ function _build_site_modelmatrix(rhs, data; contrasts::AbstractDict = Dict{Symbo
         end
     end
 
-    rhs_term = length(non_const) == 1 ? non_const[1] : Tuple(non_const)
-    f_cov = FormulaTerm(ConstantTerm(0), rhs_term)
-    sch = StatsModels.schema(f_cov, cols, contrasts)
-    applied = StatsModels.apply_schema(f_cov, sch)
-    mm = StatsModels.modelmatrix(applied.rhs, cols)
-    cnames = StatsModels.coefnames(applied.rhs)
-    cnames_vec = cnames isa AbstractVector ? string.(cnames) : [string(cnames)]
-    return Matrix{Float64}(mm), cnames_vec
+    # Keep the full RHS (including `1` / `0`) and apply the schema as a
+    # StatisticalModel, matching `_pervar_formula_design` and R's
+    # `model.matrix`. Stripping intercept constants first made interactions like
+    # `x & g` rank-deficient and dropped the first factor level's slope (#1236).
+    f = FormulaTerm(ConstantTerm(0), rhs)
+    sch = StatsModels.schema(f, cols, contrasts)
+    applied = StatsModels.apply_schema(f, sch, StatsModels.StatisticalModel)
+    mm = Matrix{Float64}(StatsModels.modelmatrix(applied.rhs, cols))
+    model_names = StatsModels.coefnames(applied.rhs)
+    model_names = model_names isa AbstractVector ? string.(model_names) : [string(model_names)]
+    site_idx = findall(!=("(Intercept)"), model_names)
+    mm = mm[:, site_idx]
+    cnames_vec = model_names[site_idx]
+    return mm, cnames_vec
 end
 
 # The per-variance Gaussian fitter treats X as the complete mean design. Use
