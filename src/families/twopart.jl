@@ -784,7 +784,8 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::
         offset = nothing,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
-        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+        newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
+        _warn_zero_columns::Bool = true)
     _refuse_mask_route("fit_hurdle_poisson_gllvm", mask)
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = nothing,
@@ -792,6 +793,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_poisson_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_hurdle_poisson_gllvm", Y, _tp_count_ok, "non-negative integer counts")
+    _warn_zero_columns && _warn_all_zero_count_columns(Y, nothing; caller = "fit_hurdle_poisson_gllvm")
     rr = rr_theta_len(p, K)
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
@@ -835,6 +837,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::
     Λc = unpack_lambda(θ̂[(2p + 1):(2p + rr)], p, K)
     ll, conv, iters = _fit_verdict(res)
     conv = _eta_cap_verdict(conv, LogLink(), βc, offset; caller = "fit_hurdle_poisson_gllvm")
+    conv = _converged_veto_all_zero_columns(conv, Y, nothing)
     return HurdlePoissonFit(βz, βc, Λc, ll, conv, iters, _stored_offset(offset))
 end
 
