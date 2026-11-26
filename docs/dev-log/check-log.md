@@ -1,3 +1,7 @@
+2026-11-26: #1449 `fit_gllvm_cov` family guard (Ordinal, ZIPoisson, ZINegBin).
+Julia 1.10.14: `julia --project=. test/test_fit_gllvm_cov_family_guard_1449.jl` —
+14 passed, 0 failed. Full `Pkg.test` not run.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
