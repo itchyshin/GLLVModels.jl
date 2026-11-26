@@ -333,7 +333,7 @@ end
 # traits with m > 0 (MAD with constant 1). A trait is flagged when
 # relative_t >= 25 (`loading_runaway_thresh`) or m_t >= 8 (`loading_absolute_thresh`,
 # a link-scale latent SD this large is a fitted probability indistinguishable from
-# 0/1). Diagnostic only: estimates and `converged` are untouched.
+# 0/1). When any trait is flagged, `converged` is set to `false` (refs #1467).
 const _BINOMIAL_LOADING_RUNAWAY_THRESH = 25.0
 const _BINOMIAL_LOADING_ABSOLUTE_THRESH = 8.0
 
@@ -583,7 +583,8 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         sat = isfinite(ll) ?
             _warn_saturation(_laplace_saturation_health(Yc, Nm, Λ̂, β̂, link, hessian;
                                                         mask = msk), link, Λ̂) : nothing
-        _warn_runaway_loadings(Λ̂)
+        runaway = _warn_runaway_loadings(Λ̂)
+        conv = conv && isempty(runaway)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters,
                            alpha_hat, collect(Float64, θ̂), hessian, sat, nothing, loading_ridge,
                            _stored_offset(offset))
@@ -604,7 +605,8 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         sat = isfinite(ll) ?
             _warn_saturation(_laplace_saturation_health(Yc, Nm, Λ̂, β̂, link, hessian;
                                                         mask = msk), link, Λ̂) : nothing
-        _warn_runaway_loadings(Λ̂)
+        runaway = _warn_runaway_loadings(Λ̂)
+        conv = conv && isempty(runaway)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters, nothing, Float64[], hessian, sat, nothing, loading_ridge,
                            _stored_offset(offset))
     end
