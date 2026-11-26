@@ -214,7 +214,8 @@ function _tw_sigma_from_hessian(fit::GllvmFit, y::AbstractMatrix,
     nll = _confint_reconstruct_nll(fit, y, X, Σ_phy)
     H = try
         ForwardDiff.hessian(nll, θ̂)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return (nothing, false)
     end
     # `lambda_constraint` pins are not parameters (#794): invert the free block and
@@ -238,7 +239,8 @@ function _tw_sigma_from_hessian_matrix(H::AbstractMatrix)
     isposdef(Hs) || return (nothing, false)
     Σ = try
         inv(Hs)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return (nothing, false)
     end
     return (Matrix(Σ), true)
@@ -342,7 +344,8 @@ function transformed_wald_ci_derived(fit::GllvmFit, derived_fn_packed::Function;
     hg = θ -> h(derived_fn_packed(θ))
     grad = try
         ForwardDiff.gradient(hg, θ̂)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return merge(failed, (; pd_hessian = true))
     end
     (all(isfinite, grad)) || return merge(failed, (; pd_hessian = true))
@@ -380,7 +383,8 @@ function _transformed_wald_ci_with_sigma(θ̂::AbstractVector, derived_fn_packed
     hg = θ -> h(derived_fn_packed(θ))
     grad = try
         ForwardDiff.gradient(hg, θ̂)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         return merge(failed, (; pd_hessian = true))
     end
     (all(isfinite, grad)) || return merge(failed, (; pd_hessian = true))
@@ -858,13 +862,15 @@ function slope_sd_ci(fit::GaussianRandomSlopeFit, y::AbstractMatrix,
 
     H = try
         ForwardDiff.hessian(nll, θ̂)
-    catch
+    catch e
+        e isa InterruptException && rethrow()
         nothing
     end
     Σcov, pd = if H !== nothing && all(isfinite, H)
         try
             (inv((H .+ H') ./ 2), true)
-        catch
+        catch e
+            e isa InterruptException && rethrow()
             (nothing, false)
         end
     else
