@@ -1,3 +1,8 @@
+2026-11-26: #1430 docs only — widen `Y` before assigning `missing`. Julia
+1.10.14, `JULIA_NUM_THREADS=1`, `julia --project=. --startup-file=no -e
+'include("test/test_issue_1430_docs.jl")'`: 7 passed, 0 failed, 0 errored, ~25s.
+No `src/` change. See after-task `2026-11-26-issue-1430-missing-eltype-docs.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
