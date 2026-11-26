@@ -951,6 +951,7 @@ println(_SHARD === nothing ?
     _shard_include("test_missing_predictor_phylo.jl")
     _shard_include("test_missing_predictor_z.jl")
     _shard_include("test_missing_predictor_poisson.jl")
+    _shard_include("test_issue_1409_poisson_missing_postfit.jl")   # #1409 Poisson post-fit on training Ym
     _shard_include("test_missing_predictor_dispersion.jl")
     _shard_include("test_missing_predictor_multi.jl")
     _shard_include("test_mi_fitter.jl")

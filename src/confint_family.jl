@@ -304,7 +304,8 @@ function _family_ci(fit::PoissonFit, Y::AbstractMatrix;
         "use confint_lv_effects(fit, Y, X_lv) for Wald intervals on B_lv, " *
         "or extract_lv_effects(fit) for point estimates"))
     p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K); link = fit.link
-    M = _ci_mask(mask, Y)
+    Y, Mraw = _laplace_count_postfit(Y; mask = mask)
+    M = _ci_mask(Mraw, Y)
     θ = vcat(fit.β, pack_lambda(fit.Λ))
     nll = function (θv)
         β = θv[1:p]; Λ = unpack_lambda(θv[(p + 1):(p + rr)], p, K)
