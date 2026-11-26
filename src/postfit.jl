@@ -816,9 +816,20 @@ matrix (e.g. two-level, random-slope, SPDE), `nobs(fit)` returns the
 cell-count analogue (`p` times the stored unit count) so the convention holds
 without requiring `Y`.
 """
+function _training_gaussian_mask(fit::GllvmFit, Y::AbstractMatrix)
+    _has_gaussian_record(fit) || return nothing
+    d = fit.integration.data
+    size(Y) == size(d.responses) || return nothing
+    return d.mask
+end
+
 function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     mask !== nothing && return count(mask)
     Missing <: eltype(Y) && return count(!ismissing, Y)
+    fit isa GllvmFit && begin
+        m = _training_gaussian_mask(fit, Y)
+        m !== nothing && return count(m)
+    end
     return length(Y)
 end
 # Fits made from a response VECTOR (`fit_phylo_gaussian`, `fit_branch_re`, `fit_branch_re_dense`,
