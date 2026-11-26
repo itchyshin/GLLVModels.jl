@@ -7,6 +7,7 @@
 
 """
     deviance(fit) -> Float64
+    deviance(fit, Y) -> Float64
 
 `-2 * loglikelihood(fit)`. Mirrors `gllvmTMB`'s `deviance.gllvmTMB_multi`
 (`methods-gllvmTMB.R:2862-2864`), which is exactly `-2 * logLik(object)` — no
@@ -17,8 +18,13 @@ penalised MAP" caveat is inherited unchanged here).
 This calculation does not use [`nobs`](@ref). When comparing [`bic`](@ref)
 across R and Julia, check the observation-count convention: site counts and
 counts of likelihood-contributing cells can differ.
+
+The `deviance(fit, Y)` form matches `deviance(fit)` for fits whose maximised
+marginal log-likelihood does not depend on which concrete `Y` is passed back
+after a masked fit (`Y` may still carry `missing`).
 """
 StatsAPI.deviance(fit::AnyGllvmFit) = -2 * StatsAPI.loglikelihood(fit)
+StatsAPI.deviance(fit::AnyGllvmFit, ::AbstractMatrix) = StatsAPI.deviance(fit)
 
 # ---------------------------------------------------------------------------
 # Item 1.2 — profile_cross_rho_ci (mirrors kernel-helpers.R:294-359; the
