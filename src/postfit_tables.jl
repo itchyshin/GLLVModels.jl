@@ -7,6 +7,7 @@
 
 """
     deviance(fit) -> Float64
+    deviance(fit, Y) -> Float64
 
 `-2 * loglikelihood(fit)`. Mirrors `gllvmTMB`'s `deviance.gllvmTMB_multi`
 (`methods-gllvmTMB.R:2862-2864`), which is exactly `-2 * logLik(object)` — no
@@ -14,11 +15,18 @@ null/saturated-model comparison, delegating through the same maximised
 marginal log-likelihood that a ridged fit reports (R's "unpenalised logLik at
 penalised MAP" caveat is inherited unchanged here).
 
+The `deviance(fit, Y)` form checks that `Y` matches the training response shape
+(species and site counts recorded on the fit) and then returns `deviance(fit)`.
+
 This calculation does not use [`nobs`](@ref). When comparing [`bic`](@ref)
 across R and Julia, check the observation-count convention: site counts and
 counts of likelihood-contributing cells can differ.
 """
 StatsAPI.deviance(fit::AnyGllvmFit) = -2 * StatsAPI.loglikelihood(fit)
+function StatsAPI.deviance(fit::AnyGllvmFit, Y::AbstractMatrix)
+    _check_training_response(fit, Y, "deviance")
+    return StatsAPI.deviance(fit)
+end
 
 # ---------------------------------------------------------------------------
 # Item 1.2 — profile_cross_rho_ci (mirrors kernel-helpers.R:294-359; the
