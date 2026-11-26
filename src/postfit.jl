@@ -89,6 +89,56 @@ end
 _check_prediction_modes(modes::Symbol) = modes in (:refit, :training) ||
     throw(ArgumentError("predict: modes must be :refit or :training; got :$modes"))
 
+# Training site count for post-fit Y shape checks (see `_check_trait_rows`).
+function _fitted_n_sites(fit)
+    T = typeof(fit)
+    if hasfield(T, :n_sites)
+        ns = getfield(fit, :n_sites)
+        ns !== nothing && return ns
+    end
+    if hasfield(T, :offset)
+        off = getfield(fit, :offset)
+        off !== nothing && return size(off, 2)
+    end
+    if hasfield(T, :weights)
+        w = getfield(fit, :weights)
+        w !== nothing && return size(w, 2)
+    end
+    if hasfield(T, :trials)
+        tr = getfield(fit, :trials)
+        tr !== nothing && return size(tr, 2)
+    end
+    if hasfield(T, :N)
+        Nt = getfield(fit, :N)
+        Nt isa AbstractMatrix && !isempty(Nt) && return size(Nt, 2)
+    end
+    if fit isa GllvmFit && fit.integration !== nothing
+        d = fit.integration.data
+        d !== nothing && hasproperty(d, :responses) && return size(d.responses, 2)
+    end
+    if fit isa Union{PoissonFit,BinomialFit} && fit.integration !== nothing
+        d = fit.integration.data
+        d !== nothing && hasproperty(d, :responses) && return size(d.responses, 2)
+    end
+    return nothing
+end
+
+function _resolve_binomial_trials(fit::BinomialFit, Y::AbstractMatrix,
+        N::Union{Nothing,AbstractMatrix{<:Integer}}, caller::AbstractString)
+    p, n = size(Y)
+    if N !== nothing
+        size(N) == (p, n) || throw(DimensionMismatch("N must be $(p)×$(n)"))
+        return N
+    end
+    tr = fit.trials
+    if tr !== nothing
+        size(tr) == (p, n) || throw(DimensionMismatch(
+            "$caller: stored trial counts are $(size(tr,1))×$(size(tr,2)) but Y is $(p)×$(n)"))
+        return tr
+    end
+    return fill(1, p, n)
+end
+
 function _prediction_mode_offset(fit, Y::AbstractMatrix, O, modes::Symbol)
     _check_prediction_modes(modes)
     modes === :refit && return O
@@ -261,6 +311,7 @@ function getLV(fit::GllvmFit, y::AbstractMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true,mask=nothing,offset=nothing)
+    _check_trait_rows(fit, y, "getLV")
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     if _has_gaussian_record(fit)
@@ -291,7 +342,8 @@ end
 
 Conditional latent-variable scores: the per-site Laplace mode `ẑₛ` (the inner
 Fisher-scoring solve of the marginal). `Y` is the p×n integer response matrix;
-`N` the trial counts (default all-ones, i.e. Bernoulli).
+`N` the trial counts — when omitted, stored training trials are reused for
+non-Bernoulli fits; Bernoulli (all-ones) fits default to unit trials.
 
 For fits with `X_lv`, `component` chooses which latent-score layer to return:
 `:mean` is `X_lv * alpha_lv`, `:innovation` is the zero-mean Laplace mode, and
@@ -313,6 +365,7 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing,offset=nothing)
+    _check_trait_rows(fit, Y, "getLV")
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     if _is_binomial_aghq(fit)
@@ -326,7 +379,7 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
     eltype(Y)<:Integer || throw(ArgumentError("Laplace binomial getLV requires integer responses"))
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _resolve_binomial_trials(fit, Y, N, "getLV")
     K = size(fit.Λ, 2)
     Zmean = _lv_score_mean_for_fit(fit, Y, X_lv)
     if component === :mean
@@ -658,7 +711,7 @@ function residuals(fit::BinomialFit, Y::AbstractMatrix;
         return result
     end
     p, n = size(Y)
-    Nm = N === nothing ? fill(1, p, n) : N
+    Nm = _resolve_binomial_trials(fit, Y, N, "residuals")
     μ = predict(fit, Y; type = :response, N = N, X_lv = X_lv,mask=mask,offset=offset)
     if type === :pearson
         return (Y .- Nm .* μ) ./ sqrt.(Nm .* μ .* (1 .- μ))
@@ -1079,6 +1132,7 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing, offset=nothing)
+    _check_trait_rows(fit, Y, "getLV")
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     if _is_poisson_aghq(fit)
@@ -1742,8 +1796,16 @@ end
 # per-site mode search and read past the end of the column (garbage indices, then a
 # BoundsError with a meaningless index). Refuse it up front, as a DimensionMismatch.
 function _check_trait_rows(fit, Y::AbstractMatrix, who::AbstractString)
-    size(Y, 1) == size(fit.Λ, 1) || throw(DimensionMismatch(
-        "$who: Y has $(size(Y, 1)) rows but the fit has $(size(fit.Λ, 1)) traits"))
+    pfit = hasfield(typeof(fit), :Λ) ? size(fit.Λ, 1) :
+           hasfield(typeof(fit), :Λc) ? size(fit.Λc, 1) :
+           size(fit.pars.Λ, 1)
+    size(Y, 1) == pfit || throw(DimensionMismatch(
+        "$who: Y has $(size(Y, 1)) rows but the fit has $pfit traits"))
+    nfit = _fitted_n_sites(fit)
+    if nfit !== nothing
+        size(Y, 2) == nfit || throw(DimensionMismatch(
+            "$who: Y has $(size(Y, 2)) columns (sites) but the fit was made with $nfit sites"))
+    end
     return nothing
 end
 
