@@ -50,7 +50,8 @@ _register_shard_table!(4, (
     (
         "test_package_rename_alias.jl", "test_none_dep.jl", "test_phylo_dep.jl",
         "test_kernel_indep.jl", "test_kernel_dep.jl", "test_kernel_latent.jl",
-        "test_gaussian_K_bounds.jl", "test_unidentified_tier_warning.jl", "test_signed_sigma_phy.jl",
+        "test_gaussian_K_bounds.jl", "test_unidentified_tier_warning.jl", "test_zero_mean_contract.jl",
+        "test_signed_sigma_phy.jl",
         "test_destination_b_grouping_invariance.jl", "test_destination_b_grouping_interval_matrix.jl", "test_grouped_profile_refit.jl",
         "test_grouped_profile_interval.jl", "test_joint_covariance_identification.jl", "test_joint_phylo_grouped_fit.jl",
         "test_extract_phylo_signal_joint.jl", "test_profile_derived_fix.jl", "test_aghq_grid.jl",
@@ -446,7 +447,8 @@ _register_shard_table!(8, (
     (
         "test_package_rename_alias.jl", "test_packing.jl", "test_none_dep.jl",
         "test_fit.jl", "test_gaussian_K_bounds.jl", "test_reml.jl",
-        "test_unidentified_tier_warning.jl", "test_grouped_profile_interval.jl", "test_em_sparse_estep_default.jl",
+        "test_unidentified_tier_warning.jl", "test_zero_mean_contract.jl", "test_grouped_profile_interval.jl",
+        "test_em_sparse_estep_default.jl",
         "test_aghq_nb2.jl", "test_gaussian_empty_design.jl", "test_profile_failure_bounds.jl",
         "test_truncnb2_laplace_breakdown.jl", "test_laplace_dual_safety.jl", "test_gp1_laplace.jl",
         "test_grouped_dispersion_beta_gamma.jl", "test_beta_grouped_convergence.jl", "test_nb2_grouped_mode_search.jl",
@@ -581,6 +583,7 @@ println(_SHARD === nothing ?
     _shard_include("test_lv_predictor.jl")
     _shard_include("test_W_and_diag.jl")
     _shard_include("test_unidentified_tier_warning.jl")
+    _shard_include("test_zero_mean_contract.jl")
     _shard_include("test_phy.jl")
     _shard_include("test_signed_sigma_phy.jl")
     _shard_include("test_sparse_phy.jl")

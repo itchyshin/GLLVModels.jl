@@ -86,6 +86,47 @@ end
 
 _reset_unidentified_warnings!() = (lock(() -> empty!(_UNIDENTIFIED_WARNED), _UNIDENTIFIED_LOCK); nothing)
 
+# Zero-mean route (`X = nothing`): warn when per-trait means are large relative to
+# within-trait SD so users know to use `fit_gllvm(Normal())` or an intercept design.
+const _ZERO_MEAN_MEAN_SD_RATIO = 3.0
+
+function _warn_zero_mean_large_trait_means!(y::AbstractMatrix{<:Real})
+    p, n = size(y)
+    max_ratio = 0.0
+    worst = 0
+    @inbounds for t in 1:p
+        μ = 0.0
+        m2 = 0.0
+        cnt = 0
+        for s in 1:n
+            v = y[t, s]
+            cnt += 1
+            δ = v - μ
+            μ += δ / cnt
+            m2 += δ * (v - μ)
+        end
+        cnt < 2 && continue
+        σ = sqrt(m2 / (cnt - 1))
+        σ = max(σ, eps(Float64))
+        r = abs(μ) / σ
+        if r > max_ratio
+            max_ratio = r
+            worst = t
+        end
+    end
+    max_ratio > _ZERO_MEAN_MEAN_SD_RATIO || return nothing
+    _warn_unidentified_once(:zero_mean_large_trait_mean,
+        "fit_gaussian_gllvm with X = nothing fits a zero-mean Gaussian GLLVM: per-trait " *
+        "intercepts are not estimated, and dof/aic/bic omit those p parameters (unlike " *
+        "fit_gllvm(Y; family = Normal(), K), which matches gllvmTMB's 0 + trait latent block). " *
+        "Large trait means relative to within-trait SD (largest |mean|/sd ≈ " *
+        "$(round(max_ratio, sigdigits = 4)) on trait $worst) can make the optimiser stop at a " *
+        "spurious optimum while converged = true; the fitter does not centre Y. For per-trait " *
+        "intercepts and comparable model comparison to gllvmTMB, use fit_gllvm(Y; family = " *
+        "Normal(), K) or pass an explicit trait-intercept X design. Issued once per Julia session.")
+    return nothing
+end
+
 """
     fit_gaussian_gllvm(y; K, K_W=0, has_diag=false, K_phy=0,
                        has_phy_unique=false, Σ_phy=nothing, X=nothing,
@@ -117,6 +158,17 @@ public API and parameter recovery semantics are unchanged.
 J1 behaviour (`K_W = 0`, `has_diag = false`, `X = nothing`,
 `K_phy = 0`, `has_phy_unique = false`, `Σ_phy = nothing`) is preserved
 unchanged.
+
+Zero-mean contract (`X = nothing`): this route estimates a **zero-mean**
+Gaussian GLLVM — per-trait intercepts are not in the likelihood and
+[`dof`](@ref) / [`aic`](@ref) / [`bic`](@ref) omit the `p` intercept
+parameters that [`fit_gllvm`](@ref) with `family = Normal()` includes
+(gllvmTMB's default `value ~ 0 + trait + latent(...)` unless you use
+`y ~ 0` or supply fixed effects). Do not compare AIC/BIC to that route or
+to gllvmTMB without accounting for the `p`-parameter gap. When any trait's
+`|mean|/sd` exceeds $(_ZERO_MEAN_MEAN_SD_RATIO) the fitter warns once per
+session (large means can hurt numerics on this path; Y is never centred
+automatically). For estimated intercepts use `fit_gllvm(Y; family = Normal(), K)`.
 
 Optional extensions:
 - J2-A-WD: `K_W::Integer = 0` (W-tier rank), `has_diag::Bool = false`
@@ -288,6 +340,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
         if !(β_fixed === nothing || (β_fixed isa AbstractVector && isempty(β_fixed)))
             throw(ArgumentError("β_fixed requires X"))
         end
+        _warn_zero_mean_large_trait_means!(y)
     end
 
     q_lv = 0
