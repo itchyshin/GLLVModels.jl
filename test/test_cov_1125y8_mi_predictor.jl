@@ -8,8 +8,11 @@ const G = GLLVModels
 
     @testset "Cholesky pack round trip" begin
         for q in 1:3
-            A = randn(rng, q, q)
-            L = cholesky(Symmetric(A' * A + (q + 2.0) * I)).L
+            Lraw = zeros(q, q)
+            for i in 1:q, j in 1:i
+                Lraw[i, j] = j == i ? exp(randn(rng)) + 1.0 : randn(rng) * 0.1
+            end
+            L = LowerTriangular(Lraw)
             c = G._mi_pack_cholesky(L)
             L2 = G._mi_unpack_cholesky(c, q)
             @test L2 ≈ L atol = 1e-14
