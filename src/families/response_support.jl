@@ -177,7 +177,8 @@ end
 # from that text: equal only when the text is equal, so two different column sets can never
 # share a counter, and the same text gives the same id in every session and Julia version). A console therefore shows
 # one message per distinct (fitter, columns) per session, not one per session.
-function _warn_all_zero_count_columns(Y::AbstractMatrix, mask; caller::AbstractString)
+# Species (row) indices whose observed cells are all zero counts.
+function _all_zero_count_column_indices(Y::AbstractMatrix, mask)
     p, n = size(Y)
     cols = Int[]
     @inbounds for t in 1:p
@@ -195,6 +196,15 @@ function _warn_all_zero_count_columns(Y::AbstractMatrix, mask; caller::AbstractS
         end
         (allzero && nobs > 0) && push!(cols, t)
     end
+    return cols
+end
+
+# True when every species row has only zero counts in observed cells (degenerate intercept).
+_all_species_all_zero_counts(Y::AbstractMatrix, mask) =
+    (p = size(Y, 1); p > 0 && length(_all_zero_count_column_indices(Y, mask)) == p)
+
+function _warn_all_zero_count_columns(Y::AbstractMatrix, mask; caller::AbstractString)
+    cols = _all_zero_count_column_indices(Y, mask)
     isempty(cols) && return nothing
     # ZIP only: the zero-inflation logit can also absorb the column, so it runs off too (observed on 24 fits:
     # logit +13 to +1600 and intercept -12 to -1500, with `converged = true`).
