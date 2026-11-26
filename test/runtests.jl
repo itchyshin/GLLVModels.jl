@@ -121,6 +121,7 @@ _register_shard_table!(4, (
         "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
         "test_formula_pervar.jl", "test_formula_default_x_guard.jl", "test_statsapi.jl",
         "test_postfit_zib_tweedie.jl", "test_extract_latent_scores.jl", "test_select_lv_759.jl",
+        "test_issue_1478_select_lv_kwargs.jl",
         "test_select_lv_p1_twin.jl", "test_issue_108_anova_docs.jl", "test_cross_kernel.jl",
         "test_source_covariance.jl", "test_grouped_gaussian.jl", "test_destination_b_public.jl",
         "test_destination_b_b1_unit_obs_paired_fit.jl", "test_destination_b_b1_cluster2_paired_fit.jl", "test_b1_fixed_point_marginal_curvature_protocol.jl",
@@ -828,6 +829,7 @@ println(_SHARD === nothing ?
     _shard_include("test_extract_latent_scores.jl")
     _shard_include("test_model_selection.jl")
     _shard_include("test_select_lv_759.jl")
+    _shard_include("test_issue_1478_select_lv_kwargs.jl")
     # P1 numeric twin of select_lv() vs gllvmTMB R/select-lv.R (Gaussian rank sweep).
     _shard_include("test_select_lv_p1_twin.jl")
     # select_lv result: the nine fields R prints (AICc, conv, pdHess added).
