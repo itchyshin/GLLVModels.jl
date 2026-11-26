@@ -293,7 +293,7 @@ function matern_correlation(r::Real, κ::Real; ν::Real = 1.0)
     return (x^ν) * besselk(ν, x) / (2.0^(ν - 1) * gamma(ν))
 end
 
-"""Largest axis-aligned span of a 2-D coordinate matrix (rows are points)."""
+# Largest axis-aligned span of a 2-D coordinate matrix (rows are points).
 function _spde_domain_extent(pts::AbstractMatrix{<:Real})
     mn = [minimum(view(pts, :, d)) for d in 1:2]
     mx = [maximum(view(pts, :, d)) for d in 1:2]
