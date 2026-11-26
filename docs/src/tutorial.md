@@ -617,13 +617,25 @@ getLV(fr, X)       # n×K deterministic site scores z_s = B' x_s
 ```
 
 For a familiar R-`gllvmTMB`-style interface, the `@formula` front end maps a
-formula plus a site-level data table onto the engine (v1: an intercept +
-continuous main effects; dispatches to `fit_gaussian_gllvm` for `Normal()` and
-`fit_gllvm_cov` otherwise):
+formula plus a site-level data table onto the engine (v1: an intercept plus
+continuous main effects). **`Normal()`** goes to [`fit_gaussian_gllvm`](@ref).
+**`Poisson()`** and **`Binomial()`** with covariates go to [`fit_gllvm_cov`](@ref)
+(shared dispersion where the family has one). **NB2, NB1, Beta, and Gamma** with
+covariates go to the per-trait grouped covariate fitters
+([`fit_nb_gllvm_grouped_cov`](@ref) and siblings) — the same estimand as gllvmTMB's
+length-`p` dispersion under site covariates, *not* a single shared `r`/`φ`/`α`.
+Call [`fit_gllvm_cov`](@ref) explicitly when you want the opt-in shared-scalar
+dispersion path (Poisson/Binomial always; NB2/NB1/Beta/Gamma only on purpose).
 
 ```julia
 gllvm(@formula(y ~ 1 + temp + depth), Y, site_data; family = Poisson(), K = 2)
 ```
+
+On the same `Y` and covariate design, `gllvm(@formula(y ~ 1 + …), …;
+family = NegativeBinomial(), …)` and `fit_nb_gllvm_grouped_cov(Y; X = X, …)` target
+the same model (log-likelihoods agree to numerical tolerance). `fit_gllvm_cov(Y;
+family = NegativeBinomial(), X = X, …)` fits a **different** model (one shared `r`),
+so log-likelihoods need not match even when both runs converge.
 
 For Gaussian trait-specific variances, add `pervar=true`. This route preserves
 trait intercepts in `y ~ 1 + temp`, shared site slopes, and the zero-mean choice

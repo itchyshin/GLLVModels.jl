@@ -1,3 +1,10 @@
+2026-11-26: #1437 eSpider NB2 formula vs `fit_gllvm_cov` (docs only). Read-only
+diagnosis on gllvm `eSpider` prep (12×28, scaled covariates): formula =
+`fit_nb_gllvm_grouped_cov` (Δ logLik 0); `fit_gllvm_cov` = shared scalar `r` (Δ
+≈ 19.16 NB2, ≈ 12.74 NB1). Tutorial §5 dispatch prose fixed. No `src/` or test
+changes. Julia 1.10.14 diagnostic only (not CI). After-task:
+`docs/dev-log/after-task/2026-11-26-issue-1437-formula-routes.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
