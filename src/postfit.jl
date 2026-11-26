@@ -3150,6 +3150,54 @@ function residuals(fit::TweedieFit, Y::AbstractMatrix{<:Real};
     return R
 end
 
+function _tweedie_grouped_phivec(fit::TweedieGroupedFit, p::Integer)
+    return [fit.φ[fit.group[t]] for t in 1:p]
+end
+
+"""
+    residuals(fit::TweedieGroupedFit, Y; type=:dunnsmyth, rng=Random.default_rng(),
+              mask=nothing, offset=nothing) -> p×n matrix
+
+Conditional residuals for a grouped-dispersion Tweedie fit. Species `t` uses dispersion
+`φ[group[t]]` at the shared `power`. The `:dunnsmyth` and `:pearson` definitions match
+[`residuals(::TweedieFit, Y)`](@ref); cells with `mask[t, s] == false` are `NaN`.
+"""
+function residuals(fit::TweedieGroupedFit, Y::AbstractMatrix{<:Real};
+                   type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng(),
+                   mask = nothing, offset = nothing)
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    p, n = size(Y)
+    pw = fit.power
+    φvec = _tweedie_grouped_phivec(fit, p)
+    μ = predict(fit, Y; type = :response, mask = mask, offset = offset)
+    if type === :pearson
+        R = (Y .- μ) ./ [sqrt(φvec[t] * μ[t, s]^pw) for t in 1:p, s in 1:n]
+        if mask !== nothing
+            @inbounds for s in 1:n, t in 1:p
+                mask[t, s] || (R[t, s] = NaN)
+            end
+        end
+        return R
+    end
+    R = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        if mask !== nothing && !mask[t, s]
+            R[t, s] = NaN
+        elseif Y[t, s] <= 0
+            φ = φvec[t]
+            F0 = exp(tweedie_logpdf(0.0, μ[t, s], φ, pw))
+            u = F0 * rand(rng)
+            R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        else
+            φ = φvec[t]
+            u = tweedie_cdf(float(Y[t, s]), μ[t, s], φ, pw)
+            R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+        end
+    end
+    return R
+end
+
 function Base.show(io::IO, ::MIME"text/plain", fit::TweedieFit)
     p, K = size(fit.Λ)
     println(io, "Tweedie GLLVM fit")

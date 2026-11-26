@@ -299,6 +299,7 @@ _grouped_site_mode(fams::AbstractVector{<:NegativeBinomial}, a...; kw...) = _nb_
 _grouped_site_mode(fams::AbstractVector{<:NB1}, a...; kw...)              = _nb1_grouped_site_mode(fams, a...; kw...)
 _grouped_site_mode(fams::AbstractVector{<:Gamma}, a...; kw...)            = _gamma_grouped_site_mode(fams, a...; kw...)
 _grouped_site_mode(fams::AbstractVector{<:Beta}, a...; kw...)             = _beta_grouped_site_mode(fams, a...; kw...)
+_grouped_site_mode(fams::AbstractVector{<:TweedieED}, a...; kw...)       = _tweedie_grouped_mode(fams, a...; kw...)
 _grouped_site_mode(fams::AbstractVector, a...; kw...)                     = (_grouped_laplace_mode(fams, a...; kw...), true)
 function _grouped_getLV_mode(fams, y, n, Λ, β, link; mask = nothing, offset = nothing)
     size(Λ, 2) == 0 && return zeros(Float64, 0)
@@ -2961,6 +2962,32 @@ _loglik(fit::TweedieGroupedFit)   = fit.loglik
 function _nparams(fit::TweedieGroupedFit)
     p, K = size(fit.Λ)
     return p + rr_theta_len(p, K) + length(fit.φ) + (fit.power_fixed ? 0 : 1)
+end
+
+"""
+    getLV(fit::TweedieGroupedFit, Y; rotate=true, mask=nothing, offset=nothing) -> n×K matrix
+
+Conditional latent-variable scores for a grouped-dispersion Tweedie fit, using the
+per-trait dispersion `φ[group[t]]` and shared `power` in the same Laplace mode
+equations as the grouped likelihood.
+"""
+function getLV(fit::TweedieGroupedFit, Y::AbstractMatrix{<:Real};
+               rotate::Bool = true, mask = nothing, offset = nothing)
+    p = size(Y, 1)
+    φvec = [fit.φ[fit.group[t]] for t in 1:p]
+    fams = [TweedieED(float(φvec[t]), float(fit.power)) for t in 1:p]
+    return _grouped_getLV(Y, fit.Λ, fit.β, fit.link, fams;
+                          rotate = rotate, mask = mask, offset = offset)
+end
+
+# Tweedie grouped fits accept offset at fit time but do not yet store it on the fit object.
+function _grouped_prediction_offset(fit::TweedieGroupedFit, Y::AbstractMatrix, offset, mask,
+                                    caller::AbstractString)
+    offset isa AbstractMatrix && size(offset) != size(Y) &&
+        throw(DimensionMismatch("offset must have size $(size(Y)); got $(size(offset))"))
+    return offset === nothing ? nothing :
+           Matrix{Float64}(_normalize_offset(offset, size(Y, 1), size(Y, 2); Y = Y, mask = mask,
+                                        caller = caller))
 end
 
 """

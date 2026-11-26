@@ -1,3 +1,6 @@
+2026-11-26: #1463 TweedieGroupedFit post-fit (`getLV`, `predict`, `residuals`;
+`fitted` via existing `AnyGllvmFit` dispatch). `julia --project=. test/test_tweedie_grouped_postfit.jl`: 18/18. After-task: `docs/dev-log/after-task/2026-11-26-tweedie-grouped-postfit-1463.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:

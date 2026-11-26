@@ -142,6 +142,17 @@ predict(fit::NB1GroupedFit, Y::AbstractMatrix{<:Integer}; type::Symbol = :respon
     _grouped_glm_predict(fit, Y, type, mask, offset, modes, (; N = N))
 
 """
+    predict(fit::TweedieGroupedFit, Y; type=:response, mask=nothing, offset=nothing,
+            modes=:refit) -> p×n matrix
+
+In-sample fitted values of a grouped-dispersion Tweedie fit at the Laplace mode:
+`type=:link` returns `η = β + offset + Λẑ`; `type=:response` the inverse-link mean.
+"""
+predict(fit::TweedieGroupedFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
+        mask = nothing, offset = nothing, modes::Symbol = :refit) =
+    _grouped_glm_predict(fit, Y, type, mask, offset, modes, (;))
+
+"""
     residuals(fit::NBGroupedFit, Y; type=:dunnsmyth, rng=Random.default_rng(),
               N=nothing, mask=nothing, offset=nothing) -> p×n matrix
 
