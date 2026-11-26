@@ -2486,7 +2486,6 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
         hessian::Symbol = :observed, β_init = nothing, Λ_init = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
-    _check_laplace_log_link_only(link, "fit_nb1_gllvm_grouped", "NB1 grouped-dispersion")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_nb1_gllvm_grouped")
@@ -2499,6 +2498,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped")
+    _check_laplace_log_link_only(link, "fit_nb1_gllvm_grouped", "NB1 grouped-dispersion")
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
@@ -2638,7 +2638,6 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
-    _check_laplace_log_link_only(link, "fit_nb1_gllvm_grouped_cov", "NB1 grouped-dispersion")
     p, n = size(Y)
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
@@ -2655,6 +2654,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     msk = _resolve_obs_mask(mask, Y)
     _check_finite_covariates(X, "fit_nb1_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped_cov")
+    _check_laplace_log_link_only(link, "fit_nb1_gllvm_grouped_cov", "NB1 grouped-dispersion")
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
@@ -3072,7 +3072,6 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
         hessian::Symbol = :observed,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
-    _check_laplace_log_link_only(link, "fit_tweedie_gllvm_grouped", "Tweedie grouped-dispersion")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "fit_tweedie_gllvm_grouped")
@@ -3089,6 +3088,7 @@ function fit_tweedie_gllvm_grouped(Y::AbstractMatrix{<:Real}; K::Integer,
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:nonneg_real, Y, msk; caller = "fit_tweedie_gllvm_grouped")
+    _check_laplace_log_link_only(link, "fit_tweedie_gllvm_grouped", "Tweedie grouped-dispersion")
     Yc  = _sanitize_missing(Y, 1e-6)
     Zemp = log.(Yc .+ _tweedie_log_offset(Yc, msk))
     offset === nothing || (Zemp .-= offset)
