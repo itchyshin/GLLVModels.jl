@@ -181,6 +181,28 @@ function _lv_runaway(fit, family; max_latent_sd::Real, ratio_max::Real)
     return ""
 end
 
+# R/gllvmTMB names (`d_max`, `method`) and common misspellings (`K_max`) belong to
+# `select_lv`, not `fit_gllvm`. If they land in `kwargs...`, every K fails inside the
+# fitter with a buried MethodError (#1478).
+const _SELECT_LV_KW_ALIASES = (
+    K_max = :Kmax,
+    d_max = :Kmax,
+    method = :criterion,
+)
+
+function _select_lv_check_kwargs(kwargs)
+    bad = Symbol[]
+    for (wrong, right) in pairs(_SELECT_LV_KW_ALIASES)
+        haskey(kwargs, wrong) || continue
+        push!(bad, wrong)
+    end
+    isempty(bad) && return nothing
+    sort!(bad)
+    hints = [string(wrong, " (use ", _SELECT_LV_KW_ALIASES[wrong], ")") for wrong in bad]
+    throw(ArgumentError("select_lv: unsupported keyword argument" *
+                        (length(bad) == 1 ? " " : "s ") * join(hints, ", ")))
+end
+
 """
     select_lv(Y; family = Normal(), Kmax = 3, criterion = :bic_sites,
               warm_start = true, tol = 1e-3, max_latent_sd = 10.0,
@@ -299,6 +321,7 @@ function select_lv(Y::AbstractMatrix; family = Normal(), Kmax::Integer = 3,
                    ratio_max::Real = 25.0, require_converged::Bool = false,
                    binary_ridge::Real = 2.0, pd_hessian::Bool = false,
                    _fitter = fit_gllvm, kwargs...)
+    _select_lv_check_kwargs(kwargs)
     if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
         requested = kwargs[:optimizer]
         _optimizer_method(requested, Optim.LBFGS(); route = "select_lv")
