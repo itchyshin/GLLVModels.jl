@@ -55,17 +55,16 @@ using GLLVModels, Test, Random, LinearAlgebra, Distributions
         @test fg.loglik == -Inf
         @test !isfinite(GLLVModels.aic(fg))
 
-        # (2) NB grouped_cov with a non-LogLink. This failed 100% of calls under the
-        # DOCUMENTED DEFAULT `hessian = :observed`, and the package's own informative
-        # ArgumentError ("supported only for NB2 with LogLink()") was being swallowed by a
-        # catch to manufacture the fake success.
+        # (2) NB grouped_cov with a non-LogLink. Before #1161 upfront refusal this failed
+        # under the default `hessian = :observed`: an informative ArgumentError was
+        # swallowed by a catch that manufactured fake `converged=true` / `loglik=-1e12`
+        # success. The grouped Laplace fitters now refuse non-LogLink links up front
+        # (after response support), same loud failure as #730 on bad data support.
         Random.seed!(104)
         X = randn(4, 80, 1)
         Yi = rand(Distributions.NegativeBinomial(3.0, 0.4), 4, 80)
-        fb = GLLVModels.fit_nb_gllvm_grouped_cov(Yi; X = X, K = 1, group = collect(1:4),
-                                            link = GLLVModels.IdentityLink())
-        @test !fb.converged                 # was true
-        @test fb.loglik == -Inf             # was -1.0e12
+        @test_throws ArgumentError GLLVModels.fit_nb_gllvm_grouped_cov(Yi; X = X, K = 1,
+            group = collect(1:4), link = GLLVModels.IdentityLink())
 
         # A healthy fit on the same route is untouched — the screen must not fire on
         # real answers.
