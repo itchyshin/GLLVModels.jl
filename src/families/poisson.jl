@@ -466,10 +466,15 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     _optimizer_stage!(stages, :primary, outer_optimizer, derivative_route, controls, initial)
     stage_callback = (name, method, result; accepted = true) ->
         _optimizer_stage!(stages, name, method, derivative_route, controls, result; accepted = accepted)
+    # #505 / #1482: `Optim.converged` also fires on a zero-length line-search step far from
+    # a stationary point; require the scale-aware gradient test used by scalar NB1 and ordinal
+    # (`_nb1_grouped_g_met`) on the stage that supplies the retained estimate, including
+    # legacy BFGS continuation (#554).
+    conv_test = r -> Optim.converged(r) && _nb1_grouped_g_met(r, g_tol)
     θ̂, nll, conv, iters = if optimizer === nothing
-        _bfgs_continuation(run_fit, initial; stage_callback = stage_callback)
+        _bfgs_continuation(run_fit, initial; stage_callback = stage_callback, conv_test = conv_test)
     else
-        (Optim.minimizer(initial), Optim.minimum(initial), Optim.converged(initial),
+        (Optim.minimizer(initial), Optim.minimum(initial), conv_test(initial),
          Optim.iterations(initial))
     end
     actual_optimizer = _last_accepted_optimizer(stages)

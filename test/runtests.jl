@@ -246,6 +246,7 @@ _register_shard_table!(4, (
         "test_cov_ord_latent_p1.jl", "test_cov_phylo_twins_p1.jl", "test_totoro_323_track_a_harness.jl",
         "test_temporal_oracles.jl", "test_temporal_fit_receipts.jl", "test_temporal_composed_receipts.jl",
         "test_zip_zinb_stall.jl", "test_robustness_sweep.jl", "test_convergence_553_554.jl",
+        "test_issue_1482_poisson_weighted_converged.jl",
         "test_eta_clamp_869.jl", "test_response_support_730_va_ordinal.jl", "test_truncpois_boot_782.jl", "test_truncated_confint_masked_nan_730.jl",
         "test_n_lt_p.jl", "test_spde_projector_validation.jl", "test_response_support_730_siblings.jl",
         "test_covariate_nonfinite.jl",
@@ -282,7 +283,8 @@ _register_shard_table!(8, (
         "test_core070_receipts.jl", "test_ordinal_link_input.jl", "test_em_phylo_sigma_eps_floor.jl",
         "test_relaxed_clock_estep_clade.jl", "test_relaxed_clock_boundary_876.jl", "test_spatial_cov.jl",
         "test_gaussian_formula_covariates.jl", "test_loading_profile_stage1_harness.jl", "test_predict_missing_p1.jl",
-        "test_zip_observed_laplace.jl", "test_convergence_553_554.jl", "test_response_support_730.jl",
+        "test_zip_observed_laplace.jl", "test_convergence_553_554.jl",
+        "test_issue_1482_poisson_weighted_converged.jl", "test_response_support_730.jl",
         "test_derived_decisions.jl", "test_n_lt_p.jl", "test_random_slope_internals.jl",
         "test_docstring_postfit_mask_offset_750.jl", "test_docstring_confint_lv_effects.jl", "test_mask_missing_763.jl",
     ),
@@ -1189,6 +1191,7 @@ println(_SHARD === nothing ?
     _shard_include("test_tweedie_speed.jl")
     _shard_include("test_nb_grouped_postfit.jl")
     _shard_include("test_convergence_553_554.jl")
+    _shard_include("test_issue_1482_poisson_weighted_converged.jl")
     _shard_include("test_eta_clamp_869.jl")
     _shard_include("test_eta_clamp_rescue_874.jl")
     _shard_include("test_response_support_730.jl")
