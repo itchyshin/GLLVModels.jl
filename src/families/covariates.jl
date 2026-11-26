@@ -320,6 +320,19 @@ _cov_default_link(::Beta)             = LogitLink()
 _cov_default_link(::Gamma)            = LogLink()
 _cov_default_link(::Exponential)      = LogLink()
 
+function _refuse_fit_gllvm_cov_family(family)
+    alt = if family isa Ordinal
+        "use `fit_ordinal_gllvm_pertrait_cov` or `gllvm(@formula(...), Y, data; family = Ordinal(), ...)`"
+    elseif family isa ZIPoisson
+        "use `fit_zip_gllvm_cov` or `gllvm(@formula(...), Y, data; family = ZIPoisson(), ...)`"
+    elseif family isa ZINegBin
+        "use `fit_zinb_gllvm_cov` or `gllvm(@formula(...), Y, data; family = ZINegBin(), ...)`"
+    else
+        return nothing
+    end
+    throw(ArgumentError("fit_gllvm_cov does not support family $(nameof(typeof(family)))(); " * alt))
+end
+
 _cov_has_disp(::Poisson)          = false
 _cov_has_disp(::Binomial)         = false
 _cov_has_disp(::Exponential)      = false
@@ -480,6 +493,7 @@ function fit_gllvm_cov(Y::AbstractMatrix; family, X::AbstractArray{<:Real, 3},
         γ_fixed = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_fit_gllvm_cov_family(family)
     p, n = size(Y)
     size(X, 1) == p && size(X, 2) == n ||
         throw(DimensionMismatch("X must be (p, n, q) = ($p, $n, q); got $(size(X))"))
