@@ -128,6 +128,22 @@ Laplace-fitted families below do not (see [Common pitfalls](pitfalls.md)).
 `missing` entries in `Y` derive an observation mask, the same rule as Poisson,
 and one `@info` records that the mask was derived.
 
+A `Matrix{Float64}` from `randn` or many CSV readers cannot store `missing`:
+`Y[i, j] = missing` raises Base `MethodError: Cannot convert Missing to Float64`
+before `fit_gaussian_gllvm` runs. Widen the element type first — for example `Ym = Matrix{Union{Missing, Float64}}(Y)`
+works on Julia 1.10+ with no extra packages; `allowmissing(Y)` does the same
+after `using Missings: allowmissing` — then mark absent cells; or pass an
+explicit boolean `mask` and keep numeric placeholders in `Y`.
+
+```julia
+using GLLVModels, Random
+rng = MersenneTwister(777)
+Y = randn(rng, 4, 10)                       # Matrix{Float64}
+Ym = Matrix{Union{Missing, Float64}}(Y)      # or allowmissing(Y) with Missings.jl
+Ym[2, 3] = missing
+fit = fit_gaussian_gllvm(Ym; K = 1)         # derives the mask; one @info
+```
+
 ### Binomial — `Binomial()`
 
 ```julia

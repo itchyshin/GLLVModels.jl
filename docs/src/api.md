@@ -730,7 +730,10 @@ convergence, caches and observed-input identity. Default `aghq=false` leaves
 legacy fitting unchanged. `X=nothing` remains zero mean, and `β_fixed` retains
 fixed-zero coefficients. `mask`/missing responses and offsets are supported on
 the ordinary loadings-only route. Omitting `mask` when `Y` contains `missing`
-derives the mask and logs that once. See the executed Gaussian quickstart.
+derives the mask and logs that once. `Y` must already allow `missing` (for
+example `Matrix{Union{Missing,T}}(Y)`, or `allowmissing(Y)` via Missings.jl);
+a plain `Matrix{Float64}` cannot be assigned `missing` in Base Julia. See
+[Response families](response-families.md) (Gaussian — `Normal()`) for the full workflow.
 
 `getLV`, `predict`, `residuals`, `simulate`, `confint`, `profile_ci` and
 `bootstrap_ci` use recorded data and estimator identity. Gaussian `vcov` for a
