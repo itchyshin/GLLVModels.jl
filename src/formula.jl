@@ -265,6 +265,8 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                sources = nothing, grouping=nothing,
                pervar::Bool = false,
                contrasts::AbstractDict = Dict{Symbol, Any}(), weights = nothing, kwargs...)
+    # An empty tuple site table is a common dynamic default; treat it like `NamedTuple()`.
+    data = data === () ? NamedTuple() : data
     if haskey(kwargs, :optimizer) && kwargs[:optimizer] !== nothing
         requested = kwargs[:optimizer]
         _optimizer_method(requested, Optim.LBFGS(); route = "gllvm")
