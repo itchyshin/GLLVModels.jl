@@ -453,7 +453,7 @@ _register_shard_table!(8, (
         "test_gamma_grouped_mode_search.jl", "test_betabinomial_x_identity.jl", "test_tweedie_grouped_mode_search_503.jl",
         "test_studentt_retained_precision.jl", "test_multinomial.jl", "test_unified_api.jl",
         "test_gaussian_pervar_heywood_736.jl", "test_statsapi.jl", "test_select_lv_759.jl",
-        "test_binomial_ridge.jl", "test_model_comparison.jl", "test_structured_cov.jl",
+        "test_binomial_ridge.jl", "test_binomial_family_marker_1523.jl", "test_model_comparison.jl", "test_structured_cov.jl",
         "test_destination_b_b1_unit_obs_paired_fit.jl", "test_phylo_latent_paired_p1.jl", "test_destination_b_tree_reference_checker.jl",
         "test_destination_b_a4_s4_tree_julia_own_optimum.jl", "test_destination_b_adapter_consumer.jl", "test_destination_b_pedigree_reference_checker.jl",
         "test_precision_objective_failures.jl", "test_grouped_nongaussian_postfit.jl", "test_destination_b_fixed_effects.jl",
@@ -833,6 +833,7 @@ println(_SHARD === nothing ?
     # select_lv result: the nine fields R prints (AICc, conv, pdHess added).
     _shard_include("test_select_lv_print.jl")
     _shard_include("test_binomial_ridge.jl")
+    _shard_include("test_binomial_family_marker_1523.jl")
     _shard_include("test_model_comparison.jl")
     # #108: tutorial gllvm_anova section (status vocabulary, claim boundary) and the behaviour it states.
     _shard_include("test_issue_108_anova_docs.jl")

@@ -623,6 +623,8 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
                    species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
     _check_nonempty_Y(Y, "fit_gllvm")
+    family isa Binomial && _validate_binomial_family_trials(
+        family, Y; N = get(kwargs, :N, nothing), caller = "fit_gllvm")
     if family isa AbstractVector
         return _fit_gllvm_per_column(Y, family; K = K, num_lv = num_lv, row_eff = row_eff,
             disp_group = disp_group, pervar = pervar, grouping = grouping, unit = unit,
@@ -852,7 +854,9 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
 end
 
 _fit_gllvm(::Normal,   Y::AbstractMatrix; kwargs...) = _fit_gaussian_trait_intercepts(Y; kwargs...)
-_fit_gllvm(::Binomial, Y::AbstractMatrix; kwargs...) = fit_binomial_gllvm(Y; kwargs...)
+function _fit_gllvm(family::Binomial, Y::AbstractMatrix; N = nothing, kwargs...)
+    return fit_binomial_gllvm(Y; N = N, kwargs...)
+end
 _fit_gllvm(::Poisson,  Y::AbstractMatrix; kwargs...) = fit_poisson_gllvm(Y; kwargs...)
 _fit_gllvm(::TruncatedPoisson, Y::AbstractMatrix; kwargs...) =
     fit_truncated_poisson_gllvm(Y; kwargs...)
