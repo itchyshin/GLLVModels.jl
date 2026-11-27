@@ -452,7 +452,7 @@ _register_shard_table!(8, (
         "test_grouped_dispersion_beta_gamma.jl", "test_beta_grouped_convergence.jl", "test_nb2_grouped_mode_search.jl",
         "test_gamma_grouped_mode_search.jl", "test_betabinomial_x_identity.jl", "test_tweedie_grouped_mode_search_503.jl",
         "test_studentt_retained_precision.jl", "test_multinomial.jl", "test_unified_api.jl",
-        "test_gaussian_pervar_heywood_736.jl", "test_statsapi.jl", "test_select_lv_759.jl",
+        "test_gaussian_pervar_heywood_736.jl", "test_statsapi.jl", "test_bic_gllvmfit_1522.jl", "test_select_lv_759.jl",
         "test_binomial_ridge.jl", "test_model_comparison.jl", "test_structured_cov.jl",
         "test_destination_b_b1_unit_obs_paired_fit.jl", "test_phylo_latent_paired_p1.jl", "test_destination_b_tree_reference_checker.jl",
         "test_destination_b_a4_s4_tree_julia_own_optimum.jl", "test_destination_b_adapter_consumer.jl", "test_destination_b_pedigree_reference_checker.jl",
@@ -821,6 +821,7 @@ println(_SHARD === nothing ?
     _shard_include("test_postfit.jl")
     _shard_include("test_issue_737_omega_doc.jl")
     _shard_include("test_statsapi.jl")
+    _shard_include("test_bic_gllvmfit_1522.jl")
     _shard_include("test_vcov_full_covariance.jl")
     _shard_include("test_gaussian_wald_pd_hessian.jl")
     _shard_include("test_postfit_zib_tweedie.jl")
