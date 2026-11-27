@@ -22348,6 +22348,10 @@ A fourth independent review returned READY_WITH_CONDITIONS. Each item was reprod
 - Verification. Tallies after this round: numerical-admission 90 (81 plus 9 new), writer-fields 12, fit-health 27, health-contract 5, contract-consistency 14, historical-preservation 12, unheld-contract OK, preload 2, gate-launcher 18 (1 skipped), live-ref 44, receipt-integration 85 (16 skipped). Flag-False differential against 993024c1 over 18000 randomised records (seeds 777 and 4242, 9000 each; 3 to 4 thousand failure verdicts): 0 differences (the only constant difference is the new `HESSIAN_COORDINATE`). Mutation check on copies (never in the repo): 31 mutants of the new code (type check, raising-certifier guard, optimizer length relation and its operators, map validation, `pass_radius_status`, both `q_free` comparisons, both trace helpers) against the numerical-admission, writer-fields and fit-health suites: 31 killed, 0 survivors. The `postcoef_radius_status` and `radius_status` entries in the two returned dictionaries are checked only by source inspection, because the full verify paths need a retained capture (not run).
 - Not done, and not claimed: R's half of a PASS (C4), authenticated `p`, `K` and map entries (C3), an R parameter layout (D2), the derivation of the error radii (W2/W3), the launcher pin rebind, any Julia or R run, and real-record admission. The hold flag stays False; this is not ready to enable.
 
+### 2026-11-27: coverage lane 1127cov w7 (tests only)
+
+Adds `test/test_coverage_1127cov_w7.jl` for package-wide coverage ranks 16–18 on main (`grouped_nongaussian_fit.jl`, `confint_profile.jl`, `lowrank_cholesky.jl`). Baseline from full `Pkg.test(coverage=true)` on this VM; after from the new driver's `--code-coverage` session merged into that baseline. No `src/` edits.
+
 ### 2026-11-08: POST-COEF certifier, fifth review (still held; not ready to enable)
 
 Two defects from an independent review, each reproduced by a failing test first. Python only, no Julia or R run, `NUMERICAL_ADMISSION_IMPLEMENTED` stays False, nothing pushed.
