@@ -91,7 +91,8 @@ _register_shard_table!(4, (
         "test_derived_ci_surfaces.jl", "test_extractors.jl", "test_namespace_numeric_p1_twin_b.jl",
         "test_postfit_twins_p1.jl", "test_diagnostics_p1.jl", "test_off_predict_twin_p1.jl",
         "test_temporal_likelihood_internals.jl", "test_isdm_cloglog_internals.jl", "test_convergence_sweep.jl",
-        "test_zinb_observed_laplace.jl", "test_input_validation.jl", "test_response_support_730.jl",
+        "test_zinb_observed_laplace.jl", "test_input_validation.jl", "test_coverage_w3_1127.jl",
+        "test_response_support_730.jl",
         "test_k_argument_check.jl",
         "test_dup_tip_names.jl",
         "test_zero_sites_check.jl",
@@ -1184,6 +1185,7 @@ println(_SHARD === nothing ?
     # w2-structured: NaN/Inf response refused by fit_phylo_gaussian, fit_spde_gaussian, fit_relaxed_clock.
     _shard_include("test_nonfinite_y_phylo_spde_relaxed.jl")
     _shard_include("test_input_validation.jl")
+    _shard_include("test_coverage_w3_1127.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")
     _shard_include("test_tweedie_speed.jl")
