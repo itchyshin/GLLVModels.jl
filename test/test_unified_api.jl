@@ -141,5 +141,18 @@ end
         # an unknown row_eff symbol → error
         @test_throws ArgumentError fit_gllvm(Yc; family = Poisson(), K = K,
                                              row_eff = :bogus)
+        # Gaussian + row_eff used to MethodError in _cov_default_link (refs #1510)
+        Yg = randn(p, n)
+        for re in (:fixed, :random)
+            err = try
+                fit_gllvm(Yg; family = Normal(), K = K, row_eff = re, iterations = iters)
+                error("expected ArgumentError")
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin("row_eff", err.msg)
+            @test occursin("Normal()", err.msg)
+        end
     end
 end
