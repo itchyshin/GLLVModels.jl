@@ -283,6 +283,37 @@ function simulate(fit::OrdinalFit, n::Integer;
 end
 
 """
+    simulate(fit::OrdinalPerTraitFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Ordinal simulation with per-trait cutpoints: draw `z ~ N(0, I_K)` per site,
+`η = β + Λ z`, and sample each trait's category from its cumulative-link
+probabilities.
+"""
+function simulate(fit::OrdinalPerTraitFit, n::Integer; rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λ)
+    C = fit.C
+    Y = Matrix{Int}(undef, p, n)
+    @inbounds for s in 1:n
+        η = fit.β .+ fit.Λ * randn(rng, K)
+        for t in 1:p
+            τt = _trait_cutpoints(fit.τ, C, t)
+            u = rand(rng)
+            cum = 0.0
+            cat = C[t]
+            for c in 1:C[t]
+                cum += _ord_prob(c, η[t], τt, fit.link)
+                if u <= cum
+                    cat = c
+                    break
+                end
+            end
+            Y[t, s] = cat
+        end
+    end
+    return Y
+end
+
+"""
     simulate(fit::StudentTFit, n; rng=Random.default_rng()) -> p×n matrix
 
 Simulate from a fitted Student-t GLLVM (heavy-tailed continuous, fixed `ν`,
