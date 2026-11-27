@@ -32,6 +32,14 @@ using GLLVModels: StatsAPI, coef, vcov, nobs, dof, loglikelihood, aic, bic, stde
         ct = StatsAPI.coeftable(fit_gauss, y_gauss)
         @test ct isa GllvmCoefTable
 
+        @test_throws ArgumentError StatsAPI.coeftable(fit_gauss)
+        err_ct = try
+            StatsAPI.coeftable(fit_gauss)
+        catch e
+            e
+        end
+        @test occursin("coeftable(fit, y)", sprint(showerror, err_ct))
+
         s = summary(fit_gauss)
         @test occursin("Gaussian GLLVM fit", s)
         @test occursin("logLik", s)

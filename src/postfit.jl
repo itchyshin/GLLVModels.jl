@@ -974,6 +974,19 @@ function StatsAPI.stderror(fit::AnyGllvmFit, Y::AbstractMatrix; kwargs...)
 end
 
 """
+    coeftable(fit, [Y]; kwargs...) -> GllvmCoefTable
+
+Return a tidy coefficient table for `fit` at response matrix `Y`. For
+`GllvmFit`, `Y` is required unless the fit retained its training matrix.
+"""
+function StatsAPI.coeftable(fit::GllvmFit; y = nothing, kwargs...)
+    y_mat = y !== nothing ? y : (hasproperty(fit, :y) ? fit.y : nothing)
+    y_mat === nothing && throw(ArgumentError(
+        "`y` matrix must be supplied to compute coeftable for GllvmFit: coeftable(fit, y)"))
+    return StatsAPI.coeftable(fit, y_mat; kwargs...)
+end
+
+"""
     coeftable(fit, Y; kwargs...) -> GllvmCoefTable
 
 Return a tidy coefficient table for `fit` at response matrix `Y`.
