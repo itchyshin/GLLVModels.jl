@@ -95,7 +95,8 @@ _register_shard_table!(4, (
         "test_k_argument_check.jl",
         "test_dup_tip_names.jl",
         "test_zero_sites_check.jl",
-        "test_bootstrap_decisions.jl", "test_wtier_crosscov.jl", "test_branch_re_helpers.jl",
+        "test_bootstrap_decisions.jl", "test_wtier_crosscov.jl", "test_coverage_1127_w4.jl",
+        "test_branch_re_helpers.jl",
         "test_extractors_invariants.jl", "test_docstring_postfit_mask_offset_750.jl", "test_docstring_confint_lv_effects.jl",
         "test_mask_missing_763.jl", "test_bootstrap_sigma_r.jl",
         "test_sparse_phy_grad.jl",
@@ -1203,6 +1204,7 @@ println(_SHARD === nothing ?
     _shard_include("test_derived_decisions.jl")
     _shard_include("test_n_lt_p.jl")
     _shard_include("test_wtier_crosscov.jl")
+    _shard_include("test_coverage_1127_w4.jl")
     _shard_include("test_spde_projector_validation.jl")
     # #794 / #764: Wald routes on lambda_constraint fits (gllvmTMB's pdHess gate; lognormal refuses pins).
     _shard_include("test_lambda_constraint_wald_794.jl")
