@@ -106,6 +106,24 @@ function predict(fit::RowEffectFit, Y::AbstractMatrix{<:Real};
     return linkinv.(Ref(fit.link), _clamp_eta.(η))
 end
 
+"""
+    row_effects(fit::RowEffectFit, Y; N=nothing) -> n-vector
+
+Per-site community row effects from a [`RowEffectFit`](@ref): the fitted site
+intercepts `ρ̂` (reference site `ρ̂_1 = 0`), stored at fit time rather than
+recomputed from a Laplace mode as on [`RowRandomFit`](@ref). `Y` must be the
+same `p×n` response matrix used to fit; its column count must match `length(fit.ρ)`.
+`N` is accepted for API parity with [`row_effects(::RowRandomFit)`](@ref) and is
+ignored.
+"""
+function row_effects(fit::RowEffectFit, Y::AbstractMatrix{<:Real};
+                     N::Union{Nothing, AbstractMatrix} = nothing)
+    n = size(Y, 2)
+    length(fit.ρ) == n ||
+        throw(ArgumentError("Y has $n sites but fit has length(fit.ρ)=$(length(fit.ρ))"))
+    return copy(fit.ρ)
+end
+
 function Base.show(io::IO, f::RowEffectFit)
     p, K = size(f.Λ); n = length(f.ρ)
     print(io, "RowEffectFit(", nameof(typeof(f.family)), ", p=", p, ", n=", n, ", K=", K)
