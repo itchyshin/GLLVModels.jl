@@ -1,3 +1,12 @@
+2026-11-27: Coverage lane `cursor/1127cov-GLLVModels.jl-pz` (tests only).
+`test/auto/test_coverage_pz_1127.jl`: simulate (`ExponentialFit`, NB `X_lv`
+guards, `OrdinalFit`), `latent_score_sd` (NB/Gamma/Beta, Binomial probit
+`:observed`, mask), SPDE-latent postfit (`N` empty/mismatch, `predict` type),
+`_csc_rowidx`. Local: 28 passed, 0 failed (~55 s). Coverage deltas (executable
+lines vs `Pkg.test(coverage=true)` on main): `re_sd.jl` 76.7%→100%,
+`simulate_fit.jl` 82.2%→96.8%, `spde_latent_postfit.jl` 90.5%→97.6%,
+`takahashi_selinv.jl` +1 line. See after-task `2026-11-27-coverage-pz-1127.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
