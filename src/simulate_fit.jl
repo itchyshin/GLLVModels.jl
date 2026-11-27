@@ -320,6 +320,40 @@ function _tweedie_sample(μ::Real, φ::Real, p::Real, rng::AbstractRNG)
 end
 
 """
+    simulate(fit::ZiFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Parametric simulation for a gllvmTMB-style `zi_*` fit: structural zero with
+probability `zi_t`, otherwise a draw from the active count family at `η^c`.
+For `zi_binomial`, trial counts cycle the columns of the fitted `trials` matrix.
+"""
+function simulate(fit::ZiFit, n::Integer; rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λ)
+    Y = Matrix{Int}(undef, p, n)
+    ncol = fit.trials === nothing ? 1 : size(fit.trials, 2)
+    @inbounds for s in 1:n
+        col = mod1(s, ncol)
+        ηc = fit.β .+ fit.Λ * randn(rng, K)
+        for t in 1:p
+            π = fit.zi[t]
+            if rand(rng) < π
+                Y[t, s] = 0
+            elseif fit.family === :zi_poisson
+                Y[t, s] = rand(rng, Poisson(exp(ηc[t])))
+            elseif fit.family === :zi_nbinom2
+                φ = fit.phi[t]
+                μ = exp(ηc[t])
+                Y[t, s] = rand(rng, NegativeBinomial(φ, φ / (φ + μ)))
+            else
+                Nt = fit.trials[t, col]
+                μ = inv(1 + exp(-ηc[t]))
+                Y[t, s] = rand(rng, Binomial(Nt, μ))
+            end
+        end
+    end
+    return Y
+end
+
+"""
     simulate(fit::TweedieFit, n; rng=Random.default_rng()) -> p×n matrix
 
 Simulate a fresh response matrix from a fitted Tweedie GLLVM (compound Poisson–
