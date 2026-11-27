@@ -17,6 +17,7 @@
 # names use their own route (src/families/zi_twin.jl), checked here.
 using Test
 using GLLVModels
+using Random
 using TOML
 using SHA
 using Distributions
@@ -95,6 +96,15 @@ end
     # binomial(); Julia names Binomial()).
     @test_throws ArgumentError fit_gllvm(min.(Y, 1); family = zi_binomial(), K = 1)
     @test_throws ArgumentError fit_gllvm(Y; family = zi_binomial(), K = 1, trials = 2)
+    # fit_gllvm binomial convention: N aliases trials on ZiBinomial() (refs #1511)
+    Random.seed!(1)
+    Yb = rand(0:5, 6, 14)
+    Nb = fill(5, 6, 14)
+    fN = fit_gllvm(Yb; family = zi_binomial(), K = 1, N = Nb, iterations = 80)
+    ft = fit_gllvm(Yb; family = zi_binomial(), K = 1, trials = 5, iterations = 80)
+    @test fN isa GLLVModels.ZiFit
+    @test isapprox(fN.loglik, ft.loglik; rtol = 0, atol = 1e-9)
+    @test_throws ArgumentError fit_gllvm(Yb; family = zi_binomial(), K = 1, N = Nb, trials = 5)
     Nmix = fill(6, size(Y)); Nmix[2, :] .= 1
     err = try
         fit_gllvm(min.(Y, 1); family = zi_binomial(), K = 1, trials = Nmix)
