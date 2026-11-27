@@ -78,6 +78,7 @@ _register_shard_table!(4, (
         "test_beta_binomial_grouped_verdict_515.jl", "test_zi_twin.jl", "test_zi_recovery.jl",
         "test_missing_predictor_phylo.jl", "test_confint_offset.jl", "test_predict_offset_shared.jl",
         "test_predict_modes_training.jl", "test_confint_bootstrap_verdict_nb1.jl", "test_confint_bootstrap_verdict_zi.jl",
+        "test_bootstrap_ci_zip_1549.jl",
         "test_confint_bootstrap_verdict_bhob.jl", "test_confint_bootstrap_verdict_nb.jl", "test_second_order_delta_followup.jl",
         "test_second_order_lognormal_ci.jl", "test_covariates.jl", "test_cov_mode_search_gamma.jl",
         "test_formula_input.jl", "test_row_random.jl", "test_rrr.jl",
@@ -977,6 +978,7 @@ println(_SHARD === nothing ?
     _shard_include("test_confint_bootstrap_verdict_tweedie.jl")
     _shard_include("test_confint_bootstrap_verdict_ordinal.jl")
     _shard_include("test_confint_bootstrap_verdict_zi.jl")
+    _shard_include("test_bootstrap_ci_zip_1549.jl")
     _shard_include("test_confint_bootstrap_verdict_hurdle_delta.jl")
     _shard_include("test_confint_bootstrap_verdict_truncated.jl")
     _shard_include("test_truncnb2_ci_boundary.jl")
