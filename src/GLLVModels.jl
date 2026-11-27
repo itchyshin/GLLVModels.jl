@@ -182,6 +182,7 @@ include("confint_derived_wald.jl")       # transformed-Wald CIs for bounded deri
 include("link_residual.jl")
 include("extractors.jl")                # extract_*/get* post-fit extractor family (core070 Cluster 1)
 include("families/nb_grouped_postfit.jl") # predict/fitted/residuals/getResidualCor for NBGroupedFit + NBGroupedCovFit (#555). AFTER extractors.jl (getResidualCor, _canonical_level) and link_residual.jl (_latent_correlation).
+include("families/grouped_cov_postfit.jl") # in-sample predict/fitted for Beta/Gamma/Ordinal grouped cov fits (#1529).
 include("re_sd.jl")                      # latent_score_sd (renamed from getREsd): TMB-sdreport-style conditional-on-θ̂ random-effect SDs (core070 E-cluster)
 include("families/mixed.jl")             # mixed-family GLLVM (cross-family VCV): fit_mixed_gllvm + MixedFamilyFit. AFTER link_residual + the family fitters so all dispatch targets exist.
 include("families/isdm_sources.jl")      # iSDM: isdm_source()/isdm_sources() declarations (gllvmTMB P1 twin)
