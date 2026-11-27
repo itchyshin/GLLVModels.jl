@@ -89,6 +89,27 @@ end
 _check_prediction_modes(modes::Symbol) = modes in (:refit, :training) ||
     throw(ArgumentError("predict: modes must be :refit or :training; got :$modes"))
 
+# Laplace post-fit routes reuse the fitter's #730 response-support checks (same caller
+# strings and masks as `fit_poisson_gllvm`, `fit_binomial_gllvm`, `fit_gamma_gllvm`).
+function _check_postfit_laplace_response_support(fit::PoissonFit, Y::AbstractMatrix, mask)
+    _check_response_support(:count, Y, _resolve_obs_mask(mask, Y); caller = "fit_poisson_gllvm")
+    return nothing
+end
+
+function _check_postfit_laplace_response_support(fit::BinomialFit, Y::AbstractMatrix, mask,
+        N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing)
+    p, n = size(Y)
+    Nm = N === nothing ? fill(1, p, n) : N
+    _check_response_support(:binomial, Y, _resolve_obs_mask(mask, Y);
+                            caller = "fit_binomial_gllvm", N = Nm)
+    return nothing
+end
+
+function _check_postfit_laplace_response_support(fit::GammaFit, Y::AbstractMatrix, mask)
+    _check_response_support(:positive, Y, _resolve_obs_mask(mask, Y); caller = "fit_gamma_gllvm")
+    return nothing
+end
+
 function _prediction_mode_offset(fit, Y::AbstractMatrix, O, modes::Symbol)
     _check_prediction_modes(modes)
     modes === :refit && return O
@@ -404,6 +425,7 @@ function predict(fit::BinomialFit, Y::AbstractMatrix;
                  modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
+    _check_postfit_laplace_response_support(fit, Y, mask, N)
     if _is_binomial_aghq(fit)
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only prediction does not use X_lv"))
         _check_prediction_modes(modes)
@@ -1150,6 +1172,7 @@ function predict(fit::PoissonFit, Y::AbstractMatrix;
                  modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
+    _check_postfit_laplace_response_support(fit, Y, mask)
     if _is_poisson_aghq(fit)
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only prediction does not use X_lv"))
         _check_prediction_modes(modes)
@@ -2027,6 +2050,7 @@ function predict(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :respo
                  modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
+    _check_postfit_laplace_response_support(fit, Y, nothing)
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
     Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = Omode)
