@@ -132,6 +132,18 @@ _refuse_offset(caller::AbstractString, what::AbstractString) = throw(ArgumentErr
     "Offsets are accepted by the Normal, count, positive-continuous, two-part and " *
     "zero-inflated (ZIPoisson, ZINegBin, ZIB) routes listed in ?fit_gllvm."))
 
+# Default `fit_gllvm` routes other than Gaussian take no site-design `X`; covariate models use
+# `fit_gllvm_cov`, `gllvm(@formula(...))`, or `fit_gllvm_speciescov`. Without this guard, `X`
+# was forwarded into Laplace fitters and surfaced as an internal `MethodError` (#1570).
+function _refuse_site_covariates(caller::AbstractString, family, X)
+    X === nothing && return
+    family isa Normal && return
+    throw(ArgumentError(
+        "$caller: site covariates (X) are not supported on the default " *
+        "$(nameof(typeof(family))) route; use fit_gllvm_cov, gllvm(@formula(...)), " *
+        "or fit_gllvm_speciescov (see ?$caller)"))
+end
+
 # Fitters that take neither `mask` nor `missing` responses: every cell enters the likelihood.
 # A mask, or a `missing` cell in `Y`, is refused here, before any work, with the same
 # `ArgumentError` on every such route; without this the call ended in a raw `MethodError`
@@ -655,6 +667,7 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     if haskey(kwargs, :offset) && kwargs[:offset] === nothing
         kwargs = Base.structdiff(NamedTuple(kwargs), NamedTuple{(:offset,)})
     end
+    _refuse_site_covariates("fit_gllvm", family, get(kwargs, :X, nothing))
     # Observation weights: `nothing` never reaches a fitter (every route sees the kwargs it
     # saw before weights existed). Any other value is admitted on the Poisson Laplace route
     # only, normalised here once, and refused with an ArgumentError everywhere else.
