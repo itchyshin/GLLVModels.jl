@@ -163,7 +163,8 @@ Optional predictor-informed latent-score mean (C1, ordinary Gaussian unit tier):
   derivation lands.
 
 The fit's `pars` NamedTuple always contains
-`(σ_eps, Λ, β, β_fixed, alpha_lv, Λ_W, σ²_B, σ²_W, Λ_phy, σ_phy, θ_packed)` where
+`(σ_eps, Λ, β, β_fixed, alpha_lv, Λ_W, σ²_B, σ²_W, Λ_phy, σ_phy, θ_packed, n_sites)` where
+`n_sites` is the training site count `n` (number of columns of `Y`),
 `β_fixed` is a Bool vector, `β` is expanded to the full coefficient length
 with fixed entries set to zero, `alpha_lv` is a `q_lv × K` matrix or `nothing`,
 and `Λ_W`, `σ²_B`, `σ²_W`, `Λ_phy`, `σ_phy` are `nothing` when the
@@ -538,7 +539,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
              Λ_phy = Λ_phy_hat,
              σ_phy = σ_phy_hat,
              Σ_phy = Σ_phy,
-             θ_packed = θ_packed_lv),
+             θ_packed = θ_packed_lv,
+             n_sites = n),
             # screened verdict (2026-08-28): a run stranded on the PosDef
             # sentinel plateau must not report converged=true.
             _fit_verdict(res)[1],
@@ -722,7 +724,8 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
          σ²_W = rec.σ²_W,
          Λ_phy = rec.Λ_phy,
          σ_phy = rec.σ_phy,
-         θ_packed = θ_packed_legacy),
+         θ_packed = θ_packed_legacy,
+         n_sites = n),
         rec.logLik,
         Optim.iterations(res),
         # screened (2026-08-28), defensively: this legacy path's objective
