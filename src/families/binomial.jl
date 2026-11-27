@@ -363,6 +363,41 @@ function _warn_runaway_loadings(Λ::AbstractMatrix, family_label::AbstractString
     return idx
 end
 
+# `Distributions.Binomial(n, p)` carries a trial count on the family instance, but every
+# binomial fitter reads trials from the `N` keyword (default all-ones). Refuse `n != 1`
+# up front rather than fitting Bernoulli and failing late at the support check (#1523).
+function _validate_binomial_family_trials(family::Binomial, Y::AbstractMatrix;
+        N = nothing, caller::AbstractString = "fit_gllvm")
+    n_marker = family.n
+    n_marker == 1 && return nothing
+    p, n = size(Y)
+    if N === nothing
+        throw(ArgumentError(
+            "$caller: `family = Binomial($n_marker)` does not set trial counts — pass " *
+            "them with the `N` keyword (a $(p)×$(n) matrix, e.g. `N = fill($n_marker, $p, $n)`) " *
+            "and use `family = Binomial()` as the marker only."))
+    end
+    if N isa Real
+        isinteger(N) && Int(N) == n_marker && return nothing
+        throw(ArgumentError(
+            "$caller: `family = Binomial($n_marker)` conflicts with scalar `N = $(N)` — " *
+            "use `family = Binomial()` when supplying `N`, or match the marker's trial count."))
+    end
+    N isa AbstractMatrix || throw(ArgumentError(
+        "$caller: `N` must be a $(p)×$(n) matrix or a scalar; got $(typeof(N))"))
+    for v in N
+        (v isa Real && isfinite(v) && v >= 0 && isinteger(v)) ||
+            throw(ArgumentError(
+                "$caller: `N` must contain non-negative integer trial counts; got $(repr(v))"))
+        Int(v) == n_marker && continue
+        throw(ArgumentError(
+            "$caller: `family = Binomial($n_marker)` conflicts with `N` (found entry " *
+            "$(Int(v)) ≠ $n_marker) — use `family = Binomial()` when supplying a trial " *
+            "matrix, or ensure every entry equals the marker's count."))
+    end
+    return nothing
+end
+
 """
     fit_binomial_gllvm(Y; K, link=LogitLink(), N=nothing, X_lv=nothing, …) -> BinomialFit
 
