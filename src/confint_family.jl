@@ -45,7 +45,7 @@ const _GroupedDispersionCovFit = Union{NBGroupedCovFit, NB1GroupedCovFit, BetaGr
 const _CIFit = Union{_FamilyFit, _TwoPartFit, _GroupedDispersionFit, _GroupedDispersionCovFit,
                      OrdinalFit, OrdinalPerTraitFit, OrdinalPerTraitCovFit, MultinomialFit,
                      GllvmCovFit, ZIPCovFit, ZINBCovFit, OrderedBetaFit, QuadraticFit, RowEffectFit,
-                     TruncatedNegBin2PerTraitFit}
+                     TruncatedNegBin2PerTraitFit, ZiFit}
 
 # ---------------------------------------------------------------------------
 # Per-family adapter. Bundles everything the generic routines need:
@@ -2666,6 +2666,76 @@ function _family_ci(fit::ZIBFit, Y::AbstractMatrix;
     end
     return _FamilyCI(θ, nll, _twopart_lin_names(p, K), fill(:linear, length(θ)), sim, refit)
 end
+
+# --- gllvmTMB zi_* twin (ZiFit) ---------------------------------------------
+function _family_ci(fit::ZiFit, Y::AbstractMatrix;
+                    newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+    p, K = size(fit.Λ); n = size(Y, 2); rr = rr_theta_len(p, K)
+    fam = _zi_marker(fit.family)
+    isnb = fit.family === :zi_nbinom2
+    θ = isnb ? vcat(fit.β, fit.logit_zi, pack_lambda(fit.Λ), log.(fit.phi)) :
+                vcat(fit.β, fit.logit_zi, pack_lambda(fit.Λ))
+    trials = fit.trials
+    nll = function (θv)
+        β = θv[1:p]; lz = θv[(p + 1):(2p)]
+        Λ = unpack_lambda(θv[(2p + 1):(2p + rr)], p, K)
+        phi = isnb ? exp.(θv[(2p + rr + 1):(3p + rr)]) : nothing
+        v = try
+            -zi_marginal_loglik_laplace(fam, Y, Λ, β, lz; phi = phi, trials = trials,
+                                        maxiter = newton_maxiter, tol = newton_tol)
+        catch
+            return 1e12
+        end
+        return isfinite(v) ? v : 1e12
+    end
+    sim = function (rng)
+        Yb = zeros(Int, p, n)
+        @inbounds for s in 1:n
+            ηc = fit.β .+ fit.Λ * randn(rng, K)
+            for t in 1:p
+                π = inv(1 + exp(-fit.logit_zi[t]))
+                if rand(rng) < π
+                    Yb[t, s] = 0
+                elseif fit.family === :zi_poisson
+                    Yb[t, s] = rand(rng, Poisson(exp(ηc[t])))
+                elseif fit.family === :zi_nbinom2
+                    φ = fit.phi[t]
+                    μ = exp(ηc[t])
+                    Yb[t, s] = rand(rng, NegativeBinomial(φ, φ / (φ + μ)))
+                else
+                    Nt = trials[t, s]
+                    μ = inv(1 + exp(-ηc[t]))
+                    Yb[t, s] = rand(rng, Binomial(Nt, μ))
+                end
+            end
+        end
+        return Yb
+    end
+    refit = function (Yb)
+        kw = (K = K, iterations = 400)
+        fb = try
+            if fit.family === :zi_poisson
+                fit_zi_gllvm(Yb; family = ZiPoisson(), kw...)
+            elseif fit.family === :zi_nbinom2
+                fit_zi_gllvm(Yb; family = ZiNbinom2(), kw...)
+            else
+                fit_zi_gllvm(Yb; family = ZiBinomial(), trials = trials, kw...)
+            end
+        catch
+            return nothing
+        end
+        θb = isnb ? vcat(fb.β, fb.logit_zi, pack_lambda(fb.Λ), log.(fb.phi)) :
+                    vcat(fb.β, fb.logit_zi, pack_lambda(fb.Λ))
+        return (θ = θb, converged = fb.converged, loglik = fb.loglik)
+    end
+    names = vcat(["betac[$t]" for t in 1:p],
+                 ["betaz[$t]" for t in 1:p],
+                 _confint_lambda_term_names("Lambda", p, K))
+    isnb && append!(names, ["phi[$t]" for t in 1:p])
+    kinds = vcat(fill(:linear, 2p + rr), isnb ? fill(:log, p) : Symbol[])
+    return _FamilyCI(θ, nll, names, kinds, sim, refit)
+end
+
 # Working vector [pack_lambda(Λ); τ] in the NATURAL cutpoint parameterisation
 # (the fitter optimises ψ-increments, but the MLE τ̂ is strictly ordered, so the
 # Wald Hessian / profile / bootstrap all run directly in τ-space — the

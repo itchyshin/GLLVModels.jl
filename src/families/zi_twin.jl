@@ -432,8 +432,8 @@ from Julia's own zero-inflated fitters, which remain available unchanged:
 use the expected (Fisher) count weight in the log-determinant, and
 `fit_zinb_gllvm` estimates one shared dispersion, `fit_zib_gllvm` takes one
 shared trials count. Only the no-covariate, no-row-effect model is offered on
-this route; `predict`, `confint`, `simulate` and the `@formula` front door with
-covariates are not wired for [`ZiFit`](@ref). Missing responses (`missing` in a
+this route; post-fit methods work on the training `Y` as for [`ZIBFit`](@ref). The
+`@formula` front door with covariates is not wired. Missing responses (`missing` in a
 `Union{Missing, Real}` matrix, or `NaN`) are refused with an `ArgumentError`
 (gllvmTMB masks them per row). `hessian` is accepted only as `:observed`.
 `eigmin_floor` sets the Laplace breakdown guard ([`ZI_LAPLACE_EIGMIN_FLOOR`](@ref));
@@ -547,3 +547,19 @@ end
 
 _fit_gllvm(family::_ZiTwinFamily, Y::AbstractMatrix; kwargs...) =
     fit_zi_gllvm(Y; family = family, kwargs...)
+
+# Post-fit / CI helpers (#1547).
+function _zi_marker(sym::Symbol)
+    sym === :zi_poisson && return ZiPoisson()
+    sym === :zi_nbinom2 && return ZiNbinom2()
+    sym === :zi_binomial && return ZiBinomial()
+    throw(ArgumentError("ZiFit has unknown family $sym"))
+end
+
+function _zi_site_family(fit::ZiFit, s::Integer)
+    p = size(fit.Λ, 1)
+    fam = _zi_marker(fit.family)
+    return Vector{Any}([_zi_cell(fam, fit.logit_zi[t],
+                          fit.family === :zi_nbinom2 ? fit.phi[t] : NaN,
+                          fit.trials === nothing ? 0 : fit.trials[t, s]) for t in 1:p])
+end

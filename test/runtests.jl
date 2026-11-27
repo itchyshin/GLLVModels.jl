@@ -75,7 +75,8 @@ _register_shard_table!(4, (
         "test_cross_objective_helpers.jl", "test_gaussian_source_design.jl", "test_bridge_sources.jl",
         "test_spde_latent.jl", "test_spde_latent_mode_flag_747.jl", "test_twopart_alloc_equiv.jl",
         "test_delta_shared_predictor.jl", "test_beta_binomial_mode_search.jl", "test_beta_binomial_phi_continuity_872.jl",
-        "test_beta_binomial_grouped_verdict_515.jl", "test_zi_twin.jl", "test_zi_recovery.jl",
+        "test_beta_binomial_grouped_verdict_515.jl", "test_zi_twin.jl", "test_postfit_zi_twin_1547.jl",
+        "test_zi_recovery.jl",
         "test_missing_predictor_phylo.jl", "test_confint_offset.jl", "test_predict_offset_shared.jl",
         "test_predict_modes_training.jl", "test_confint_bootstrap_verdict_nb1.jl", "test_confint_bootstrap_verdict_zi.jl",
         "test_confint_bootstrap_verdict_bhob.jl", "test_confint_bootstrap_verdict_nb.jl", "test_second_order_delta_followup.jl",
@@ -938,6 +939,7 @@ println(_SHARD === nothing ?
     _shard_include("test_beta_binomial_grouped_verdict_515.jl")
     _shard_include("test_zero_inflated.jl")
     _shard_include("test_zi_twin.jl")
+    _shard_include("test_postfit_zi_twin_1547.jl")
     _shard_include("test_zi_recovery.jl")
     _shard_include("test_missing_data.jl")
     _shard_include("test_missing_response.jl")

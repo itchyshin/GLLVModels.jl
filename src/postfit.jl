@@ -18,7 +18,7 @@ const AnyGllvmFit = Union{
     CensoredPoissonFit, GP1Fit, NB1Fit, COMPoissonFit, BetaBinomialFit,
     BetaBinomialGroupedFit, BetaBinomialGroupedCovFit, BetaHurdleFit,
     DeltaLogNormalFit, HurdlePoissonFit, HurdleNBFit, DeltaGammaFit,
-    ZIPFit, ZIPCovFit, ZINBFit, ZINBCovFit, ZIBFit, ZIBCovFit,
+    ZIPFit, ZIPCovFit, ZINBFit, ZINBCovFit, ZIBFit, ZIBCovFit, ZiFit,
     NBGroupedFit, NBGroupedCovFit, BetaGroupedFit, BetaGroupedCovFit,
     GammaGroupedFit, GammaGroupedCovFit, NB1GroupedFit, NB1GroupedCovFit,
     TweedieGroupedFit, TweediePerTraitPowerFit
@@ -3050,6 +3050,126 @@ function Base.show(io::IO, ::MIME"text/plain", fit::ZIBFit)
     p, K = size(fit.Λc)
     println(io, "Zero-inflated binomial GLLVM fit (two-part)")
     println(io, "  responses p = ", p, ", latent factors K = ", K, ", trials N = ", fit.N)
+    println(io, "  logLik = ", round(fit.loglik; sigdigits = 7),
+            ", AIC = ", round(aic(fit); sigdigits = 7))
+    print(io,   "  converged = ", fit.converged, " (", fit.iterations, " iterations)")
+end
+
+# ---------------------------------------------------------------------------
+# gllvmTMB zi_* twin post-fit (ZiFit: observed-curvature Laplace, per-trait φ/N).
+# Mirrors ZIP / ZINB / ZIB predict types; loadings and count intercepts match R names.
+# ---------------------------------------------------------------------------
+
+_loadings(fit::ZiFit) = fit.Λ
+_loglik(fit::ZiFit)   = fit.loglik
+
+function _nparams(fit::ZiFit)
+    p, K = size(fit.Λ)
+    rr = p * K - div(K * (K - 1), 2)
+    base = 2p + rr
+    return fit.family === :zi_nbinom2 ? base + p : base
+end
+
+StatsAPI.coef(fit::ZiFit) = vcat(fit.logit_zi, fit.β)
+
+"""
+    getLV(fit::ZiFit, Y; rotate=true) -> n×K matrix
+
+Conditional latent scores for a gllvmTMB-style `zi_*` fit: per-site Laplace mode
+with intercept-only structural zeros (`Λ_z = 0`).
+"""
+function getLV(fit::ZiFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+    p, n = size(Y)
+    K = size(fit.Λ, 2)
+    Λz = zeros(p, K)
+    Z = Matrix{Float64}(undef, K, n)
+    @inbounds for s in 1:n
+        fam = _zi_site_family(fit, s)
+        Z[:, s] = _twopart_mode(fam, view(Y, :, s), Λz, fit.Λ, fit.logit_zi, fit.β)
+    end
+    Zt = permutedims(Z)
+    return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
+end
+
+"""
+    predict(fit::ZiFit, Y; type=:response) -> p×n matrix
+
+`:link` = count linear predictor `η^c`; `:zeroinfl` = structural-zero probability
+`π`; `:mean` = the count mean (`exp(η^c)` for Poisson/NB2, `N·μ` for binomial);
+`:response` = unconditional mean `(1−π)·μ_count`.
+"""
+function predict(fit::ZiFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+    type in (:response, :zeroinfl, :mean, :link) ||
+        throw(ArgumentError("type must be :response, :zeroinfl, :mean, or :link; got :$type"))
+    p, n = size(Y)
+    Z = getLV(fit, Y; rotate = false)
+    ηc = fit.β .+ fit.Λ * Z'
+    type === :link && return ηc
+    π = fit.zi
+    type === :zeroinfl && return repeat(π, 1, n)
+    μ = if fit.family === :zi_binomial
+        inv.(1 .+ exp.(-ηc))
+    else
+        exp.(ηc)
+    end
+    if fit.family === :zi_binomial
+        fit.trials === nothing && throw(ArgumentError("ZiFit zi_binomial: missing trials matrix"))
+        μ = fit.trials .* μ
+    end
+    type === :mean && return μ
+    return (1 .- π) .* μ
+end
+
+"""
+    residuals(fit::ZiFit, Y; rng=Random.default_rng()) -> p×n matrix
+
+Dunn–Smyth randomized quantile residuals under the zero-inflated count CDF.
+"""
+function residuals(fit::ZiFit, Y::AbstractMatrix{<:Real};
+                   rng::AbstractRNG = Random.default_rng())
+    p, n = size(Y)
+    Z = getLV(fit, Y; rotate = false)
+    ηc = fit.β .+ fit.Λ * Z'
+    R = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        πt = fit.zi[t]
+        y = Int(round(Y[t, s]))
+        μ = if fit.family === :zi_binomial
+            inv(1 + exp(-ηc[t, s]))
+        else
+            exp(ηc[t, s])
+        end
+        d = if fit.family === :zi_poisson
+            Poisson(μ)
+        elseif fit.family === :zi_nbinom2
+            φ = fit.phi[t]
+            NegativeBinomial(φ, φ / (φ + μ))
+        else
+            Nt = fit.trials[t, s]
+            Binomial(Nt, μ)
+        end
+        if y == 0
+            lo = 0.0
+            hi = πt + (1 - πt) * cdf(d, 0)
+            clo = 1.0
+            chi = (1 - πt) * ccdf(d, 0)
+            lm = log(hi)
+        else
+            lo = πt + (1 - πt) * cdf(d, y - 1)
+            hi = πt + (1 - πt) * cdf(d, y)
+            clo = (1 - πt) * ccdf(d, y - 1)
+            chi = (1 - πt) * ccdf(d, y)
+            lm = log1p(-πt) + logpdf(d, y)
+        end
+        R[t, s] = _ds_z(lo, hi, clo, chi, rand(rng); lmass = lm)
+    end
+    return R
+end
+
+function Base.show(io::IO, ::MIME"text/plain", fit::ZiFit)
+    p, K = size(fit.Λ)
+    println(io, "gllvmTMB zi_* GLLVM fit (", fit.family, ")")
+    println(io, "  responses p = ", p, ", latent factors K = ", K)
     println(io, "  logLik = ", round(fit.loglik; sigdigits = 7),
             ", AIC = ", round(aic(fit); sigdigits = 7))
     print(io,   "  converged = ", fit.converged, " (", fit.iterations, " iterations)")
