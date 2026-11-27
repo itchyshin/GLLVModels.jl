@@ -812,6 +812,10 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
     # --- row_eff: community (fixed) or random row effect. --------------------
     if row_eff !== :none
         K === nothing && throw(ArgumentError("fit_gllvm: K (or num_lv) is required"))
+        family isa Normal && throw(ArgumentError(
+            "fit_gllvm: row_eff is not supported for family=Normal() (Gaussian responses); " *
+            "row community effects are implemented for GLM response families with a link " *
+            "scale (e.g. Poisson(), Binomial())."))
         if row_eff === :fixed
             return fit_roweffect_gllvm(Y; family = family, K = K, kwargs...)
         elseif row_eff === :random
