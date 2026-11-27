@@ -511,6 +511,15 @@ getResidualCov(fit::_GllvmOrTwoLevel; level::Symbol = :unit) = extract_residual_
 """
 getResidualCor(fit::_GllvmOrTwoLevel; level::Symbol = :unit) = extract_residual_cor(fit; level = level)
 
+"""
+    getResidualCor(fit::Union{PoissonFit, NBFit}, Y; mask=nothing) -> Matrix
+
+`gllvmTMB`-style spelling of [`correlation`](@ref) for Laplace count fits that
+need the training response matrix to form the implied latent correlation.
+"""
+getResidualCor(fit::Union{PoissonFit, NBFit}, Y::AbstractMatrix; mask = nothing) =
+    correlation(fit, Y; mask = mask)
+
 # ---------------------------------------------------------------------------
 # Ordination.
 # ---------------------------------------------------------------------------
