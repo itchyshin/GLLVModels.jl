@@ -158,4 +158,39 @@ end
         @test maximum(abs, fit.β .- β_true) < 0.35
         @test maximum(abs, fit.γ .- γ_true) < 0.35
     end
+
+    @testset "post-fit predict / fitted / residuals / simulate (#1552)" begin
+        Random.seed!(99)
+        Kcat, n = 4, 40
+        Y = zeros(Int, Kcat, n)
+        for j in 1:n
+            c = rand(1:Kcat)
+            Y[c, j] = 1
+        end
+        fit = fit_multinomial_gllvm(Y; iterations = 200)
+        @test fit.converged
+
+        pr = predict(fit, Y; type = :prob)
+        @test size(pr) == (1, n, Kcat)
+        @test all(i -> sum(pr[1, i, :]) ≈ 1.0, 1:n)
+        cls = predict(fit, Y; type = :class)
+        @test size(cls) == (1, n)
+        @test all(1 .<= cls[1, :] .<= Kcat)
+        @test fitted(fit, Y) == cls
+        η = predict(fit, Y; type = :link)
+        @test size(η) == (Kcat, n)
+        @test all(η[1, :] .== 0)
+
+        rng = MersenneTwister(1552)
+        R = residuals(fit, Y; rng = rng)
+        @test size(R) == (1, n)
+        @test all(isfinite, R)
+
+        Ysim = simulate(fit, 12; rng = MersenneTwister(1553))
+        @test size(Ysim) == (1, 12)
+        @test all(1 .<= Ysim[1, :] .<= Kcat)
+
+        fit2 = fit_multinomial_gllvm(reshape(Int[1, 2, 3, 2, 1, 3], 1, 6); iterations = 80)
+        @test predict(fit2, [1, 2, 3, 2, 1, 3]) isa Matrix{Int}
+    end
 end

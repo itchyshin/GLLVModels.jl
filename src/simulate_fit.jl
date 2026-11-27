@@ -283,6 +283,29 @@ function simulate(fit::OrdinalFit, n::Integer;
 end
 
 """
+    simulate(fit::MultinomialFit, n; rng=Random.default_rng()) -> 1×n matrix
+
+Simulate integer categories `1:K` i.i.d. from the fitted intercept-only FE softmax
+(`η₁≡0` at the covariate reference `x = 0`). Covariate fits are refused: new sites
+need covariate values that `simulate(fit, n)` does not accept.
+"""
+function simulate(fit::MultinomialFit, n::Integer; rng::AbstractRNG = default_rng())
+    p_cov = size(fit.γ, 2)
+    p_cov > 0 && throw(ArgumentError(
+        "simulate(fit::MultinomialFit, n) applies to intercept-only fits; " *
+        "this fit used site covariates (new-unit simulation needs covariate values " *
+        "not accepted on this route)"))
+    probs = _multinomial_category_probs(fit.β, fit.γ, Float64[])
+    n >= 1 || throw(ArgumentError("simulate: n must be ≥ 1 (got $n)"))
+    Y = Matrix{Int}(undef, 1, n)
+    d = Distributions.Categorical(probs)
+    @inbounds for i in 1:n
+        Y[1, i] = rand(rng, d)
+    end
+    return Y
+end
+
+"""
     simulate(fit::StudentTFit, n; rng=Random.default_rng()) -> p×n matrix
 
 Simulate from a fitted Student-t GLLVM (heavy-tailed continuous, fixed `ν`,
