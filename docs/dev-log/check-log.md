@@ -1,3 +1,10 @@
+2026-11-27: Coverage lane w2 (`cursor/1127cov-GLLVModels.jl-go-w2`). Tests only:
+`test/test_coverage_1127cov_w2.jl` + `runtests.jl` wire-up. Target files
+`postfit.jl`, `phylo_ordinal_xlv.jl`, `phylo_gamma_xlv.jl`. Isolated run
+`julia --code-coverage=@. test/test_coverage_1127cov_w2.jl`: 36/36 pass, ~30 s.
+Full `Pkg.test(coverage=true)` not re-run post-change; baseline from main at
+`02a4fdfa9`. See after-task `2026-11-27-coverage-1127cov-w2.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
