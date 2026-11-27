@@ -1,6 +1,6 @@
 """
     aghq_gaussian_problem(Y, K; k, X=nothing, mask=nothing, offset=nothing,
-                         mode_gradient_tol=1e-7)
+                         mode_maxiter=100, mode_tol=1e-9, mode_gradient_tol=1e-7)
 
 Internal ordinary Gaussian quadrature problem with a shared residual standard
 deviation, matching the frozen R Stage1a model with `unique=false`. Parameters
@@ -16,14 +16,18 @@ parameter derivatives; gradient agreement requires at least two nodes per axis,
 and Hessian agreement at least three. This adapter constructs no public fit.
 """
 function aghq_gaussian_problem(Y::AbstractMatrix,K;k,X=nothing,mask=nothing,offset=nothing,
-        mode_gradient_tol=1e-7)
+        mode_maxiter=100,mode_tol=1e-9,mode_gradient_tol=1e-7)
     p,n=size(Y)
     p>0 && n>0 || throw(ArgumentError("AGHQ Gaussian requires nonempty responses"))
     K isa Integer && !(K isa Bool) && 1<=K<=p || throw(ArgumentError("AGHQ Gaussian K must be an integer in 1:p"))
     k isa Integer && !(k isa Bool) && k>0 || throw(ArgumentError("AGHQ Gaussian k must be a positive integer"))
     _aghq_kd_bound(K,k)
-    mode_gradient_tol isa Real && !(mode_gradient_tol isa Bool) && isfinite(mode_gradient_tol) && mode_gradient_tol>0 ||
-        throw(ArgumentError("mode_gradient_tol must be finite and positive"))
+    for (name,value) in ((:mode_tol,mode_tol),(:mode_gradient_tol,mode_gradient_tol))
+        value isa Real && !(value isa Bool) && isfinite(value) && value>0 ||
+            throw(ArgumentError("$name must be finite and positive"))
+    end
+    mode_maxiter isa Integer && !(mode_maxiter isa Bool) && mode_maxiter>0 ||
+        throw(ArgumentError("mode_maxiter must be a positive integer"))
     if mask!==nothing
         size(mask)==size(Y) || throw(DimensionMismatch("AGHQ mask must match responses"))
         eltype(mask)<:Bool || throw(ArgumentError("AGHQ mask must contain Bool values"))
@@ -74,13 +78,26 @@ function aghq_gaussian_problem(Y::AbstractMatrix,K;k,X=nothing,mask=nothing,offs
             all(isfinite,H) || error("Gaussian AGHQ observed curvature is nonfinite at site $s")
             F=cholesky(Symmetric(H));z=F\(L'*residual/variance)
             logjoint=v->joint(v,beta,log_sigma,variance,loading,s)
-            g=maximum(abs,ForwardDiff.gradient(logjoint,z))
+            # Conditional modes are quadratic; the Cholesky solve is the exact mode.
+            # The stationarity test uses the normal-equation residual (not ForwardDiff,
+            # which can falsely fail the 1e-7 check when loadings and traits interact).
+            g=norm(H * z - L' * residual / variance)
+            refined=false
+            if isfinite(g) && g>mode_gradient_tol && all(isfinite,z)
+                nll=v->-logjoint(v)
+                grad! = (out,v)->ForwardDiff.gradient!(out,nll,v)
+                opt=Optim.optimize(nll,grad!,copy(z),Optim.BFGS(linesearch=Optim.LineSearches.BackTracking(order=3)),
+                    Optim.Options(iterations=mode_maxiter,g_tol=mode_gradient_tol/10))
+                z=Optim.minimizer(opt)
+                g=norm(H * z - L' * residual / variance)
+                refined=true
+            end
             all(isfinite,z) && isfinite(logjoint(z)) && isfinite(g) && g<=mode_gradient_tol ||
                 error("Gaussian AGHQ mode check failed at site $s (gradient_max=$g)")
             cache=aghq_adaptation(z,H)
             push!(caches,cache)
             push!(diagnostics,(site=s,gradient_max=g,minimum_eigenvalue=cache.minimum_eigenvalue,
-                curvature_repaired=cache.curvature_repaired))
+                curvature_repaired=cache.curvature_repaired,mode_refined=refined))
         end
         return caches,diagnostics
     end
