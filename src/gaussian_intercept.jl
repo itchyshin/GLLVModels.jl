@@ -66,6 +66,13 @@ function _fit_gaussian_trait_intercepts(Y::AbstractMatrix; K::Integer, kwargs...
         return fit_gaussian_gllvm(Y; K = K, kwargs...)
     end
     p, n = size(Y)
+    if p == 1 && n == 1
+        throw(ArgumentError(
+            "fit_gllvm(...; family = Normal()) needs at least two sites when p = 1 to estimate " *
+            "a trait intercept jointly with latent factors (one species × one site is not supported). " *
+            "For a single response cell use fit_gaussian_gllvm(Y; K), which fits a zero-mean model " *
+            "(refs #1501)."))
+    end
     rest = Base.structdiff((; kwargs...), NamedTuple{(:X,)})
     # The phylogenetic effect J_n ⊗ B is constant across sites within a species,
     # so a free per-species intercept would absorb it and drive σ_phy to zero.
