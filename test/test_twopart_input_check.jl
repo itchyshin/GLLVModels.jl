@@ -79,6 +79,28 @@ end
         @test_throws ArgumentError GM.fit_gllvm(B; family = BetaHurdle(), K)
     end
 
+    # Hurdle-Poisson: non-integer counts refused at fit time (refs #1512)
+    @testset "HurdlePoisson integer support (refs #1512)" begin
+        Random.seed!(20251127)
+        p, n = 6, 14
+        Yf = abs.(randn(p, n)) .+ 0.1
+        Yf[rand(1:p * n, 8)] .= 0.0
+        for (label, fit) in (
+            ("fit_hurdle_poisson_gllvm", () -> GM.fit_hurdle_poisson_gllvm(Yf; K)),
+            ("fit_gllvm", () -> GM.fit_gllvm(Yf; family = GM.HurdlePoisson(), K = K)),
+        )
+            err = try
+                fit()
+                error("expected ArgumentError")
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin(label, err.msg) || occursin("fit_hurdle_poisson_gllvm", err.msg)
+            @test occursin("Poisson support", err.msg)
+        end
+    end
+
     # Soft-failure draws used by the #504 bootstrap-verdict tests stay soft:
     # no ArgumentError, the fitter returns its failure verdict instead.
     @testset "soft-failure draws are not newly rejected" begin

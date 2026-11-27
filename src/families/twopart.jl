@@ -792,6 +792,7 @@ function fit_hurdle_poisson_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, K::
     hessian in (:observed, :fisher) || throw(ArgumentError(
         "fit_hurdle_poisson_gllvm: hessian must be :observed or :fisher; got :$hessian"))
     _check_twopart_support("fit_hurdle_poisson_gllvm", Y, _tp_count_ok, "non-negative integer counts")
+    _check_response_support(:count, Y, nothing; caller = "fit_hurdle_poisson_gllvm")
     rr = rr_theta_len(p, K)
     βz0 = Vector{Float64}(undef, p); βc0 = Vector{Float64}(undef, p)
     @inbounds for t in 1:p
