@@ -99,6 +99,11 @@ function predict(fit::RowEffectFit, Y::AbstractMatrix{<:Real};
                  type::Symbol = :response, N::Union{Nothing, AbstractMatrix} = nothing)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
+    n_sites = size(Y, 2)
+    n_fit = length(fit.ρ)
+    n_sites == n_fit || throw(DimensionMismatch(
+        "Y has $n_sites site columns but RowEffectFit was fit on $n_fit sites " *
+        "(length(ρ) = $n_fit); predict requires the same number of sites as training."))
     Z = getLV(fit, Y; rotate = false, N = N)          # n×K
     O = _build_offset_row(fit.ρ, size(Y, 1))
     η = fit.β .+ O .+ fit.Λ * Z'                       # p×n
