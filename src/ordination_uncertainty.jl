@@ -61,6 +61,16 @@ function _resample_at_mean(fit::_ScalarMuFit, μ̂::AbstractMatrix, rng::Abstrac
     return Y
 end
 
+function _resample_at_mean(fit::GllvmFit, μ̂::AbstractMatrix, rng::AbstractRNG)
+    σ = fit.pars.σ_eps
+    p, n = size(μ̂)
+    Y = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        Y[t, s] = μ̂[t, s] + σ * randn(rng)
+    end
+    return Y
+end
+
 function _resample_at_mean(fit::BinomialFit, μ̂::AbstractMatrix, Nm::AbstractMatrix,
                            rng::AbstractRNG)
     p, n = size(μ̂)
@@ -99,8 +109,8 @@ canonical principal orientation (the same orientation as `getLV(fit, Y)` /
 - `level`  — the requested coverage level.
 - `n_boot` — the number of successful bootstrap replicates used.
 
-Supported fits: the single-`Y` ordination fits — `PoissonFit`, `NBFit`,
-`BetaFit`, `GammaFit`, `ExponentialFit`, and `BinomialFit`.
+Supported fits: the single-`Y` ordination fits — `GllvmFit` (Gaussian),
+`PoissonFit`, `NBFit`, `BetaFit`, `GammaFit`, `ExponentialFit`, and `BinomialFit`.
 
 ```julia
 fit = fit_poisson_gllvm(Y; K = 2)
@@ -108,12 +118,14 @@ u   = ordination_uncertainty(fit, Y; n_boot = 200)
 # u.scores[s, :]  -> site s point;  u.lower/u.upper[s, :] -> its CI box per axis
 ```
 """
-function ordination_uncertainty(fit::Union{_ScalarMuFit, BinomialFit},
+function ordination_uncertainty(fit::Union{_ScalarMuFit, BinomialFit, GllvmFit},
         Y::AbstractMatrix; n_boot::Integer = 200, level::Real = 0.95,
         rotate::Bool = true, rng::AbstractRNG = default_rng(),
         N::Union{Nothing, AbstractMatrix} = nothing)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     n_boot ≥ 2 || throw(ArgumentError("n_boot must be ≥ 2; got $n_boot"))
+    fit isa GllvmFit && N !== nothing &&
+        throw(ArgumentError("ordination_uncertainty on a Gaussian GllvmFit does not take `N`"))
 
     isbin = fit isa BinomialFit
     Nm = isbin ? (N === nothing ? fill(1, size(Y)...) : N) : nothing
@@ -128,8 +140,13 @@ function ordination_uncertainty(fit::Union{_ScalarMuFit, BinomialFit},
     boots = Array{Float64}(undef, n, K, n_boot)
     nok = 0
     for _ in 1:n_boot
-        Yb = isbin ? _resample_at_mean(fit, μ̂, Nm, rng) :
-                     _resample_at_mean(fit, μ̂, rng)
+        Yb = if isbin
+            _resample_at_mean(fit, μ̂, Nm, rng)
+        elseif fit isa GllvmFit
+            _resample_at_mean(fit, μ̂, rng)
+        else
+            _resample_at_mean(fit, μ̂, rng)
+        end
         Sb = try
             isbin ? getLV(fit, Yb; N = Nm, rotate = rotate) :
                     getLV(fit, Yb; rotate = rotate)
