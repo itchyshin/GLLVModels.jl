@@ -968,6 +968,13 @@ function StatsAPI.stderror(fit::GllvmFit, Y::AbstractMatrix; kwargs...)
     return copy(ci.se)
 end
 
+# `coef(::GllvmCovFit)` returns covariate effects `γ` only; match that slice.
+function StatsAPI.stderror(fit::GllvmCovFit, Y::AbstractMatrix; kwargs...)
+    _stderror_wald_only(kwargs)
+    ci = confint(fit, Y; method = :wald, parm = "gamma", kwargs...)
+    return copy(ci.se)
+end
+
 function StatsAPI.stderror(fit::AnyGllvmFit, Y::AbstractMatrix; kwargs...)
     ci = confint(fit, Y; method = :wald, kwargs...)
     return copy(ci.se)
