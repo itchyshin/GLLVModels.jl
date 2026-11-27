@@ -773,6 +773,20 @@ Return the maximized marginal log-likelihood of `fit`.
 StatsAPI.loglikelihood(fit::AnyGllvmFit) = _loglik(fit)
 
 """
+    loglikelihood(fit, Y) — not supported
+
+Use [`loglikelihood`](@ref)(`fit`) for the stored maximised marginal log-likelihood
+(`fit.loglik` on Laplace families, `fit.logLik` on Gaussian). Unlike
+[`bic`](@ref)(`fit`, `Y`), the response matrix is not accepted.
+"""
+function StatsAPI.loglikelihood(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
+    throw(ArgumentError(
+        "loglikelihood returns the maximised marginal log-likelihood stored on the fit " *
+        "(use loglikelihood(fit)); loglikelihood(fit, Y) is not supported — " *
+        "unlike bic(fit, Y), Y is not used here."))
+end
+
+"""
     aic(fit) -> Float64
 
 Akaike information criterion `2k − 2ℓ`: `k` the free-parameter count (`dof(fit)`),
