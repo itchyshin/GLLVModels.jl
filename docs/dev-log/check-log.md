@@ -1,3 +1,10 @@
+2026-11-27: Coverage lane w6 (`cursor/1127cov-GLLVModels.jl-w6`). Tests only:
+`test/test_coverage_1127cov_w6.jl` + `runtests.jl` wire-up. Targets
+`families/quadratic.jl`, `families/tweedie.jl`, `families/gamma.jl`.
+Isolated run 9/9 pass, ~10 s. Baseline from in-flight
+`Pkg.test(coverage=true)` on `02a4fdfa9`. See
+`docs/dev-log/after-task/2026-11-27-coverage-1127cov-w6.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
