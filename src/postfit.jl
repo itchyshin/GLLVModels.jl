@@ -794,6 +794,18 @@ StatsAPI.bic(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing) =
     StatsAPI.bic(fit, StatsAPI.nobs(fit, Y; mask = mask))
 
 """
+    bic(fit::PoissonFit) -> Float64
+
+Refuse one-argument `bic` on `PoissonFit`: route through [`_loglik`](@ref) so a weighted
+fit raises the same `ArgumentError` as `aic` / `loglikelihood`, then remind callers to
+supply `n` or `Y` (see the two-argument methods above).
+"""
+function StatsAPI.bic(fit::PoissonFit)
+    _loglik(fit)
+    throw(MethodError(StatsAPI.bic, (fit,)))
+end
+
+"""
     nobs(fit, [Y]; mask = nothing) -> Integer
 
 Number of observed response cells: R's `p·n` cell-count convention, i.e.
