@@ -152,6 +152,36 @@ function compoisson_logpdf(y, η, ν)
     return y * logλ - ν * loggamma(oftype(logλ, y) + 1) - logZ
 end
 
+# One CMP count at rate `λ = exp(η)` and dispersion `ν`, by inversion on the
+# normalised pmf implied by [`compoisson_logpdf`](@ref) / [`compoisson_logz`](@ref).
+# Truncates the support with the same relative tolerance and hard cap as the
+# normalising series (`_CMP_LOGZ_TOL`, `_CMP_LOGZ_CAP`). At `ν = 1` delegates to
+# `Poisson(λ)` (the Poisson anchor).
+function _compoisson_sample(rng::AbstractRNG, η::Real, ν::Real)
+    logλ = float(_clamp_eta(η))
+    ν = float(ν)
+    ν == 1.0 && return rand(rng, Poisson(exp(logλ)))
+    logZ = compoisson_logz(logλ, ν)
+    total = 0.0
+    masses = Float64[]
+    y = 0
+    @inbounds while y < _CMP_LOGZ_CAP
+        logp = y * logλ - ν * loggamma(y + 1) - logZ
+        mass = exp(logp)
+        push!(masses, mass)
+        total += mass
+        y += 1
+        mass < _CMP_LOGZ_TOL * total && break
+    end
+    u = rand(rng) * total
+    cdf = 0.0
+    @inbounds for (k, mass) in enumerate(masses)
+        cdf += mass
+        cdf >= u && return k - 1
+    end
+    return length(masses) - 1
+end
+
 # Per-trait score s_t = ∂log p/∂η and weight W_t = −∂²log p/∂η², via ForwardDiff
 # on the scalar map η → log p. W clamped to ≥ 1e-8 to keep Λ'WΛ + I SPD.
 function _cmp_score_weight(y, η, ν)

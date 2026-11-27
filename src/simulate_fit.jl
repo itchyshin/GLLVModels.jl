@@ -320,6 +320,27 @@ function _tweedie_sample(μ::Real, φ::Real, p::Real, rng::AbstractRNG)
 end
 
 """
+    simulate(fit::COMPoissonFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Simulate a fresh `p×n` integer count matrix from a fitted Conway–Maxwell–Poisson
+GLLVM: a new latent `z_s ~ N(0, I_K)` per site, `η = β + Λ z`, and each trait
+count drawn from the CMP at rate `λ = exp(η)` and fitted dispersion `ν` (inversion
+on the truncated normalised pmf shared with the likelihood). Pass a fixed `rng`
+to reproduce.
+"""
+function simulate(fit::COMPoissonFit, n::Integer; rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λ)
+    Y = Matrix{Int}(undef, p, n)
+    @inbounds for s in 1:n
+        η = fit.β .+ fit.Λ * randn(rng, K)
+        for t in 1:p
+            Y[t, s] = _compoisson_sample(rng, η[t], fit.ν)
+        end
+    end
+    return Y
+end
+
+"""
     simulate(fit::TweedieFit, n; rng=Random.default_rng()) -> p×n matrix
 
 Simulate a fresh response matrix from a fitted Tweedie GLLVM (compound Poisson–
