@@ -1,3 +1,8 @@
+2026-11-27: Coverage lane w7 (`cursor/1127cov-GLLVModels.jl-w7`). Tests only:
+`test/test_coverage_1127cov_w7.jl` targets `grouped_nongaussian_fit.jl`, `cv.jl`,
+`lowrank_cholesky.jl` (ranks 16/18/19 on main baseline). Standalone 25/25 pass,
+~46 s. See `docs/dev-log/after-task/2026-11-27-coverage-1127cov-w7.md`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
