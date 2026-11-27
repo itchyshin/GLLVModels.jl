@@ -130,7 +130,8 @@ _register_shard_table!(4, (
         "test_phylo_glm_families.jl", "test_phylo_beta_xlv_mode.jl", "test_phylo_ordinal_xlv_mode.jl",
         "test_xlv_refit_converged.jl", "test_twopart_mode_search.jl", "test_delta_disp_group.jl",
         "test_twopart_hessian_kwarg.jl", "test_zero_inflated.jl", "test_weights.jl",
-        "test_weights_byte_identity.jl", "test_confint_bootstrap_verdict_tweedie.jl", "test_confint_bootstrap_verdict_ordinal.jl",
+        "test_weights_byte_identity.jl", "test_cursor_1127fx_1571.jl",
+        "test_confint_bootstrap_verdict_tweedie.jl", "test_confint_bootstrap_verdict_ordinal.jl",
         "test_confint_bootstrap_verdict_misc.jl", "test_second_order_s2_cloglog_ratified.jl", "test_second_order_truncpois_ci.jl",
         "test_second_order_truncnb2_ci.jl", "test_second_order_multinomial_ci.jl", "test_second_order_betabinomial_shared_ci.jl",
         "test_nobs_pn_convention.jl", "test_cov_analytic_grad.jl", "test_optimizer_selection.jl",
@@ -958,6 +959,7 @@ println(_SHARD === nothing ?
     # Observation weights (Poisson Laplace) and the guard that weights = nothing is byte-identical to main.
     _shard_include("test_weights.jl")
     _shard_include("test_weights_byte_identity.jl")
+    _shard_include("test_cursor_1127fx_1571.jl")
     _shard_include("test_fd_hessian.jl")
     _shard_include("test_nb_grouped_wald_speed_552.jl")
     _shard_include("test_confint_family.jl")
