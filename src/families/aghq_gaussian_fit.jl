@@ -169,7 +169,8 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
     end
     X=get(kwargs,:X,nothing);fullX=X===nothing ? zeros(p,n,0) : X
     # Validation uses k=1 so ineligible node requests can retain Laplace.
-    checked=aghq_gaussian_problem(Y,K;k=1,X=fullX,mask=mask,offset=offset,mode_gradient_tol=c.mode_gradient_tol)
+    checked=aghq_gaussian_problem(Y,K;k=1,X=fullX,mask=mask,offset=offset,
+        mode_maxiter=c.mode_maxiter,mode_tol=c.mode_tol,mode_gradient_tol=c.mode_gradient_tol)
     qfull=size(checked.data.design,3)
     fixed=_fixed_zero_mask(get(kwargs,:β_fixed,nothing),qfull,"β_fixed")
     X===nothing && get(kwargs,:β_fixed,nothing)!==nothing && !isempty(get(kwargs,:β_fixed,[])) &&
@@ -234,7 +235,8 @@ function fit_gaussian_gllvm(Y::AbstractMatrix;K::Integer,aghq=false,aghq_control
             optimizer_info=info)
     end
     problem=aghq_gaussian_problem(Y,K;k=reason===:eligible ? k : 1,X=Xfree,
-        mask=data.mask,offset=data.offset,mode_gradient_tol=c.mode_gradient_tol)
+        mask=data.mask,offset=data.offset,mode_maxiter=c.mode_maxiter,mode_tol=c.mode_tol,
+        mode_gradient_tol=c.mode_gradient_tol)
     if reason!==:eligible
         reason in (:laplace_rule,:exact_gaussian) || @warn "AGHQ request retained exact Gaussian/Laplace" reason=reason requested=request
         cache=problem.adapt(base.pars.θ_packed)
@@ -312,6 +314,7 @@ function _gaussian_record_problem(f,Y;X=nothing,mask=nothing,offset=nothing,requ
     !same && offset===nothing && any(!iszero,d.offset) && throw(ArgumentError("new-data Gaussian prediction requires explicit offset"))
     free=findall(!,f.pars.β_fixed)
     q=aghq_gaussian_problem(Y,f.model.K;k=i.k,X=full.data.design[:,:,free],mask=full.data.mask,offset=full.data.offset,
+        mode_maxiter=i.controls.mode_maxiter,mode_tol=i.controls.mode_tol,
         mode_gradient_tol=i.controls.mode_gradient_tol)
     return q,same
 end
