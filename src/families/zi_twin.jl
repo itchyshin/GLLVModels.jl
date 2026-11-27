@@ -545,5 +545,14 @@ function _zi_min_site_eigen(family::_ZiTwinFamily, Y::AbstractMatrix, Λ::Abstra
     return m
 end
 
-_fit_gllvm(family::_ZiTwinFamily, Y::AbstractMatrix; kwargs...) =
-    fit_zi_gllvm(Y; family = family, kwargs...)
+function _fit_gllvm(family::_ZiTwinFamily, Y::AbstractMatrix; kwargs...)
+    if family isa ZiBinomial
+        haskey(kwargs, :N) && haskey(kwargs, :trials) && throw(ArgumentError(
+            "fit_gllvm: pass either N or trials for ZiBinomial(), not both"))
+        if haskey(kwargs, :N) && !haskey(kwargs, :trials)
+            kwargs = merge(NamedTuple(kwargs), (trials = kwargs[:N],))
+            kwargs = Base.structdiff(NamedTuple(kwargs), NamedTuple{(:N,)})
+        end
+    end
+    return fit_zi_gllvm(Y; family = family, kwargs...)
+end
