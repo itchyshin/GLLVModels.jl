@@ -3196,6 +3196,18 @@ function getLV(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:R
 end
 
 """
+    predict(fit::GllvmCovFit, Y; kwargs...) -> throws ArgumentError
+
+Covariate fits do not retain the training design; use `predict(fit, Y, X)`.
+"""
+function predict(fit::GllvmCovFit, Y::AbstractMatrix; kwargs...)
+    throw(ArgumentError(
+        "covariate GLLVM fits do not store the training site design `X`; use " *
+        "`predict(fit, Y, X)` with the same `(p, n, q)` array passed when fitting " *
+        "(Gaussian formula fits give this message too)."))
+end
+
+"""
     predict(fit::GllvmCovFit, Y, X; type=:response, N=nothing) -> p×n matrix
 
 `:link` = the linear predictor `η = β + Xγ + Λẑ`; `:response` (= `:mean`) = the
