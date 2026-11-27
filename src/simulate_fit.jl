@@ -99,12 +99,33 @@ matrix; the simulator draws `z_total = X_lv * alpha_lv + z` with `z ~ N(0, I_K)`
 Without `X_lv` this reduces to the ordinary scalar-μ Poisson draw (identical RNG
 stream).
 
-`offset` is a known additive term in `η` (p×n). Only AGHQ fits accept it; on a
-Laplace fit an explicit `offset` throws an `ArgumentError`. On an AGHQ fit with a
-non-zero stored offset, simulating a different number of sites than the fit needs an
-explicit `offset` (`ArgumentError`), and a non-finite or wrongly shaped `offset` is
-refused.
+`offset` is a known additive term in `η` (p×n). On a Laplace fit made with an
+offset, `simulate(fit, n)` at the training site count uses the stored training offset
+(the same term as [`predict`](@ref)). Otherwise pass an explicit `offset` (p×n). On
+an AGHQ fit with a non-zero stored offset, simulating a different number of sites than
+the fit needs an explicit `offset` (`ArgumentError`), and a non-finite or wrongly
+shaped `offset` is refused.
 """
+function _laplace_poisson_simulation_offset(fit::PoissonFit, n::Integer, offset)
+    p = size(fit.Λ, 1)
+    stored = fit.offset
+    if offset !== nothing
+        return Matrix{Float64}(_normalize_offset(offset, p, n; caller = "simulate"))
+    end
+    stored === nothing && return nothing
+    size(stored, 2) == n && return stored
+    # Homogeneous training offset (e.g. fill(η₀, p, n)): reuse on any site count.
+    if all(isfinite, stored) && all(stored .== stored[1, 1])
+        return fill(stored[1, 1], p, n)
+    end
+    any(v -> isfinite(v) && !iszero(v), stored) ||
+        return nothing
+    throw(ArgumentError(
+        "simulate: this fit was made with an offset, and n ($n) differs from the training " *
+        "site count ($(size(stored, 2))), so the stored training offset does not apply. " *
+        "Pass simulate(fit, n; offset = O), O a $(p)×$(n) matrix."))
+end
+
 function simulate(fit::PoissonFit, n::Integer;
                   X_lv::Union{Nothing, AbstractMatrix} = nothing,
                   rng::AbstractRNG = default_rng(),offset=nothing)
@@ -112,7 +133,7 @@ function simulate(fit::PoissonFit, n::Integer;
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only simulation does not use X_lv"))
         return _poisson_aghq_simulate(fit,n;rng=rng,offset=offset)
     end
-    offset===nothing || throw(ArgumentError("explicit simulation offset currently requires AGHQ metadata"))
+    off = _laplace_poisson_simulation_offset(fit, n, offset)
     fam, link = _sim_family(fit)
     p, K = size(fit.Λ)
     Zmean = if fit.alpha_lv === nothing
@@ -131,6 +152,7 @@ function simulate(fit::PoissonFit, n::Integer;
     @inbounds for s in 1:n
         z_total = Zmean[s, :] .+ randn(rng, K)
         η = fit.β .+ fit.Λ * z_total
+        off !== nothing && (η .+= view(off, :, s))
         for t in 1:p
             μ = linkinv(link, _clamp_eta(η[t]))
             Y[t, s] = _cov_sample(fam, μ, 1, rng)
