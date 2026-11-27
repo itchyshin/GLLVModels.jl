@@ -360,6 +360,22 @@ that retained their integration data accept them, and any other `GllvmFit` throw
 `ArgumentError`; new units from a fit made with a non-zero offset need an explicit
 `offset`.
 """
+
+# Post-fit routes share the Laplace fitters' response-domain checks (#730, #1503).
+function _check_postfit_response_support(fit, Y::AbstractMatrix, mask;
+        caller::AbstractString, N = nothing)
+    p, n = size(Y)
+    if fit isa BinomialFit
+        Nm = N === nothing ? fill(1, p, n) : N
+        _check_response_support(:binomial, Y, mask; caller = caller, N = Nm)
+    elseif fit isa PoissonFit
+        _check_response_support(:count, Y, mask; caller = caller)
+    elseif fit isa GammaFit
+        _check_response_support(:positive, Y, mask; caller = caller)
+    end
+    return nothing
+end
+
 function predict(fit::GllvmFit, y::AbstractMatrix;
                  type::Symbol = :response,
                  X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
@@ -404,6 +420,7 @@ function predict(fit::BinomialFit, Y::AbstractMatrix;
                  modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
+    _check_postfit_response_support(fit, Y, mask; caller = "predict", N = N)
     if _is_binomial_aghq(fit)
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only prediction does not use X_lv"))
         _check_prediction_modes(modes)
@@ -1150,6 +1167,7 @@ function predict(fit::PoissonFit, Y::AbstractMatrix;
                  modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
+    _check_postfit_response_support(fit, Y, mask; caller = "predict", N = N)
     if _is_poisson_aghq(fit)
         X_lv===nothing || throw(ArgumentError("AGHQ loadings-only prediction does not use X_lv"))
         _check_prediction_modes(modes)
@@ -2027,6 +2045,7 @@ function predict(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :respo
                  modes::Symbol = :refit)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
+    _check_postfit_response_support(fit, Y, nothing; caller = "predict")
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
     Omode = _prediction_mode_offset(fit, Y, O, modes)
     Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = Omode)
