@@ -143,6 +143,9 @@ using GLLVModels: StatsAPI, coef, vcov, nobs, dof, loglikelihood, aic, bic, stde
         @test StatsAPI.loglikelihood(fit_cov) ≈ fit_cov.loglik
         @test length(StatsAPI.coef(fit_cov)) == length(fit_cov.γ)
         @test StatsAPI.nobs(fit_cov, Y_pois) == pn
+        se_γ = StatsAPI.stderror(fit_cov, Y_pois; X = X_3d)
+        @test length(se_γ) == length(StatsAPI.coef(fit_cov))
+        @test se_γ == GLLVModels.confint(fit_cov, Y_pois; method = :wald, X = X_3d, parm = "gamma").se
         s = summary(fit_cov)
         @test occursin("GLLVM Covariates fit", s)
     end
