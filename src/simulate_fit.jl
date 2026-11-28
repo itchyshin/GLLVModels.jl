@@ -403,6 +403,36 @@ function simulate(fit::TweedieFit, n::Integer; rng::AbstractRNG = default_rng())
 end
 
 """
+    simulate(fit::BetaBinomialGroupedFit, n; N=nothing,
+             rng=Random.default_rng()) -> p×n matrix
+
+Beta–binomial (grouped dispersion) simulation at trial counts `N` (default all-ones).
+Per site draw `z ~ N(0, I_K)`, form `η = β + Λ z`, draw species success probability
+from `Beta(μ φ_g, (1−μ) φ_g)` with `φ_g = φ[group[t]]`, then `Binomial(N, p)`.
+"""
+function simulate(fit::BetaBinomialGroupedFit, n::Integer;
+                  N::Union{Nothing, AbstractMatrix} = nothing,
+                  rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λ)
+    link = fit.link
+    group = fit.group
+    Nm = N === nothing ? fill(1, p, n) : N
+    size(Nm) == (p, n) ||
+        throw(ArgumentError("N must be p×n ($(p)×$(n)); got $(size(Nm))"))
+    Y = Matrix{Int}(undef, p, n)
+    @inbounds for s in 1:n
+        η = fit.β .+ fit.Λ * randn(rng, K)
+        for t in 1:p
+            μ = clamp(linkinv(link, _clamp_eta(η[t])), 1e-12, 1 - 1e-12)
+            φ = fit.φ[group[t]]
+            pdraw = clamp(rand(rng, Beta(μ * φ, (1 - μ) * φ)), 1e-12, 1 - 1e-12)
+            Y[t, s] = rand(rng, Binomial(Nm[t, s], pdraw))
+        end
+    end
+    return Y
+end
+
+"""
     simulate(fit::GllvmCovFit, X; N=nothing, rng=Random.default_rng()) -> p×n matrix
 
 Simulate from a fitted covariate model at the design `X` (`(p, n, q)`), with the
