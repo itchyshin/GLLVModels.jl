@@ -402,6 +402,41 @@ function simulate(fit::TweedieFit, n::Integer; rng::AbstractRNG = default_rng())
     return Y
 end
 
+# Count offset on two-part fits (`ZIBFit`, …): only the stored p×n training matrix
+# applies, and `n` must match its site count.
+function _twopart_sim_offset(fit, n::Integer)
+    off = fit.offset
+    off === nothing && return nothing
+    p = size(fit.Λc, 1)
+    (size(off, 1) == p && size(off, 2) == n) ||
+        throw(ArgumentError(
+            "stored training offset is $(p)×$(size(off, 2)); simulate with n=$(size(off, 2)) or refit without an offset"))
+    return off
+end
+
+"""
+    simulate(fit::ZIBFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Zero-inflated binomial simulation at `N` trials per cell (from the fit): structural
+zero with probability `π_t = logistic(β^z_t)`, otherwise `Binomial(N, logistic(η^c_t))`.
+Uses the stored training offset when present. Pass a fixed `rng` to reproduce.
+"""
+function simulate(fit::ZIBFit, n::Integer; rng::AbstractRNG = default_rng())
+    offset = _twopart_sim_offset(fit, n)
+    p, K = size(fit.Λc)
+    Ntr = fit.N
+    Y = zeros(Int, p, n)
+    @inbounds for s in 1:n
+        ηc = fit.βc .+ fit.Λc * randn(rng, K) .+ _ci_offcol(offset, s)
+        for t in 1:p
+            π = inv(1 + exp(-fit.βz[t]))
+            μ = inv(1 + exp(-ηc[t]))
+            Y[t, s] = rand(rng) < π ? 0 : rand(rng, Binomial(Ntr, μ))
+        end
+    end
+    return Y
+end
+
 """
     simulate(fit::GllvmCovFit, X; N=nothing, rng=Random.default_rng()) -> p×n matrix
 
