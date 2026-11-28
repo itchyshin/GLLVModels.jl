@@ -14,3 +14,9 @@ Git history; that attempt is preserved separately. No site was deployed.
 
 The earlier `Pkg.test()` result applies to unchanged production code. GitHub
 checks on the revised pull-request head still need to finish.
+
+The README now directs readers to the separate Gaussian residual-SD and
+named-source unique-SD prior routes described in the prior guide.
+
+The local-preview manual build including the README correction exited 0; its
+log SHA-256 is `f30ddb47baf8af13243deb649437aea0292f97ba0fa30390a29a4a9616a73dbe`.

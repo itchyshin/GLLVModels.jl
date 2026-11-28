@@ -107,8 +107,9 @@ from the model matrix; direct `fit_gllvm_cov` calls can supply
 (otherwise names are `trait_1`, …). For wide matrices, response names follow
 the rows of `Y`. The coefficient priors use normalized link-scale densities.
 `ridge(lambda)` remains the unnormalized penalty
-`0.5 * lambda * sum(abs2, Lambda)`. Other families and fitting routes refuse
-these table targets.
+`0.5 * lambda * sum(abs2, Lambda)`. For the separate Gaussian prior-table
+routes, including residual SD and named-source unique SD priors, see the
+[prior guide](docs/src/priors.md).
 
 ```julia
 using GLLVModels, Distributions, Random

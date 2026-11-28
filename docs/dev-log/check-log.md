@@ -22366,3 +22366,8 @@ Two defects from an independent review, each reproduced by a failing test first.
   `8a1833dc42f9793f2ca5d1d61c12d0b8761513029abf081932178218bd1c6c04`.
 - The source change is documentation-only. The earlier package-suite result
   remains evidence for unchanged production code, not a new full-suite run.
+
+- The README now points to the separate supported Gaussian prior-table routes.
+
+The local-preview manual build including the README correction exited 0; its
+log SHA-256 is `f30ddb47baf8af13243deb649437aea0292f97ba0fa30390a29a4a9616a73dbe`.
