@@ -781,14 +781,23 @@ Akaike information criterion `2k − 2ℓ`: `k` the free-parameter count (`dof(f
 StatsAPI.aic(fit::AnyGllvmFit) = 2 * StatsAPI.dof(fit) - 2 * StatsAPI.loglikelihood(fit)
 
 """
+    bic(fit) — requires the observation count
     bic(fit, n) -> Float64
     bic(fit, Y; mask = nothing) -> Float64
 
-Bayesian information criterion `k·log(n) − 2ℓ`. `n` is a directly supplied
-observation count (pass [`nobs`](@ref) explicitly if a non-default count is
-wanted); the `bic(fit, Y)` form infers it as `nobs(fit, Y; mask)` — R's p·n
-cell-count convention, not the number of sites.
+Bayesian information criterion `k·log(n) − 2ℓ`. Unlike [`aic`](@ref)(`fit`),
+`bic` needs the observation count: pass the response matrix as
+[`bic`](@ref)(`fit`, `Y`) (uses [`nobs`](@ref)(`fit`, `Y`)), or pass a count
+directly as `bic(fit, n)`. `n` is a directly supplied observation count (pass
+[`nobs`](@ref) explicitly if a non-default count is wanted); the `bic(fit, Y)`
+form infers it as `nobs(fit, Y; mask)` — R's p·n cell-count convention, not the
+number of sites.
 """
+function StatsAPI.bic(fit::AnyGllvmFit)
+    throw(ArgumentError(
+        "bic needs the observation count (unlike aic(fit)): use bic(fit, Y) with " *
+        "the response matrix, or bic(fit, n) with an explicit count."))
+end
 StatsAPI.bic(fit::AnyGllvmFit, n::Integer) = StatsAPI.dof(fit) * log(n) - 2 * StatsAPI.loglikelihood(fit)
 StatsAPI.bic(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing) =
     StatsAPI.bic(fit, StatsAPI.nobs(fit, Y; mask = mask))
