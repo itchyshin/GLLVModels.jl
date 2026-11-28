@@ -41,8 +41,9 @@ fit = fit_gllvm(Y; family = Distributions.Binomial(), K = 1, priors, response_na
 
 For an intercept-only Gaussian model, `class = "residual_sd"` targets the
 natural residual SD. The Gamma expression is parameterized by its mean and
-shape; its rate is `shape / mean`. The optimizer uses log SD internally, but
-the density is on SD and no log-SD Jacobian is added.
+shape; its rate is `shape / mean`. Both arguments must be finite, the mean
+must be positive, and the shape must exceed one. The optimizer uses log SD
+internally, but the density is on SD and no log-SD Jacobian is added.
 
 ```@example prior_table
 Y_gaussian = [1.1 0.9 1.3 1.0 0.8 1.2; -0.2 0.1 0.0 0.3 -0.1 0.2]
@@ -63,7 +64,8 @@ For an explicit Gaussian source model, `class="fixef"` resolves against the
 actual `coefficient_names`. A `class="unique_variance"` row identifies its
 response trait and source kernel. Its `gamma(mean, shape)` expression is
 converted to shape/rate, and the normalized density is evaluated on the natural
-SD without a log-SD Jacobian. This route requires the residual SD to be fixed
+SD without a log-SD Jacobian. The mean must be finite and positive; the shape
+must be finite and greater than one. This route requires the residual SD to be fixed
 with `sigma_eps_fixed`. A single eligible source can be inferred when
 `kernel` is empty; multi-source fits require an exact kernel name.
 

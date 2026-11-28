@@ -20,3 +20,8 @@ named-source unique-SD prior routes described in the prior guide.
 
 The local-preview manual build including the README correction exited 0; its
 log SHA-256 is `f30ddb47baf8af13243deb649437aea0292f97ba0fa30390a29a4a9616a73dbe`.
+
+The prior guide now states the finite, positive mean and shape greater than one
+required for Gamma residual-SD and unique-SD rows. An isolated local-preview
+manual build on unchanged production source exited 0; log SHA-256:
+`30b6ae7230c7c1e05ff4c495e3e2be9a0ed4639e7c5118a11b02289b8bbb6365`.
