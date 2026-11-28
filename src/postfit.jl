@@ -793,6 +793,19 @@ StatsAPI.bic(fit::AnyGllvmFit, n::Integer) = StatsAPI.dof(fit) * log(n) - 2 * St
 StatsAPI.bic(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing) =
     StatsAPI.bic(fit, StatsAPI.nobs(fit, Y; mask = mask))
 
+function _fit_stored_obs_mask(fit)
+    hasproperty(fit, :obs_mask) && fit.obs_mask !== nothing && return fit.obs_mask
+    if hasproperty(fit, :integration) && fit.integration !== nothing &&
+       hasproperty(fit.integration, :data)
+        d = fit.integration.data
+        if hasproperty(d, :mask)
+            m = d.mask
+            m !== nothing && !all(m) && return m
+        end
+    end
+    return nothing
+end
+
 """
     nobs(fit, [Y]; mask = nothing) -> Integer
 
@@ -816,19 +829,6 @@ matrix (e.g. two-level, random-slope, SPDE), `nobs(fit)` returns the
 cell-count analogue (`p` times the stored unit count) so the convention holds
 without requiring `Y`.
 """
-function _fit_stored_obs_mask(fit)
-    hasproperty(fit, :obs_mask) && fit.obs_mask !== nothing && return fit.obs_mask
-    if hasproperty(fit, :integration) && fit.integration !== nothing &&
-       hasproperty(fit.integration, :data)
-        d = fit.integration.data
-        if hasproperty(d, :mask)
-            m = d.mask
-            m !== nothing && !all(m) && return m
-        end
-    end
-    return nothing
-end
-
 function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     mask !== nothing && return count(mask)
     stored = _fit_stored_obs_mask(fit)
