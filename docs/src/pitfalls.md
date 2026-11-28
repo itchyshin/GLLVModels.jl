@@ -16,6 +16,17 @@ quantities instead:
 For a fixed, interpretable orientation, rotate the loadings (e.g. varimax)
 *after* fitting.
 
+### R bridge Wald table vs `loadings`
+
+When you call `bridge_fit` with `ci_method = "wald"` (or profile/bootstrap), the
+optional `ci_param_names` / `ci_estimate` / `ci_lower` / `ci_upper` rows for
+`Lambda[...]` use the **same engine-native packing** as the internal objective.
+The flat `loadings` field in the same payload is a **rotated** matrix for
+readability. Both give the same `Λ Λᵀ`; individual loadings can differ in sign or
+rotation (especially at `d > 1`). Do not expect each Wald `Lambda` row to equal
+the corresponding entry in `loadings` — use `ci_estimate` for the interval's
+center.
+
 ## Choose the number of factors `K` deliberately
 
 Too few factors miss real structure; too many invite over-fitting and weak

@@ -63,7 +63,11 @@
 #   ci_method      :: String          — the method actually run
 #   ci_level       :: Float64         — nominal coverage (default 0.95)
 #   ci_param_names :: Vector{String}  — term names (engine-native ordering)
-#   ci_estimate    :: Vector{Float64} — point estimates (raw scale for dispersions)
+#   ci_estimate    :: Vector{Float64} — point estimates (raw scale for dispersions).
+#        For loading terms, these are the **engine-native** lower-triangular Λ packed
+#        for the objective; they need not match `loadings`, which is a post-fit
+#        rotation for presentation (LL' agrees to machine precision). Line up Wald rows
+#        with `ci_estimate`, not with `loadings`; see pitfalls.md.
 #   ci_lower       :: Vector{Float64} — lower CI bounds
 #   ci_upper       :: Vector{Float64} — upper CI bounds
 #   ci_note        :: String          — caveats (empty unless CIs were skipped or every bound is NaN)
