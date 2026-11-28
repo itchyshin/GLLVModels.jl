@@ -208,6 +208,7 @@ end
 function _confint_reconstruct_nll(fit::GllvmFit, y::AbstractMatrix,
                                   X::Union{Nothing, AbstractArray{<:Real, 3}},
                                   Σ_phy::Union{Nothing, AbstractMatrix})
+    y = _gaussian_fit_y(fit, y)
     _has_gaussian_record(fit) && return _gaussian_record_ci(fit,y;X=X,Σ_phy=Σ_phy).nll
     _require_complete_y("confint", y)
     X = _mean_X(fit, X, size(y, 2))
