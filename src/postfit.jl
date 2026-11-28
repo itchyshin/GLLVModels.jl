@@ -980,25 +980,28 @@ Return a tidy coefficient table for `fit` at response matrix `Y`.
 """
 StatsAPI.coeftable(fit::AnyGllvmFit, Y::AbstractMatrix; kwargs...) = coef_table(fit, Y; kwargs...)
 
+_summary_not_converged_suffix(fit) =
+    hasproperty(fit, :converged) && !fit.converged ? ", NOT CONVERGED" : ""
+
 """
     summary(fit) -> String
 
 Return a concise string summary of a fitted GLLVM model.
 """
-Base.summary(fit::GllvmFit) = (fit.integration===nothing ? "" : fit.integration.actual===:aghq ? "AGHQ(k=$(fit.integration.k)) " : "exact Gaussian/Laplace ($(fit.integration.reason)) ") * "Gaussian GLLVM fit (p=$(fit.model.p), K=$(fit.model.K), logLik=$(round(fit.logLik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::BinomialFit) = (fit.integration===nothing ? "" : fit.integration.actual===:aghq ? "AGHQ(k=$(fit.integration.k)) " : "Laplace ($(fit.integration.reason)) ") * "Binomial GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::PoissonFit) = (fit.integration===nothing ? "" : fit.integration.actual===:aghq ? "AGHQ(k=$(fit.integration.k)) " : "Laplace ($(fit.integration.reason)) ") * "Poisson GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::NBFit) = "NegativeBinomial GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::NB1Fit) = "NB1 GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::GP1Fit) = "GP1 GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::BetaFit) = "Beta GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::GammaFit) = "Gamma GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::OrdinalFit) = "Ordinal GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::TweedieFit) = "Tweedie GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::GaussianREMLFit) = "Gaussian REML fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), reml_loglik=$(round(fit.reml_loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::PhyloGaussianFit) = "PhyloGaussian fit (logLik=$(round(-fit.negll; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::GllvmCovFit) = "GLLVM Covariates fit (logLik=$(round(fit.loglik; sigdigits=5)), dof=$(_nparams(fit)), AIC=$(round(aic(fit); sigdigits=5)))"
-Base.summary(fit::TwoLevelFit) = "TwoLevel GLLVM fit (p=$(size(fit.Λ_B, 1)), K_B=$(size(fit.Λ_B, 2)), K_W=$(size(fit.Λ_W, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))"
+Base.summary(fit::GllvmFit) = (fit.integration===nothing ? "" : fit.integration.actual===:aghq ? "AGHQ(k=$(fit.integration.k)) " : "exact Gaussian/Laplace ($(fit.integration.reason)) ") * "Gaussian GLLVM fit (p=$(fit.model.p), K=$(fit.model.K), logLik=$(round(fit.logLik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::BinomialFit) = (fit.integration===nothing ? "" : fit.integration.actual===:aghq ? "AGHQ(k=$(fit.integration.k)) " : "Laplace ($(fit.integration.reason)) ") * "Binomial GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::PoissonFit) = (fit.integration===nothing ? "" : fit.integration.actual===:aghq ? "AGHQ(k=$(fit.integration.k)) " : "Laplace ($(fit.integration.reason)) ") * "Poisson GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::NBFit) = "NegativeBinomial GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::NB1Fit) = "NB1 GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::GP1Fit) = "GP1 GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::BetaFit) = "Beta GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::GammaFit) = "Gamma GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::OrdinalFit) = "Ordinal GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::TweedieFit) = "Tweedie GLLVM fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::GaussianREMLFit) = "Gaussian REML fit (p=$(size(fit.Λ, 1)), K=$(size(fit.Λ, 2)), reml_loglik=$(round(fit.reml_loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::PhyloGaussianFit) = "PhyloGaussian fit (logLik=$(round(-fit.negll; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::GllvmCovFit) = "GLLVM Covariates fit (logLik=$(round(fit.loglik; sigdigits=5)), dof=$(_nparams(fit)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
+Base.summary(fit::TwoLevelFit) = "TwoLevel GLLVM fit (p=$(size(fit.Λ_B, 1)), K_B=$(size(fit.Λ_B, 2)), K_W=$(size(fit.Λ_W, 2)), logLik=$(round(fit.loglik; sigdigits=5)), AIC=$(round(aic(fit); sigdigits=5)))" * _summary_not_converged_suffix(fit)
 
 
 # Rich REPL display (the idiomatic "summary").
