@@ -280,6 +280,11 @@ end
 function _confint_gaussian_wald_covariance(fit::GllvmFit, y,
                                            X::Union{Nothing, AbstractArray{<:Real, 3}},
                                            Σ_phy::Union{Nothing, AbstractMatrix})
+    model = fit.model
+    if (model.K_phy > 0 || model.has_phy_unique) && Σ_phy === nothing
+        throw(ArgumentError(
+            "Σ_phy is required when spec.K_phy > 0 or spec.has_phy_unique"))
+    end
     _has_lv_predictor(fit) && throw(ArgumentError(
         "confint for fit_gaussian_gllvm(...; X_lv=...) is not admitted in the C1 predictor-informed latent-score path; use extract_lv_effects for point estimates"))
     y === nothing && throw(ArgumentError(
