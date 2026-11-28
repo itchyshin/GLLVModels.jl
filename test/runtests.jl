@@ -146,7 +146,8 @@ _register_shard_table!(4, (
         "test_confint_inspect_p1.jl", "test_data_twins_p1.jl", "test_predict_offset_twin_p1.jl",
         "test_off_mixed_twin_p1.jl", "test_destination_b_s4_public_phylo_dep_probe_harness.jl", "test_temporal_api.jl",
         "test_temporal_helpers.jl", "test_zip_betaz_wald_926.jl", "test_zerostep_verdict_sweep.jl",
-        "test_derived_ci_sweep.jl", "test_nb_grouped_postfit.jl", "test_eta_clamp_rescue_874.jl",
+        "test_derived_ci_sweep.jl", "test_nb_grouped_postfit.jl", "test_nb_grouped_1496_1497.jl",
+        "test_eta_clamp_rescue_874.jl",
         "test_derived_decisions.jl", "test_random_slope_internals.jl", "test_interrupt_rethrow.jl",
         "test_docstring_ref_linebreaks.jl",
         "test_nb_mite_multistart_1022.jl",
@@ -1188,6 +1189,7 @@ println(_SHARD === nothing ?
     _shard_include("test_derived_ci_sweep.jl")
     _shard_include("test_tweedie_speed.jl")
     _shard_include("test_nb_grouped_postfit.jl")
+    _shard_include("test_nb_grouped_1496_1497.jl")
     _shard_include("test_convergence_553_554.jl")
     _shard_include("test_eta_clamp_869.jl")
     _shard_include("test_eta_clamp_rescue_874.jl")

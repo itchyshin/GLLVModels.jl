@@ -701,6 +701,8 @@ fit is returned. `n_init > 1` is not available with `aghq` in `fit_gllvm`.
 """
 function fit_nb_gllvm_grouped(Y::AbstractMatrix; K::Integer, n_init::Integer = 1, kwargs...)
     n_init >= 1 || throw(ArgumentError("fit_nb_gllvm_grouped: n_init must be at least 1; got $n_init"))
+    haskey(kwargs, :group) || throw(ArgumentError(
+        "fit_nb_gllvm_grouped requires keyword `group` (length-p vector of dispersion group ids; one entry per trait)"))
     return _best_of_starts(_fit_nb_gllvm_grouped_start, Y, K, n_init, kwargs)
 end
 

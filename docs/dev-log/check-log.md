@@ -1,3 +1,9 @@
+2026-11-26: #1496/#1497 grouped NB2 post-fit. `fit_nb_gllvm_grouped` without `group`
+throws `ArgumentError` naming `group` (no default). `NBGroupedFit` joins
+`_NonGaussianLatentFit` (`communality`, `extract_communality`, `correlation`,
+`extract_correlations`). `julia --project=. test/test_nb_grouped_1496_1497.jl`:
+13/13 pass (Julia 1.13.4).
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
