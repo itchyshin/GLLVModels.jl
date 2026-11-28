@@ -31,7 +31,10 @@ Fields:
 - `loglik::Float64`: total out-of-sample log-likelihood summed across all test cells
 - `mse::Float64`: overall out-of-sample Mean Squared Error
 - `residual_mean::Float64`: sample mean of out-of-sample Dunn–Smyth randomized quantile residuals (target ≈ 0)
-- `residual_std::Float64`: sample standard deviation of out-of-sample randomized quantile residuals (target ≈ 1)
+- `residual_std::Float64`: sample standard deviation of out-of-sample randomized quantile residuals.
+  Under a well-specified random-entry split this is near 1; under `split = :site` (or when a held-out
+  site has no training cells) scores are evaluated at latent mode 0, so `residual_std` can exceed 1
+  even when the model is correct (Gaussian: ≈ `sqrt(1 + mean(Λ²)/σ²)` for held-out sites).
 - `fold_logliks::Vector{Float64}`: out-of-sample log-likelihood for each fold
 - `fold_mses::Vector{Float64}`: out-of-sample MSE for each fold
 - `fold_residual_means::Vector{Float64}`: mean of quantile residuals per fold
@@ -67,7 +70,8 @@ function Base.show(io::IO, ::MIME"text/plain", res::CVResult)
     println(io, "  Out-of-sample logLik: ", @sprintf("%.4f", res.loglik))
     println(io, "  Out-of-sample MSE:    ", @sprintf("%.6f", res.mse))
     println(io, "  Residual Mean:        ", @sprintf("%.4f", res.residual_mean), " (target ≈ 0)")
-    println(io, "  Residual Std:         ", @sprintf("%.4f", res.residual_std), " (target ≈ 1)")
+    println(io, "  Residual Std:         ", @sprintf("%.4f", res.residual_std),
+            res.split === :site ? " (site hold-out: not calibrated to 1)" : " (target ≈ 1)")
     println(io, "\nFold breakdown:")
     println(io, "  Fold     logLik        MSE   Resid.Mean   Resid.Std")
     for k in 1:res.k_folds
