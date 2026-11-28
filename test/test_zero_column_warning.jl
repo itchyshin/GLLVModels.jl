@@ -1,7 +1,7 @@
 # All-zero count column warning on the Poisson and ZIP fitters.
 # A species whose observed cells are all zero has no finite maximum-likelihood intercept; the
-# fit used to report `converged = true` with no message. The warning is the only change: it
-# names the column, and sparse columns (one or a few non-zero cells) stay silent.
+# fit warns, sets `converged = false`, and leaves estimates unchanged. Sparse columns (one or
+# a few non-zero cells) stay silent.
 using Test, GLLVModels, Distributions, Random, SparseArrays, Logging
 
 _zc_pattern = r"species column\(s\) \[(\d+(, \d+)*)\] have no non-zero count in any observed cell"
@@ -83,9 +83,11 @@ end
         fa, _ = _zc_warnings(() -> fit_poisson_gllvm(Yz; K = 1))
         fb = fit_poisson_gllvm(Yz; K = 1, _warn_zero_columns = false)
         @test fa.loglik == fb.loglik && fa.β == fb.β && fa.Λ == fb.Λ && fa.converged == fb.converged
+        @test !fa.converged
         za, _ = _zc_warnings(() -> fit_zip_gllvm(Yz; K = 1))
         zb = fit_zip_gllvm(Yz; K = 1, _warn_zero_columns = false)
         @test za.loglik == zb.loglik && za.βc == zb.βc && za.βz == zb.βz && za.Λc == zb.Λc
+        @test !za.converged
     end
 end
 

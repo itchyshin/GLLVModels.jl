@@ -490,9 +490,12 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         cursor += q_lv * K
         Λ̂ = unpack_lambda(@view(θ̂[(cursor + 1):(cursor + rr)]), p, K)
         lv_hat = _lv_mean_eta(Λ̂, X_lv_fit, alpha_hat)
+        obs = weights === nothing ? msk : weights .> 0
         verdict = (verdict[1],
-                   _eta_cap_verdict(verdict[2], link, β̂, offset === nothing ? lv_hat : offset .+ lv_hat;
-                                    mask = msk, caller = "fit_poisson_gllvm"),
+                   _converged_veto_all_zero_columns(
+                       _eta_cap_verdict(verdict[2], link, β̂, offset === nothing ? lv_hat : offset .+ lv_hat;
+                                        mask = msk, caller = "fit_poisson_gllvm"),
+                       Yc, obs),
                    verdict[3])
         return PoissonFit(β̂, Λ̂, link, verdict...,
                           alpha_hat, collect(Float64, θ̂), hessian, nothing, _stored_offset(offset), nothing,
@@ -501,8 +504,11 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
+        obs = weights === nothing ? msk : weights .> 0
         verdict = (verdict[1],
-                   _eta_cap_verdict(verdict[2], link, β̂, offset; mask = msk, caller = "fit_poisson_gllvm"),
+                   _converged_veto_all_zero_columns(
+                       _eta_cap_verdict(verdict[2], link, β̂, offset; mask = msk, caller = "fit_poisson_gllvm"),
+                       Yc, obs),
                    verdict[3])
         return PoissonFit(β̂, Λ̂, link, verdict..., nothing, Float64[], hessian,
                           nothing, _stored_offset(offset), weights,
