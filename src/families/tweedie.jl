@@ -336,6 +336,7 @@ function fit_tweedie_gllvm(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
     _check_response_support(:nonneg_real, Y, _resolve_obs_mask(mask, Y); caller = "fit_tweedie_gllvm")
+    _check_laplace_log_link_only(link, "fit_tweedie_gllvm", "Tweedie")
     p_sp, n = size(Y)
     rr = rr_theta_len(p_sp, K)
     hessian in (:fisher, :observed) || throw(ArgumentError(
