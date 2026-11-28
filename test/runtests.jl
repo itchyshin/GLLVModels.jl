@@ -656,6 +656,7 @@ println(_SHARD === nothing ?
     _shard_include("test_poisson_laplace.jl")
     _shard_include("test_truncated_poisson.jl")
     _shard_include("test_censored_poisson.jl")
+    _shard_include("test_issue_1534_censored_poisson_postfit.jl")
     _shard_include("test_truncated_nbinom2.jl")
     _shard_include("test_truncnb2_precision.jl")
     _shard_include("test_truncnb2_laplace_breakdown.jl")

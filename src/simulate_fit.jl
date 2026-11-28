@@ -381,6 +381,27 @@ function simulate(fit::DeltaGammaFit, n::Integer; rng::AbstractRNG = default_rng
 end
 
 """
+    simulate(fit::CensoredPoissonFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Draw a fresh **uncensored** Poisson count matrix at the fitted rates (`η = β + Λ z`,
+`z ~ N(0,I)` per site). Right-censor limits from training are not stored on
+[`CensoredPoissonFit`](@ref), so this path does not reproduce interval censoring
+in the simulated data.
+"""
+function simulate(fit::CensoredPoissonFit, n::Integer; rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λ)
+    Y = Matrix{Int}(undef, p, n)
+    @inbounds for s in 1:n
+        η = fit.β .+ fit.Λ * randn(rng, K)
+        for t in 1:p
+            μ = linkinv(fit.link, _clamp_eta(η[t]))
+            Y[t, s] = rand(rng, Poisson(max(μ, 1e-12)))
+        end
+    end
+    return Y
+end
+
+"""
     simulate(fit::TweedieFit, n; rng=Random.default_rng()) -> p×n matrix
 
 Simulate a fresh response matrix from a fitted Tweedie GLLVM (compound Poisson–
