@@ -4511,3 +4511,24 @@ function _lv_bootstrap(fit, Y, X_lv, N, q_lv::Integer, level::Real,
     return (term = term, estimate = b̂, lower = lo, upper = hi,
             level = level, method = :bootstrap, n_converged = nconv)
 end
+
+# ---------------------------------------------------------------------------
+# bootstrap_ci twin for Laplace zero-inflated fits (#1549 / #1494 pattern).
+# ---------------------------------------------------------------------------
+
+"""
+    bootstrap_ci(fit::Union{ZIPFit, ZINBFit}, Y; parm = nothing, kwargs...) -> NamedTuple
+
+Parametric bootstrap confidence intervals for [`ZIPFit`](@ref) and
+[`ZINBFit`](@ref): a thin wrapper around
+[`confint`](@ref)(`fit`, `Y`; `method = :bootstrap`, …) with the same keywords
+(`n_boot`, `seed`, `level`, `parallel`, `offset`, …).
+
+```julia
+ci = bootstrap_ci(fit, Y; parm = "betac[1]", n_boot = 200, seed = 1)
+```
+"""
+function bootstrap_ci(fit::Union{ZIPFit, ZINBFit}, Y::AbstractMatrix;
+                      parm = nothing, kwargs...)
+    return confint(fit, Y; method = :bootstrap, parm = parm, kwargs...)
+end
