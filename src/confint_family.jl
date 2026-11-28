@@ -2987,9 +2987,18 @@ function _family_ci(fit::GllvmCovFit, Y::AbstractMatrix;
                     X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
                     N::Union{Nothing, AbstractMatrix} = nothing,
                     mask = nothing,
-                    newton_maxiter::Integer = 100, newton_tol::Real = 1e-9, kwargs...)
+                    newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
+                    inference::Symbol = :confint, kwargs...)
     _ci_refuse_mask(fit, mask, Y)
-    X === nothing && throw(ArgumentError("confint on a GllvmCovFit needs the design `X` (the same array passed to fit_gllvm_cov): confint(fit, Y; method=…, X=X)"))
+    if X === nothing
+        if inference === :vcov
+            throw(ArgumentError(
+                "vcov on a GllvmCovFit requires the design `X` (the same array passed to fit_gllvm_cov): vcov(fit, Y; X=X)"))
+        else
+            throw(ArgumentError(
+                "confint on a GllvmCovFit needs the design `X` (the same array passed to fit_gllvm_cov): confint(fit, Y; method=…, X=X)"))
+        end
+    end
     p, K = size(fit.Λ); n = size(Y, 2); q_full = length(fit.γ); rr = rr_theta_len(p, K)
     length(fit.γ_fixed) == q_full || throw(ArgumentError(
         "fit.γ_fixed length ($(length(fit.γ_fixed))) must equal length(fit.γ) = $q_full"))
@@ -3525,7 +3534,7 @@ end
 # Argument validation and `_FamilyCI` adapter construction shared by
 # `confint(fit::_CIFit, Y)` and `vcov(fit::_CIFit, Y)`.
 function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, newton_maxiter, newton_tol,
-                               offset = nothing)
+                               offset = nothing, inference::Symbol = :confint)
     0 < level < 1 || throw(ArgumentError("level must be in (0, 1); got $level"))
     is_aghq=_is_aghq_fit(fit)
     objective===:fit && (objective=is_aghq ? :aghq : :laplace)
@@ -3554,7 +3563,8 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
     end
     ad = _family_ci(fit, Y; N = N, X = X, objective = objective,
                     mask = mask, offset = O,
-                    newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+                    newton_maxiter = newton_maxiter, newton_tol = newton_tol,
+                    inference = inference)
     if !is_aghq
         # Log-likelihood of the variational objective at the fitted values, for the fits that
         # legitimately differ from the adapter's default (see `_check_ci_objective`).
@@ -3564,7 +3574,8 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
                     return exponential_marginal_loglik_va(Y, fit.Λ, fit.β; maxiter = newton_maxiter, tol = newton_tol)
                 else
                     a = _family_ci(fit, Y; N = N, X = X, objective = :va, mask = nothing, offset = nothing,
-                                   newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+                                   newton_maxiter = newton_maxiter, newton_tol = newton_tol,
+                                   inference = inference)
                     return -a.nll(a.θ)
                 end
             catch e
@@ -3782,7 +3793,8 @@ function StatsAPI.vcov(fit::_CIFit, Y::AbstractMatrix;
     method === :wald || throw(ArgumentError("vcov is the Wald (observed-information) covariance; method must be :wald"))
     ad, is_aghq = _family_confint_setup(fit, Y; method = method, level = level, N = N, X = X,
                                         mask = mask, objective = objective, offset = offset,
-                                        newton_maxiter = newton_maxiter, newton_tol = newton_tol)
+                                        newton_maxiter = newton_maxiter, newton_tol = newton_tol,
+                                        inference = :vcov)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
     return _family_wald(ad, sel, level; hessian = is_aghq ? ForwardDiff.hessian(ad.nll, ad.θ) : nothing,
