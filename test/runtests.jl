@@ -93,6 +93,7 @@ _register_shard_table!(4, (
         "test_temporal_likelihood_internals.jl", "test_isdm_cloglog_internals.jl", "test_convergence_sweep.jl",
         "test_zinb_observed_laplace.jl", "test_input_validation.jl", "test_response_support_730.jl",
         "test_k_argument_check.jl",
+        "test_k_bool_phylo_error_order_1291.jl",
         "test_dup_tip_names.jl",
         "test_zero_sites_check.jl",
         "test_bootstrap_decisions.jl", "test_wtier_crosscov.jl", "test_branch_re_helpers.jl",
@@ -1196,6 +1197,7 @@ println(_SHARD === nothing ?
     _shard_include("test_zero_sites_check.jl")
     _shard_include("test_response_support_730_va_ordinal.jl")
     _shard_include("test_k_argument_check.jl")
+    _shard_include("test_k_bool_phylo_error_order_1291.jl")
     _shard_include("test_bootstrap_decisions.jl")
     _shard_include("test_clamp_and_replicate_retention_docs.jl")
     _shard_include("test_truncpois_boot_782.jl")
