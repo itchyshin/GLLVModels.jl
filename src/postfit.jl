@@ -2181,6 +2181,67 @@ function Base.show(io::IO, ::MIME"text/plain", fit::GammaFit)
 end
 
 # ---------------------------------------------------------------------------
+# Gaussian per-species variance post-fit (heteroscedastic Gaussian; identity link).
+# ---------------------------------------------------------------------------
+
+function _gaussian_pervar_fitted_mean(fit::GaussianPerVarFit, y::AbstractMatrix{<:Real},
+        X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing)
+    p, n = size(y)
+    β = fit.β
+    if X === nothing
+        length(β) == p || throw(ArgumentError(
+            "GaussianPerVarFit with length(β)=$(length(β)) ≠ p=$p needs the same X used at fit time"))
+        return repeat(reshape(β, p, 1), 1, n)
+    end
+    q = size(X, 3)
+    length(β) == q || throw(DimensionMismatch(
+        "β length ($(length(β))) must equal q=$q (the third dimension of X)"))
+    μ = zeros(Float64, p, n)
+    @inbounds for s in 1:n, t in 1:p, k in 1:q
+        μ[t, s] += X[t, s, k] * β[k]
+    end
+    return μ
+end
+
+"""
+    getLV(fit::GaussianPerVarFit, Y; X=nothing, rotate=true) -> n×K matrix
+
+Conditional latent-variable scores for a per-species-variance Gaussian fit: the
+posterior mean `mₛ = (I + Λᵀ Ψ⁻¹ Λ)⁻¹ Λᵀ Ψ⁻¹ (yₛ − μₛ)` with `Ψ = diag(φ²)`.
+When the fit used a design `X`, pass the same `(p, n, q)` array.
+"""
+function getLV(fit::GaussianPerVarFit, y::AbstractMatrix{<:Real};
+               X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
+               rotate::Bool = true)
+    Λ = fit.Λ
+    K = size(Λ, 2)
+    Ψ = Diagonal(fit.φ²)
+    μ = _gaussian_pervar_fitted_mean(fit, y, X)
+    R = y .- μ
+    ΨiΛ = Ψ \ Λ
+    M = Symmetric(I + Λ' * ΨiΛ)
+    Z = M \ (ΨiΛ' * R)                  # K×n
+    Zt = permutedims(Z)                 # n×K
+    return rotate ? Zt * _svd_rotation(Λ) : Zt
+end
+
+"""
+    predict(fit::GaussianPerVarFit, Y; type=:response, X=nothing) -> p×n matrix
+
+In-sample fitted values at the conditional latent scores. For the identity-link
+Gaussian family, `:link` and `:response` both return `η = μ + Λ ẑ` (the conditional
+mean).
+"""
+function predict(fit::GaussianPerVarFit, y::AbstractMatrix{<:Real};
+                 type::Symbol = :response,
+                 X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing)
+    type in (:link, :response) ||
+        throw(ArgumentError("type must be :link or :response; got :$type"))
+    Z = getLV(fit, y; X = X, rotate = false)
+    return _gaussian_pervar_fitted_mean(fit, y, X) .+ fit.Λ * Z'
+end
+
+# ---------------------------------------------------------------------------
 # Delta-lognormal post-fit methods (two-part: occurrence Bernoulli × positive
 # lognormal; shared latent z drives the positive part, Λ_z = 0).
 # ---------------------------------------------------------------------------

@@ -61,6 +61,7 @@ const _ComponentAwareGllvmFit = Union{
 }
 
 const _PlainGllvmFit = Union{
+    GaussianPerVarFit,
     NB1Fit, GP1Fit, ExponentialFit, DeltaLogNormalFit, HurdlePoissonFit,
     HurdleNBFit, DeltaGammaFit, ZIPFit, ZINBFit, ZIBFit, TweedieFit,
     COMPoissonFit, BetaBinomialFit, BetaBinomialGroupedFit, BetaHurdleFit,
