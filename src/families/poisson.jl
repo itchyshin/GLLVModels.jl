@@ -154,6 +154,11 @@ function poisson_lv_nll_packed(params::AbstractVector, Y::AbstractMatrix,
                                             maxiter = maxiter, tol = tol)
 end
 
+function _poisson_degenerate_converged(conv::Bool, Y::AbstractMatrix, mask)
+    _all_species_all_zero_counts(Y, mask) && return false
+    return conv
+end
+
 """
     fit_poisson_gllvm(Y; K, link=LogLink(), mask=nothing, …) -> PoissonFit
 
@@ -191,11 +196,6 @@ use the finite-difference gradient and are refused together with `X_lv` or AGHQ.
 Fisher-scored. Default: canonical log link — the two coincide. Omitting it is exactly the pre-kwarg
 behaviour.
 """
-function _poisson_degenerate_converged(conv::Bool, Y::AbstractMatrix, mask)
-    _all_species_all_zero_counts(Y, mask) && return false
-    return conv
-end
-
 function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         link::Link = LogLink(), mask = nothing, offset = nothing, weights = nothing,
         gradient::Symbol = :analytic,
