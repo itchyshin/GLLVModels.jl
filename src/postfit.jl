@@ -345,6 +345,27 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
     return rotate ? Zout * _svd_rotation(fit.Λ) : Zout
 end
 
+# Post-fit routes share the Laplace fitters' response-domain checks (#1548; #1503 elsewhere).
+function _check_postfit_response_support(fit, Y::AbstractMatrix, mask;
+        caller::AbstractString)
+    if fit isa DeltaLogNormalFit
+        _check_twopart_postfit_support(Y, _tp_positive_ok, caller)
+    elseif fit isa HurdlePoissonFit
+        _check_response_support(:count, Y, mask; caller = caller)
+    end
+    return nothing
+end
+
+function _check_twopart_postfit_support(Y::AbstractMatrix, ok, caller::AbstractString)
+    for I in CartesianIndices(Y)
+        y = Y[I]
+        ok(y) || throw(ArgumentError(
+            "$caller: Y[$(I[1]), $(I[2])] = $y is outside the family's support " *
+            "(same rule as at fit time). NaN is not a missing-value marker."))
+    end
+    return nothing
+end
+
 """
     predict(fit::GllvmFit, y; type=:response, X=nothing, X_lv=nothing,
             mask=nothing, offset=nothing) -> p×n matrix
@@ -2249,6 +2270,7 @@ function predict(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real}; type::Symbol
                  offset = nothing)
     type in (:response, :occurrence, :positive, :link) ||
         throw(ArgumentError("type must be :response, :occurrence, :positive, or :link; got :$type"))
+    _check_postfit_response_support(fit, Y, nothing; caller = "predict")
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
     Z = getLV(fit, Y; rotate = false, offset = O)
@@ -2274,6 +2296,7 @@ rule as [`predict`](@ref).
 """
 function residuals(fit::DeltaLogNormalFit, Y::AbstractMatrix{<:Real};
                    rng::AbstractRNG = Random.default_rng(), offset = nothing)
+    _check_postfit_response_support(fit, Y, nothing; caller = "residuals")
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "residuals"; maskable = false)
     Z = getLV(fit, Y; rotate = false, offset = O)
@@ -2351,6 +2374,7 @@ function predict(fit::HurdlePoissonFit, Y::AbstractMatrix{<:Real}; type::Symbol 
                  offset = nothing)
     type in (:response, :occurrence, :positive, :link) ||
         throw(ArgumentError("type must be :response, :occurrence, :positive, or :link; got :$type"))
+    _check_postfit_response_support(fit, Y, nothing; caller = "predict")
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict"; maskable = false)
     Z = getLV(fit, Y; rotate = false, offset = O)
@@ -2377,6 +2401,7 @@ otherwise the `offset` you pass.
 """
 function residuals(fit::HurdlePoissonFit, Y::AbstractMatrix{<:Real};
                    rng::AbstractRNG = Random.default_rng(), offset = nothing)
+    _check_postfit_response_support(fit, Y, nothing; caller = "residuals")
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "residuals"; maskable = false)
     Z = getLV(fit, Y; rotate = false, offset = O)
