@@ -14,10 +14,15 @@ What counts as a possible closure (case-insensitive):
     `Closes: itchyshin/GLLVModels.jl#12`, `resolved https://github.com/o/r/issues/12`;
   * loose form (flagged on purpose, because the incidents above were loose or
     negated): any reference later on the same line as a keyword, e.g.
-    `fix(scope): text (refs #149)` or `Does not fix #142`.
+    `fix(derived-ci): … (#142)` or `Does not fix #142`.
+  * explicit `ref` / `refs` (optional colon) immediately before a reference is
+    skipped, e.g. `fix(scope): text (refs #149)`; another ref on the same line
+    with a real closing keyword is still flagged (`Fixes #3, refs #4` → #3).
 Keywords are GitHub's documented list: close, closes, closed, fix, fixes,
 fixed, resolve, resolves, resolved. A keyword inside a longer word
-(`prefix`, `fixture`, `unresolved`) is ignored. Fenced code blocks (CommonMark fence rules) and HTML comments are skipped in
+(`prefix`, `fixture`, `unresolved`, `fixed_coefficients`, `wrong-close`) is
+ignored; `fixed` as an adjective without a strict issue ref is ignored.
+Fenced code blocks (CommonMark fence rules) and HTML comments are skipped in
 PR bodies only; commit messages and titles are scanned raw. Routine text such
 as `fix(x): y (#12)` is flagged on purpose (loose form); reword it. The
 `intended-closes` comment is an accident guard, not a security control: any
@@ -38,17 +43,52 @@ import re
 import subprocess
 import sys
 
-KEYWORD = r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)"
-KW_RE = re.compile(r"(?<![A-Za-z0-9])" + KEYWORD + r"(?![A-Za-z0-9])", re.I)
+# Standalone keyword: not inside a longer alnum token; not joined via _/./ to another word
+# (`fixed_coefficients`); hyphenated names (`wrong-close`) must not expose `close`.
+_WORD_EDGE = r"(?<![A-Za-z0-9])"
+_WORD_EDGE_END = r"(?![A-Za-z0-9])"
+_JOINED_ID = r"(?!(?:_[A-Za-z]|[./][A-Za-z]))"
+# `fixed` is strict-only (issue ref on the same line); other keywords keep loose behaviour.
+LOOSE_KEYWORD = r"(?:close[sd]?|fix(?:es)?|resolve[sd]?)"
+FIXED_KEYWORD = r"fixed"
+_STRICT_TAIL = r"[\s*_`]*:?[\s*_`]*"
+_ALL_LOOSE_KW = _WORD_EDGE + LOOSE_KEYWORD + _WORD_EDGE_END + _JOINED_ID
 # A reference: owner/repo#N, a GitHub issue URL, or a bare #N.
 REF_RE = re.compile(
     r"(?:https?://github\.com/(?P<uo>[\w.-]+)/(?P<ur>[\w.-]+)/(?:issues|pull)/(?P<un>\d+))"
     r"|(?:(?<![\w/.-])(?P<ro>[\w.-]+)/(?P<rr>[\w.-]+)#(?P<rn>\d+))"
     r"|(?:(?<![\w/&])#(?P<bn>\d+))"
 )
-STRICT_RE = re.compile(
-    r"(?<![A-Za-z0-9])" + KEYWORD + r"(?![A-Za-z0-9])[\s*_`]*:?[\s*_`]*(?=" + REF_RE.pattern + ")", re.I
+KW_RE = re.compile(_ALL_LOOSE_KW, re.I)
+FIXED_STRICT_RE = re.compile(
+    _WORD_EDGE + FIXED_KEYWORD + _WORD_EDGE_END + _JOINED_ID
+    + _STRICT_TAIL + r"(?=" + REF_RE.pattern + ")",
+    re.I,
 )
+STRICT_RE = re.compile(
+    _WORD_EDGE + r"(?:" + LOOSE_KEYWORD + r"|" + FIXED_KEYWORD + r")" + _WORD_EDGE_END
+    + _JOINED_ID + _STRICT_TAIL + r"(?=" + REF_RE.pattern + ")",
+    re.I,
+)
+
+
+_EXPLICIT_REFS_RE = re.compile(r"(?:^|[\s(,;`\[*])(refs?)\s*:?\s*$", re.I)
+
+
+def _explicit_refs_only(line, ref_start):
+    """True when the reference is only cited via ref/refs, not a closing keyword."""
+    return bool(_EXPLICIT_REFS_RE.search(line[:ref_start].rstrip()))
+
+
+def _spurious_close_keyword(line, start, keyword):
+    """Hyphen/underscore joined names must not treat embedded close* as keywords."""
+    if not keyword.lower().startswith("close"):
+        return False
+    if start > 0 and line[start - 1] == "-":
+        return True
+    if start >= 2 and line[start - 1] == "_" and line[start - 2].isalnum():
+        return True
+    return False
 
 
 _DEFAULT_REPO = [None]  # set from --repo; bare #N then means this repo
@@ -87,13 +127,30 @@ def find_refs(text, strip=True, repo=None):
     """Yield (repo, number, line, form) for every possible closing reference."""
     seen = set()
     for line in _strip_hidden(text, strip):
-        kws = [m.start() for m in KW_RE.finditer(line)]
+        kws = []
+        for m in KW_RE.finditer(line):
+            if _spurious_close_keyword(line, m.start(), m.group()):
+                continue
+            kws.append(m.start())
+        for m in FIXED_STRICT_RE.finditer(line):
+            pos = m.start()
+            if pos not in kws:
+                kws.append(pos)
         if not kws:
             continue
         first = kws[0]
-        strict_ends = {m.end() for m in STRICT_RE.finditer(line)}
+        strict_ends = set()
+        for m in STRICT_RE.finditer(line):
+            kw_m = re.match(_ALL_LOOSE_KW, line[m.start():], re.I) or re.match(
+                _WORD_EDGE + FIXED_KEYWORD + _WORD_EDGE_END + _JOINED_ID, line[m.start():], re.I)
+            kw = kw_m.group() if kw_m else ""
+            if _spurious_close_keyword(line, m.start(), kw):
+                continue
+            strict_ends.add(m.end())
         for m in REF_RE.finditer(line):
             if m.start() < first:
+                continue
+            if _explicit_refs_only(line, m.start()):
                 continue
             form = "strict" if m.start() in strict_ends else "loose"
             key = _ref_key(m) + (line,)

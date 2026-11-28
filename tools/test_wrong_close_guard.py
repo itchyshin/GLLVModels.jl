@@ -25,7 +25,7 @@ class Incidents(unittest.TestCase):
 
     def test_149_conventional_commit_subject(self):
         subj = "fix(n<p): Gaussian n_sites >= p guard is an ArgumentError; Lognormal inherits it (refs #149)"
-        self.assertEqual(bad(subj), [(None, 149)])
+        self.assertEqual(bad(subj), [])
 
     def test_142_commit_subjects(self):
         self.assertEqual(bad("fix(derived-ci): natural-bounds clamp for profile_ci_derived (#142)"),
@@ -70,6 +70,48 @@ class Syntax(unittest.TestCase):
 
     def test_html_entity_and_path_not_a_ref(self):
         self.assertEqual(bad("fixes a&#35; and src/a#b"), [])
+
+
+class FalsePositiveGuards(unittest.TestCase):
+    """Regression: joined identifiers and adjective 'fixed' must not trip the guard."""
+
+    def test_fixed_coefficients_in_backticks(self):
+        txt = "rank 13 `fixed_coefficients.jl` is in #1580."
+        self.assertEqual(bad(txt), [])
+
+    def test_fixed_coefficients_in_pr_list(self):
+        txt = ("Scanned open coverage PRs **#1385–#1397** ... including **#1397** "
+               "(`fixed_coefficients`, ...)")
+        self.assertEqual(bad(txt), [])
+
+    def test_fixed_shape_adjective(self):
+        txt = "use the `family` object's fixed shape/precision (#1227)."
+        self.assertEqual(bad(txt), [])
+
+    def test_hyphenated_wrong_close_identifier(self):
+        txt = "**wrong-close guard** ... #1186"
+        self.assertEqual(bad(txt), [])
+
+
+class TruePositiveStillCaught(unittest.TestCase):
+    def test_fixes_and_fixed_strict(self):
+        self.assertEqual(bad("Fixes #12"), [(None, 12)])
+        self.assertEqual(bad("fixed #12"), [(None, 12)])
+
+    def test_refs_only_on_same_line_as_fix(self):
+        self.assertEqual(bad("Fix vcov GllvmCovFit missing-X error message (refs #1555)"), [])
+        self.assertEqual(
+            bad("Fix Gaussian AGHQ conditional-mode check for trait designs (refs #1502)"), [])
+
+    def test_mixed_fixes_and_refs(self):
+        self.assertEqual(bad("Fixes #3, refs #4"), [(None, 3)])
+
+    def test_closes_gap_still_flagged(self):
+        self.assertEqual(bad("Closes the gap in #1466"), [(None, 1466)])
+
+    def test_resolves_owner_repo(self):
+        self.assertEqual(bad("resolves itchyshin/GLLVModels.jl#5"),
+                         [("itchyshin/gllvmodels.jl", 5)])
 
 
 class Review(unittest.TestCase):
@@ -142,8 +184,12 @@ class Cli(unittest.TestCase):
             git("commit", "-q", "--allow-empty", "-m", "fix(x): y (refs #149)")
             r = subprocess.run([sys.executable, g.__file__, "--git-range", "HEAD~1..HEAD"],
                                capture_output=True, text=True, cwd=d)
-            self.assertEqual(r.returncode, 1)
-            self.assertIn("#149", r.stdout)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            git("commit", "-q", "--allow-empty", "-m", "fix(x): still bad (#149)")
+            r2 = subprocess.run([sys.executable, g.__file__, "--git-range", "HEAD~1..HEAD"],
+                                capture_output=True, text=True, cwd=d)
+            self.assertEqual(r2.returncode, 1)
+            self.assertIn("#149", r2.stdout)
 
 
 if __name__ == "__main__":
