@@ -1724,6 +1724,146 @@ function Base.show(io::IO, ::MIME"text/plain", fit::BetaFit)
 end
 
 # ---------------------------------------------------------------------------
+# Multinomial post-fit methods (unordered categorical; FE softmax, η₁≡0, no LV).
+# ---------------------------------------------------------------------------
+
+_loglik(fit::MultinomialFit) = fit.loglik
+
+function _multinomial_category_probs(β::AbstractVector, γ::AbstractMatrix, x::AbstractVector)
+    η = multinomial_eta(β, γ, x)
+    lse = _multinomial_logsumexp(η)
+    probs = Vector{Float64}(undef, length(η))
+    @inbounds for k in eachindex(η)
+        probs[k] = exp(η[k] - lse)
+    end
+    return probs
+end
+
+function _multinomial_postfit_X(fit::MultinomialFit, n::Integer,
+        X::Union{Nothing, AbstractMatrix{<:Real}}, who::AbstractString)
+    p = size(fit.γ, 2)
+    if p == 0
+        X !== nothing && throw(ArgumentError(
+            "$who: MultinomialFit was fit without covariates; omit X"))
+        return nothing
+    end
+    X === nothing && throw(ArgumentError(
+        "$who on a covariate MultinomialFit needs the design `X` " *
+        "(the same n×p matrix passed to fit_multinomial_gllvm): $who(fit, Y; X=X)"))
+    size(X) == (n, p) || throw(DimensionMismatch(
+        "$who: multinomial X must be n×p = ($n, $p); got $(size(X))"))
+    return X
+end
+
+"""
+    predict(fit::MultinomialFit, Y; type=:class, X=nothing) -> 1×n, K×n, or 1×n×K
+
+In-sample predictions from the fitted FE softmax. `Y` is a `1×n` integer row,
+length-`n` vector, or `K×n` one-hot matrix (v1, one trait). `type=:link` returns
+the linear predictors `η` (`K×n`, with `η₁≡0` in each column); `type=:prob`
+category probabilities (`1×n×K`); `type=:class` / `:response` the modal category
+(`1×n` integers). Covariate fits need the training `X` (`n×p`, no intercept column).
+"""
+function predict(fit::MultinomialFit, Y::AbstractVecOrMat;
+                 type::Symbol = :class,
+                 X::Union{Nothing, AbstractMatrix{<:Real}} = nothing)
+    type in (:link, :prob, :class, :response) ||
+        throw(ArgumentError("type must be :link, :prob, :class, or :response; got :$type"))
+    y, K = _multinomial_response(Y; n_categories = fit.n_categories)
+    K == fit.n_categories || throw(DimensionMismatch(
+        "predict: Y implies K=$K but fit has n_categories=$(fit.n_categories)"))
+    n = length(y)
+    Xmat = _multinomial_postfit_X(fit, n, X, "predict")
+    p_cov = size(fit.γ, 2)
+    xbuf = p_cov == 0 ? Float64[] : Vector{Float64}(undef, p_cov)
+    if type === :link
+        ηmat = Matrix{Float64}(undef, K, n)
+        @inbounds for i in 1:n
+            if p_cov == 0
+                η = multinomial_eta(fit.β, fit.γ, xbuf)
+            else
+                for j in 1:p_cov
+                    xbuf[j] = Xmat[i, j]
+                end
+                η = multinomial_eta(fit.β, fit.γ, xbuf)
+            end
+            ηmat[:, i] .= η
+        end
+        return ηmat
+    end
+    if type === :prob
+        P = Array{Float64, 3}(undef, 1, n, K)
+        @inbounds for i in 1:n
+            if p_cov == 0
+                probs = _multinomial_category_probs(fit.β, fit.γ, xbuf)
+            else
+                for j in 1:p_cov
+                    xbuf[j] = Xmat[i, j]
+                end
+                probs = _multinomial_category_probs(fit.β, fit.γ, xbuf)
+            end
+            for k in 1:K
+                P[1, i, k] = probs[k]
+            end
+        end
+        return P
+    end
+    M = Matrix{Int}(undef, 1, n)
+    @inbounds for i in 1:n
+        if p_cov == 0
+            probs = _multinomial_category_probs(fit.β, fit.γ, xbuf)
+        else
+            for j in 1:p_cov
+                xbuf[j] = Xmat[i, j]
+            end
+            probs = _multinomial_category_probs(fit.β, fit.γ, xbuf)
+        end
+        M[1, i] = argmax(probs)
+    end
+    return M
+end
+
+"""
+    residuals(fit::MultinomialFit, Y; type=:dunnsmyth, X=nothing, rng=...) -> 1×n matrix
+
+Dunn–Smyth randomized quantile residuals under the fitted FE softmax: `u` uniform
+on `[P(Y < y), P(Y ≤ y)]` for the observed category `y`. Only `:dunnsmyth` is
+supported. Covariate fits need the training `X`.
+"""
+function residuals(fit::MultinomialFit, Y::AbstractVecOrMat;
+                   type::Symbol = :dunnsmyth,
+                   X::Union{Nothing, AbstractMatrix{<:Real}} = nothing,
+                   rng::AbstractRNG = Random.default_rng())
+    type === :dunnsmyth ||
+        throw(ArgumentError("multinomial residuals support type=:dunnsmyth only; got :$type"))
+    y, K = _multinomial_response(Y; n_categories = fit.n_categories)
+    K == fit.n_categories || throw(DimensionMismatch(
+        "residuals: Y implies K=$K but fit has n_categories=$(fit.n_categories)"))
+    n = length(y)
+    Xmat = _multinomial_postfit_X(fit, n, X, "residuals")
+    p_cov = size(fit.γ, 2)
+    xbuf = p_cov == 0 ? Float64[] : Vector{Float64}(undef, p_cov)
+    R = Matrix{Float64}(undef, 1, n)
+    @inbounds for i in 1:n
+        if p_cov == 0
+            probs = _multinomial_category_probs(fit.β, fit.γ, xbuf)
+        else
+            for j in 1:p_cov
+                xbuf[j] = Xmat[i, j]
+            end
+            probs = _multinomial_category_probs(fit.β, fit.γ, xbuf)
+        end
+        c = y[i]
+        Flo = c <= 1 ? 0.0 : sum(probs[1:(c - 1)])
+        Fhi = sum(probs[1:c])
+        clo = 1.0 - Flo
+        chi = 1.0 - Fhi
+        R[1, i] = _ds_z(Flo, Fhi, clo, chi, rand(rng))
+    end
+    return R
+end
+
+# ---------------------------------------------------------------------------
 # Ordinal post-fit methods (ordered categories 1:C; cumulative logit, common
 # ordered cutpoints τ; latent η = (Λz)_t, no intercept). The "fitted value" is
 # the modal category; residuals are Dunn–Smyth randomized quantile (discrete CDF).
