@@ -1246,7 +1246,7 @@ end
 
 """
     getLV(fit::NBFit, Y; N=nothing, X_lv=nothing,
-          component=:total, rotate=true, offset=nothing) -> n×K matrix
+          component=:total, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a negative-binomial fit: the per-site
 Laplace mode `ẑₛ` (computed at the fitted dispersion `r`). `rotate=true` applies
@@ -1291,7 +1291,8 @@ function getLV(fit::NBFit, Y::AbstractMatrix;
 end
 
 """
-    predict(fit::NBFit, Y; type=:response, N=nothing, offset=nothing) -> p×n matrix
+    predict(fit::NBFit, Y; type=:response, N=nothing, X_lv=nothing,
+            offset=nothing, modes=:refit) -> p×n matrix
 
 In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
 `type=:response` the inverse-link fitted means `linkinv(link, η) = exp(η)`.
@@ -1321,7 +1322,8 @@ function predict(fit::NBFit, Y::AbstractMatrix;
 end
 
 """
-    residuals(fit::NBFit, Y; type=:dunnsmyth, rng=Random.default_rng()) -> p×n matrix
+    residuals(fit::NBFit, Y; type=:dunnsmyth, X_lv=nothing,
+              rng=Random.default_rng(), offset=nothing) -> p×n matrix
 
 Conditional residuals for a negative-binomial fit. `:dunnsmyth` returns Dunn–Smyth
 randomized quantile residuals — `Φ⁻¹(u)`, `u` uniform on `[F(y−1), F(y)]` under
