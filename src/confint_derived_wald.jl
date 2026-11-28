@@ -434,9 +434,9 @@ Fisher-z transformed-Wald CI for the cross-trait correlation `ρ[i, j]`.
 Bounds are guaranteed to lie in `[−1, 1]`. See
 [`transformed_wald_ci_derived`](@ref).
 
-Also reached as `confint(fit, y; parm = "rho[i,j]", method = :wald)`, which also
-offers `method = :profile` and `method = :bootstrap` for the same quantity; see
-[`confint`](@ref).
+Also reached as `confint(fit, y; parm = "rho[i,j]", method = :wald)` (and
+`method = :bootstrap` for the same quantity). `method = :profile` is refused,
+matching gllvmTMB's withdrawn nonlinear profile route; see [`confint`](@ref).
 """
 function correlation_wald_ci(fit::GllvmFit, i::Integer, j::Integer;
                              level::Real = 0.95,
@@ -455,9 +455,9 @@ end
 Logit transformed-Wald CI for the per-trait communality `c²[t]`. Bounds
 are guaranteed to lie in `[0, 1]`. See [`transformed_wald_ci_derived`](@ref).
 
-Also reached as `confint(fit, y; parm = "communality[t]", method = :wald)`, which
-also offers `method = :profile` and `method = :bootstrap` for the same quantity;
-see [`confint`](@ref).
+Also reached as `confint(fit, y; parm = "communality[t]", method = :wald)` (and
+`method = :bootstrap` for the same quantity). `method = :profile` is refused,
+matching gllvmTMB's withdrawn nonlinear profile route; see [`confint`](@ref).
 """
 function communality_wald_ci(fit::GllvmFit, t::Integer;
                              level::Real = 0.95,

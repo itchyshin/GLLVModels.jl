@@ -118,7 +118,7 @@ _register_shard_table!(4, (
         "test_zip_x_identity.jl", "test_issue_719_docs_deploy_guard.jl", "test_tweedie.jl",
         "test_tweedie_grouped_mode_search_503.jl", "test_tweedie_grouped_k1_mode_1042.jl", "test_studentt_core070.jl", "test_lognormal.jl",
         "test_zib_x_identity.jl", "test_ordinal_fit.jl", "test_ordinal_logit_twin.jl",
-        "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
+        "test_issue_749_fit_gllvm_doc.jl", "test_issue_1461_derived_wald_ci_doc.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
         "test_formula_pervar.jl", "test_formula_default_x_guard.jl", "test_statsapi.jl",
         "test_postfit_zib_tweedie.jl", "test_extract_latent_scores.jl", "test_select_lv_759.jl",
         "test_select_lv_p1_twin.jl", "test_issue_108_anova_docs.jl", "test_cross_kernel.jl",
@@ -805,6 +805,7 @@ println(_SHARD === nothing ?
     _shard_include("test_getlv_rowcheck.jl")
     _shard_include("test_fit_gllvm.jl")
     _shard_include("test_issue_749_fit_gllvm_doc.jl")
+    _shard_include("test_issue_1461_derived_wald_ci_doc.jl")
     _shard_include("test_truncated_formula.jl")
     _shard_include("test_unified_api.jl")
     _shard_include("test_com_poisson.jl")
