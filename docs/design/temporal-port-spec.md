@@ -303,7 +303,25 @@ Constructor validation and messages (R/temporal.R:10-32):
 
 Every temporal error in R appends the action line "See `temporal_latent()`
 for the admitted temporal workflow." (R/temporal.R:1-8). Julia appends the
-same sentence.
+same sentence for `temporal_latent()`.
+
+**Marker naming (Julia, issue 1286; twin of gllvmTMB #1812).** R's wording
+above is written for `temporal_latent()`. In Julia every refusal names the
+marker the user called: `temporal_indep()`, `temporal_dep()` or
+`temporal_latent()`, in the message and in the closing action line. The
+`temporal_latent()` texts are unchanged byte for byte, and no rule or error
+`kind` changes. The parser and constructors are covered by the parser PR (#1288).
+The post-fit helpers take the marker from the fit (`_temporal_fit_marker(fit)`
+in `src/temporal_methods.jl`): `predict` with `newdata`, the iid inference
+routes (`confint`, `bootstrap_ci`, `ordination_uncertainty`), and the default
+action line of `forecast_temporal`, `bootstrap_temporal` and
+`profile_temporal`. Texts that already name a marker on purpose (for example
+"currently supports `temporal_indep()` only") and refusals with their own action
+line are unchanged; `compare_temporal` takes several fits and keeps the default
+line. Until the R twin lands, indep and dep wording differs from R by design.
+If the maintainers choose another rule (for example keep R's `temporal_latent()`
+wording), change `_temporal_fit_marker` and `_temporal_fit_action` only, and the
+expectations in `test/test_temporal_helper_marker_name_1286.jl`.
 
 ### 2.2 Fit-time validation (the pre-pass)
 
