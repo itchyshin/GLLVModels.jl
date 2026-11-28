@@ -110,7 +110,7 @@ _register_shard_table!(4, (
         "test_aghq_multistart.jl", "test_aghq_nb2.jl", "test_aghq_tweedie.jl",
         "test_aghq_delta_gamma.jl", "test_aghq_public_binomial.jl", "test_truncated_poisson.jl",
         "test_truncated_nbinom2.jl", "test_truncnb2_precision.jl", "test_truncnb2_mode_search.jl",
-        "test_poisson_n_init.jl", "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl",
+        "test_poisson_n_init.jl", "test_poisson_mask_blocks_1249.jl", "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl",
         "test_laplace_dual_safety.jl", "test_phylo_nb_xlv.jl", "test_phylo_nb_xlv_mode_1125.jl", "test_destination_b_joint_identification.jl",
         "test_destination_b_joint_poisson.jl", "test_gp1_laplace.jl", "test_gp1_verdict.jl",
         "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_nb_grouped_upper_warn.jl",
@@ -369,7 +369,7 @@ _register_shard_table!(8, (
         "test_likelihood.jl", "test_animal_latent.jl", "test_spatial_dep.jl",
         "test_destination_b_grouping_interval_matrix.jl", "test_grouped_profile_public.jl", "test_profile_sigma_phy_identity.jl",
         "test_aghq_public_poisson.jl", "test_aghq_ordinal.jl", "test_gamma_laplace.jl",
-        "test_binomial_fit.jl", "test_poisson_n_init.jl", "test_phylo_binomial_xlv.jl",
+        "test_binomial_fit.jl", "test_poisson_n_init.jl", "test_poisson_mask_blocks_1249.jl", "test_phylo_binomial_xlv.jl",
         "test_poisson_grad_perf.jl", "test_grouped_laplace.jl", "test_grouped_laplace_identity.jl",
         "test_destination_b_joint_other_families.jl", "test_gamma_beta_upper_boundary.jl", "test_nb_grouped_poisson_ridge.jl",
         "test_nb1_scalar_gradient_gate.jl", "test_nb1_grouped_mode_search.jl", "test_ordinal_x_identity.jl",
@@ -416,6 +416,7 @@ _register_shard_table!(8, (
         "test_totoro_323_track_a_harness.jl", "test_temporal_lowrank.jl", "test_derived_ci_sweep.jl",
         "test_spde_projector_validation.jl", "test_docstring_ref_linebreaks.jl", "test_comparator_targets.jl",
         "test_core070_covariance_registry.jl", "test_predictive_check_binomial.jl", "test_bootstrap_sigma_r.jl",
+        "test_link_residual_undefined_link.jl",
     ),
     (
         "test_W_and_diag.jl", "test_signed_sigma_phy.jl", "test_precision_multivariate.jl",
@@ -666,6 +667,7 @@ println(_SHARD === nothing ?
     _shard_include("test_binomial_fit.jl")
     _shard_include("test_poisson_fit.jl")
     _shard_include("test_poisson_n_init.jl")
+    _shard_include("test_poisson_mask_blocks_1249.jl")
     _shard_include("test_nb_n_init.jl")
     _shard_include("test_laplace_curvature_contract.jl")
     _shard_include("test_issue_783_curvature_docs.jl")
@@ -1003,6 +1005,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nobs_vector_y_1164.jl")
     _shard_include("test_newick_input_messages_1165.jl")
     _shard_include("test_beta_grouped_ci_y_clamp_1155.jl")
+    _shard_include("test_beta_speciescov_start_1200.jl")
     _shard_include("test_summary_table.jl")
     _shard_include("test_covariates.jl")
     _shard_include("test_cov_mode_search_gamma.jl")
@@ -1035,6 +1038,7 @@ println(_SHARD === nothing ?
     _shard_include("test_variational_dgamma.jl")
     _shard_include("test_variational_exponential.jl")
     _shard_include("test_fix_1108.jl")
+    _shard_include("test_all_missing_trait.jl")   # a trait with no observed cell is an ArgumentError
     _shard_include("test_va_vs_laplace.jl")
     _shard_include("test_va_objective_missing_nan.jl")
     _shard_include("test_random_slopes.jl")
@@ -1162,6 +1166,8 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_likelihood_internals.jl")
     _shard_include("test_temporal_fit_receipts.jl")
     _shard_include("test_temporal_helpers.jl")
+    # Post-fit temporal helpers name the marker the user called (refs #1286).
+    _shard_include("test_temporal_helper_marker_name_1286.jl")
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
@@ -1256,6 +1262,7 @@ println(_SHARD === nothing ?
     _shard_include("test_zero_column_warning.jl")
     # Formula covariate columns typed Union{Missing,T} (refs #1190).
     _shard_include("test_formula_missing_covariate.jl")
+    _shard_include("test_temporal_missing_covariate.jl")
     # fit_mixed_gllvm: an unsupported family marker gives the documented ArgumentError, not a default_link MethodError.
     _shard_include("test_mixed_unsupported_family.jl")
     # Temporal parser refusals name the marker the user called (refs #1286).
@@ -1270,6 +1277,9 @@ println(_SHARD === nothing ?
     _shard_include("test_profile_quad_cancellation.jl")
     # PR 1037 layer (#739 twin parity). Appended last so no existing file changes shard.
     _shard_include("test_twin_parity_zip_tweedie_beta_gamma_739.jl")
+    # link_residual on undefined (family, link) pairs throws ArgumentError (refs #1161).
+    # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
+    _shard_include("test_link_residual_undefined_link.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
