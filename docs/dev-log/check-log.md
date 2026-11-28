@@ -1,3 +1,9 @@
+2026-11-28: Maintainer decision option B (refs #1538, #1553). `nobs(fit, Y)`
+refuses weighted / grouped-N ambiguity with `ArgumentError` (grouped-nobs
+policy not set yet); unweighted p·n path unchanged. Julia 1.10.14:
+`test/test_nobs_grouped_policy.jl` 11/11; `test/test_statsapi.jl` 74/74.
+Tag `cursor-cloud-1128`.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:

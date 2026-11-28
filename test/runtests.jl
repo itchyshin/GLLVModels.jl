@@ -133,7 +133,7 @@ _register_shard_table!(4, (
         "test_weights_byte_identity.jl", "test_confint_bootstrap_verdict_tweedie.jl", "test_confint_bootstrap_verdict_ordinal.jl",
         "test_confint_bootstrap_verdict_misc.jl", "test_second_order_s2_cloglog_ratified.jl", "test_second_order_truncpois_ci.jl",
         "test_second_order_truncnb2_ci.jl", "test_second_order_multinomial_ci.jl", "test_second_order_betabinomial_shared_ci.jl",
-        "test_nobs_pn_convention.jl", "test_cov_analytic_grad.jl", "test_optimizer_selection.jl",
+        "test_nobs_pn_convention.jl", "test_nobs_grouped_policy.jl", "test_cov_analytic_grad.jl", "test_optimizer_selection.jl",
         "test_formula_no_intercept_default.jl", "test_constrained_ordination.jl", "test_quadratic.jl",
         "test_variational_binomial.jl", "test_variational_beta.jl", "test_variational_exponential.jl",
         "test_random_slopes.jl", "test_twolevel.jl", "test_random_slopes_poisson.jl",
@@ -382,6 +382,7 @@ _register_shard_table!(8, (
         "test_phylo_beta_xlv_mode.jl", "test_phylo_ordinal_xlv_mode.jl", "test_twopart_substrate.jl",
         "test_weights_byte_identity.jl", "test_confint_offset.jl", "test_predict_offset_grouped.jl",
         "test_confint_bootstrap_verdict_tweedie.jl", "test_second_order_multinomial_ci.jl", "test_nobs_pn_convention.jl",
+        "test_nobs_grouped_policy.jl",
         "test_covariates.jl", "test_saturation_health.jl", "test_known_sentinel_defects.jl",
         "test_phylo_contrasts.jl", "test_family11_p1_boundary.jl", "test_parity_trial_inputs.jl",
         "test_relaxed_clock.jl", "test_cv_unsupported_773.jl", "test_loading_profile_confirmatory.jl",
@@ -1002,6 +1003,7 @@ println(_SHARD === nothing ?
     _shard_include("test_diagnostics.jl")
     _shard_include("test_se_machinery.jl")
     _shard_include("test_nobs_pn_convention.jl")
+    _shard_include("test_nobs_grouped_policy.jl")
     _shard_include("test_nobs_vector_y_1164.jl")
     _shard_include("test_newick_input_messages_1165.jl")
     _shard_include("test_beta_grouped_ci_y_clamp_1155.jl")
