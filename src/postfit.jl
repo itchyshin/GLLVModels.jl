@@ -1748,7 +1748,7 @@ function _check_trait_rows(fit, Y::AbstractMatrix, who::AbstractString)
 end
 
 """
-    getLV(fit::OrdinalFit, Y; rotate=true) -> n×K matrix
+    getLV(fit::OrdinalFit, Y; X_lv=nothing, component=:total, rotate=true, mask=nothing) -> n×K matrix
 
 Conditional latent-variable scores for an ordinal fit: the per-site Laplace mode
 `ẑₛ` (at the fitted cutpoints). `Y` is the p×n matrix of ordinal responses (`1:C`);
@@ -1822,7 +1822,7 @@ function getLV(fit::OrdinalPerTraitCovFit, Y::AbstractMatrix,
 end
 
 """
-    predict(fit::OrdinalFit, Y; type=:class) -> matrix or p×n×C array
+    predict(fit::OrdinalFit, Y; X_lv=nothing, type=:class, mask=nothing) -> matrix or p×n×C array
 
 In-sample predictions at the Laplace mode `ẑ` (η = Λẑ). `type=:link` returns the
 linear predictor `η` (p×n); `type=:prob` the category probabilities (p×n×C array,
@@ -1892,7 +1892,7 @@ function predict(fit::OrdinalPerTraitFit, Y::AbstractMatrix;
 end
 
 """
-    residuals(fit::OrdinalFit, Y; type=:dunnsmyth, rng=Random.default_rng()) -> p×n matrix
+    residuals(fit::OrdinalFit, Y; type=:dunnsmyth, rng=Random.default_rng(), mask=nothing) -> p×n matrix
 
 Dunn–Smyth randomized quantile residuals for an ordinal fit — `Φ⁻¹(u)`, `u` uniform
 on `[P(Y≤c−1), P(Y≤c)]` under the fitted cumulative-logit model at the Laplace mode
