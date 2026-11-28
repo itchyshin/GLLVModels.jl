@@ -60,6 +60,34 @@ function _check_ordinal_levels(Y::AbstractMatrix, obs; caller::AbstractString = 
     return nothing
 end
 
+# Float-valued ordinal codes (what `readdlm` or a CSV reader returns). Integer-valued floats
+# (3.0) are accepted and passed on as `Int`; a non-integer or non-finite observed cell is an
+# `ArgumentError` naming the first such cell. An integer-valued code outside `1:C` (0.0, -1.0)
+# is left to `_check_ordinal_levels`, which gives its own out-of-range error (#1191).
+function _ordinal_float_to_int(Y::AbstractMatrix{<:AbstractFloat}, mask; caller::AbstractString)
+    mask === nothing || size(mask) == size(Y) || throw(DimensionMismatch(
+        "$caller: mask is $(size(mask)); Y is $(size(Y))"))
+    bad = 0
+    first_bad = (0, 0)
+    for i in axes(Y, 2), t in axes(Y, 1)
+        (mask === nothing || mask[t, i]) || continue
+        y = Y[t, i]
+        if !(isfinite(y) && y == round(y) && abs(y) < 1e15)
+            bad += 1
+            bad == 1 && (first_bad = (t, i))
+        end
+    end
+    if bad > 0
+        t, i = first_bad
+        throw(ArgumentError("$caller: Y[$t, $i] = $(Y[t, i]) is not an integer ordinal level " *
+            "($bad observed cell(s) in total). Ordinal codes must be integers coded from 1; " *
+            "integer-valued floats such as 3.0 are accepted. Fix the data, or mark unobserved " *
+            "cells `mask = false`; NaN and Inf are not valid responses."))
+    end
+    return Int[(mask === nothing || mask[t, i]) ? Int(Y[t, i]) : 1
+               for t in axes(Y, 1), i in axes(Y, 2)]
+end
+
 function _check_ordinal_trait_observed(obs::AbstractMatrix{Bool}, caller::AbstractString)
     p = size(obs, 1)
     @inbounds for t in 1:p
@@ -823,6 +851,7 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     obs = mask === nothing ? trues(p, n) : mask
     _check_ordinal_trait_observed(obs, "fit_ordinal_gllvm_pertrait_cov")
     _check_ordinal_levels(Y, obs; caller = "fit_ordinal_gllvm_pertrait_cov")
+    _check_finite_covariates(X, "fit_ordinal_gllvm_pertrait_cov"; obs = obs)
     C = zeros(Int, p)
     @inbounds for t in 1:p, i in 1:n
         obs[t, i] && (C[t] = max(C[t], Int(Y[t, i])))
@@ -878,3 +907,42 @@ function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Integer};
     return OrdinalPerTraitCovFit(β̂, γ̂, collect(Bool, γ_fixed_mask), Λ̂, τ̂, C, link,
                                  _fit_verdict(res)...)
 end
+
+# `Union{Missing,Integer}` matrices (e.g. from CSV reads) and `missing` in Y: derive a mask and
+# sanitize to `Matrix{Int}` before the integer-typed fitters, as on the Poisson Laplace route (#1191).
+function _ordinal_resolve_integer_y(Y::AbstractMatrix, mask, caller::AbstractString)
+    msk = if mask !== nothing
+        _resolve_obs_mask(mask, Y)
+    elseif any(ismissing, Y)
+        @info "$caller: derived the observation mask from missing entries in Y" maxlog=1
+        observed_mask(Y)
+    else
+        nothing
+    end
+    Yint = Matrix{Int}(_sanitize_unobserved(Y, msk, 1))
+    return Yint, msk
+end
+
+function fit_ordinal_gllvm(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...)
+    Yint, msk = _ordinal_resolve_integer_y(Y, mask, "fit_ordinal_gllvm")
+    return fit_ordinal_gllvm(Yint; mask = msk, kwargs...)
+end
+function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...)
+    Yint, msk = _ordinal_resolve_integer_y(Y, mask, "fit_ordinal_gllvm_pertrait")
+    return fit_ordinal_gllvm_pertrait(Yint; mask = msk, kwargs...)
+end
+function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...)
+    Yint, msk = _ordinal_resolve_integer_y(Y, mask, "fit_ordinal_gllvm_pertrait_cov")
+    return fit_ordinal_gllvm_pertrait_cov(Yint; mask = msk, kwargs...)
+end
+
+# Integer-valued float codes: convert once, then run the integer method (#1191).
+fit_ordinal_gllvm(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm");
+                      mask = mask, kwargs...)
+fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm_pertrait(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm_pertrait");
+                               mask = mask, kwargs...)
+fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
+    fit_ordinal_gllvm_pertrait_cov(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm_pertrait_cov");
+                                   mask = mask, kwargs...)

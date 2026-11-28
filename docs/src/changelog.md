@@ -6,12 +6,48 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
 ## GLLVModels.jl (development version)
 
 ### Changed
+- **IN (refs #1144), behaviour change:** `confint`, `profile_ci` and `bootstrap_ci` on a Gaussian fit made
+  without a mask throw an `ArgumentError` for `missing`, NaN or Inf in `y` (they returned all-NaN
+  intervals). Masked fits are unchanged. No signature change.
+- **IN (#1190):** a formula covariate holding `missing` is an `ArgumentError` naming the column and
+  the first site (it was `KeyError: key missing not found`); a column used only inside a function,
+  such as `coalesce(x, 0.0)`, is left to that function.
+- **IN (#1286):** every refusal in the temporal parser and the three marker
+  constructors names the marker the user called (`temporal_indep()`,
+  `temporal_dep()` or `temporal_latent()`) instead of `temporal_latent()`:
+  the four messages that named it directly (complete Gaussian response,
+  `0 + trait | series` form, trait-intercept block, three-trait rule) and the
+  default closing "See ..." line of all the others. The `temporal_latent()`
+  text is unchanged byte for byte, and the same inputs are refused. Message
+  only. Still naming `temporal_latent()`: the rank-one check (only
+  `temporal_latent()` reaches it), the `predict(newdata)` and iid-inference
+  refusals in `src/temporal_methods.jl`, and the default closing line of the
+  post-fit helper refusals there (`forecast_temporal`, `bootstrap_temporal`,
+  `profile_temporal`, `compare_temporal`). Differs from gllvmTMB until its
+  issue 1812 lands.
+- **CHANGED (returned values):** the AGHQ fitters keep the Laplace fit when the quadrature
+  run never produced an AGHQ estimate. A usable run that never left its start and did not
+  converge (all seven AGHQ fitters), and for `fit_ordinal_gllvm_pertrait_aghq` also a run
+  that moved but stopped on `:adaptation_failed` or `:optimizer_failed` while the Laplace
+  fit converged, now return the Laplace fit with `integration.actual = :laplace` and
+  `integration.reason` set to the run's stop reason, plus one warning. Before, they returned
+  an unconverged AGHQ-typed fit. `loglik`, `integration.*` and the applicable post-fit
+  routes change for such fits; `fit.converged` is the Laplace fit's flag. The ordinal
+  rule is asymmetric (siblings still keep a moved point) and rests on one fixture. See the
+  Unreleased entry in `CHANGELOG.md` for the full list.
 - **IN (#1107):** `fit_gaussian_gllvm`, `fit_gllvm(Normal())`, and
   `fit_gaussian_pervar_gllvm` derive an observation mask from `missing` in `Y`
   and emit one `@info` (`maxlog=1`). An explicit mask does not. A `missing`
   cell marked observed is an `ArgumentError`. Complete data is unchanged.
   Structured Gaussian routes that already refuse a mask still refuse.
   Variational fitters derive their mask the same way (#1108, in the repository CHANGELOG).
+- **IN (refs #1107, #1108), behaviour change:** a NaN, `missing` or Inf in a
+  covariate array is an `ArgumentError` naming the fitter, the array and the first
+  entry on `fit_rrr_gllvm`, `fit_constrained_gllvm`, the `*_cov` and grouped-covariate
+  fitters, `fit_gllvm_speciescov`, `fit_fourthcorner_gllvm`, `fit_multinomial_gllvm`, the per-trait ordinal
+  covariate fitter and the formula routes that reach them. They used to return
+  `loglik = -Inf` with `converged = false` and no message. Where `mask` is accepted,
+  only entries at observed response cells are checked.
 - **Development:** ordinary Gaussian, Poisson Laplace, shared-r NB2 Laplace,
   and the default per-trait NB2 formula route accept direct outer-optimizer
   selection with `:lbfgs`, `:bfgs`, or configured Optim methods. The default
@@ -108,6 +144,11 @@ Notable changes to GLLVModels.jl. Style mirrors `gllvmTMB`'s NEWS: status labels
   by decision (e.g. GP-1).
 
 ### Fixed
+- **FIX:** the Gaussian profile likelihood (`gaussian_profile_nll`, `profile_recover`)
+  no longer throws a `DomainError` when a large unabsorbed mean makes the Woodbury
+  quadratic cancel; it uses the nonnegative form `(r - Lz)'D^-1(r - Lz) + z'z`. Values
+  match the old form to about 1e-16 where that was accurate. The GLS branch
+  (`profile_beta = true`) is unchanged.
 - **FIX:** the README Poisson optimizer example defines the count matrix `Y`
   (#1007). The `:bfgs` / `:lbfgs` block used an undefined `Y` and raised
   `UndefVarError` in a fresh session. The confidence-interval block is also
