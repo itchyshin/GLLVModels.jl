@@ -151,7 +151,9 @@ raw latent-axis coefficients for the predictor-informed score mean; use
 when the loading ridge was off); `loglik` is always the UNPENALISED Laplace
 marginal, evaluated at the (possibly ridge-penalised) optimum. `offset` is the p×n
 training offset a Laplace fit was made with (`nothing` when the fit had none);
-[`predict`](@ref) and [`getLV`](@ref) use it by default. An AGHQ fit leaves
+[`predict`](@ref) and [`getLV`](@ref) use it by default. Non-Bernoulli trial
+counts are stored in `trials` so post-fit calls can omit `N`; Bernoulli fits keep
+`trials === nothing`. `n_sites` records the training column count. An AGHQ fit leaves
 `offset === nothing`: its offset is kept in `integration.data.offset`, which the AGHQ
 post-fit route uses.
 """
@@ -169,7 +171,12 @@ struct BinomialFit
     integration::Union{Nothing,AGHQFitInfo}
     loading_ridge::Float64   # the fit's `loading_ridge` kwarg; `Inf` = ridge off
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    trials::Union{Nothing,Matrix{Int}}       # training trials when not Bernoulli; `nothing` = all ones
+    n_sites::Union{Nothing,Int}              # site count at fit time; post-fit shape guard
 end
+# Pre-trials compat tier (13 positional args): no stored trial matrix / site count.
+BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,offset)=
+    BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,offset,nothing,nothing)
 # Pre-offset compat tier (12 positional args): no stored training offset.
 BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge)=
     BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,nothing)
@@ -187,6 +194,12 @@ BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian
 # SAME objective instead of guessing (the audit's confint-consistency class).
 BinomialFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed) =
     BinomialFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, _default_hessian(Binomial(), link))
+
+# Store training trials when the fit was not Bernoulli (all unit trials).
+function _stored_binomial_trials(Nm::AbstractMatrix{<:Integer})
+    all(isone, Nm) && return nothing
+    return Matrix{Int}(Nm)
+end
 # 9-arg tier (with hessian, pre-saturation): saturation defaults to "not computed".
 BinomialFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian::Symbol) =
     BinomialFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
@@ -584,9 +597,10 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             _warn_saturation(_laplace_saturation_health(Yc, Nm, Λ̂, β̂, link, hessian;
                                                         mask = msk), link, Λ̂) : nothing
         _warn_runaway_loadings(Λ̂)
+        trials_store = _stored_binomial_trials(Nm)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters,
                            alpha_hat, collect(Float64, θ̂), hessian, sat, nothing, loading_ridge,
-                           _stored_offset(offset))
+                           _stored_offset(offset), trials_store, n)
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
@@ -605,7 +619,8 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
             _warn_saturation(_laplace_saturation_health(Yc, Nm, Λ̂, β̂, link, hessian;
                                                         mask = msk), link, Λ̂) : nothing
         _warn_runaway_loadings(Λ̂)
+        trials_store = _stored_binomial_trials(Nm)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters, nothing, Float64[], hessian, sat, nothing, loading_ridge,
-                           _stored_offset(offset))
+                           _stored_offset(offset), trials_store, n)
     end
 end

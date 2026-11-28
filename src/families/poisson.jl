@@ -65,17 +65,18 @@ struct PoissonFit
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
     weights::Union{Nothing,Matrix{Float64}}  # observation weights (p×n); `nothing` = unweighted
     optimizer_info::Union{Nothing,OptimizerRecord}
+    n_sites::Union{Nothing,Int}              # site count at fit time; post-fit shape guard
 end
 
 # Preserve the most recent full positional constructor (12 arguments).
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian,
            integration, offset, weights) =
     PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed,
-               hessian, integration, offset, weights, nothing)
+               hessian, integration, offset, weights, nothing, nothing)
 
 # Pre-weights compat tier (11 positional args): an unweighted fit.
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset) =
-    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset, nothing, nothing)
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset, nothing, nothing, nothing)
 
 # Pre-offset compat tier (10 positional args): no stored training offset.
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration) =
@@ -497,7 +498,8 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         return PoissonFit(β̂, Λ̂, link, verdict...,
                           alpha_hat, collect(Float64, θ̂), hessian, nothing, _stored_offset(offset), nothing,
                           _optimizer_record(optimizer, stages; controls = controls,
-                              derivative = derivative_route, actual = actual_optimizer))
+                              derivative = derivative_route, actual = actual_optimizer),
+                          n)
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
@@ -507,6 +509,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         return PoissonFit(β̂, Λ̂, link, verdict..., nothing, Float64[], hessian,
                           nothing, _stored_offset(offset), weights,
                           _optimizer_record(optimizer, stages; controls = controls,
-                              derivative = derivative_route, actual = actual_optimizer))
+                              derivative = derivative_route, actual = actual_optimizer),
+                          n)
     end
 end

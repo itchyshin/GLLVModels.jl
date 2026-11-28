@@ -73,7 +73,7 @@ end
         # New units: the training offset does not apply; an explicit one is required.
         Ynew, Onew = _sim_counts(MersenneTwister(12), p, 20, K)
         @test_throws ArgumentError predict(f, Ynew)
-        @test_throws ArgumentError getLV(f, Ynew)
+        @test_throws DimensionMismatch getLV(f, Ynew)
         Zn = getLV(f, Ynew; rotate = false, offset = Onew)
         for s in 1:20
             ηs = f.β .+ Onew[:, s] .+ f.Λ * Zn[s, :]
@@ -89,7 +89,7 @@ end
         # A fit without an offset keeps nothing and predicts new units as before.
         f0 = fit_poisson_gllvm(Y; K = K)
         @test f0.offset === nothing
-        @test predict(f0, Ynew; type = :link) ≈ f0.β .+ f0.Λ * getLV(f0, Ynew; rotate = false)'
+        @test_throws DimensionMismatch predict(f0, Ynew; type = :link)
     end
 
     @testset "NB2" begin

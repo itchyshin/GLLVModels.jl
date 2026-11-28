@@ -67,7 +67,7 @@ using GLLVModels,Test,Random,LinearAlgebra,Distributions
             sim=simulate(fit,8;rng=MersenneTwister(1))
             @test size(sim)==size(Y) && all(0 .<=sim.<=N)
             @test_throws ArgumentError simulate(fit,9)
-            @test_throws ArgumentError getLV(fit,Y[:,1:4];component=:mean)
+            @test_throws DimensionMismatch getLV(fit,Y[:,1:4];component=:mean)
             @test_throws DimensionMismatch getLV(fit,Y;component=:mean,mask=trues(1,1))
             @test_throws DimensionMismatch getLV(fit,Y[1:1,:];N=N[1:1,:],offset=zeros(1,8),component=:mean)
             @test size(simulate(fit,9;N=fill(4,2,9),offset=zeros(2,9)))==(2,9)

@@ -60,7 +60,7 @@ using Random
         @test size(Z) == (n, K)
         @test Z[:, 1] ≈ [GLLVModels._laplace_mode(Poisson(), Y[:, s], ones(Int, p), fw.Λ, fw.β,
                                                     LogLink(); weights = Wc[:, s])[1] for s in 1:n]
-        @test_throws ArgumentError getLV(fw, Y[:, 1:10])
+        @test_throws DimensionMismatch getLV(fw, Y[:, 1:10])
         @test_throws ArgumentError confint(fw, Y)
         @test_throws ArgumentError loglikelihood(fw)            # gllvmTMB's logLik() aborts too
         @test_throws ArgumentError aic(fw)

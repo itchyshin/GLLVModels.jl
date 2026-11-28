@@ -172,7 +172,7 @@ _register_shard_table!(4, (
         "test_studentt_normalizer_precision.jl", "test_studentt_retained_precision.jl", "test_studentt_grouped_mode_search.jl",
         "test_ordinal_pertrait.jl", "test_ordinal_gradient_gate.jl", "test_ordinal_level_check.jl", "test_ordinal_float_y.jl", "test_ordinal_rowcheck.jl", "test_getlv_rowcheck.jl", "test_fit_gllvm.jl",
         "test_truncated_formula.jl", "test_gaussian_pervar.jl", "test_ledermann_pervar_k.jl",
-        "test_postfit.jl", "test_issue_737_omega_doc.jl", "test_model_selection.jl",
+        "test_postfit.jl", "test_postfit_issues_1475_1476.jl", "test_issue_737_omega_doc.jl", "test_model_selection.jl",
         "test_select_lv_print.jl", "test_binomial_ridge.jl", "test_c1_behaviour_p1.jl",
         "test_structured_cov.jl", "test_symmetric_admission.jl", "test_destination_b_b1_joint_gaussian_paired_fit.jl",
         "test_phylo_latent_twin.jl", "test_destination_b_phylo_reference_checker.jl", "test_destination_b_pedigree_precision.jl",
@@ -273,7 +273,7 @@ _register_shard_table!(8, (
         "test_chibar2_variance_lrt_p1_twin.jl", "test_nb_boundary_restart.jl", "test_gamma_shape_upper_warn.jl",
         "test_nb_cov_two_starts.jl", "test_fit_verdict_gradient.jl", "test_nb_beta_x_identity.jl",
         "test_zip_x_identity.jl", "test_studentt_disp_group.jl", "test_studentt_core070.jl",
-        "test_postfit.jl", "test_vcov_full_covariance.jl", "test_cross_kernel_fit.jl",
+        "test_postfit.jl", "test_postfit_issues_1475_1476.jl", "test_vcov_full_covariance.jl", "test_cross_kernel_fit.jl",
         "test_destination_b_b1_cluster_paired_fit.jl", "test_precision_fit_admission.jl", "test_formula_structured_terms.jl",
         "test_coevolution_kronecker.jl", "test_spde_latent_mode_flag_747.jl", "test_phylo_poisson_xlv.jl",
         "test_xlv_refit_converged.jl", "test_twopart_alloc_equiv.jl", "test_missing_data.jl",
@@ -825,6 +825,7 @@ println(_SHARD === nothing ?
     _shard_include("test_formula_default_x_guard.jl")
     _shard_include("test_aicbic_newfits.jl")
     _shard_include("test_postfit.jl")
+    _shard_include("test_postfit_issues_1475_1476.jl")
     _shard_include("test_issue_737_omega_doc.jl")
     _shard_include("test_statsapi.jl")
     _shard_include("test_vcov_full_covariance.jl")
