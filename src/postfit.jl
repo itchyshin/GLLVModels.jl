@@ -1988,11 +1988,13 @@ function _nparams(fit::GammaFit)
 end
 
 """
-    getLV(fit::GammaFit, Y; rotate=true) -> n×K matrix
+    getLV(fit::GammaFit, Y; X_lv=nothing, component=:total, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a Gamma fit: the per-site Laplace mode `ẑₛ`
 (computed at the fitted shape `α`). `Y` is the p×n matrix of positive reals;
 `rotate=true` applies the canonical [`rotation`](@ref).
+`mask` selects observed cells (when `Y` carries `missing`, the training mask
+is implied if `mask` is omitted). `offset` is the same as in [`predict`](@ref).
 
 On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
 stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
@@ -2030,10 +2032,12 @@ function getLV(fit::GammaFit, Y::_ResponseMatrix;
 end
 
 """
-    predict(fit::GammaFit, Y; type=:response) -> p×n matrix
+    predict(fit::GammaFit, Y; type=:response, X_lv=nothing, mask=nothing, offset=nothing, modes=:refit) -> p×n matrix
 
 In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
 `type=:response` the inverse-link fitted means `linkinv(link, η) = exp(η)` (positive reals).
+`mask` selects observed cells (when `Y` carries `missing`, the training mask is
+implied if `mask` is omitted).
 
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
