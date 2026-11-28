@@ -345,7 +345,12 @@ function _bridge_ci_nboot(options)
     end
     return Int(raw)
 end
-_bridge_ci_seed(options)  = Int(_bridge_get(options, "ci_seed", 0))
+function _bridge_ci_seed(options)
+    raw = _bridge_get(options, "ci_seed", 0)
+    (raw isa Real && isfinite(raw) && isinteger(raw)) || throw(ArgumentError(
+        "bridge_fit: ci_seed must be an integer (got $(repr(raw)))"))
+    return Int(raw)
+end
 
 # Empty CI payload (the "none" default and the skip-with-note cases).
 function _bridge_ci_payload(method::AbstractString, level::Real, note::AbstractString)
