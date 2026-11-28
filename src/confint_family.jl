@@ -4504,3 +4504,11 @@ function _lv_bootstrap(fit, Y, X_lv, N, q_lv::Integer, level::Real,
     return (term = term, estimate = b̂, lower = lo, upper = hi,
             level = level, method = :bootstrap, n_converged = nconv)
 end
+
+# `bootstrap_ci` in `confint_bootstrap.jl` is Gaussian-only; refuse other CI-ready fits here
+# so callers are pointed at `confint(..., method=:bootstrap)` (refs #1494).
+function bootstrap_ci(fit::_CIFit; kwargs...)
+    throw(ArgumentError(
+        "bootstrap_ci is implemented for Gaussian GllvmFit only; for $(nameof(typeof(fit))) " *
+        "use confint(fit, Y; method=:bootstrap, ...)"))
+end
