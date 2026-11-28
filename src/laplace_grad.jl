@@ -467,6 +467,7 @@ end
 # weight (Dual) to match the marginal.
 _beta_score_scalar(η, φ, y) = begin
     μ = 1 / (1 + exp(-η)); me = μ * (1 - μ)
+    y = _clamp_y(Beta(φ, 1.0), y)
     ystar = log(y) - log1p(-y)
     μstar = digamma(μ * φ) - digamma((1 - μ) * φ)
     return φ * (ystar - μstar) * me
@@ -483,10 +484,11 @@ function _beta_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::Abstract
     φ = exp(logφ)
     Λv = ForwardDiff.value.(Λ); βv = ForwardDiff.value.(β); φv = ForwardDiff.value(φ)
     ẑ = _laplace_mode(Beta(φv, 1.0), y, ones(Int, p), Λv, βv, LogitLink(); mask = mask)
+    yc = _clamp_y.(Ref(Beta(φv, 1.0)), y)
 
     # Concrete observed-Hessian weights via AD-derivative of the scalar score.
     ηc = _clamp_eta.(βv .+ Λv * ẑ)
-    Wobs = [-ForwardDiff.derivative(η_ -> _beta_score_scalar(η_, φv, y[t]), ηc[t]) for t in 1:p]
+    Wobs = [-ForwardDiff.derivative(η_ -> _beta_score_scalar(η_, φv, yc[t]), ηc[t]) for t in 1:p]
     if mask !== nothing                           # masked cell: zero weights + score, skip log-pmf
         Wobs = ifelse.(mask, Wobs, zero(eltype(Wobs)))
     end
@@ -495,7 +497,7 @@ function _beta_site_diffable(y::AbstractVector, Λ::AbstractMatrix, β::Abstract
     # Differentiable score at ẑ.
     η = _clamp_eta.(β .+ Λ * ẑ); μ = 1 ./ (1 .+ exp.(-η))
     me = μ .* (1 .- μ)
-    ystar = log.(y) .- log1p.(-y)
+    ystar = log.(yc) .- log1p.(-yc)
     μstar = digamma.(μ .* φ) .- digamma.((1 .- μ) .* φ)
     s = φ .* (ystar .- μstar) .* me
     if mask !== nothing
