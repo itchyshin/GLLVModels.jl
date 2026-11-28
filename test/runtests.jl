@@ -906,6 +906,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_delaunay_scale.jl")
     _shard_include("test_spde_fit.jl")
     _shard_include("test_spde_latent.jl")
+    _shard_include("test_spde_latent_disp_len.jl")
     _shard_include("test_spde_latent_postfit.jl")
     _shard_include("test_spde_latent_binomial_trials.jl")
     _shard_include("test_spde_latent_mode_flag_747.jl")
