@@ -1,3 +1,5 @@
+2026-11-28: #1534 `CensoredPoissonFit` post-fit (`predict`/`fitted`/`residuals`/`simulate`). `julia --project=. test/test_issue_1534_censored_poisson_postfit.jl`: 8/8 pass (cursor-cloud-1128).
+
 2026-11-26: #1450 Gamma + X dispersion route docs (docs-only). `julia --project=. --startup-file=no -e 'include("test/test_gamma_cov_dispersion_routes_1450.jl")'`: 14 passed, 0 failed (shared `GllvmCovFit.dispersion` vs per-trait `GammaGroupedCovFit.α` on `@formula` / `fit_gamma_gllvm_grouped_cov`; docstring guards).
 
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:

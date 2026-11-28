@@ -1228,6 +1228,83 @@ function residuals(fit::PoissonFit, Y::AbstractMatrix;
     return R
 end
 
+"""
+    getLV(fit::CensoredPoissonFit, Y; component=:total, rotate=true, mask=nothing) -> n×K matrix
+
+Latent mode scores for a Laplace censored-Poisson fit. Censor limits are **not**
+stored on the fit; each cell is treated as uncensored at the supplied `Y` when
+solving modes (right-censored fits need the interval matrices used at fit time for
+a faithful refit — not supported here).
+"""
+function getLV(fit::CensoredPoissonFit, Y::AbstractMatrix;
+               component::Symbol = :total,
+               rotate::Bool = true, mask = nothing)
+    component in (:total, :innovation, :mean) ||
+        throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
+    eltype(Y) <: Integer ||
+        throw(ArgumentError("CensoredPoisson getLV requires integer responses"))
+    p, n = size(Y)
+    K = size(fit.Λ, 2)
+    component === :mean && return zeros(Float64, n, K)
+    Nm = zeros(Int, p, n)
+    fam = CensoredPoisson()
+    Z = Matrix{Float64}(undef, K, n)
+    @inbounds for s in 1:n
+        mi = mask === nothing ? nothing : view(mask, :, s)
+        Z[:, s] = _laplace_mode(fam, view(Y, :, s), view(Nm, :, s), fit.Λ,
+                                fit.β, fit.link; mask = mi)
+    end
+    Zt = permutedims(Z)
+    Zout = component === :innovation ? Zt : Zt
+    return rotate ? Zout * _svd_rotation(fit.Λ) : Zout
+end
+
+"""
+    predict(fit::CensoredPoissonFit, Y; type=:response, mask=nothing) -> p×n matrix
+
+In-sample fitted values at the Laplace mode (`type=:link` → `η`, `:response` → `μ`).
+See [`getLV`](@ref) for the uncensored-at-`Y` mode assumption.
+"""
+function predict(fit::CensoredPoissonFit, Y::AbstractMatrix;
+                 type::Symbol = :response, mask = nothing)
+    type in (:link, :response) ||
+        throw(ArgumentError("type must be :link or :response; got :$type"))
+    Z = getLV(fit, Y; mask = mask, rotate = false)
+    η = fit.β .+ fit.Λ * Z'
+    type === :link && return η
+    return linkinv.(Ref(fit.link), η)
+end
+
+"""
+    residuals(fit::CensoredPoissonFit, Y; type=:dunnsmyth, rng=..., mask=nothing) -> p×n matrix
+
+Conditional residuals treating fitted rates as Poisson means (uncensored-at-`Y`
+modes). `:dunnsmyth` and `:pearson` match [`residuals(::PoissonFit)`](@ref).
+"""
+function residuals(fit::CensoredPoissonFit, Y::AbstractMatrix;
+                   type::Symbol = :dunnsmyth,
+                   rng::AbstractRNG = Random.default_rng(),
+                   mask = nothing)
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    p, n = size(Y)
+    μ = predict(fit, Y; type = :response, mask = mask)
+    if type === :pearson
+        return (Y .- μ) ./ sqrt.(max.(μ, 1e-12))
+    end
+    R = Matrix{Float64}(undef, p, n)
+    msk = _resolve_obs_mask(mask, Y)
+    @inbounds for s in 1:n, t in 1:p
+        if msk !== nothing && !msk[t, s]
+            R[t, s] = NaN
+            continue
+        end
+        d = Poisson(μ[t, s])
+        R[t, s] = _ds_z_discrete(d, Y[t, s], rand(rng))
+    end
+    return R
+end
+
 function Base.show(io::IO, ::MIME"text/plain", fit::PoissonFit)
     p, K = size(fit.Λ)
     println(io, "Poisson GLLVM fit")
