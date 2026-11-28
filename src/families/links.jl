@@ -72,7 +72,7 @@ default_link(::NegativeBinomial) = LogLink()
 default_link(::Beta)     = LogitLink()
 default_link(::Gamma)    = LogLink()
 
-"""Refuse unsupported links before Laplace optimisation (refs #1161)."""
+# Refuse unsupported links before Laplace optimisation (refs #1161).
 function _check_laplace_log_link_only(link::Link, caller::AbstractString, family_label::AbstractString)
     link isa LogLink || throw(ArgumentError(
         "$caller: $family_label Laplace fitters support only LogLink; " *
