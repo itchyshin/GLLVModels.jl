@@ -361,6 +361,45 @@ function Base.show(io::IO, f::OrderedBetaFit)
           f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+# Observed interior cells (0 < y < 1); masked / missing cells are skipped.
+function _ordered_beta_interior_observed(Y::AbstractMatrix, mask)
+    p, n = size(Y)
+    vals = Float64[]
+    sizehint!(vals, p * n ÷ 2)
+    @inbounds for t in 1:p, i in 1:n
+        (mask === nothing || mask[t, i]) || continue
+        y = Y[t, i]
+        ismissing(y) && continue
+        yf = float(y)
+        (yf > 0 && yf < 1) || continue
+        push!(vals, yf)
+    end
+    return vals
+end
+
+function _ordered_beta_constant_interior(Y::AbstractMatrix, mask)
+    vals = _ordered_beta_interior_observed(Y, mask)
+    isempty(vals) && return false
+    v0 = vals[1]
+    return all(==(v0), vals)
+end
+
+function _ordered_beta_check_constant_interior(Y::AbstractMatrix, mask; caller::AbstractString)
+    vals = _ordered_beta_interior_observed(Y, mask)
+    isempty(vals) && return nothing
+    v0 = vals[1]
+    all(==(v0), vals) || return nothing
+    throw(ArgumentError("$caller: all observed interior responses (0 < y < 1) are " *
+        "identical (y = $v0; $(length(vals)) cell(s)). There is no interior variation to " *
+        "identify cutpoints and Beta precision on these data."))
+end
+
+# Convergence veto (B): never report `converged = true` on constant-interior data.
+function _ordered_beta_convergence_veto(Y::AbstractMatrix, mask, converged::Bool)
+    converged || return false
+    return !_ordered_beta_constant_interior(Y, mask)
+end
+
 """
     fit_ordered_beta_gllvm(Y; K, c0_init=-1.0, c1_init=1.0, φ_init=nothing, …) -> OrderedBetaFit
 
@@ -376,6 +415,10 @@ Missing data: pass a `mask` (p×n Bool, `false` = unobserved) or simply include
 `missing` entries in `Y` — either way the masked cells are dropped from the
 marginal *and* from the warm start, so the fit depends only on the observed cells
 (it is invariant to whatever sits in the masked positions).
+
+When every observed interior cell carries the same value (`0 < y < 1`), the fitter
+refuses with an `ArgumentError`. A completed fit on such data is also reported as
+not converged (`converged = false`), even if the optimiser accepted the step.
 """
 function fit_ordered_beta_gllvm(Y::AbstractMatrix; K::Integer,
         c0_init::Real = -1.0, c1_init::Real = 1.0, mask = nothing,
@@ -389,6 +432,7 @@ function fit_ordered_beta_gllvm(Y::AbstractMatrix; K::Integer,
     # NA handling: derive the observation mask (explicit `mask`, else from `missing`)
     # and a sanitized response matrix with an in-(0,1) placeholder in masked cells.
     msk = _resolve_obs_mask(mask, Y)
+    _ordered_beta_check_constant_interior(Y, msk; caller = "fit_ordered_beta_gllvm")
     Yc = _sanitize_unobserved(Y, msk, 0.5)
 
     # warm start: empirical logit-mean over interior values (fall back to clamp).
@@ -436,5 +480,7 @@ function fit_ordered_beta_gllvm(Y::AbstractMatrix; K::Integer,
     c0̂ = θ̂[p + rr + 1]
     c1̂ = c0̂ + exp(θ̂[p + rr + 2])
     φ̂  = exp(θ̂[p + rr + 3])
-    return OrderedBetaFit(β̂, Λ̂, c0̂, c1̂, φ̂, _fit_verdict(res)...)
+    ll, conv, iters = _fit_verdict(res)
+    conv = _ordered_beta_convergence_veto(Yc, msk, conv)
+    return OrderedBetaFit(β̂, Λ̂, c0̂, c1̂, φ̂, ll, conv, iters)
 end
