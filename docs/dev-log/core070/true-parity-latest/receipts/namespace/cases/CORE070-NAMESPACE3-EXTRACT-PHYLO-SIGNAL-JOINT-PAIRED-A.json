@@ -1,0 +1,162 @@
+{
+  "schema": "core070-namespace-3-p1-case-receipt/v1",
+  "case_id": "CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A",
+  "verdict": "PASS",
+  "evidence_kind": "numeric_r_vs_julia",
+  "source_ids": [
+    "namespace/export/extract_phylo_signal"
+  ],
+  "batch": "tools/core070_namespace_3_d5_batch.R + .jl via tools/core070_namespace_3_d5_run.sh, GLLVM_PARITY_PIN=P1",
+  "harness_pass": true,
+  "batch_status": "PASS",
+  "batch_verifier": {
+    "tool": "tools/core070_namespace_3_p1_receipts.py",
+    "argv": "--check",
+    "status": "PASS",
+    "accept_marker": "CORE070_NAMESPACE_3_D5_RUN_VERIFIED",
+    "log": "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-3-d5-p1/verify.txt"
+  },
+  "decision_rule": "matched point decides: the comparison block binds the four matched-point quantities; the independent fit is recorded and reported against its bars but does not decide.",
+  "r_call": "gllvmTMB(value ~ 0 + trait + phylo_latent(species, d = 1, tree = tree) + indep(0 + trait | species), unit = 'site', cluster = 'species', family = gaussian(), REML = FALSE, engine = 'tmb'); extract_phylo_signal(fit)",
+  "julia_call": "fit_joint_phylo_grouped_gaussian(Y, phy; rank = 1, phylo_mode = :barelowrank, terms = [GroupingTerm(:cluster; mode = :indep, common = false)], residual_mode = :shared); extract_phylo_signal(fit; species_level = :cluster)",
+  "fixture": "8 species x 3 sites x 3 traits (72 values); fixed tree; seed 4401; one draw, no reseeding",
+  "seed": 4401,
+  "design_sha256": "8396814f3556b18e98c8d61cf4a4e0bac609611d1db752beb41b59bf65b82ede",
+  "frozen_data_sha256": "290d0b6af4fb3c11bae052ad1e3f36a439e00600779e467bd5496106f594fd4b",
+  "raw": [
+    "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-3-d5-p1/julia-results.json",
+    "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-3-d5-p1/R_params_A.csv",
+    "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-3-d5-p1/R_signal_A.csv",
+    "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-3-d5-p1/R_summary_A.csv"
+  ],
+  "pin": "P1",
+  "reference_commit": "9539352f66f2db2cc26b1c393e67212a359b60c9",
+  "contract": "docs/dev-log/core070/true-parity-latest/namespace-3-d5-batch-contract-p1.json",
+  "contract_sha256": "fc6abc00c4d8e8d40b159d365f66881e47a95ce95114566dbd8f459f915ff5de",
+  "gllvmtmb_version": "0.7.1",
+  "gllvmtmb_remote_sha": "absent",
+  "r_version": "4.6.1",
+  "glvmodels_commit": "dae1229a42be22a9a480e12052e1d006755802ff",
+  "glvmodels_worktree_dirty": [],
+  "julia_version": "1.10.12",
+  "threads": {
+    "julia": 1,
+    "openblas": "1",
+    "omp": "1"
+  },
+  "r_elapsed_s": 0.61040186882019,
+  "comparison": {
+    "pin": "P1",
+    "cases": [
+      {
+        "case_id": "CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A",
+        "quantity": "logLik (at R estimates)",
+        "max_abs_diff": 1.4210854715202004e-14,
+        "tolerance": 1e-06,
+        "tolerance_rule": "contract bar at R's estimates, 1e-6 on every quantity; max |R - Julia| elementwise",
+        "n_values": 1,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          -78.295798061428
+        ],
+        "julia_value": [
+          -78.29579806142802
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A",
+        "quantity": "H2 (at R estimates)",
+        "max_abs_diff": 1.4432899320127035e-15,
+        "tolerance": 1e-06,
+        "tolerance_rule": "contract bar at R's estimates, 1e-6 on every quantity; max |R - Julia| elementwise",
+        "n_values": 3,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          0.839488921239483,
+          0.999999988602222,
+          0.0736724373475887
+        ],
+        "julia_value": [
+          0.8394889212394845,
+          0.999999988602222,
+          0.07367243734758823
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A",
+        "quantity": "Psi (at R estimates)",
+        "max_abs_diff": 1.4988010832439613e-15,
+        "tolerance": 1e-06,
+        "tolerance_rule": "contract bar at R's estimates, 1e-6 on every quantity; max |R - Julia| elementwise",
+        "n_values": 3,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          0.160511078760517,
+          1.13977780157035e-08,
+          0.926327562652411
+        ],
+        "julia_value": [
+          0.1605110787605155,
+          1.1397778015703534e-08,
+          0.9263275626524119
+        ],
+        "discriminating": true
+      },
+      {
+        "case_id": "CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A",
+        "quantity": "V_eta (at R estimates)",
+        "max_abs_diff": 9.103828801926284e-15,
+        "tolerance": 1e-06,
+        "tolerance_rule": "contract bar at R's estimates, 1e-6 on every quantity; max |R - Julia| elementwise",
+        "n_values": 3,
+        "diff_source": "recomputed from raw R and Julia values",
+        "r_value": [
+          1.19468481919744,
+          0.607961377752034,
+          0.14760099789494
+        ],
+        "julia_value": [
+          1.194684819197449,
+          0.6079613777520351,
+          0.1476009978949396
+        ],
+        "discriminating": true
+      }
+    ]
+  },
+  "independent_fit": {
+    "note": "recorded and reported; under the decision rule (matched point decides) this block is not part of the binding comparison",
+    "logLik": {
+      "r_value": -78.295798061428,
+      "julia_value": -78.29579805206944,
+      "abs_diff": 9.35855837269628e-09,
+      "bar": 0.0001,
+      "within_bar": true
+    },
+    "H2": {
+      "r_value": [
+        0.839488921239483,
+        0.999999988602222,
+        0.0736724373475887
+      ],
+      "julia_value": [
+        0.8394886224580669,
+        0.9999999999783089,
+        0.07367220640383669
+      ],
+      "max_abs_diff": 2.987814161636848e-07,
+      "bar": 0.001,
+      "within_bar": true
+    },
+    "converged": true,
+    "stopping_reason": "converged",
+    "iterations_cap": 1500
+  },
+  "caveats": [
+    "one data draw with 8 species, no reseeding",
+    "trait 2 sits on the boundary (Psi about 1e-8, H2 about 1)",
+    "at the matched point H2, Psi and V_eta depend only on the loadings and species variances, so they test the name mapping and the formula; logLik is the only tree-sensitive number"
+  ]
+}

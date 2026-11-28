@@ -41,7 +41,7 @@
   },
   {
    "path": "docs/dev-log/core070/true-parity-latest/case-map-namespace.json",
-   "sha256": "641e8095db0ff16b479434e0780276dfc63cb341e7be36457cb7ba6749516dbb",
+   "sha256": "6e4db11afec1c390e8d8001d4b3b64359ff940be10cd288e2f2e87fe48bdc476",
    "rows": 69
   },
   {
@@ -9587,23 +9587,39 @@
    "measured_against": "9539352f66f2db2cc26b1c393e67212a359b60c9",
    "evidence": {
     "receipt": [
+     "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A.json"
+    ],
+    "registration_receipts": [
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/cases/CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE.json",
      "docs/dev-log/core070/true-parity-latest/receipts/namespace/namespace-1-batch-p1/receipt.json"
     ],
-    "batch": "namespace-1 Tier 0 at P1",
-    "verifier": "GLLVM_PARITY_PIN=P1 python3 tools/core070_verify_namespace_1_batch.py <batch> --write-case-receipts <dir> (CORE070_NAMESPACE_1_STATE_OK; row verdicts measured)",
-    "tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)"
+    "registration_case_ids": [
+     "CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE"
+    ],
+    "registration_tier": "registration: R export registered+defined at P1 and a same-named exported Julia Function; a name match, semantics and numeric output not compared (D-295 row 5)",
+    "batch": "namespace-3 (D5) at P1",
+    "verifier": "python3 tools/core070_namespace_3_p1_receipts.py --check (CORE070_NAMESPACE_3_D5_RUN_VERIFIED)",
+    "ruling": "seed 4401, bars 1e-6 at the matched point (1e-4 logLik and 1e-3 H2 for the independent fit) and the rule 'matched point decides' approved by the maintainer on 13 Nov 2026; the numeric case lives in namespace-3-d5-batch-contract-p1.json, the frozen namespace-1 contract is unchanged.",
+    "tier": "numeric: R gllvmTMB phylo_latent + indep species term against Julia fit_joint_phylo_grouped_gaussian (residual_mode = :shared) on one frozen draw (8 species x 3 sites x 3 traits), compared at R's estimates: logLik, H2, Psi, V_eta all within 1e-6. The old name-match registration receipts are kept under registration_receipts."
    },
    "executable_case_ids": [
-    "CORE070-NAMESPACE-EXTRACT-PHYLO-SIGNAL-NATIVE"
+    "CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A"
    ],
-   "reason": "R export(extract_phylo_signal) registered and defined at P1; Julia `phylo_signal` is an exported Function (measured). Name match only.",
+   "reason": "Numeric R-vs-Julia comparison at R's estimates on one frozen draw (seed 4401), gllvmTMB 0.7.1 at the P1 pin. One draw with 8 species; trait 2 is on the boundary; H2, Psi and V_eta at the matched point test the name mapping and the formula, logLik is the only tree-sensitive number.",
    "disposition": null,
-   "evidence_tier": "registration",
+   "evidence_tier": "numeric",
    "measured_result": {
-    "case_verdict": "PASS",
-    "category": "registration_twin",
-    "reason": "R registered and defined; Julia symbol present, exported, a Function"
+    "case_verdicts": {
+     "CORE070-NAMESPACE3-EXTRACT-PHYLO-SIGNAL-JOINT-PAIRED-A": "PASS"
+    },
+    "row_verdict": "PASS",
+    "matched_point_max_abs_diff": {
+     "logLik (at R estimates)": 1.4210854715202004e-14,
+     "H2 (at R estimates)": 1.4432899320127035e-15,
+     "Psi (at R estimates)": 1.4988010832439613e-15,
+     "V_eta (at R estimates)": 9.103828801926284e-15
+    },
+    "independent_fit_within_bars": true
    }
   },
   {
