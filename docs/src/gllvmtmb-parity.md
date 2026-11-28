@@ -274,6 +274,11 @@ not bugs on either side.
 | Dispersion **structure** | per-species by default (`disp.formula = NULL`) | shared scalar by default; per-species via the grouped fitters | route Julia through `fit_*_gllvm_grouped(Y; K, group = 1:p)`, **or** set gllvm `disp.formula = ~1` |
 | Estimation method | default `method = "VA"` | default Laplace; VA available via `fit_*_gllvm_va` | pin matching methods; VA and LA differ in finite samples. The Julia VA posterior covariance is diagonal and gllvm's default is `Lambda.struc = "unstructured"`, so for `K ≥ 2` match it with `control.va = list(Lambda.struc = "diagonal")` |
 | `select_lv` default criterion | `criterion = "bic"`: penalty `log` of the number of observed cells (`p·n` with no missing values) | `criterion = :bic_sites`: penalty `log(n)`, `n` the number of sites | keep the default; pass `criterion = :bic` to reproduce R's choice. The two rules can pick different `K` on the same data |
+| Binomial and Beta link | `link = "probit"` (for `method = "LA"` and the Beta family) | default `LogitLink()` | pass `link = ProbitLink()` to compare with a default `gllvm` fit; otherwise the two fit different models |
+| Covariate scaling | `scale.X = TRUE` (covariates scaled when a fourth-corner model is fitted) | slopes are on the scale of the covariates you pass | standardise `X` yourself, or set `scale.X = FALSE` in `gllvm` |
+| Fourth-corner traits | no argument; `fit$TR` is centred and scaled even with `scale.X = FALSE` | `fit_fourthcorner_gllvm` uses the traits as passed, so raw traits give a different model | standardise the traits first (then the two agree; see #1202) |
+| Tweedie power | `Power = 1.1` is **fixed** unless `Power = NULL` (experimental) | the power is estimated | a default `gllvm` Tweedie fit has one parameter fewer; the "default start" in the Tweedie row above is a starting value only on the Julia side |
+| Ordinal with Laplace | refused in `gllvm` 2.0.15 ("Laplace's method cannot yet handle ordinal data") | no Laplace reference for ordinal | compare against `gllvm` with VA only |
 
 ### Families, dispersion, and measured covariates
 
