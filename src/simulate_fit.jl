@@ -90,22 +90,6 @@ function simulate(fit::BinomialFit, n::Integer;
     return Y
 end
 
-"""
-    simulate(fit::PoissonFit, n; X_lv=nothing, rng=Random.default_rng(),
-             offset=nothing) -> p×n matrix
-
-Poisson simulation. For fits that used `X_lv`, pass the matching n×q_lv predictor
-matrix; the simulator draws `z_total = X_lv * alpha_lv + z` with `z ~ N(0, I_K)`.
-Without `X_lv` this reduces to the ordinary scalar-μ Poisson draw (identical RNG
-stream).
-
-`offset` is a known additive term in `η` (p×n). On a Laplace fit made with an
-offset, `simulate(fit, n)` at the training site count uses the stored training offset
-(the same term as [`predict`](@ref)). Otherwise pass an explicit `offset` (p×n). On
-an AGHQ fit with a non-zero stored offset, simulating a different number of sites than
-the fit needs an explicit `offset` (`ArgumentError`), and a non-finite or wrongly
-shaped `offset` is refused.
-"""
 function _laplace_poisson_simulation_offset(fit::PoissonFit, n::Integer, offset)
     p = size(fit.Λ, 1)
     stored = fit.offset
@@ -126,6 +110,22 @@ function _laplace_poisson_simulation_offset(fit::PoissonFit, n::Integer, offset)
         "Pass simulate(fit, n; offset = O), O a $(p)×$(n) matrix."))
 end
 
+"""
+    simulate(fit::PoissonFit, n; X_lv=nothing, rng=Random.default_rng(),
+             offset=nothing) -> p×n matrix
+
+Poisson simulation. For fits that used `X_lv`, pass the matching n×q_lv predictor
+matrix; the simulator draws `z_total = X_lv * alpha_lv + z` with `z ~ N(0, I_K)`.
+Without `X_lv` this reduces to the ordinary scalar-μ Poisson draw (identical RNG
+stream).
+
+`offset` is a known additive term in `η` (p×n). On a Laplace fit made with an
+offset, `simulate(fit, n)` at the training site count uses the stored training offset
+(the same term as [`predict`](@ref)). Otherwise pass an explicit `offset` (p×n). On
+an AGHQ fit with a non-zero stored offset, simulating a different number of sites than
+the fit needs an explicit `offset` (`ArgumentError`), and a non-finite or wrongly
+shaped `offset` is refused.
+"""
 function simulate(fit::PoissonFit, n::Integer;
                   X_lv::Union{Nothing, AbstractMatrix} = nothing,
                   rng::AbstractRNG = default_rng(),offset=nothing)
