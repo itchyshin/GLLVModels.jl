@@ -431,7 +431,7 @@ end
                 Ya[t, s] = rand(ra, Poisson(exp(η[t])))
             end
         end
-        fa = fit_poisson_gllvm(Ya; K = 1, aghq = 3, offset = Oa)
+        fa = fit_poisson_gllvm(Ya; K = 1, aghq = 3, offset = Oa, iterations = 80, g_tol = 1e-4)
         @test fa.integration.actual === :aghq
         ca = confint(fa, Ya)                           # the offset is on the fit
         @test ca.objective === :aghq
@@ -439,7 +439,7 @@ end
         @test isequal(confint(fa, Ya; offset = Oa).se, ca.se)
         @test_throws ArgumentError confint(fa, Ya; offset = Oa .+ 0.1)
         @test_throws ArgumentError confint(fa, Ya; offset = zeros(pa, na))
-        fl = fit_poisson_gllvm(Ya; K = 1, aghq = 1, offset = Oa)   # Laplace retained
+        fl = fit_poisson_gllvm(Ya; K = 1, aghq = 1, offset = Oa, iterations = 80, g_tol = 1e-4)   # Laplace retained
         @test fl.integration.actual === :laplace
         @test_throws ArgumentError confint(fl, Ya)
         @test confint(fl, Ya; offset = Oa).pd_hessian

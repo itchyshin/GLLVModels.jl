@@ -3577,6 +3577,23 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
     return ad, is_aghq
 end
 
+function _ci_source_converged(fit)
+    return hasproperty(fit, :converged) ? fit.converged : true
+end
+
+function _ci_warn_unconverged_source!(fit, context::AbstractString)
+    hasproperty(fit, :converged) && !fit.converged &&
+        @warn "$(context): the supplied fit did not converge (fit.converged = false); " *
+              "intervals are not reliable at a stationary point" maxlog = 1
+end
+
+function _ci_merge_source_converged(result, fit; method::Symbol)
+    src = _ci_source_converged(fit)
+    result = merge(result, (source_converged = src,))
+    method === :wald && !src && (result = merge(result, (pd_hessian = false,)))
+    return result
+end
+
 """
     confint(fit, Y; method = :wald, level = 0.95, parm = nothing, N = nothing,
             mask = nothing, offset = nothing,
@@ -3708,6 +3725,11 @@ confint(fit, Y; method = :wald)
 confint(fit, Y; method = :profile, parm = "beta[1]")
 confint(fit, Y; method = :bootstrap, n_boot = 500, parallel = true)
 ```
+
+Every result carries `source_converged`, mirroring the supplied fit's `converged`
+field (when present). When `source_converged = false`, a one-time `@warn` is
+emitted and Wald intervals set `pd_hessian = false`, since the Hessian at a
+non-stationary point is not a valid standard-error basis.
 """
 function confint(fit::_CIFit, Y::AbstractMatrix;
                  method::Symbol = :wald,
@@ -3734,19 +3756,24 @@ function confint(fit::_CIFit, Y::AbstractMatrix;
                                         newton_maxiter = newton_maxiter, newton_tol = newton_tol)
     sel = _family_select(parm, ad.names)
     isempty(sel) && throw(ArgumentError("parm selector matched no parameters"))
+    _ci_warn_unconverged_source!(fit, "confint")
     if method === :wald
-        result=_family_wald(ad,sel,level;hessian=is_aghq ? ForwardDiff.hessian(ad.nll,ad.θ) : nothing)
-        return is_aghq ? merge(result,(objective=:aghq,gradient_kind=:frozen_surrogate,)) : result
+        result = _family_wald(ad, sel, level;
+                              hessian = is_aghq ? ForwardDiff.hessian(ad.nll, ad.θ) : nothing)
+        result = _ci_merge_source_converged(result, fit; method = :wald)
+        return is_aghq ? merge(result, (objective = :aghq, gradient_kind = :frozen_surrogate,)) : result
     elseif method === :profile
         result = _family_profile(ad, sel, level;
                                profile_iterations = profile_iterations,
                                profile_g_tol = profile_g_tol,
                                profile_max_expand = profile_max_expand,
                                profile_max_bisect = profile_max_bisect)
-        return is_aghq ? merge(result,(objective=:aghq,gradient_kind=:frozen_surrogate,)) : result
+        result = _ci_merge_source_converged(result, fit; method = :profile)
+        return is_aghq ? merge(result, (objective = :aghq, gradient_kind = :frozen_surrogate,)) : result
     elseif method === :bootstrap
-        result=_family_bootstrap(ad,sel,level,n_boot,seed,parallel;retain_replicates=is_aghq)
-        return is_aghq ? merge(result,(objective=:aghq,gradient_kind=:frozen_surrogate,)) : result
+        result = _family_bootstrap(ad, sel, level, n_boot, seed, parallel; retain_replicates = is_aghq)
+        result = _ci_merge_source_converged(result, fit; method = :bootstrap)
+        return is_aghq ? merge(result, (objective = :aghq, gradient_kind = :frozen_surrogate,)) : result
     else
         throw(ArgumentError("method must be :wald, :profile, or :bootstrap; got :$method"))
     end
