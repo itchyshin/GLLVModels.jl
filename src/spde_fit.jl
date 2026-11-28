@@ -178,6 +178,7 @@ function fit_spde_gaussian(y::AbstractVector, nodes::AbstractMatrix,
     # Precompute the mesh-dependent pieces once.
     Cdiag, G = spde_fem(nodes, tris)
     A = spde_projector(nodes, tris, locs)
+    _spde_warn_absolute_kappa_tau(nodes, locs, κ_init, τ_init, "fit_spde_gaussian")
 
     # Warm start on θ = [log κ, log τ, log σ², μ].
     σ20 = 0.5 * var(yv)

@@ -178,6 +178,23 @@ using GLLVModels: StatsAPI, coef, vcov, nobs, dof, loglikelihood, aic, bic, stde
         @test occursin("Tweedie GLLVM fit", s)
     end
 
+    @testset "IC accessors warn when not converged (#1465)" begin
+        Random.seed!(7)
+        Y_nc = rand(Poisson(2), 4, 10)
+        fit_nc = fit_poisson_gllvm(Y_nc; K = 2, iterations = 2)
+        @test !fit_nc.converged
+        ll = fit_nc.loglik
+        ll_out, aic_out, bic_out = @test_logs (:warn, r"converged == false") begin
+            loglikelihood(fit_nc)
+            loglikelihood(fit_nc)
+            a = aic(fit_nc)
+            b = bic(fit_nc, Y_nc)
+            (loglikelihood(fit_nc), a, b)
+        end
+        @test isfinite(ll_out) && isfinite(aic_out) && isfinite(bic_out)
+        @test ll_out ≈ ll
+    end
+
     # 10. Re-exported symbols check
     @testset "Re-exports in GLLVModels" begin
         @test isdefined(GLLVModels, :coef)
