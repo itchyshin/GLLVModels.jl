@@ -365,7 +365,7 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing,offset=nothing)
-    _check_trait_rows(fit, Y, "getLV")
+    _check_trait_rows(fit, Y, "getLV"; allow_new_sites = offset !== nothing || N !== nothing)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     if _is_binomial_aghq(fit)
@@ -1132,7 +1132,12 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing, offset=nothing)
-    _check_trait_rows(fit, Y, "getLV")
+    Wt = fit.weights
+    allow_new = offset !== nothing
+    Wt !== nothing && size(Y) != size(Wt) &&
+        throw(DimensionMismatch(
+            "getLV: this Poisson fit was weighted; Y must match training size $(size(Wt))"))
+    _check_trait_rows(fit, Y, "getLV"; allow_new_sites = allow_new)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     if _is_poisson_aghq(fit)
@@ -1795,14 +1800,15 @@ end
 # A Y whose row count differs from the fit's trait count used to reach an `@inbounds`
 # per-site mode search and read past the end of the column (garbage indices, then a
 # BoundsError with a meaningless index). Refuse it up front, as a DimensionMismatch.
-function _check_trait_rows(fit, Y::AbstractMatrix, who::AbstractString)
+function _check_trait_rows(fit, Y::AbstractMatrix, who::AbstractString;
+                           allow_new_sites::Bool = false)
     pfit = hasfield(typeof(fit), :Λ) ? size(fit.Λ, 1) :
            hasfield(typeof(fit), :Λc) ? size(fit.Λc, 1) :
            size(fit.pars.Λ, 1)
     size(Y, 1) == pfit || throw(DimensionMismatch(
         "$who: Y has $(size(Y, 1)) rows but the fit has $pfit traits"))
     nfit = _fitted_n_sites(fit)
-    if nfit !== nothing
+    if nfit !== nothing && !allow_new_sites
         size(Y, 2) == nfit || throw(DimensionMismatch(
             "$who: Y has $(size(Y, 2)) columns (sites) but the fit was made with $nfit sites"))
     end
