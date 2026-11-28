@@ -170,7 +170,7 @@ _register_shard_table!(4, (
         "test_studentt_normalizer_precision.jl", "test_studentt_retained_precision.jl", "test_studentt_grouped_mode_search.jl",
         "test_ordinal_pertrait.jl", "test_ordinal_gradient_gate.jl", "test_ordinal_level_check.jl", "test_ordinal_float_y.jl", "test_ordinal_rowcheck.jl", "test_getlv_rowcheck.jl", "test_fit_gllvm.jl",
         "test_truncated_formula.jl", "test_gaussian_pervar.jl", "test_ledermann_pervar_k.jl",
-        "test_postfit.jl", "test_issue_737_omega_doc.jl", "test_model_selection.jl",
+        "test_postfit.jl", "test_postfit_shape_1219.jl", "test_issue_737_omega_doc.jl", "test_model_selection.jl",
         "test_select_lv_print.jl", "test_binomial_ridge.jl", "test_c1_behaviour_p1.jl",
         "test_structured_cov.jl", "test_symmetric_admission.jl", "test_destination_b_b1_joint_gaussian_paired_fit.jl",
         "test_phylo_latent_twin.jl", "test_destination_b_phylo_reference_checker.jl", "test_destination_b_pedigree_precision.jl",
@@ -818,6 +818,7 @@ println(_SHARD === nothing ?
     _shard_include("test_formula_pervar.jl")
     _shard_include("test_formula_default_x_guard.jl")
     _shard_include("test_aicbic_newfits.jl")
+    _shard_include("test_postfit_shape_1219.jl")
     _shard_include("test_postfit.jl")
     _shard_include("test_issue_737_omega_doc.jl")
     _shard_include("test_statsapi.jl")
