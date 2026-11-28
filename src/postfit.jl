@@ -815,8 +815,32 @@ For fit structs that store observation/level counts instead of a response
 matrix (e.g. two-level, random-slope, SPDE), `nobs(fit)` returns the
 cell-count analogue (`p` times the stored unit count) so the convention holds
 without requiring `Y`.
+
+Weighted Poisson fits and trial-structured binomial counts (`N`) do not have
+a maintainer-set grouped-nobs policy yet (refs #1538, #1553): pass `weights=`
+or `N=` to refuse with `ArgumentError`, as does `nobs` on a weighted
+`PoissonFit` (use `bic(fit, n)` with an explicit `n`, or refit without weights).
 """
-function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
+const _NOBS_GROUPED_POLICY_MSG =
+    "the grouped-nobs policy is not set yet: nobs cannot choose an observation " *
+    "count for weighted fits or trial-structured N (refs #1538, #1553). Pass an " *
+    "explicit integer n to bic(fit, n), or refit without weights / with unit trials " *
+    "for the ordinary p·n cell count."
+
+function _nobs_refuse_weighted_or_grouped!(fit; weights = nothing, N = nothing)
+    weights !== nothing && throw(ArgumentError(
+        "nobs(fit, Y; weights=...): " * _NOBS_GROUPED_POLICY_MSG))
+    N !== nothing && throw(ArgumentError(
+        "nobs(fit, Y; N=...): " * _NOBS_GROUPED_POLICY_MSG))
+    fit isa PoissonFit && fit.weights !== nothing &&
+        throw(ArgumentError("nobs(fit, Y) on a weighted Poisson fit: " * _NOBS_GROUPED_POLICY_MSG))
+    return nothing
+end
+
+function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix;
+                       mask = nothing, weights = nothing,
+                       N = nothing)
+    _nobs_refuse_weighted_or_grouped!(fit; weights, N)
     mask !== nothing && return count(mask)
     Missing <: eltype(Y) && return count(!ismissing, Y)
     return length(Y)
@@ -826,7 +850,8 @@ end
 # `nobs(fit, Y)`, and a vector `y` has no such method (#1164). Count it as the single column
 # it is; same rule as the matrix method (mask, then `missing`, then `length`).
 StatsAPI.nobs(fit::Union{PhyloGaussianFit, BranchREFit, MultinomialFit}, y::AbstractVector;
-              mask = nothing) = StatsAPI.nobs(fit, reshape(y, :, 1); mask = mask)
+              mask = nothing, weights = nothing, N = nothing) =
+    StatsAPI.nobs(fit, reshape(y, :, 1); mask = mask, weights = weights, N = N)
 StatsAPI.nobs(fit::TwoLevelFit) = size(fit.Λ_B, 1) * fit.nindiv
 StatsAPI.nobs(fit::GaussianRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::PoissonRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
