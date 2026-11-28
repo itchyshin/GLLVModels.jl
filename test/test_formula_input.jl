@@ -16,3 +16,22 @@ Base.getindex(::FormulaUnreadResponse, ::Int, ::Int) = throw(FormulaResponseRead
         @test_throws FormulaResponseRead gllvm(@formula(y ~ 1),Y,NamedTuple();family=family,K=1)
     end
 end
+
+@testset "formula site_data () refused (refs #1414)" begin
+    using Random
+    Random.seed!(1126)
+    p, n = 3, 20
+    Y = randn(p, n)
+    for family in (GLLVModels.Normal(), GLLVModels.Poisson())
+        err = try
+            gllvm(@formula(y ~ 1), Y, (); family = family, K = 1)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("empty tuple `()`", sprint(showerror, err))
+        @test occursin("NamedTuple()", sprint(showerror, err))
+    end
+    @test gllvm(@formula(y ~ 1), Y, NamedTuple(); family = GLLVModels.Normal(), K = 1) isa GLLVModels.AnyGllvmFit
+end
