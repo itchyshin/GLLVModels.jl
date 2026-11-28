@@ -86,7 +86,8 @@ _link_residual_one(::Binomial, link::Link, μ̂::Real, dispersion) =
 _link_residual_one(::NegativeBinomial, ::LogLink, μ̂::Real, dispersion::Real) =
     trigamma(max(dispersion, 1e-12))
 
-_fit_dispersion_at(disp, t::Integer) = disp isa Real ? disp : disp[t]
+_fit_dispersion_at(disp, ::Integer) = disp
+_fit_dispersion_at(disp::AbstractVector, t::Integer) = disp[t]
 
 # Gamma-log: trigamma(shape). extract-sigma.R 182–183 (nu_hat = 1/σ², the shape).
 # GLLVModels.jl carries the shape α directly (Var = μ²/α), so dispersion == α.
