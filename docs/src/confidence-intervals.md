@@ -16,6 +16,7 @@ using GLLVModels, Distributions
 
 fit = fit_gllvm(Y; family = Poisson(), K = 2)
 
+# Julia defaults to Wald; R `gllvmTMB` defaults to profile (see gllvmtmb-parity.md).
 confint(fit, Y; method = :wald)                          # observed-information Wald
 confint(fit, Y; method = :profile,  parm = "beta[1]")    # profile-likelihood (LRT)
 confint(fit, Y; method = :bootstrap, n_boot = 500)       # parametric bootstrap
