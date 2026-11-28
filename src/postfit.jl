@@ -24,6 +24,22 @@ const AnyGllvmFit = Union{
     TweedieGroupedFit, TweediePerTraitPowerFit
 }
 
+# Wide response matrices that may retain `missing` in the eltype.
+const _ResponseMatrix = AbstractMatrix{<:Union{Missing, Real}}
+
+function _require_laplace_integer_responses(Y, route::AbstractString)
+    T = eltype(Y)
+    T <: Integer && return
+    if Missing <: T
+        Base.nonmissingtype(T) <: Integer && return
+    end
+    throw(ArgumentError("Laplace $(route) currently requires integer responses"))
+end
+
+# When `Y` carries `missing`, default the observation mask to the training cells
+# (same convention as the Laplace fitters' `observed_mask`).
+_training_obs_mask(Y, mask) = mask === nothing && Missing <: eltype(Y) ? observed_mask(Y) : mask
+
 # Loadings accessor — dispatches over the fitted types.
 _loadings(fit::GllvmFit)    = fit.pars.Λ
 _loadings(fit::BinomialFit) = fit.Λ
@@ -313,6 +329,7 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing,offset=nothing)
+    mask = _training_obs_mask(Y, mask)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     if _is_binomial_aghq(fit)
@@ -323,7 +340,7 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
         end
         return _binomial_aghq_scores(fit,Y;N=N,rotate=rotate,mask=mask,offset=offset)
     end
-    eltype(Y)<:Integer || throw(ArgumentError("Laplace binomial getLV requires integer responses"))
+    _require_laplace_integer_responses(Y, "binomial getLV")
     p, n = size(Y)
     O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "getLV")
     Nm = N === nothing ? fill(1, p, n) : N
@@ -402,6 +419,7 @@ function predict(fit::BinomialFit, Y::AbstractMatrix;
                  N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                  X_lv::Union{Nothing, AbstractMatrix} = nothing,mask=nothing,offset=nothing,
                  modes::Symbol = :refit)
+    mask = _training_obs_mask(Y, mask)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     if _is_binomial_aghq(fit)
@@ -1079,6 +1097,7 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing, offset=nothing)
+    mask = _training_obs_mask(Y, mask)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     if _is_poisson_aghq(fit)
@@ -1089,7 +1108,7 @@ function getLV(fit::PoissonFit, Y::AbstractMatrix;
         end
         return _poisson_aghq_scores(fit,Y;rotate=rotate,mask=mask,offset=offset)
     end
-    eltype(Y)<:Integer || throw(ArgumentError("Laplace Poisson getLV currently requires integer responses"))
+    _require_laplace_integer_responses(Y, "Poisson getLV")
     p, n = size(Y)
     # A weighted fit's modes are those of the weighted joint (as gllvmTMB's), which are
     # defined for the training cells only.
@@ -1148,6 +1167,7 @@ function predict(fit::PoissonFit, Y::AbstractMatrix;
                  N::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
                  X_lv::Union{Nothing, AbstractMatrix} = nothing, mask=nothing,offset=nothing,
                  modes::Symbol = :refit)
+    mask = _training_obs_mask(Y, mask)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
     if _is_poisson_aghq(fit)
@@ -1968,11 +1988,13 @@ function _nparams(fit::GammaFit)
 end
 
 """
-    getLV(fit::GammaFit, Y; rotate=true) -> n×K matrix
+    getLV(fit::GammaFit, Y; X_lv=nothing, component=:total, rotate=true, mask=nothing, offset=nothing) -> n×K matrix
 
 Conditional latent-variable scores for a Gamma fit: the per-site Laplace mode `ẑₛ`
 (computed at the fitted shape `α`). `Y` is the p×n matrix of positive reals;
 `rotate=true` applies the canonical [`rotation`](@ref).
+`mask` selects observed cells (when `Y` carries `missing`, the training mask
+is implied if `mask` is omitted). `offset` is the same as in [`predict`](@ref).
 
 On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
 stored training offset (`fit.offset`) when `Y` has the training size, otherwise the
@@ -1980,10 +2002,11 @@ stored training offset (`fit.offset`) when `Y` has the training size, otherwise 
 New units from an offset fit without an `offset` are refused, as gllvmTMB refuses
 `newdata` that lacks the offset variable.
 """
-function getLV(fit::GammaFit, Y::AbstractMatrix{<:Real};
+function getLV(fit::GammaFit, Y::_ResponseMatrix;
                X_lv::Union{Nothing, AbstractMatrix} = nothing,
                component::Symbol = :total,
                rotate::Bool = true, mask = nothing, offset = nothing)
+    mask = _training_obs_mask(Y, mask)
     component in (:total, :innovation, :mean) ||
         throw(ArgumentError("component must be :total, :innovation, or :mean; got :$component"))
     p, n = size(Y)
@@ -2009,10 +2032,12 @@ function getLV(fit::GammaFit, Y::AbstractMatrix{<:Real};
 end
 
 """
-    predict(fit::GammaFit, Y; type=:response) -> p×n matrix
+    predict(fit::GammaFit, Y; type=:response, X_lv=nothing, mask=nothing, offset=nothing, modes=:refit) -> p×n matrix
 
 In-sample fitted values at the Laplace mode: `type=:link` returns `η = β + Λ ẑ`;
 `type=:response` the inverse-link fitted means `linkinv(link, η) = exp(η)` (positive reals).
+`mask` selects observed cells (when `Y` carries `missing`, the training mask is
+implied if `mask` is omitted).
 
 On a fit made with an `offset`, `η` includes it: the stored training offset
 (`fit.offset`) when `Y` has the training size, otherwise the `offset` you pass.
@@ -2022,14 +2047,15 @@ New units from an offset fit without an `offset` are refused (see [`getLV`](@ref
 be the training response. The default `modes = :refit` re-solves the modes (see the
 `PoissonFit` method).
 """
-function predict(fit::GammaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response,
-                 X_lv::Union{Nothing, AbstractMatrix} = nothing, offset = nothing,
-                 modes::Symbol = :refit)
+function predict(fit::GammaFit, Y::_ResponseMatrix; type::Symbol = :response,
+                 X_lv::Union{Nothing, AbstractMatrix} = nothing, mask = nothing,
+                 offset = nothing, modes::Symbol = :refit)
+    mask = _training_obs_mask(Y, mask)
     type in (:link, :response) ||
         throw(ArgumentError("type must be :link or :response; got :$type"))
-    O = _laplace_prediction_offset(fit.offset, Y, offset, nothing, "predict")
+    O = _laplace_prediction_offset(fit.offset, Y, offset, mask, "predict")
     Omode = _prediction_mode_offset(fit, Y, O, modes)
-    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, offset = Omode)
+    Z = getLV(fit, Y; X_lv = X_lv, component = :total, rotate = false, mask = mask, offset = Omode)
     η = fit.β .+ fit.Λ * Z'
     O === nothing || (η .+= O)
     type === :link && return η

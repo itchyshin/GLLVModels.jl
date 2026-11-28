@@ -228,6 +228,15 @@ LaplaceModeWorkspace(::Type{T}, p::Integer, K::Integer) where {T} =
 # A zero weight drops the cell exactly like `mask`. `nothing` takes the unweighted
 # statements unchanged (no multiplication by 1.0), so unweighted results are
 # bit-identical (test/test_weights_byte_identity.jl).
+function _laplace_mode_numeric_y(y::AbstractVector, ::Type{T}) where T
+    out = Vector{T}(undef, length(y))
+    @inbounds for i in eachindex(y)
+        yi = y[i]
+        out[i] = ismissing(yi) ? zero(T) : convert(T, yi)
+    end
+    return out
+end
+
 function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         Λ::AbstractMatrix, β::AbstractVector, link::Link;
         mask = nothing, offset = nothing, weights = nothing, maxiter::Integer = 100, tol::Real = 1e-9,
@@ -250,14 +259,15 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
             Vector{T}(undef, p), Vector{T}(undef, p), Vector{T}(undef, p),
             Matrix{T}(undef, p, K), Matrix{T}(undef, K, K), Vector{T}(undef, K)
         end
+    y_use = Missing <: eltype(y) ? _laplace_mode_numeric_y(y, T) : y
     restarted = false
     for _ in 1:maxiter
         mul!(Λz, Λ, z)
         η  .= _clamp_eta.(β .+ off .+ Λz)
         μ  .= _clamp_mu.(Ref(family), linkinv.(Ref(link), η))
         me .= mu_eta.(Ref(link), η)
-        s  .= _glm_score.(Ref(family), μ, n, me, y)
-        W  .= _laplace_mode_step_weight.(Ref(family), μ, n, me, y, Ref(link), η)
+        s  .= _glm_score.(Ref(family), μ, n, me, y_use)
+        W  .= _laplace_mode_step_weight.(Ref(family), μ, n, me, y_use, Ref(link), η)
         if mask !== nothing
             s .= ifelse.(mask, s, zero(T))        # masked ⇒ no contribution (NaN safe)
             W .= ifelse.(mask, W, zero(T))
@@ -292,7 +302,7 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
         elseif !_laplace_mode_should_backtrack(family)
             z = z .+ Δ
         else
-            q0 = _laplace_mode_logpost(family, y, n, Λ, β, link, z;
+            q0 = _laplace_mode_logpost(family, y_use, n, Λ, β, link, z;
                                        mask = mask, offset = offset, weights = weights)
             if isfinite(q0)
                 accepted = false
@@ -304,7 +314,7 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
                 slack = robust && small ? 1e-10 * (1 + abs(q0)) : zero(q0)
                 @inbounds for _half in 1:30
                     ztrial = z .+ step .* Δ
-                    q1 = _laplace_mode_logpost(family, y, n, Λ, β, link, ztrial;
+                    q1 = _laplace_mode_logpost(family, y_use, n, Λ, β, link, ztrial;
                                                mask = mask, offset = offset, weights = weights)
                     if isfinite(q1) && q1 >= q0 - slack
                         z = ztrial
@@ -319,7 +329,7 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
                         if robust && step == 1.0
                             @inbounds for _dbl in 1:10
                                 zx = z .+ step_taken .* Δ   # z + 2^k Δ from the start
-                                qx = _laplace_mode_logpost(family, y, n, Λ, β, link, zx;
+                                qx = _laplace_mode_logpost(family, y_use, n, Λ, β, link, zx;
                                                            mask = mask, offset = offset, weights = weights)
                                 (isfinite(qx) && qx > q1 + 1e-10 * (1 + abs(q1))) || break
                                 z = zx; q1 = qx; step_taken *= 2
@@ -340,10 +350,10 @@ function _laplace_mode(family, y::AbstractVector, n::AbstractVector,
     # The weighted call passes `weights` on, so a family whose alternative-start search
     # does not take weights fails loudly instead of searching an unweighted objective.
     weights === nothing ||
-        return _laplace_mode_alt_starts(family, z, y, n, Λ, β, link;
+        return _laplace_mode_alt_starts(family, z, y_use, n, Λ, β, link;
                                         mask = mask, offset = offset, weights = weights,
                                         maxiter = maxiter, tol = tol)
-    return _laplace_mode_alt_starts(family, z, y, n, Λ, β, link;
+    return _laplace_mode_alt_starts(family, z, y_use, n, Λ, β, link;
                                     mask = mask, offset = offset, maxiter = maxiter, tol = tol)
 end
 
