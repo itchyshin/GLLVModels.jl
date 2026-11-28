@@ -53,7 +53,7 @@ using GLLVModels, Test, Random, Distributions, LinearAlgebra
         f = @test_logs (:warn, r"saturation region") match_mode = :any begin
             GLLVModels.fit_binomial_gllvm(Y; K = 1, link = GLLVModels.CLogLogLink())
         end
-        @test f.converged                      # the optimizer DID converge on the coded objective
+        @test !f.converged                     # optimizer may stop, but runaway loadings veto converged (#1467)
         @test norm(f.Λ) > 5.0                  # the runaway is real
         @test f.saturation !== nothing
         @test f.saturation.n_clamp > 0

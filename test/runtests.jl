@@ -59,6 +59,7 @@ _register_shard_table!(4, (
         "test_poisson_laplace.jl", "test_truncnb2_dispersion_boundary.jl", "test_truncnb2_pertrait_boundary_restart.jl",
         "test_nb2_precision.jl", "test_negbin_laplace.jl", "test_beta_laplace.jl",
         "test_binomial_fit.jl", "test_poisson_fit.jl", "test_nb_n_init.jl", "test_zero_column_warning.jl",
+        "test_issue_1467_binomial_runaway_converged.jl",
         "test_issue_783_curvature_docs.jl", "test_chibar2_variance_lrt_p1_twin.jl", "test_poisson_grad_perf.jl",
         "test_latte_kernel_identity.jl", "test_grouped_analytic_grad.jl", "test_destination_b_joint_nb2_replication.jl",
         "test_destination_b_quadrature.jl", "test_laplace_alloc_equiv.jl", "test_grouped_dispersion.jl",
@@ -669,6 +670,7 @@ println(_SHARD === nothing ?
     _shard_include("test_ordinal_laplace.jl")
     _shard_include("test_gamma_laplace.jl")
     _shard_include("test_binomial_fit.jl")
+    _shard_include("test_issue_1467_binomial_runaway_converged.jl")
     _shard_include("test_poisson_fit.jl")
     _shard_include("test_poisson_n_init.jl")
     _shard_include("test_poisson_mask_blocks_1249.jl")
