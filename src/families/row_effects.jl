@@ -113,6 +113,18 @@ function Base.show(io::IO, f::RowEffectFit)
     print(io, ", loglik=", round(f.loglik; sigdigits = 7), f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+# NB1 is a plain marker type (not a `Distributions.Distribution`), so the row-effect
+# result structs (`family::Distribution`) cannot hold it: the fit used to run to the end
+# and then stop with a MethodError while building the result (#1238). Refuse up front.
+function _refuse_nb1_row_effect(family, caller::AbstractString, row_eff::Symbol)
+    family isa NB1 && throw(ArgumentError(
+        "$caller: family = NB1() is not supported with a row effect (row_eff = :$row_eff). " *
+        "The fixed and random row-effect routes accept Poisson(), NegativeBinomial(), " *
+        "Binomial(), Beta() and Gamma(); use NegativeBinomial() for overdispersed counts " *
+        "with a row effect, or drop the row effect to fit NB1()."))
+    return nothing
+end
+
 """
     fit_roweffect_gllvm(Y; family, K, link=nothing, N=nothing, …) -> RowEffectFit
 
@@ -146,6 +158,7 @@ function fit_roweffect_gllvm(Y::AbstractMatrix; family,
         N::Union{Nothing, AbstractMatrix} = nothing, mask = nothing,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9)
+    _refuse_nb1_row_effect(family, "fit_roweffect_gllvm", :fixed)
     p, n = size(Y)
     n >= 1 || throw(ArgumentError("Y must have at least one site (column)"))
     rr = rr_theta_len(p, K)
