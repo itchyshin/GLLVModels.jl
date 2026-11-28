@@ -989,6 +989,7 @@ function fit_nb_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3}
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_nb_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:count, Y, msk; caller = "fit_nb_gllvm_grouped_cov")
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]
@@ -1428,6 +1429,13 @@ function _beta_grouped_gradient_restart(negll, res, θ_warm, ls, opts, first_log
     return best
 end
 
+function _check_beta_grouped_link(link::Link, caller::AbstractString)
+    link isa LogitLink || throw(ArgumentError(
+        "$caller: Beta grouped-dispersion Laplace fitters support only LogitLink; " *
+        "got $(nameof(typeof(link)))."))
+    return nothing
+end
+
 """
     fit_beta_gllvm_grouped(Y; K, group, link=LogitLink(), mask=nothing, offset=nothing,
                            hessian=:observed, β_init=nothing, Λ_init=nothing, …) -> BetaGroupedFit
@@ -1467,6 +1475,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
 
     msk = _resolve_obs_mask(mask, Y)
     _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped")
+    _check_beta_grouped_link(link, "fit_beta_gllvm_grouped")
     Yc  = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     offset === nothing || (Zemp .-= offset)
@@ -1608,7 +1617,9 @@ function fit_beta_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_beta_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:beta, Y, msk; caller = "fit_beta_gllvm_grouped_cov")
+    _check_beta_grouped_link(link, "fit_beta_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 0.5)
     Zemp = [linkfun(link, clamp(float(Yc[t, i]), 1e-6, 1 - 1e-6)) for t in 1:p, i in 1:n]
     _mask_warmstart!(Zemp, msk)
@@ -2112,6 +2123,7 @@ function fit_gamma_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real,
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_gamma_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:positive, Y, msk; caller = "fit_gamma_gllvm_grouped_cov")
     Yc = _sanitize_unobserved(Y, msk, 1.0)
     Zemp = log.(max.(Yc, 1e-6))
@@ -2644,6 +2656,7 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     gidx = [findfirst(==(group[t]), labels) for t in 1:p]
 
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(X, "fit_nb1_gllvm_grouped_cov"; obs = msk)
     _check_response_support(:count, Y, msk; caller = "fit_nb1_gllvm_grouped_cov")
     Yc = Integer.(_sanitize_unobserved(Y, msk, 0))
     Zemp = [linkfun(link, max(Yc[t, i] + 0.5, 1e-4)) for t in 1:p, i in 1:n]

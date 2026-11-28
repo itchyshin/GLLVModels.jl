@@ -9,6 +9,7 @@ name: True-parity check negative controls
 # CI per AGENTS.md / the maintainer's GitHub Actions cost discipline.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'tools/true_parity_check.mjs'
       - 'tools/test_true_parity_check.mjs'
@@ -34,6 +35,11 @@ on:
   workflow_dispatch:
 jobs:
   negative-controls:
+    # Drafts that match the paths above skip this job (the check reports
+    # skipped). workflow_dispatch still runs. The paths list itself is
+    # unchanged, so a PR that does not touch those files still does not
+    # start this workflow.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
