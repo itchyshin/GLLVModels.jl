@@ -154,6 +154,13 @@ function poisson_lv_nll_packed(params::AbstractVector, Y::AbstractMatrix,
                                             maxiter = maxiter, tol = tol)
 end
 
+function _check_poisson_laplace_link(link::Link, caller::AbstractString = "fit_poisson_gllvm")
+    link isa Union{LogLink, IdentityLink} || throw(ArgumentError(
+        "$caller: Poisson Laplace fitters support only LogLink and IdentityLink; " *
+        "got $(nameof(typeof(link)))."))
+    return nothing
+end
+
 """
     fit_poisson_gllvm(Y; K, link=LogLink(), mask=nothing, …) -> PoissonFit
 
@@ -201,6 +208,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         g_tol::Real = 1e-5, iterations::Integer = 500,
         newton_maxiter::Integer = 100, newton_tol::Real = 1e-9,
         optimizer = nothing, _warn_zero_columns::Bool = true)
+    _check_poisson_laplace_link(link, "fit_poisson_gllvm")
     p, n = size(Y)
     offset = _normalize_offset(offset, p, n; Y = Y, mask = mask,
                                caller = "_fit_poisson_gllvm_laplace")

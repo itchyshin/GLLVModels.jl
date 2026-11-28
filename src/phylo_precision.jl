@@ -205,15 +205,15 @@ end
 """
     precision_logdet_check(pp::PrecisionPhy) :: (recomputed, shipped, abs_diff)
 
-Recompute `logdet(pp.Q)` independently (dense `cholesky` for the checksum,
-so it never shares code with the sparse Cholesky the likelihood kernel
-uses) and compare against the shipped/recorded `pp.log_det`. A per-fit
-sanity checksum for a bridge-shipped bundle: a mismatch here means the two
-engines built different Q's from what was meant to be one canonical
-precision.
+Recompute `logdet(pp.Q)` independently via a fresh sparse Cholesky factor
+of the stored precision (no densification of `Q`) and compare against the
+shipped/recorded `pp.log_det`. A per-fit sanity checksum for a
+bridge-shipped bundle: a mismatch here means the two engines built
+different Q's from what was meant to be one canonical precision.
 """
 function precision_logdet_check(pp::PrecisionPhy)
-    recomputed = logdet(cholesky(Symmetric(Matrix(pp.Q))))
+    F = cholesky(Symmetric(pp.Q); check = false)
+    recomputed = logdet(F)
     shipped = pp.log_det
     return recomputed, shipped, abs(recomputed - shipped)
 end

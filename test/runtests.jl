@@ -63,7 +63,8 @@ _register_shard_table!(4, (
         "test_latte_kernel_identity.jl", "test_grouped_analytic_grad.jl", "test_destination_b_joint_nb2_replication.jl",
         "test_destination_b_quadrature.jl", "test_laplace_alloc_equiv.jl", "test_grouped_dispersion.jl",
         "test_nb_grouped_poisson_ridge.jl", "test_nb_cov_ridge_polish_grad.jl", "test_beta_grouped_convergence.jl",
-        "test_gamma_x_identity.jl", "test_gamma_fit.jl", "test_tweedie_engine_health.jl",
+        "test_gamma_x_identity.jl", "test_gamma_cov_dispersion_routes_1450.jl", "test_gamma_fit.jl",
+        "test_tweedie_engine_health.jl",
         "test_tweedie_grouped_engine_health.jl", "test_tweedie_cdf.jl", "test_exponential.jl",
         "test_studentt.jl", "test_studentt_input_validation.jl", "test_studentt_boundary_honesty.jl",
         "test_mode_search_623.jl", "test_ordinal_probit.jl", "test_unified_api.jl",
@@ -83,6 +84,7 @@ _register_shard_table!(4, (
         "test_formula_input.jl", "test_row_random.jl", "test_rrr.jl",
         "test_ordination_uncertainty.jl", "test_ordered_beta.jl", "test_ordered_beta_mode_search.jl",
         "test_variational.jl", "test_va_vs_laplace.jl", "test_va_objective_missing_nan.jl", "test_bridge_ci.jl",
+        "test_bridge_ci_seed_1246.jl",
         "test_bridge_capabilities.jl", "test_phylo_eta_realized.jl", "test_bridge_missing_mask.jl",
         "test_known_sentinel_defects.jl", "test_edge_incidence_solveQ.jl", "test_branch_re_convergence.jl",
         "test_family11_p1_boundary.jl", "test_ordinal_link_input.jl", "test_em_phylo.jl",
@@ -180,7 +182,8 @@ _register_shard_table!(4, (
         "test_precision_objective_failures.jl", "test_grouped_nongaussian_postfit.jl", "test_formula_sources.jl",
         "test_formula_structured_terms.jl", "test_gaussian_source_bindings.jl", "test_phylo_precision_animal.jl",
         "test_coevolution_kronecker.jl", "test_spde_delaunay.jl", "test_spde_fit.jl",
-        "test_spde_latent_postfit.jl", "test_spde_converged_at_start_1220.jl", "test_phylo_binomial_xlv_mode.jl", "test_delta_fit.jl",
+        "test_spde_latent_postfit.jl", "test_spde_converged_at_start_1220.jl",
+        "test_spde_absolute_init_warn_1220.jl", "test_phylo_binomial_xlv_mode.jl", "test_delta_fit.jl",
         "test_delta_postfit.jl", "test_hurdle_poisson.jl", "test_hurdle_nb.jl",
         "test_delta_gamma.jl", "test_missing_data.jl", "test_missing_response_extra.jl",
         "test_missing_predictor_poisson.jl", "test_missing_predictor_multi.jl", "test_nb_grouped_wald_speed_552.jl",
@@ -201,7 +204,7 @@ _register_shard_table!(4, (
         "test_temporal_composed.jl", "test_isdm.jl", "test_zip_observed_laplace.jl",
         "test_tweedie_speed.jl", "test_clamp_and_replicate_retention_docs.jl", "test_lambda_constraint_wald_794.jl",
         "test_comparator_targets.jl", "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl",
-        "test_confint_na_y.jl",
+        "test_confint_na_y.jl", "test_confint_y_keyword_1524.jl",
     ),
     (
         "test_likelihood.jl", "test_packing.jl", "test_docstring_animal_dep_twin.jl",
@@ -418,6 +421,7 @@ _register_shard_table!(8, (
         "test_spde_projector_validation.jl", "test_docstring_ref_linebreaks.jl", "test_comparator_targets.jl",
         "test_core070_covariance_registry.jl", "test_predictive_check_binomial.jl", "test_bootstrap_sigma_r.jl",
         "test_link_residual_undefined_link.jl",
+        "test_issue_1161_link_check.jl",
     ),
     (
         "test_W_and_diag.jl", "test_signed_sigma_phy.jl", "test_precision_multivariate.jl",
@@ -428,6 +432,7 @@ _register_shard_table!(8, (
         "test_truncnb2_pertrait_boundary_restart.jl", "test_nb2_precision.jl", "test_beta_laplace.jl",
         "test_boundary_inference.jl", "test_masked_dispersion_grad.jl", "test_grouped_dispersion.jl",
         "test_nb_grouped_upper_warn.jl", "test_grouped_init_kwargs.jl", "test_gamma_x_identity.jl",
+        "test_gamma_cov_dispersion_routes_1450.jl",
         "test_grouped_getlv_offset.jl", "test_zinb_cov_iterations.jl", "test_tweedie.jl",
         "test_exponential.jl", "test_mode_search_623.jl", "test_ordination.jl",
         "test_c1_behaviour_p1.jl", "test_destination_b_a4_s4_public_r_formula_receipt.jl", "test_formula_sources.jl",
@@ -759,6 +764,7 @@ println(_SHARD === nothing ?
     _shard_include("test_grouped_getlv_mode.jl")
     _shard_include("test_nb_beta_x_identity.jl")
     _shard_include("test_gamma_x_identity.jl")
+    _shard_include("test_gamma_cov_dispersion_routes_1450.jl")
     _shard_include("test_gamma_grouped_mode_search.jl")
     _shard_include("test_beta_grouped_mode_search.jl")
     _shard_include("test_grouped_getlv_offset.jl")
@@ -912,6 +918,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_latent_binomial_trials.jl")
     _shard_include("test_spde_latent_mode_flag_747.jl")
     _shard_include("test_spde_converged_at_start_1220.jl")
+    _shard_include("test_spde_absolute_init_warn_1220.jl")
     _shard_include("test_phylo_glm.jl")
     _shard_include("test_phylo_glm_families.jl")
     _shard_include("test_phylo_poisson_xlv.jl")
@@ -948,6 +955,7 @@ println(_SHARD === nothing ?
     _shard_include("test_masked_gaussian_converged_735.jl")   # #735
     _shard_include("test_fix_1107.jl")   # #1107 derive Gaussian mask from missing
     _shard_include("test_confint_na_y.jl")   # #1144 confint / profile_ci / bootstrap_ci refuse missing / NaN in y
+    _shard_include("test_confint_y_keyword_1524.jl")
     _shard_include("test_na_input_maskless_gaussian.jl")   # #1147 typed error for missing / NaN on maskless Gaussian fitters
     _shard_include("test_missing_predictor_fiml.jl")
     _shard_include("test_missing_predictor_phylo.jl")
@@ -1048,6 +1056,7 @@ println(_SHARD === nothing ?
     _shard_include("test_bridge_ci.jl")
     _shard_include("test_bridge_ci_nan_note_1157.jl")
     _shard_include("test_bridge_ci_nboot.jl")
+    _shard_include("test_bridge_ci_seed_1246.jl")
     _shard_include("test_bridge_grouped_dispersion.jl")
     _shard_include("test_bridge_capabilities.jl")
     _shard_include("test_mixed_mode_search.jl")
@@ -1280,6 +1289,7 @@ println(_SHARD === nothing ?
     # link_residual on undefined (family, link) pairs throws ArgumentError (refs #1161).
     # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
     _shard_include("test_link_residual_undefined_link.jl")
+    _shard_include("test_issue_1161_link_check.jl")
     # Lane cursor-cloud-1124d: fast coverage tests for validation/show/accessor branches.
     _shard_include("test_cov_1124d_source_bridge.jl")
     _shard_include("test_cov_1124d_spde.jl")
