@@ -129,8 +129,8 @@ function spde_mesh_delaunay(points::AbstractMatrix)
     # ordinary (extent >= 1) coordinates; shrink it with extent^4 below that
     # so a 1e-8 domain does not mark every triangle bad (#748).
     incircle_tol = 1e-10 * (extent > 0.0 ? min(extent, 1.0)^4 : 0.0)
-    # Super-triangle still uses a floor of 1 so order-1 construction is unchanged.
-    delta = max(extent, 1.0)
+    # Super-triangle: floor of 1, then x1000 so the hull is never clipped (#1221).
+    delta = 1e3 * max(extent, 1.0)
 
     # Centre of the bounding box.
     midx = (xmin + xmax) / 2

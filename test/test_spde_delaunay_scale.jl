@@ -1,4 +1,4 @@
-using GLLVModels, Test
+using GLLVModels, Test, Random
 
 # Geometry-only checks. No SPDE fit, no precision matrix.
 
@@ -58,5 +58,52 @@ end
                                    nodes_t[b, 1], nodes_t[b, 2],
                                    nodes_t[c, 1], nodes_t[c, 2]) > 0
         end
+    end
+end
+
+# Hull coverage (#1221): the mesh must cover the whole convex hull.
+function _hull_vertices(P)
+    idx = sortperm(1:size(P, 1); by = i -> (P[i, 1], P[i, 2]))
+    cr(o, a, b) = (P[a, 1] - P[o, 1]) * (P[b, 2] - P[o, 2]) - (P[a, 2] - P[o, 2]) * (P[b, 1] - P[o, 1])
+    function half(order)
+        h = Int[]
+        for i in order
+            while length(h) >= 2 && cr(h[end-1], h[end], i) <= 0
+                pop!(h)
+            end
+            push!(h, i)
+        end
+        pop!(h)
+        return h
+    end
+    return vcat(half(idx), half(reverse(idx)))
+end
+
+@testset "SPDE Delaunay covers the full convex hull (#1221)" begin
+    for scale in (1e-3, 1.0, 1e3), seed in (1, 2, 3), N in (30, 200)
+        rng = Random.MersenneTwister(seed)
+        pts = scale .* (rand(rng, N, 2) .+ [5.0 -3.0])
+        nodes, tris = GLLVModels.spde_mesh_delaunay(pts)
+        hull = _hull_vertices(pts)
+        H = length(hull)
+        hx = pts[hull, 1]; hy = pts[hull, 2]
+        hull_area = 0.5 * abs(sum(hx .* circshift(hy, -1) .- circshift(hx, -1) .* hy))
+        @test _mesh_area(nodes, tris) ≈ hull_area rtol = 1e-9
+        @test size(tris, 1) == 2N - 2 - H
+    end
+end
+
+@testset "SPDE Delaunay hull coverage with large coordinate offset (#1221)" begin
+    # UTM-style: small cluster far from the origin (offset >> extent).
+    for off in (5e5, 1e6), seed in (1, 2), N in (30, 100)
+        rng = Random.MersenneTwister(seed)
+        pts = 1e3 .* rand(rng, N, 2) .+ [off off / 2]
+        nodes, tris = GLLVModels.spde_mesh_delaunay(pts)
+        hull = _hull_vertices(pts)
+        H = length(hull)
+        hx = pts[hull, 1]; hy = pts[hull, 2]
+        hull_area = 0.5 * abs(sum(hx .* circshift(hy, -1) .- circshift(hx, -1) .* hy))
+        @test _mesh_area(nodes, tris) ≈ hull_area rtol = 1e-6
+        @test size(tris, 1) == 2N - 2 - H
     end
 end
