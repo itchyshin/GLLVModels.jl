@@ -618,8 +618,15 @@ getLV(fr, X)       # n×K deterministic site scores z_s = B' x_s
 
 For a familiar R-`gllvmTMB`-style interface, the `@formula` front end maps a
 formula plus a site-level data table onto the engine (v1: an intercept +
-continuous main effects; dispatches to `fit_gaussian_gllvm` for `Normal()` and
-`fit_gllvm_cov` otherwise):
+continuous main effects). It dispatches to `fit_gaussian_gllvm` for `Normal()`,
+to `fit_gllvm_cov` for Poisson and Binomial (shared dispersion + X where the
+family has one), and to the per-trait `fit_*_gllvm_grouped_cov` routes for
+NB2, Beta, Gamma, and NB1 under X — **not** to `fit_gllvm_cov` for those
+families. For Gamma + site covariates, prefer
+`gllvm(@formula(y ~ 1 + x), …; family = Gamma())` or
+`fit_gamma_gllvm_grouped_cov` rather than
+`fit_gllvm_cov(Y; family = Gamma(), X = X, …)` (shared shape φ; different
+log-likelihood on the same data when `p > 1`).
 
 ```julia
 gllvm(@formula(y ~ 1 + temp + depth), Y, site_data; family = Poisson(), K = 2)

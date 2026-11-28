@@ -210,8 +210,14 @@ beta-binomial route also threads a binomial-style `N` trial-count kwarg), to
 shared site-X), to [`fit_zip_gllvm_cov`](@ref) for `ZIPoisson()` (separate
 `γz`/`γc`, `Λz=0`; Julia-forward), to [`fit_zinb_gllvm_cov`](@ref) for
 `ZINegBin()` (separate `γz`/`γc`, `Λz=0`, shared scalar `r`; Julia-forward),
-and to [`fit_gllvm_cov`](@ref) for the other non-Gaussian families (shared
-dispersion + X). Returns that fitter's result.
+and to [`fit_gllvm_cov`](@ref) for the other non-Gaussian families with
+covariates (Poisson, Binomial, … — **shared** dispersion + X where applicable).
+With covariates, `Gamma()`, `Beta()`, `NegativeBinomial()`, `NB1()`, and
+beta-binomial **do not** use `fit_gllvm_cov`; they use the grouped covariate
+fitters above (per-trait φ/α/`r` + shared `γ`). A direct matrix call
+`fit_gllvm_cov(Y; family = Gamma(), X = X, …)` keeps one shared Gamma shape and
+is a different estimand — compare `loglik` only within the same route. Returns
+that fitter's result.
 For `Normal()`, `pervar=true` instead selects
 [`fit_gaussian_pervar_gllvm`](@ref). This route constructs the complete mean:
 `y ~ 1 + x` (or `y ~ x`) has trait-specific intercepts and a shared slope;
