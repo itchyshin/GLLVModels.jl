@@ -1061,6 +1061,7 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
     _check_unpinned_refit(fit, "profile_ci_derived")
     y === nothing && throw(ArgumentError(
         "profile_ci_derived requires the data matrix `y`"))
+    y = _gaussian_fit_y(fit, y)
     X = _mean_X(fit, X, size(y, 2))
 
     θ̂ = fit.pars.θ_packed

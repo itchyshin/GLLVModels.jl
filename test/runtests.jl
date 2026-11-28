@@ -142,6 +142,7 @@ _register_shard_table!(4, (
         "test_confint_hessian_twopart_truncnb2.jl", "test_grouped_hessian_consistency.jl", "test_saturation_health.jl",
         "test_phylo_branch_re.jl", "test_branch_re_marginal_fallback.jl", "test_core070_interface_registry.jl",
         "test_core070_shape_boundaries.jl", "test_cv_unsupported_773.jl", "test_gaussian_intercept.jl",
+        "test_issue_1419_large_mean.jl",
         "test_dunn_smyth_tail_767.jl", "test_predict_delta_shared_820.jl", "test_namespace_gaussian_w1_p1.jl",
         "test_confint_inspect_p1.jl", "test_data_twins_p1.jl", "test_predict_offset_twin_p1.jl",
         "test_off_mixed_twin_p1.jl", "test_destination_b_s4_public_phylo_dep_probe_harness.jl", "test_temporal_api.jl",
@@ -438,6 +439,7 @@ _register_shard_table!(8, (
         "test_bridge_grouped_dispersion.jl", "test_phylo_eta_realized.jl", "test_edge_incidence_solveQ.jl",
         "test_branch_re_marginal_fallback.jl", "test_em_phylo.jl", "test_em_squarem.jl",
         "test_em_squarem_safety.jl", "test_cv.jl", "test_gaussian_intercept.jl",
+        "test_issue_1419_large_mean.jl",
         "test_namespace_numeric_p1_twin.jl", "test_temporal_oracles.jl", "test_temporal_fit_receipts.jl",
         "test_zip_zinb_stall.jl", "test_zerostep_verdict_sweep.jl", "test_robustness_sweep.jl",
         "test_clamp_and_replicate_retention_docs.jl", "test_wtier_crosscov.jl", "test_phylo_sparse_solvers.jl",
@@ -1101,6 +1103,7 @@ println(_SHARD === nothing ?
     _shard_include("test_cv_species_binomial_trials.jl")
     _shard_include("test_cv_grouped_dispersion_1211.jl")
     _shard_include("test_gaussian_intercept.jl")
+    _shard_include("test_issue_1419_large_mean.jl")
     _shard_include("test_gaussian_formula_covariates.jl")
     _RUN_QUALITY && include("test_quality.jl")
     _shard_include("test_loading_profile_stage0.jl")

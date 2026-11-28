@@ -86,6 +86,19 @@ end
 
 _reset_unidentified_warnings!() = (lock(() -> empty!(_UNIDENTIFIED_WARNED), _UNIDENTIFIED_LOCK); nothing)
 
+"""Apply the per-trait mean shift used at fit time for zero-mean Gaussian fits."""
+function _gaussian_fit_y(fit::GllvmFit, y::AbstractMatrix)
+    m = fit.pars isa NamedTuple && hasproperty(fit.pars, :y_trait_mean) ?
+        getproperty(fit.pars, :y_trait_mean) : nothing
+    if m === nothing
+        return y
+    end
+    p = size(y, 1)
+    Yc = Matrix{Float64}(y)
+    Yc .-= reshape(m, p, 1)
+    return Yc
+end
+
 """
     fit_gaussian_gllvm(y; K, K_W=0, has_diag=false, K_phy=0,
                        has_phy_unique=false, Σ_phy=nothing, X=nothing,
@@ -224,6 +237,22 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
                             optimizer = nothing,
                             _sufficient_stat::Bool = false)
     p, n = size(y)
+    y = Matrix{Float64}(y)
+    # Documented zero-mean fits (`X = nothing`) match gllvmTMB / bridge convention:
+    # trait means are removed before optimisation so PPCA warm starts and the
+    # profiled objective are not driven by large per-trait constants (#1419).
+    y_trait_mean = nothing
+    if X === nothing
+        row_means = vec(mean(y, dims = 2))
+        # Centring only when per-trait constants dominate the scale (#1419). Small
+        # row means (synthetic fixtures, already-centred data) are left untouched
+        # so profile-derived pins and interior CIs stay aligned with main.
+        center_tol = max(10.0, 0.1 * maximum(std(y, dims = 2; corrected = true)))
+        if maximum(abs, row_means) > center_tol
+            y_trait_mean = row_means
+            y .-= reshape(y_trait_mean, p, 1)
+        end
+    end
     default_optimizer = Optim.LBFGS()
     outer_optimizer = _optimizer_method(optimizer, default_optimizer; route = "fit_gaussian_gllvm")
     stages = OptimizerStage[]
@@ -538,6 +567,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
              Λ_phy = Λ_phy_hat,
              σ_phy = σ_phy_hat,
              Σ_phy = Σ_phy,
+             y_trait_mean = y_trait_mean,
              θ_packed = θ_packed_lv),
             # screened verdict (2026-08-28): a run stranded on the PosDef
             # sentinel plateau must not report converged=true.
@@ -722,6 +752,7 @@ function _fit_gaussian_gllvm_exact(y::AbstractMatrix;
          σ²_W = rec.σ²_W,
          Λ_phy = rec.Λ_phy,
          σ_phy = rec.σ_phy,
+         y_trait_mean = y_trait_mean,
          θ_packed = θ_packed_legacy),
         rec.logLik,
         Optim.iterations(res),
