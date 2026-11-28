@@ -452,6 +452,14 @@ function gllvm(formula::FormulaTerm, long_data; family = Normal(),
                K::Union{Integer, _FormulaKUnset} = _FORMULA_K_UNSET,
                species::Symbol = :species, site::Symbol = :site,
                contrasts::AbstractDict = Dict{Symbol, Any}(), kwargs...)
+    if long_data isa AbstractMatrix
+        throw(ArgumentError(
+            "a wide species×sites response matrix was passed to the long-format " *
+            "`gllvm(formula, long_data)` entry point; long data must be a table with " *
+            "response, species, and site columns. For a wide matrix `Y`, use " *
+            "`fit_gllvm(Y; ...)` or supply a site table as the third argument, e.g. " *
+            "`gllvm(formula, Y, (site = collect(1:size(Y, 2)),; ...)`."))
+    end
     cols = Tables.columntable(long_data)
     formula.lhs isa Term || throw(ArgumentError(
         "long-format gllvm needs a single response column on the formula LHS; got $(formula.lhs)"))
