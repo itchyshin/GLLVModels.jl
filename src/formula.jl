@@ -180,6 +180,13 @@ function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false,
     return X
 end
 
+function gllvm(Y::AbstractMatrix; kwargs...)
+    throw(ArgumentError(
+        "matrix-first fitting does not use `gllvm`; pass a `@formula` as the first argument " *
+        "(e.g. `gllvm(@formula(y ~ 1), Y, site_data; family, K)`). For a species×sites matrix alone, " *
+        "use `fit_gllvm(Y; family, K)` or `fit_gaussian_gllvm(Y; K)` when `family = Normal()`."))
+end
+
 """
     gllvm(formula, Y, data; family = Normal(), K, sources = nothing,
           contrasts = Dict(), kwargs...)
