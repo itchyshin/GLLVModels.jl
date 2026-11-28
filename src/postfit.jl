@@ -3056,6 +3056,89 @@ function Base.show(io::IO, ::MIME"text/plain", fit::ZIBFit)
 end
 
 # ---------------------------------------------------------------------------
+# Student-t post-fit (identity link, fixed or per-trait ν and σ).
+# ---------------------------------------------------------------------------
+
+_loadings(fit::StudentTFit) = fit.Λ
+_loglik(fit::StudentTFit)   = fit.loglik
+
+function _studentt_site_fams(fit::StudentTFit)
+    p = size(fit.Λ, 1)
+    σ, ν = fit.σ, fit.ν
+    if σ isa AbstractVector && ν isa AbstractVector
+        return [StudentTFamily(ν[t], σ[t]) for t in 1:p]
+    elseif σ isa AbstractVector
+        return [StudentTFamily(ν, σ[t]) for t in 1:p]
+    elseif ν isa AbstractVector
+        return [StudentTFamily(ν[t], σ) for t in 1:p]
+    else
+        return [StudentTFamily(ν, σ) for t in 1:p]
+    end
+end
+
+"""
+    getLV(fit::StudentTFit, Y; rotate=true) -> n×K matrix
+
+Conditional latent-variable scores: the per-site Laplace mode `ẑₛ` at the fitted
+`ν` and `σ`.
+"""
+function getLV(fit::StudentTFit, Y::AbstractMatrix{<:Real}; rotate::Bool = true)
+    p, n = size(Y)
+    K = size(fit.Λ, 2)
+    ones_p = ones(Int, p)
+    Z = Matrix{Float64}(undef, K, n)
+    fams = _studentt_site_fams(fit)
+    shared = fit.σ isa Real && fit.ν isa Real
+    @inbounds for s in 1:n
+        if shared
+            Z[:, s] = _laplace_mode(fams[1], view(Y, :, s), ones_p, fit.Λ, fit.β, fit.link)
+        else
+            z, _ = _studentt_grouped_mode(fams, view(Y, :, s), ones_p, fit.Λ, fit.β, fit.link)
+            Z[:, s] = z
+        end
+    end
+    Zt = permutedims(Z)
+    return rotate ? Zt * _svd_rotation(fit.Λ) : Zt
+end
+
+"""
+    predict(fit::StudentTFit, Y; type=:response) -> p×n matrix
+
+`:link` and `:response` both return the location `η = β + Λ ẑ` (identity link).
+"""
+function predict(fit::StudentTFit, Y::AbstractMatrix{<:Real}; type::Symbol = :response)
+    type in (:link, :response) ||
+        throw(ArgumentError("type must be :link or :response; got :$type"))
+    Z = getLV(fit, Y; rotate = false)
+    return fit.β .+ fit.Λ * Z'
+end
+
+"""
+    residuals(fit::StudentTFit, Y; type=:dunnsmyth, rng=Random.default_rng()) -> p×n matrix
+
+`:dunnsmyth` randomized quantile residuals under the fitted location–scale t;
+`:pearson` returns `(Y − μ) / σ`.
+"""
+function residuals(fit::StudentTFit, Y::AbstractMatrix{<:Real};
+                   type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng())
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    p, n = size(Y)
+    μ = predict(fit, Y; type = :response)
+    σ_vec = fit.σ isa Real ? fill(fit.σ, p) : fit.σ
+    ν_vec = fit.ν isa Real ? fill(fit.ν, p) : fit.ν
+    if type === :pearson
+        return (Y .- μ) ./ σ_vec
+    end
+    R = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        u = cdf(TDist(ν_vec[t]), (Y[t, s] - μ[t, s]) / σ_vec[t])
+        R[t, s] = quantile(Normal(), clamp(u, 1e-12, 1 - 1e-12))
+    end
+    return R
+end
+
+# ---------------------------------------------------------------------------
 # Tweedie post-fit (compound Poisson–Gamma, power 1 < p < 2; mean μ = exp(η),
 # dispersion φ, Var = φ μ^p; point mass at 0 plus a positive continuous part).
 # Scalar-μ family, mirroring Gamma; the Tweedie CDF is mixed (atom at 0 + density
