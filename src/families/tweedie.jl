@@ -78,7 +78,7 @@ function _tweedie_logA(y::Float64, φ::Float64, p::Float64)
         end
     end
     drop = 37.0
-    cap = 5000
+    cap = clamp(10 * sqrt(float(j0)) + 100, 5000, 400000)
     s = 1.0                                # sum of exp(logW_j - w0), mode term = 1
     j = j0 + 1
     while j <= j0 + cap
