@@ -270,3 +270,22 @@ GLLVModels._isdm_cloglog_obs_weight
 GLLVModels._isdm_cell_mode
 GLLVModels._isdm_cell_loglik
 ```
+
+
+## Prior-table fit and convergence internals
+
+These entries describe the penalized source-fit result and the internal checks
+used to assess convergence. The underscore-prefixed functions are implementation
+details and do not extend the public fitting interface.
+
+```@docs
+GLLVModels.PenalizedGaussianSourcesFit
+GLLVModels.FitConvergence
+GLLVModels._fit_convergence
+GLLVModels._fit_fd_hessian_from_gradient
+GLLVModels._fit_hessian_pd
+GLLVModels._fit_projected_gradient
+GLLVModels._fit_fd_gradient
+GLLVModels._fit_natural_positive_score
+GLLVModels._fit_objective_verdict
+```

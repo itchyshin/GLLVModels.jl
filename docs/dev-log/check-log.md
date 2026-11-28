@@ -22355,3 +22355,14 @@ Two defects from an independent review, each reproduced by a failing test first.
 - Optimizer point binding (reproduced; fixed). `_optimizer_binding` checked only the length of the optimizer point and that the reconstruction used the same point. A point of `[123.0]` with `parameters` at `[0.0, 0.0]` still gave FIT_HEALTH_PASS under the flag. The point must now equal, as exact values with no tolerance, the packed `parameters` with the log sigma slot (index `q_free + 1`) removed. A mismatch is INCOMPLETE, as every other binding error in `_certify_fit` is; a recorded FAIL is untouched because `_classify` returns it before the certifier.
 - PASS requires `confirmable` (reproduced; fixed). `_classify` accepted a PASS when every per-fit verdict was PASS, even if `certify_evidence` reported the case set unconfirmable or a fit's own `confirmable` False (the evidence binding). It now also needs the overall `confirmable` and `confirmable is True` on every certificate.
 - Tests: `FifthReviewTests` (3). Pinned bytes change in `tools/core070_postcoef_fit_health.py` and `tools/test_postcoef_numerical_admission.py`, so the launcher pins need the planned rebind (branch `claude/postcoef-pin-rebind-20261107` not touched).
+
+
+## 2026-11-28: prior-table documentation build
+
+- The manual now includes the penalized source-fit result and eight convergence
+  docstrings, resolving the nine missing entries reported by Documenter.
+- A local-preview build on the source archive for commit `08e407b`, with this
+  reference-page change, exited 0. Its log SHA-256 is
+  `8a1833dc42f9793f2ca5d1d61c12d0b8761513029abf081932178218bd1c6c04`.
+- The source change is documentation-only. The earlier package-suite result
+  remains evidence for unchanged production code, not a new full-suite run.
