@@ -180,6 +180,8 @@ function fit_fourthcorner_gllvm(Y::AbstractMatrix; family,
 
     # NA handling: derive the observation mask and a sanitized response matrix.
     msk = _resolve_obs_mask(mask, Y)
+    _check_finite_covariates(Xenv, "fit_fourthcorner_gllvm"; obs = msk, unit = :site, name = "Xenv")
+    _check_finite_covariates(TR, "fit_fourthcorner_gllvm"; obs = msk, unit = :trait, name = "TR")
     _check_family_response_support(family, Y, msk; caller = "fit_fourthcorner_gllvm", N = N)
     Yc = _sanitize_missing(Y, _cov_placeholder(family))
 
@@ -213,6 +215,7 @@ function fit_fourthcorner_gllvm(Y::AbstractMatrix; family,
         end
         return isfinite(v) ? v : 1e12
     end
+    _rescue_disp_start!(negll, θ0, has_disp, family)   # #1200
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
                          autodiff = :finite)

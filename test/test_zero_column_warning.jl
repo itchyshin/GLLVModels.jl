@@ -44,9 +44,10 @@ end
         M = trues(size(Y1)); M[2, 7] = false
         _, w = _zc_warnings(() -> fit_poisson_gllvm(Y1; K = 1, mask = M))
         @test length(w) == 1 && occursin("[2]", only(w))
-        # a column with no observed cell at all is not an all-zero column
-        Mall = trues(size(Yz)); Mall[2, :] .= false
-        _, w = _zc_warnings(() -> fit_poisson_gllvm(Yz; K = 1, mask = Mall))
+        # a column with a single observed cell, which is non-zero, is not an all-zero column
+        # (a column with no observed cell at all is refused with an ArgumentError instead)
+        Mall = trues(size(Y1)); Mall[2, :] .= false; Mall[2, 7] = true
+        _, w = _zc_warnings(() -> fit_poisson_gllvm(Y1; K = 1, mask = Mall))
         @test isempty(w)
     end
 
