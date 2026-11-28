@@ -45,15 +45,52 @@ using Distributions: Poisson
             @test msg !== nothing && occursin(name, msg) && occursin("mask", msg)
             # a mask of the wrong shape is still refused with the shape message
             @test_throws ArgumentError confint(fit, Y; method = :wald, mask = trues(p + 1, n), kw...)
-            # an all-observed mask is the unmasked call
-            @test isequal(confint(fit, Y; method = :wald, mask = trues(p, n), kw...).se,
-                          confint(fit, Y; method = :wald, kw...).se)
-            # unmasked calls keep working and are deterministic
-            a = confint(fit, Y; method = :wald, mask = nothing, kw...)
-            b = confint(fit, Y; method = :wald, kw...)
-            @test isequal(a.se, b.se) && isequal(a.estimate, b.estimate)
-            @test length(b.term) > 0
+            if name in ("GllvmCovFit", "OrdinalPerTraitCovFit")
+                # the fit was made on a masked objective; unmasked confint is refused (#1260)
+                for call in (() -> confint(fit, Y; method = :wald, mask = trues(p, n), kw...),
+                             () -> confint(fit, Y; method = :wald, kw...))
+                    msg_u = try; call(); nothing catch e; e isa ArgumentError ? sprint(showerror, e) : rethrow() end
+                    @test msg_u !== nothing && occursin("log-likelihood", msg_u)
+                end
+            else
+                # an all-observed mask is the unmasked call
+                @test isequal(confint(fit, Y; method = :wald, mask = trues(p, n), kw...).se,
+                              confint(fit, Y; method = :wald, kw...).se)
+                # unmasked calls keep working and are deterministic
+                a = confint(fit, Y; method = :wald, mask = nothing, kw...)
+                b = confint(fit, Y; method = :wald, kw...)
+                @test isequal(a.se, b.se) && isequal(a.estimate, b.estimate)
+                @test length(b.term) > 0
+            end
         end
+    end
+
+    # masked covariate fits: unmasked confint must not return wrong SEs (#1260)
+    @testset "masked GllvmCovFit objective guard (#1260)" begin
+        rng = MersenneTwister(1260)
+        p2, n2, K2 = 4, 60, 1
+        x = randn(rng, n2)
+        X = reshape(repeat(x', p2, 1), p2, n2, 1)
+        Y = zeros(p2, n2)
+        for s in 1:n2
+            z = randn(rng)
+            for t in 1:p2
+                Y[t, s] = rand(rng, Poisson(exp(0.3 + 0.4 * x[s] + 0.7 * z * (t == 1 ? 1.0 : 0.5))))
+            end
+        end
+        mk2 = trues(p2, n2); mk2[:, 1:20] .= false
+        fm = fit_gllvm_cov(Y; family = Poisson(), X = X, K = K2, mask = mk2, iterations = 80)
+        msg = try
+            confint(fm, Y; method = :wald, X = X)
+            nothing
+        catch e
+            e isa ArgumentError ? sprint(showerror, e) : rethrow()
+        end
+        @test msg !== nothing
+        @test occursin("log-likelihood", msg) || occursin("objective", msg)
+        fs = fit_gllvm_cov(Y[:, 21:end]; family = Poisson(), X = X[:, 21:end, :], K = K2, iterations = 80)
+        ref = confint(fs, Y[:, 21:end]; method = :wald, X = X[:, 21:end, :])
+        @test isfinite(ref.se[1])
     end
 
     # fit types that do use the mask are unaffected
