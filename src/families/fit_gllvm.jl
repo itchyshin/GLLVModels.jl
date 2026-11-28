@@ -276,6 +276,16 @@ function _normalize_weights(w, p::Integer, n::Integer; Y = nothing, mask = nothi
             "$(repr(v)) at trait $t, unit $s"))
         W[t, s] = Float64(v)
     end
+    any_positive = false
+    @inbounds for s in 1:n, t in 1:p
+        if W[t, s] > 0
+            any_positive = true
+            break
+        end
+    end
+    any_positive || throw(ArgumentError(
+        "$caller: observation weights are zero at every observed cell; at least one " *
+        "positive weight is required to fit."))
     return W
 end
 
