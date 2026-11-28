@@ -486,6 +486,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                    _eta_cap_verdict(verdict[2], link, β̂, offset === nothing ? lv_hat : offset .+ lv_hat;
                                     mask = msk, caller = "fit_poisson_gllvm"),
                    verdict[3])
+        _warn_runaway_loadings(Λ̂, "Poisson")
         return PoissonFit(β̂, Λ̂, link, verdict...,
                           alpha_hat, collect(Float64, θ̂), hessian, nothing, _stored_offset(offset), nothing,
                           _optimizer_record(optimizer, stages; controls = controls,
@@ -496,6 +497,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         verdict = (verdict[1],
                    _eta_cap_verdict(verdict[2], link, β̂, offset; mask = msk, caller = "fit_poisson_gllvm"),
                    verdict[3])
+        _warn_runaway_loadings(Λ̂, "Poisson")
         return PoissonFit(β̂, Λ̂, link, verdict..., nothing, Float64[], hessian,
                           nothing, _stored_offset(offset), weights,
                           _optimizer_record(optimizer, stages; controls = controls,
