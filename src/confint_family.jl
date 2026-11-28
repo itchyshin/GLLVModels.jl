@@ -3709,6 +3709,29 @@ confint(fit, Y; method = :profile, parm = "beta[1]")
 confint(fit, Y; method = :bootstrap, n_boot = 500, parallel = true)
 ```
 """
+function _family_inference_requires_y(caller::AbstractString)
+    throw(ArgumentError(
+        "$caller requires the response matrix `Y` (the same matrix passed to the fitter): $caller(fit, Y)"))
+end
+
+function confint(fit::_CIFit; kwargs...)
+    isempty(kwargs) || throw(ArgumentError(
+        "confint requires the response matrix `Y`; pass confint(fit, Y) instead of keyword-only confint(fit; ...)"))
+    _family_inference_requires_y("confint")
+end
+
+function StatsAPI.vcov(fit::_CIFit; kwargs...)
+    isempty(kwargs) || throw(ArgumentError(
+        "vcov requires the response matrix `Y`; pass vcov(fit, Y) instead of keyword-only vcov(fit; ...)"))
+    _family_inference_requires_y("vcov")
+end
+
+function StatsAPI.coeftable(fit::_CIFit; kwargs...)
+    isempty(kwargs) || throw(ArgumentError(
+        "coeftable requires the response matrix `Y`; pass coeftable(fit, Y) instead of keyword-only coeftable(fit; ...)"))
+    _family_inference_requires_y("coeftable")
+end
+
 function confint(fit::_CIFit, Y::AbstractMatrix;
                  method::Symbol = :wald,
                  level::Real = 0.95,
