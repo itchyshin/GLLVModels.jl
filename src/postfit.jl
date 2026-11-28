@@ -15,7 +15,7 @@ const AnyGllvmFit = Union{
     BinomialFit, NBFit, BetaFit, GammaFit, OrdinalFit, OrdinalPerTraitFit,
     OrdinalPerTraitCovFit, TweedieFit, StudentTFit, ExponentialFit, LognormalFit,
     MultinomialFit, TruncatedPoissonFit, TruncatedNegBin2Fit, TruncatedNegBin2PerTraitFit,
-    CensoredPoissonFit, GP1Fit, NB1Fit, COMPoissonFit, BetaBinomialFit,
+    CensoredPoissonFit, GP1Fit, NB1Fit, COMPoissonFit, OrderedBetaFit, BetaBinomialFit,
     BetaBinomialGroupedFit, BetaBinomialGroupedCovFit, BetaHurdleFit,
     DeltaLogNormalFit, HurdlePoissonFit, HurdleNBFit, DeltaGammaFit,
     ZIPFit, ZIPCovFit, ZINBFit, ZINBCovFit, ZIBFit, ZIBCovFit,

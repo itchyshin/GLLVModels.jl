@@ -387,14 +387,15 @@ end
     predict(fit::COMPoissonFit, Y; type=:rate) -> p×n matrix
 
 In-sample fitted values at the Laplace mode `ẑ` (see [`getLV`](@ref)): `type=:link`
-returns the linear predictor `η = β + Λ ẑ`; `type=:rate` returns the CMP **rate**
-`λ = exp(η)` (η clamped). NOTE: in the rate parameterisation `λ` is NOT the mean
-`E[y]` (they coincide only at `ν=1`); there is no closed-form mean, so `predict`
-returns the rate, not the expectation.
+returns the linear predictor `η = β + Λ ẑ`; `type=:rate` or `:response` returns the
+CMP **rate** `λ = exp(η)` (η clamped). NOTE: in the rate parameterisation `λ` is
+NOT the mean `E[y]` (they coincide only at `ν=1`); there is no closed-form mean,
+so `predict` returns the rate, not the expectation. [`fitted`](@ref) routes through
+`type = :response`.
 """
 function predict(fit::COMPoissonFit, Y::AbstractMatrix{<:Real}; type::Symbol = :rate)
-    type in (:link, :rate) ||
-        throw(ArgumentError("type must be :link or :rate; got :$type"))
+    type in (:link, :rate, :response) ||
+        throw(ArgumentError("type must be :link, :rate, or :response; got :$type"))
     Z = getLV(fit, Y; rotate = false)                 # n×K
     η = fit.β .+ fit.Λ * Z'                            # p×n
     type === :link && return η

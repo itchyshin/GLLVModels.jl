@@ -337,18 +337,72 @@ end
     predict(fit::OrderedBetaFit, Y; type=:mean) -> p×n matrix
 
 In-sample fitted values at the Laplace mode `ẑ` (see [`getLV`](@ref)): `type=:link`
-returns the linear predictor `η = β + Λ ẑ`; `type=:mean` returns the interior Beta
-mean `μ = logistic(η)` (η clamped). Note `:mean` is the *conditional Beta mean of
-the (0,1) interior*, not the unconditional `E[y]` over the full zero/interior/one
-mixture (which would weight by the point-mass probabilities).
+returns the linear predictor `η = β + Λ ẑ`; `type=:mean` or `:response` returns the
+interior Beta mean `μ = logistic(η)` (η clamped). Note `:mean` / `:response` is the
+*conditional Beta mean of the (0,1) interior*, not the unconditional `E[y]` over
+the full zero/interior/one mixture (which would weight by the point-mass
+probabilities). [`fitted`](@ref) routes through `type = :response`.
 """
 function predict(fit::OrderedBetaFit, Y::AbstractMatrix{<:Real}; type::Symbol = :mean)
-    type in (:link, :mean) ||
-        throw(ArgumentError("type must be :link or :mean; got :$type"))
+    type in (:link, :mean, :response) ||
+        throw(ArgumentError("type must be :link, :mean, or :response; got :$type"))
     Z = getLV(fit, Y; rotate = false)                 # n×K
     η = fit.β .+ fit.Λ * Z'                            # p×n
     type === :link && return η
     return _ob_logistic.(_clamp_eta.(η))
+end
+
+"""
+    residuals(fit::OrderedBetaFit, Y; type=:dunnsmyth, rng=Random.default_rng()) -> p×n matrix
+
+Dunn–Smyth randomized quantile residuals for an ordered-beta fit: the mixture
+CDF at each observed `y` combines the point masses at `0` and `1` with the
+interior Beta (`μ = σ(η)`, precision `φ`). ≈ N(0,1) under a correct model (pass
+a fixed `rng` to reproduce). `:pearson` divides `(y − μ̂)` by `√(μ̂(1−μ̂))` where
+`μ̂` is the unconditional mean `σ(η−c1) + (1−σ(c0−η)−σ(η−c1))·σ(η)`.
+"""
+function residuals(fit::OrderedBetaFit, Y::AbstractMatrix{<:Real};
+                   type::Symbol = :dunnsmyth, rng::AbstractRNG = Random.default_rng())
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    p, n = size(Y)
+    c0, c1, φ = fit.c0, fit.c1, fit.φ
+    Z = getLV(fit, Y; rotate = false)
+    η = fit.β .+ fit.Λ * Z'                            # p×n
+    R = Matrix{Float64}(undef, p, n)
+    if type === :pearson
+        μ_in = _ob_logistic.(_clamp_eta.(η))
+        p0 = _ob_logistic.(c0 .- η)
+        p1 = _ob_logistic.(η .- c1)
+        pm = max.(1 .- p0 .- p1, 0.0)
+        μ̂ = p1 .+ pm .* μ_in
+        return (Y .- μ̂) ./ sqrt.(max.(μ̂ .* (1 .- μ̂), 1e-12))
+    end
+    @inbounds for s in 1:n, t in 1:p
+        ηt = η[t, s]
+        p0 = _ob_logistic(c0 - ηt)
+        p1 = _ob_logistic(ηt - c1)
+        pm = max(1.0 - p0 - p1, 0.0)
+        y = float(Y[t, s])
+        if y <= 0.0
+            R[t, s] = _ds_z(0.0, p0, 1.0, 1.0 - p0, rand(rng);
+                            lmass = p0 > 0 ? log(p0) : -Inf)
+        elseif y >= 1.0
+            lo = p0 + p1
+            R[t, s] = _ds_z(lo, 1.0, 0.0, 1.0 - lo, rand(rng);
+                            lmass = p1 > 0 ? log(p1) : -Inf)
+        else
+            μ = clamp(_ob_logistic(ηt), _OB_MU_LO, _OB_MU_HI)
+            d = Beta(μ * φ, (1 - μ) * φ)
+            yc = clamp(y, nextfloat(0.0), prevfloat(1.0))
+            F = cdf(d, yc)
+            lo = p0 + p1 + pm * (F > 0 ? cdf(d, max(yc - 1e-9, nextfloat(0.0))) : 0.0)
+            hi = p0 + p1 + pm * F
+            R[t, s] = _ds_z(lo, hi, 1.0 - hi, 1.0 - lo, rand(rng);
+                            lmass = pm > 0 ? log(pm) + logpdf(d, yc) : -Inf)
+        end
+    end
+    return R
 end
 
 function Base.show(io::IO, f::OrderedBetaFit)

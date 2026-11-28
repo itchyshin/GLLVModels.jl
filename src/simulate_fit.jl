@@ -212,6 +212,37 @@ function simulate(fit::GammaFit, n::Integer;
 end
 
 """
+    simulate(fit::OrderedBetaFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Ordered-beta simulation (proportions in `[0,1]` with point masses). Draws
+`z_s ~ N(0, I_K)`, forms `η = β + Λ z_s`, then samples from the fitted ordered-
+beta law at `(c0, c1, φ)` per trait (interior draws clamped off exact `0`/`1`).
+"""
+function simulate(fit::OrderedBetaFit, n::Integer; rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λ)
+    c0, c1, φ = fit.c0, fit.c1, fit.φ
+    Y = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n
+        η = fit.β .+ fit.Λ * randn(rng, K)
+        for t in 1:p
+            p0 = _ob_logistic(c0 - η[t])
+            p1 = _ob_logistic(η[t] - c1)
+            u = rand(rng)
+            if u < p0
+                Y[t, s] = 0.0
+            elseif u < p0 + p1
+                Y[t, s] = 1.0
+            else
+                μ = clamp(_ob_logistic(η[t]), _OB_MU_LO, _OB_MU_HI)
+                y = rand(rng, Beta(μ * φ, (1 - μ) * φ))
+                Y[t, s] = clamp(y, nextfloat(0.0), prevfloat(1.0))
+            end
+        end
+    end
+    return Y
+end
+
+"""
     simulate(fit::BetaFit, n; X_lv=nothing, rng=Random.default_rng()) -> p×n matrix
 
 Beta simulation (proportions in (0,1)). For fits that used `X_lv`, pass the
