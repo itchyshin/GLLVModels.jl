@@ -72,6 +72,15 @@ function spde_fem(nodes::AbstractMatrix, tris::AbstractMatrix{<:Integer})
     T = size(tris, 1)
     size(nodes, 2) == 2 || throw(ArgumentError("nodes must be N × 2; got $(size(nodes))"))
     size(tris, 2) == 3 || throw(ArgumentError("tris must be T × 3; got $(size(tris))"))
+    @inbounds for k in 1:T
+        for j in 1:3
+            gi = tris[k, j]
+            (1 <= gi <= N) ||
+                throw(ArgumentError(
+                    "triangle row $k references node index $gi, but there are only $N nodes",
+                ))
+        end
+    end
 
     Cdiag = zeros(Float64, N)
 

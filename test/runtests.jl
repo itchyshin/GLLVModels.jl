@@ -95,6 +95,8 @@ _register_shard_table!(4, (
         "test_temporal_likelihood_internals.jl", "test_isdm_cloglog_internals.jl", "test_convergence_sweep.jl",
         "test_zinb_observed_laplace.jl", "test_input_validation.jl", "test_response_support_730.jl",
         "test_k_argument_check.jl",
+        "test_cov_1124d_source_bridge.jl", "test_cov_1124d_spde.jl",
+        "test_cov_1124d_postfit_misc.jl", "test_cov_1124d_spatial.jl",
         "test_dup_tip_names.jl",
         "test_zero_sites_check.jl",
         "test_bootstrap_decisions.jl", "test_wtier_crosscov.jl", "test_branch_re_helpers.jl",
@@ -1288,6 +1290,11 @@ println(_SHARD === nothing ?
     # Appended last so no existing file changes shard (pinned to shard 4 in the table above).
     _shard_include("test_link_residual_undefined_link.jl")
     _shard_include("test_issue_1161_link_check.jl")
+    # Lane cursor-cloud-1124d: fast coverage tests for validation/show/accessor branches.
+    _shard_include("test_cov_1124d_source_bridge.jl")
+    _shard_include("test_cov_1124d_spde.jl")
+    _shard_include("test_cov_1124d_postfit_misc.jl")
+    _shard_include("test_cov_1124d_spatial.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
     _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
