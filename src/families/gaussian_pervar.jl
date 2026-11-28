@@ -214,6 +214,37 @@ function _derive_obs_mask(mask, Y; caller::AbstractString)
     return msk
 end
 
+# A trait with no variation among its observed cells contributes a degenerate row/column to
+# the sample covariance; PPCA warm-start then lands at a stationary point with n_iter = 0 and
+# converged = true without identifying Λ on that trait (#1568).
+function _check_gaussian_trait_variance(Y::AbstractMatrix, mask;
+        caller::AbstractString)
+    p, n = size(Y)
+    for t in 1:p
+        y0 = nothing
+        cnt = 0
+        uniform = true
+        @inbounds for i in 1:n
+            (mask !== nothing && !mask[t, i]) && continue
+            y = Y[t, i]
+            ismissing(y) && continue
+            cnt += 1
+            if y0 === nothing
+                y0 = y
+            elseif y != y0
+                uniform = false
+                break
+            end
+        end
+        cnt < 2 && continue
+        uniform || continue
+        throw(ArgumentError("trait $t (row $t of `Y`) has no variation among observed cells " *
+            "(every observed value is $(y0)); its latent/covariance parameters are not " *
+            "identified. Drop that trait from `Y` or supply varying observations."))
+    end
+    return nothing
+end
+
 """
     GaussianPerVarFit
 
