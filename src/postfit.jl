@@ -631,7 +631,9 @@ reproducibility). `:pearson` returns `(Y − Nμ) / √(Nμ(1−μ))`.
 
 `mask` and `offset` are passed to [`predict`](@ref) and follow the rules in
 [`getLV`](@ref): new units from an offset fit without an `offset` throw an
-`ArgumentError`. On AGHQ fits, unobserved cells come back as `NaN`.
+`ArgumentError`. Unobserved cells (`mask` false) come back as `NaN` on the
+Laplace path and on AGHQ fits, so a placeholder stored in `Y` there does not
+enter the residual (#1151).
 """
 function residuals(fit::BinomialFit, Y::AbstractMatrix;
                    type::Symbol = :dunnsmyth,
@@ -661,12 +663,22 @@ function residuals(fit::BinomialFit, Y::AbstractMatrix;
     Nm = N === nothing ? fill(1, p, n) : N
     μ = predict(fit, Y; type = :response, N = N, X_lv = X_lv,mask=mask,offset=offset)
     if type === :pearson
-        return (Y .- Nm .* μ) ./ sqrt.(Nm .* μ .* (1 .- μ))
+        R = Matrix{Float64}((Y .- Nm .* μ) ./ sqrt.(Nm .* μ .* (1 .- μ)))
+        return _nan_unobserved!(R, mask)
     end
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         d = Binomial(Int(Nm[t, s]), μ[t, s])
         R[t, s] = _ds_z_discrete(d, Y[t, s], rand(rng))
+    end
+    return _nan_unobserved!(R, mask)
+end
+
+# `true` in `mask` is observed, as in `fit_*`. A missing mask leaves `R` unchanged.
+function _nan_unobserved!(R::AbstractMatrix, mask)
+    mask === nothing && return R
+    @inbounds for i in eachindex(R)
+        mask[i] || (R[i] = NaN)
     end
     return R
 end
@@ -1179,7 +1191,9 @@ randomized quantile residuals — `Φ⁻¹(u)`, `u` uniform on `[F(y−1), F(y)]
 
 `mask` and `offset` are passed to [`predict`](@ref) and follow the rules in
 [`getLV`](@ref): new units from an offset fit without an `offset` throw an
-`ArgumentError`. On AGHQ fits, unobserved cells come back as `NaN`.
+`ArgumentError`. Unobserved cells (`mask` false) come back as `NaN` on the
+Laplace path and on AGHQ fits, so a placeholder stored in `Y` there does not
+enter the residual (#1151).
 """
 function residuals(fit::PoissonFit, Y::AbstractMatrix;
                    type::Symbol = :dunnsmyth,
@@ -1205,14 +1219,15 @@ function residuals(fit::PoissonFit, Y::AbstractMatrix;
         return result
     end
     if type === :pearson
-        return (Y .- μ) ./ sqrt.(μ)
+        R = Matrix{Float64}((Y .- μ) ./ sqrt.(μ))
+        return _nan_unobserved!(R, mask)
     end
     R = Matrix{Float64}(undef, p, n)
     @inbounds for s in 1:n, t in 1:p
         d = Poisson(μ[t, s])
         R[t, s] = _ds_z_discrete(d, Y[t, s], rand(rng))
     end
-    return R
+    return _nan_unobserved!(R, mask)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", fit::PoissonFit)

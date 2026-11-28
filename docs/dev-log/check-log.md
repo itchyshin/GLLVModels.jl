@@ -1,3 +1,10 @@
+2026-11-18: #1151 masked Laplace residuals. Julia 1.10.13, 1 thread.
+`julia --project=. --startup-file=no -e 'using Test; include("test/test_masked_residuals_1151.jl")'`.
+Before: 8 passed, 8 failed (masked Poisson and Binomial Laplace cells were
+finite for Pearson and Dunn–Smyth). After: 16 passed, 0 failed. Observed
+cells still match across two placeholders. Full `Pkg.test` not run.
+See after-task/2026-11-18-masked-residuals-1151.md.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
