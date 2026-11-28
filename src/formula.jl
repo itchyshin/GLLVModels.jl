@@ -180,6 +180,14 @@ function _pervar_formula_design(rhs, cols, p, n; contrasts, names::Bool=false,
     return X
 end
 
+# Refuse `data === ()`; otherwise widen site-level `data` to a column table for `gllvm`.
+function _wide_formula_site_data(data)
+    data === () && throw(ArgumentError(
+        "site-level `data` must not be the empty tuple `()`; use `NamedTuple()` when there " *
+        "are no covariate columns, or a tables-compatible site table (e.g. a `NamedTuple` or `DataFrame`)"))
+    return Tables.columntable(data)
+end
+
 """
     gllvm(formula, Y, data; family = Normal(), K, sources = nothing,
           contrasts = Dict(), kwargs...)
@@ -261,13 +269,6 @@ value at an observed cell throws an `ArgumentError`). With covariates in the for
 `family = Normal()` takes an offset; the other covariate routes, explicit `sources` and the
 families `fit_gllvm` lists as taking none refuse it with an `ArgumentError`.
 """
-function _wide_formula_site_data(data)
-    data === () && throw(ArgumentError(
-        "site-level `data` must not be the empty tuple `()`; use `NamedTuple()` when there " *
-        "are no covariate columns, or a tables-compatible site table (e.g. a `NamedTuple` or `DataFrame`)"))
-    return Tables.columntable(data)
-end
-
 function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
                family = Normal(), K::Union{Integer, _FormulaKUnset} = _FORMULA_K_UNSET,
                sources = nothing, grouping=nothing,
