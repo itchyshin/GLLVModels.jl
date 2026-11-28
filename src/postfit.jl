@@ -3226,8 +3226,20 @@ fitted(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:Real, 3};
 Population-level (new-site) prediction at a covariate design `X` (`(p, n, q)`) with
 the latent at its prior mean `z = 0` — the latent is not estimable at unseen sites.
 `:link` returns the fixed-effect linear predictor `η = β + Xγ`; `:response`
-(= `:mean`) the mean `μ = linkinv(link, η)`. (For in-sample *conditional*
-predictions at the fitted sites, use the three-argument `predict(fit, Y, X)`.)
+(= `:mean`) the mean `μ = linkinv(link, η)`.
+
+This two-argument `predict(fit, design)` route is distinct from
+[`predict(fit, Y, X)`](@ref) above, which conditions on the response matrix and
+returns in-sample predictions at the Laplace latent mode.
+
+**New-site `predict(fit, design)` without `Y`** is implemented only for a small
+set of fit types. Besides `GllvmCovFit`, see [`predict(::RRRFit, ::AbstractMatrix)`](@ref)
+(`n×q` site matrix; latent axes deterministic in `X`), Destination-B grouped
+records (`GroupedGaussianFit`, `PrecisionMultivariateFit`, `GroupedNonGaussianFit`,
+`JointPhyloGroupedGaussianFit`; design-only population mean with random effects at
+zero), and [`predict_spatial`](@ref) for spatial latent fits. All other
+covariate-capable fits refuse this call with an `ArgumentError` and require
+`predict(fit, Y, design)` for conditional predictions.
 """
 function predict(fit::GllvmCovFit, X::AbstractArray{<:Real, 3}; type::Symbol = :response)
     type in (:response, :mean, :link) ||

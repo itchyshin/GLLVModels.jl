@@ -79,7 +79,8 @@ _register_shard_table!(4, (
         "test_missing_predictor_phylo.jl", "test_confint_offset.jl", "test_predict_offset_shared.jl",
         "test_predict_modes_training.jl", "test_confint_bootstrap_verdict_nb1.jl", "test_confint_bootstrap_verdict_zi.jl",
         "test_confint_bootstrap_verdict_bhob.jl", "test_confint_bootstrap_verdict_nb.jl", "test_second_order_delta_followup.jl",
-        "test_second_order_lognormal_ci.jl", "test_covariates.jl", "test_cov_mode_search_gamma.jl",
+        "test_second_order_lognormal_ci.jl", "test_covariates.jl", "test_predict_population_predict_gate.jl",
+        "test_cov_mode_search_gamma.jl",
         "test_formula_input.jl", "test_row_random.jl", "test_rrr.jl",
         "test_ordination_uncertainty.jl", "test_ordered_beta.jl", "test_ordered_beta_mode_search.jl",
         "test_variational.jl", "test_va_vs_laplace.jl", "test_va_objective_missing_nan.jl", "test_bridge_ci.jl",
@@ -382,7 +383,8 @@ _register_shard_table!(8, (
         "test_phylo_beta_xlv_mode.jl", "test_phylo_ordinal_xlv_mode.jl", "test_twopart_substrate.jl",
         "test_weights_byte_identity.jl", "test_confint_offset.jl", "test_predict_offset_grouped.jl",
         "test_confint_bootstrap_verdict_tweedie.jl", "test_second_order_multinomial_ci.jl", "test_nobs_pn_convention.jl",
-        "test_covariates.jl", "test_saturation_health.jl", "test_known_sentinel_defects.jl",
+        "test_covariates.jl", "test_predict_population_predict_gate.jl", "test_saturation_health.jl",
+        "test_known_sentinel_defects.jl",
         "test_phylo_contrasts.jl", "test_family11_p1_boundary.jl", "test_parity_trial_inputs.jl",
         "test_relaxed_clock.jl", "test_cv_unsupported_773.jl", "test_loading_profile_confirmatory.jl",
         "test_predict_delta_shared_820.jl", "test_postfit_communality_confint_default_parity.jl", "test_temporal_helpers.jl",
@@ -1007,6 +1009,7 @@ println(_SHARD === nothing ?
     _shard_include("test_beta_speciescov_start_1200.jl")
     _shard_include("test_summary_table.jl")
     _shard_include("test_covariates.jl")
+    _shard_include("test_predict_population_predict_gate.jl")
     _shard_include("test_cov_mode_search_gamma.jl")
     _shard_include("test_gamma_grouped_ci_y_floor.jl")
     _shard_include("test_cov_analytic_grad.jl")

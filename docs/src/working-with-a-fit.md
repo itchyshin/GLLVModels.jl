@@ -67,10 +67,31 @@ Exponential, and Binomial (with `N` when trial counts are needed).
 
 For the Gaussian family the link is the identity, so `:link` and `:response`
 coincide. For a binary fit `:response` returns fitted probabilities in `[0, 1]`.
-Plain latent fits predict in-sample because the latent score is conditional on
-the observed response matrix. Covariate fits also support population-level
-new-site prediction from a supplied `X` design, with the latent at its prior
-mean, and spatial latent fits use `predict_spatial` for new locations.
+
+**In-sample (conditional) predictions** use `predict(fit, Y; …)` or, when the
+fit includes fixed covariates, `predict(fit, Y, X; …)`. The latent score is
+solved at each site from `Y` (Laplace mode), so these values are not defined for
+unseen sites without the response matrix.
+
+**Population-level (new-site) predictions** from a design alone — latent held at
+its prior mean (`z = 0`) or otherwise not estimated — are implemented only for:
+
+- `GllvmCovFit`: `predict(fit, X; type = :link)` with trait-major design `X`
+  `(p, n, q)` (`fit_gllvm_cov`, Poisson / Binomial / Gamma routes);
+- `RRRFit`: `predict(fit, X)` with an `n×q` site-covariate matrix
+  (`fit_rrr_gllvm`; axes are deterministic in `X`);
+- Destination-B grouped records: `GroupedGaussianFit`, `PrecisionMultivariateFit`,
+  `GroupedNonGaussianFit`, and `JointPhyloGroupedGaussianFit` via
+  `predict(fit[, design])` (population mean with random effects at zero).
+
+Other covariate-capable fit types (grouped dispersion with `X`, ZIP/ZINB/ZIB with
+covariates, ordinal per-trait covariates, species-specific `XB`, constrained
+ordination, Gaussian `GllvmFit` with a retained design, and similar) do **not**
+implement `predict(fit, design)`; they raise an `ArgumentError` naming the
+supported types. Use `predict(fit, Y, X)` on those fits for conditional
+in-sample predictions.
+
+Spatial latent fits use `predict_spatial` for new locations.
 
 ## Residual diagnostics
 

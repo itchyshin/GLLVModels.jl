@@ -1,3 +1,9 @@
+2026-11-22: #1192 population predict docs + ArgumentError gate (no new estimators).
+Julia 1.13.4, 1 thread, `julia --project=. --startup-file=no -e 'include(...)'`.
+`test/test_predict_population_predict_gate.jl`: 22 passed, 0 failed.
+`test/test_docs_snippets_734_738.jl`: 18 passed, 0 failed (incl. #1192 wording).
+Full `Pkg.test()` not run (time budget). Draft PR; refs #1192.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
