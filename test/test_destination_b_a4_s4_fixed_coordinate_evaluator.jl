@@ -205,7 +205,7 @@ end
         @test runner["attestation_status"] == "runner_recorded_unverified"
         @test runner["input_summary_path"] == valid
         @test runner["input_summary_sha256"] == bytes2hex(sha256(read(valid)))
-        @test occursin(r"^1\.10\.", runner["julia_version"])
+        @test runner["julia_version"] == string(VERSION)
         @test length(runner["evaluator_source_sha256"]) == 64
         @test Set(keys(runner["gllvm_kernel_source_sha256"])) == Set([
             "precision_multivariate_fit.jl", "precision_multivariate.jl"])
