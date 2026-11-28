@@ -793,6 +793,14 @@ StatsAPI.bic(fit::AnyGllvmFit, n::Integer) = StatsAPI.dof(fit) * log(n) - 2 * St
 StatsAPI.bic(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing) =
     StatsAPI.bic(fit, StatsAPI.nobs(fit, Y; mask = mask))
 
+# Retained training mask for `GllvmFit` when `Y` matches the stored responses (else `nothing`).
+function _training_gaussian_mask(fit::GllvmFit, Y::AbstractMatrix)
+    _has_gaussian_record(fit) || return nothing
+    d = fit.integration.data
+    size(Y) == size(d.responses) || return nothing
+    return d.mask
+end
+
 """
     nobs(fit, [Y]; mask = nothing) -> Integer
 
@@ -816,13 +824,6 @@ matrix (e.g. two-level, random-slope, SPDE), `nobs(fit)` returns the
 cell-count analogue (`p` times the stored unit count) so the convention holds
 without requiring `Y`.
 """
-function _training_gaussian_mask(fit::GllvmFit, Y::AbstractMatrix)
-    _has_gaussian_record(fit) || return nothing
-    d = fit.integration.data
-    size(Y) == size(d.responses) || return nothing
-    return d.mask
-end
-
 function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     mask !== nothing && return count(mask)
     Missing <: eltype(Y) && return count(!ismissing, Y)
