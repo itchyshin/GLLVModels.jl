@@ -60,11 +60,32 @@ struct GllvmFit
     cputime::Float64
     integration::Union{Nothing,AbstractIntegrationInfo}
     optimizer_info::Union{Nothing,OptimizerRecord}
+    convergence::FitConvergence
 end
+GllvmFit(model, pars, logLik, n_iter, converged, optim_result, cputime,
+        integration, optimizer_info) =
+    GllvmFit(model, pars, logLik, n_iter, converged, optim_result, cputime,
+        integration, optimizer_info, _fit_unavailable_convergence(logLik))
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime)=
     GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,nothing,nothing)
 GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration)=
     GllvmFit(model,pars,logLik,n_iter,converged,optim_result,cputime,integration,nothing)
+
+function Base.getproperty(f::GllvmFit, name::Symbol)
+    name === :convergence && return getfield(f, :convergence)
+    if name === :prior_metadata
+        pars = getfield(f, :pars)
+        return hasproperty(pars, :prior_metadata) ? getproperty(pars, :prior_metadata) : nothing
+    end
+    name in _GLLVM_CONVERGENCE_PROPERTIES &&
+        return getproperty(getfield(f, :convergence), name)
+    return getfield(f, name)
+end
+
+function Base.propertynames(::GllvmFit, private::Bool = false)
+    fields = fieldnames(GllvmFit)
+    return (fields..., :prior_metadata, _GLLVM_CONVERGENCE_PROPERTIES...)
+end
 
 # Warn once per Julia session per key: refits inside bootstrap and profile
 # loops call the fitter many times and must not repeat the message.

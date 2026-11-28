@@ -375,7 +375,8 @@ end
 
 """
     fit_gllvm(Y; family = Normal(), K = nothing, num_lv = nothing, Kmax = nothing,
-              row_eff = :none, disp_group = nothing, pervar = false, kwargs...)
+              row_eff = :none, disp_group = nothing, pervar = false,
+              priors = nothing, kwargs...)
 
 Fit a GLLVM, dispatching on the response `family` — a Distributions.jl
 distribution used as a marker (the GLM.jl convention):
@@ -456,6 +457,15 @@ and runaway fits are skipped) and returns the chosen fit. `Kmax` defaults to
 `K` is unavailable with `row_eff` or `pervar` (pass `K` or call `select_lv` directly).
 Family-specific keyword arguments (`link`, `N`, `Σ_phy`, …) pass through to the
 underlying fitter.
+
+`priors` accepts a Tables.jl table. In this Julia engine, the first supported
+table row is the existing blanket Binomial loading penalty:
+`(class="loading", coef="all", prior="ridge(lambda)", dpar="mu",
+scale="loading_coef")`. It maps to `loading_ridge = 1/sqrt(lambda)` and is
+available on the Binomial Laplace route; `lambda = 0` disables the penalty.
+Fixed-effect prior rows and other model routes are rejected explicitly. The
+fit's `loading_ridge` field records the applied scale, and its `loglik` remains
+the unpenalized marginal likelihood evaluated at the penalized estimate.
 
 `offset` is the known additive term in `η = β + offset + Λz` (for example log-exposure);
 `β` is the offset-free intercept, so a constant offset is absorbed by the intercepts (same
@@ -621,8 +631,57 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
                    grouping=nothing, unit=nothing, unit_obs=nothing,
                    cluster=nothing, cluster2=nothing,
                    phylo=nothing, phylo_rank=nothing, phylo_mode=nothing,
-                   species_id=nothing, Kmax=nothing, weights=nothing, kwargs...)
+                   species_id=nothing, Kmax=nothing, weights=nothing,
+                   priors=nothing, response_names=nothing, kwargs...)
     _check_nonempty_Y(Y, "fit_gllvm")
+    if priors !== nothing
+        K !== nothing && num_lv !== nothing && K != num_lv && throw(ArgumentError(
+            "fit_gllvm: K=$K and num_lv=$num_lv disagree; pass only one"))
+        selected_k = K === nothing ? num_lv : K
+        selected_k === nothing && throw(ArgumentError(
+            "fit_gllvm: prior-table fits require an explicit K"))
+        selected_k isa Integer && selected_k >= 0 || throw(ArgumentError(
+            "fit_gllvm: prior-table fits require a non-negative integer K"))
+        unsupported_structure = grouping !== nothing || phylo !== nothing ||
+            phylo_rank !== nothing || phylo_mode !== nothing || species_id !== nothing ||
+            row_eff !== :none || disp_group !== nothing || pervar || weights !== nothing ||
+            any(x -> x !== nothing, (unit, unit_obs, cluster, cluster2))
+        unsupported_structure && throw(ArgumentError(
+            "fit_gllvm prior tables currently require an ordinary ungrouped and unweighted route"))
+        (haskey(kwargs, :X) || haskey(kwargs, :X_lv) || haskey(kwargs, :offset) ||
+         haskey(kwargs, :mask)) && throw(ArgumentError(
+            "fit_gllvm prior tables require complete intercept-only responses without X, X_lv, offset, or mask"))
+        _aghq_request(get(kwargs, :aghq, false)) === :off || throw(ArgumentError(
+            "fit_gllvm prior tables are not supported with AGHQ"))
+        response_names === nothing || length(response_names) == size(Y, 1) || throw(ArgumentError(
+            "response_names must contain one name for each response row"))
+        if family isa Binomial
+            allowed = (:link, :iterations, :newton_maxiter, :newton_tol, :g_tol)
+            unsupported = filter(k -> !(k in allowed), keys(kwargs))
+            isempty(unsupported) || throw(ArgumentError(
+                "fit_gllvm: the Binomial prior-table route does not accept: $(join(string.(unsupported), ", "))"))
+            X0 = zeros(Float64, size(Y, 1), size(Y, 2), 0)
+            return fit_gllvm_cov(Y; family=family, X=X0, K=selected_k,
+                priors=priors, response_names=response_names, kwargs...)
+        elseif family isa Normal
+            selected_k == 0 || throw(ArgumentError(
+                "fit_gllvm: Gaussian prior tables currently require the intercept-only K=0 route"))
+            allowed = (:g_tol, :iterations, :optimizer)
+            unsupported = filter(k -> !(k in allowed), keys(kwargs))
+            isempty(unsupported) || throw(ArgumentError(
+                "fit_gllvm: the Gaussian prior-table route does not accept: $(join(string.(unsupported), ", "))"))
+            resolution = _resolve_gaussian_intercept_prior_table(priors, size(Y, 1);
+                response_names=response_names)
+            return _fit_gaussian_intercept_prior_table(Y, resolution;
+                g_tol=get(kwargs, :g_tol, 1e-6),
+                iterations=get(kwargs, :iterations, 500),
+                optimizer=get(kwargs, :optimizer, nothing))
+        end
+        throw(ArgumentError(
+            "fit_gllvm: prior tables currently support Binomial Laplace and intercept-only Gaussian K=0 fits"))
+    elseif response_names !== nothing
+        throw(ArgumentError("response_names is available only with `priors`"))
+    end
     if family isa AbstractVector
         return _fit_gllvm_per_column(Y, family; K = K, num_lv = num_lv, row_eff = row_eff,
             disp_group = disp_group, pervar = pervar, grouping = grouping, unit = unit,

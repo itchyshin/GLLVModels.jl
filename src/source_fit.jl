@@ -257,7 +257,9 @@ GaussianSourcesFit(beta,sigma_eps,trait_covariances,sources,parameters,loglik,
 """
     fit_gaussian_sources(Y; sources, X=nothing, coefficient_names=nothing,
                          start=nothing, sigma_eps_fixed=nothing,
-                         g_tol=1e-6, iterations=500, optimizer=nothing)
+                         g_tol=1e-6, iterations=500, optimizer=nothing,
+                         psi_sd_priors=nothing, priors=nothing,
+                         trait_names=nothing)
 
 Fit finite complete Gaussian data `Y` (traits × units) with independent
 residual noise and additive [`SourceCovariance`](@ref) blocks. The covariance
@@ -286,6 +288,26 @@ required length. The default start is deterministic. No automatic ridge, source
 jitter, random restart or estimator selection occurs. Final likelihood,
 ForwardDiff gradient and Hessian are recomputed over the free coordinates.
 
+Optional `psi_sd_priors` rows contain exactly `kernel`, `trait`, `shape > 1`
+and `rate > 0`; `trait_names` explicitly names the response rows. Each row
+adds a normalized Gamma density on that named source's trait-specific unique
+SD, once per target, with no log-SD Jacobian. This natural-scale penalized/MAP
+criterion is not a full posterior. It targets neither loadings nor independent
+residual SD. The optional route requires `sigma_eps_fixed`, rank-one latent
+sources with `unique=true, common=false`, and independent projected kernel
+patterns. It returns a `PenalizedGaussianSourcesFit` with separate `logLik`,
+`log_prior` and maximized `objective`, penalized convergence diagnostics, and
+the unpenalized Hessian at that same estimate. Empty or absent priors preserve
+the ordinary result. This candidate has no parameter-recovery or interval
+calibration claim. Plan priors before seeing boundary estimates; primary
+analyses remain unpenalized unless separately approved.
+
+The optional shared `priors` table accepts Gaussian source-fit fixed-effect
+Normal or Student-t rows and unique-variance natural-SD Gamma rows. It supports
+fixed-only, Psi-only, and mixed tables. An absent or empty table returns the
+ordinary `GaussianSourcesFit` unchanged. `priors` and `psi_sd_priors` cannot be
+combined in one call.
+
 This development interface is limited to fixed Gaussian source matrices. Its
 dense covariance has quadratic memory and cubic factorization cost in the
 number of observed cells. Fixed slopes and explicit-source Gaussian formula
@@ -297,7 +319,8 @@ full R-parity claim.
 """
 function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
         coefficient_names=nothing,start=nothing,sigma_eps_fixed=nothing,
-        g_tol::Real=1e-6,iterations::Integer=500,optimizer=nothing)
+        g_tol::Real=1e-6,iterations::Integer=500,optimizer=nothing,
+        psi_sd_priors=nothing,priors=nothing,trait_names=nothing)
     selected_optimizer = _optimizer_method(optimizer, Optim.LBFGS(); route = "fit_gaussian_sources")
     p,n=size(Y)
     p>0 && n>=2 || throw(ArgumentError("source fitting needs at least one trait and two units"))
@@ -320,6 +343,18 @@ function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
     q=size(D,2)
     names=_source_coefficient_names(coefficient_names,q;default_trait_names=default_means)
     total=q+source_coordinates+(residual_fixed ? 0 : 1)
+    psi_rows = _psi_sd_prior_input(psi_sd_priors)
+    resolved_priors, resolved_traits = if priors !== nothing
+        isempty(psi_rows) || throw(ArgumentError("use either priors or psi_sd_priors, not both"))
+        _resolve_gaussian_source_prior_table(priors,ss,names,trait_names,p)
+    elseif isempty(psi_rows)
+        (NamedTuple[], trait_names === nothing ? nothing : String.(trait_names))
+    else
+        residual_fixed || throw(ArgumentError("Psi SD priors currently require sigma_eps_fixed"))
+        (_resolve_psi_sd_priors(psi_rows,ss,trait_names,p,q),String.(trait_names))
+    end
+    any(row -> row.target === :unique_variance, resolved_priors) && !residual_fixed &&
+        throw(ArgumentError("Psi SD priors currently require sigma_eps_fixed"))
     means=vec(mean(data,dims=2))
     if !residual_fixed
         if default_means
@@ -351,8 +386,11 @@ function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
         theta=Float64.(start)
     end
     S=[s.projection*s.covariance*s.projection' for s in ss]
-    objective(t)=_gaussian_sources_nll(data,ss,t;projected=S,sigma_eps_fixed=fixed_sigma,
+    likelihood(t)=_gaussian_sources_nll(data,ss,t;projected=S,sigma_eps_fixed=fixed_sigma,
         X=default_means ? nothing : D)
+    # Keep the old closure and all result fields on the absent/empty-prior path.
+    objective = isempty(resolved_priors) ? likelihood :
+        t -> likelihood(t) + _source_prior_table_penalty(t,resolved_priors)
     isfinite(objective(theta)) || throw(ArgumentError("start produces an invalid covariance"))
     if total==0
         _refuse_optimizer(optimizer, "fit_gaussian_sources", "a zero-parameter route with no outer solve")
@@ -389,11 +427,13 @@ function fit_gaussian_sources(Y::AbstractMatrix{<:Real}; sources, X=nothing,
         Optim.iterations(result)>=iterations ? :iteration_limit : :gradient_not_converged
     B=_source_trait_covariances(ss,p,view(estimate,q+1:q+source_coordinates))
     sigma_eps=residual_fixed ? fixed_sigma : exp(estimate[end])
-    return GaussianSourcesFit(collect(estimate[1:q]),sigma_eps,B,ss,
-        collect(estimate),-value,converged,gradient_norm,min_eig,pd,
+    fit = GaussianSourcesFit(collect(estimate[1:q]),sigma_eps,B,ss,
+        collect(estimate),isempty(resolved_priors) ? -value : -likelihood(estimate),converged,gradient_norm,min_eig,pd,
         Optim.iterations(result),reason,length(data),residual_fixed,D,(p,n),names,
         _optimizer_record(optimizer,stages;controls=controls,derivative=:forwarddiff,
                           actual=selected_optimizer))
+    isempty(resolved_priors) && return fit
+    return _psi_sd_prior_fit(fit,data,likelihood,objective,resolved_priors,result,g_tol,resolved_traits)
 end
 
 """Return the fixed-effect mean coefficients of a `GaussianSourcesFit`."""
@@ -411,3 +451,5 @@ function Base.show(io::IO,f::GaussianSourcesFit)
         ", loglik=",f.loglik,", status=",f.stopping_reason,
         ", gradient_norm=",f.gradient_norm,", Hessian_PD=",f.hessian_positive_definite,")")
 end
+
+include("psi_sd_prior.jl")

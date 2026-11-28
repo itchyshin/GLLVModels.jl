@@ -22355,3 +22355,24 @@ Two defects from an independent review, each reproduced by a failing test first.
 - Optimizer point binding (reproduced; fixed). `_optimizer_binding` checked only the length of the optimizer point and that the reconstruction used the same point. A point of `[123.0]` with `parameters` at `[0.0, 0.0]` still gave FIT_HEALTH_PASS under the flag. The point must now equal, as exact values with no tolerance, the packed `parameters` with the log sigma slot (index `q_free + 1`) removed. A mismatch is INCOMPLETE, as every other binding error in `_certify_fit` is; a recorded FAIL is untouched because `_classify` returns it before the certifier.
 - PASS requires `confirmable` (reproduced; fixed). `_classify` accepted a PASS when every per-fit verdict was PASS, even if `certify_evidence` reported the case set unconfirmable or a fit's own `confirmable` False (the evidence binding). It now also needs the overall `confirmable` and `confirmable is True` on every certificate.
 - Tests: `FifthReviewTests` (3). Pinned bytes change in `tools/core070_postcoef_fit_health.py` and `tools/test_postcoef_numerical_admission.py`, so the launcher pins need the planned rebind (branch `claude/postcoef-pin-rebind-20261107` not touched).
+
+
+## 2026-11-28: prior-table documentation build
+
+- The manual now includes the penalized source-fit result and eight convergence
+  docstrings, resolving the nine missing entries reported by Documenter.
+- A local-preview build on the source archive for commit `08e407b`, with this
+  reference-page change, exited 0. Its log SHA-256 is
+  `8a1833dc42f9793f2ca5d1d61c12d0b8761513029abf081932178218bd1c6c04`.
+- The source change is documentation-only. The earlier package-suite result
+  remains evidence for unchanged production code, not a new full-suite run.
+
+- The README now points to the separate supported Gaussian prior-table routes.
+
+The local-preview manual build including the README correction exited 0; its
+log SHA-256 is `f30ddb47baf8af13243deb649437aea0292f97ba0fa30390a29a4a9616a73dbe`.
+
+The prior guide now states the finite, positive mean and shape greater than one
+required for Gamma residual-SD and unique-SD rows. An isolated local-preview
+manual build on unchanged production source exited 0; log SHA-256:
+`30b6ae7230c7c1e05ff4c495e3e2be9a0ed4639e7c5118a11b02289b8bbb6365`.

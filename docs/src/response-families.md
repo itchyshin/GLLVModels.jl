@@ -136,6 +136,35 @@ fit = fit_gllvm(Yb; family = Binomial(), K = 2, N = trials)        # binomial co
 fit = fit_gllvm(Yb; family = Binomial(), K = 2, link = ProbitLink())
 ```
 
+The Binomial covariate Laplace route accepts named Normal or Student-t priors
+on shared covariate coefficients and response-specific intercepts, optionally
+with one blanket loading ridge. Supply `response_names` in the row order of a
+wide `Y` matrix to target intercepts; direct calls default to `trait_1`, …,
+`trait_p`. The long-format formula route uses its sorted species levels. Here
+`lambda` is the coefficient of `0.5 * sum(abs2, Lambda)`, so `ridge(4)`
+corresponds to the legacy `loading_ridge = 0.5` control:
+
+```julia
+priors = (;
+    prior = ["normal(0,2.5)", "ridge(4)"],
+    class = ["fixef", "loading"],
+    coef = ["temperature", "all"],
+    dpar = ["mu", "mu"],
+    scale = ["link", "loading_coef"])
+fit = gllvm(@formula(y ~ 1 + temperature), Yb, site_data;
+            family = Binomial(), K = 2, priors = priors)
+fit.prior_metadata.resolved_targets
+fit.prior_metadata.fixed_effect_penalty
+fit.prior_metadata.loading_penalty
+fit.prior_metadata.total_objective
+```
+
+The returned `loglik` is the data-only marginal likelihood at the penalized
+estimate. The fit metadata stores the resolved named targets and separate
+penalties. `confint` refuses prior-penalized fits because their curvature is
+not calibrated uncertainty; refit without priors for ordinary likelihood
+intervals. Other families and fitting routes reject these table rows.
+
 For binary responses (Bernoulli), `Y` is a `p × n` integer matrix of 0/1.
 For binomial *counts*, pass the trial counts as `N` — a `p × n` integer matrix;
 the default is all-ones (Bernoulli). Link choices: `LogitLink()` (default),

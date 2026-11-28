@@ -60,6 +60,50 @@ and can be overridden with `link = ...` (`LogitLink`, `ProbitLink`,
 `CLogLogLink`, `LogLink`, `IdentityLink`). For ordered categories the cumulative
 link can be switched to probit: `fit_ordinal_gllvm(Yo; K = 2, link = ProbitLink())`.
 
+For Binomial covariate fits, a table can combine a named response-coefficient
+prior with the existing blanket loading ridge. Formula terms supply the
+coefficient names, and `scale = "link"` states that Normal and Student-t
+densities apply on the model's link scale. With `lambda = 4`, the loading
+penalty remains `0.5 * lambda * sum(abs2, Lambda)`:
+
+```@example prior-table
+using GLLVModels, Random, Distributions
+using StatsModels: @formula
+
+rng = Random.MersenneTwister(42)
+Y_prior = Int.(rand(rng, 4, 40) .< 0.35)
+x_prior = randn(rng, 40)
+prior_data = (temperature = x_prior,)
+response_names = ["species_a", "species_b", "species_c", "species_d"]
+priors = (;
+    prior = ["normal(0,2.5)", "normal(0,1.5)", "ridge(4)"],
+    class = ["fixef", "fixef", "loading"],
+    coef = ["temperature", "species_a", "all"],
+    dpar = ["mu", "mu", "mu"],
+    scale = ["link", "link", "loading_coef"])
+prior_fit = gllvm(@formula(y ~ 1 + temperature), Y_prior, prior_data;
+                  family = Binomial(), K = 1, priors = priors,
+                  response_names = response_names,
+                  iterations = 120, newton_maxiter = 100)
+prior_fit.prior_metadata.resolved_targets
+prior_fit.prior_metadata.fixed_effect_penalty
+prior_fit.prior_metadata.loading_penalty
+prior_fit.prior_metadata.total_objective
+```
+
+`student_t(location, scale, df)` is also available for named coefficients. A
+`fixef` selector can name either a shared covariate coefficient or a
+response-specific intercept. For wide matrices, pass `response_names` in row
+order; direct calls default to `trait_1`, …, `trait_p`. The long-format formula
+method uses its sorted species levels. This table route is currently limited to
+Binomial Laplace fits; `fit_gllvm_cov` accepts the same table and explicit
+`coefficient_names` and `response_names` vectors. Prior fits retain the
+unpenalized data `loglik` separately from the
+penalties. `confint` refuses these fits because their penalized curvature is
+not calibrated uncertainty; refit without priors for ordinary likelihood
+intervals. Other families and fitting routes reject the table rather than
+ignoring it.
+
 For binomial counts that are **over-dispersed** relative to `Binomial(N, μ)`, the
 beta-binomial lets the per-trial success probability itself vary
 (`p ~ Beta(μφ, (1−μ)φ)`), jointly estimating the Beta precision `φ`:

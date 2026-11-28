@@ -204,7 +204,14 @@ _cms_quiet(f) = Base.CoreLogging.with_logger(f, Base.CoreLogging.NullLogger())
         # reaches at -569.700833.
         fit0 = _cms_quiet(() -> G.fit_gllvm_cov(Y; family = gam2, X = zeros(p, n, 1), K = K))
         @test isfinite(fit0.loglik)
-        @test fit0.converged
+        # X is all zero here, so its slope is unidentified. The fit remains
+        # finite, but the full Hessian is singular and the convergence contract
+        # must report this as degenerate rather than converged.
+        @test !fit0.converged
+        @test fit0.convergence.status == :degenerate
+        @test fit0.convergence.optimizer_finished
+        @test fit0.convergence.relative_gradient < 1e-5
+        @test !fit0.convergence.pd_hessian
         @test fit0.loglik >= -569.700833 - 1e-5
         X1 = randn(MersenneTwister(99), p, n, 1)
         fit1 = _cms_quiet(() -> G.fit_gllvm_cov(Y; family = gam2, X = X1, K = K))
@@ -240,7 +247,12 @@ _cms_quiet(f) = Base.CoreLogging.with_logger(f, Base.CoreLogging.NullLogger())
                            "d6663d884c3f25dbef6d23c5ec179b66c0b485f9413ebb338fa30da796e1e8bd")
         fd = _cms_quiet(() -> G.fit_gllvm_cov(Yd; family = gam2, X = zeros(size(Yd)..., 1), K = Kd))
         @test isfinite(fd.loglik)
-        @test fd.converged
+        # As above, the all-zero covariate leaves an unidentified slope.
+        @test !fd.converged
+        @test fd.convergence.status == :degenerate
+        @test fd.convergence.optimizer_finished
+        @test fd.convergence.relative_gradient < 1e-5
+        @test !fd.convergence.pd_hessian
         @test 0.15 < fd.dispersion < 0.6                  # true alpha 0.3
     end
 end
