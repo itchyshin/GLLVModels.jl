@@ -109,7 +109,7 @@ _register_shard_table!(4, (
         "test_aghq_multistart.jl", "test_aghq_nb2.jl", "test_aghq_tweedie.jl",
         "test_aghq_delta_gamma.jl", "test_aghq_public_binomial.jl", "test_truncated_poisson.jl",
         "test_truncated_nbinom2.jl", "test_truncnb2_precision.jl", "test_truncnb2_mode_search.jl",
-        "test_poisson_n_init.jl", "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl",
+        "test_poisson_n_init.jl", "test_poisson_mask_blocks_1249.jl", "test_laplace_curvature_contract.jl", "test_laplace_curvature_oracle.jl",
         "test_laplace_dual_safety.jl", "test_phylo_nb_xlv.jl", "test_phylo_nb_xlv_mode_1125.jl", "test_destination_b_joint_identification.jl",
         "test_destination_b_joint_poisson.jl", "test_gp1_laplace.jl", "test_gp1_verdict.jl",
         "test_nb_shared_r_boundary.jl", "test_grouped_dispersion_beta_gamma.jl", "test_nb_grouped_upper_warn.jl",
@@ -368,7 +368,7 @@ _register_shard_table!(8, (
         "test_likelihood.jl", "test_animal_latent.jl", "test_spatial_dep.jl",
         "test_destination_b_grouping_interval_matrix.jl", "test_grouped_profile_public.jl", "test_profile_sigma_phy_identity.jl",
         "test_aghq_public_poisson.jl", "test_aghq_ordinal.jl", "test_gamma_laplace.jl",
-        "test_binomial_fit.jl", "test_poisson_n_init.jl", "test_phylo_binomial_xlv.jl",
+        "test_binomial_fit.jl", "test_poisson_n_init.jl", "test_poisson_mask_blocks_1249.jl", "test_phylo_binomial_xlv.jl",
         "test_poisson_grad_perf.jl", "test_grouped_laplace.jl", "test_grouped_laplace_identity.jl",
         "test_destination_b_joint_other_families.jl", "test_gamma_beta_upper_boundary.jl", "test_nb_grouped_poisson_ridge.jl",
         "test_nb1_scalar_gradient_gate.jl", "test_nb1_grouped_mode_search.jl", "test_ordinal_x_identity.jl",
@@ -666,6 +666,7 @@ println(_SHARD === nothing ?
     _shard_include("test_binomial_fit.jl")
     _shard_include("test_poisson_fit.jl")
     _shard_include("test_poisson_n_init.jl")
+    _shard_include("test_poisson_mask_blocks_1249.jl")
     _shard_include("test_nb_n_init.jl")
     _shard_include("test_laplace_curvature_contract.jl")
     _shard_include("test_issue_783_curvature_docs.jl")
@@ -1003,6 +1004,7 @@ println(_SHARD === nothing ?
     _shard_include("test_nobs_vector_y_1164.jl")
     _shard_include("test_newick_input_messages_1165.jl")
     _shard_include("test_beta_grouped_ci_y_clamp_1155.jl")
+    _shard_include("test_beta_speciescov_start_1200.jl")
     _shard_include("test_summary_table.jl")
     _shard_include("test_covariates.jl")
     _shard_include("test_cov_mode_search_gamma.jl")
@@ -1163,6 +1165,8 @@ println(_SHARD === nothing ?
     _shard_include("test_temporal_likelihood_internals.jl")
     _shard_include("test_temporal_fit_receipts.jl")
     _shard_include("test_temporal_helpers.jl")
+    # Post-fit temporal helpers name the marker the user called (refs #1286).
+    _shard_include("test_temporal_helper_marker_name_1286.jl")
     _shard_include("test_temporal_composed.jl")
     _shard_include("test_temporal_composed_receipts.jl")
     _shard_include("test_isdm.jl")
