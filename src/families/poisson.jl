@@ -63,23 +63,39 @@ struct PoissonFit
     hessian::Symbol   # Laplace log-det curvature; AGHQ is recorded separately
     integration::Union{Nothing,AGHQFitInfo}
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    n_units::Int                             # training unit count; when `offset === nothing` (#826)
     weights::Union{Nothing,Matrix{Float64}}  # observation weights (p×n); `nothing` = unweighted
     optimizer_info::Union{Nothing,OptimizerRecord}
 end
 
-# Preserve the most recent full positional constructor (12 arguments).
+# Preserve the most recent full positional constructor (13 arguments).
+PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian,
+           integration, offset, n_units, weights) =
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed,
+               hessian, integration, offset, n_units, weights, nothing)
+
+# Pre-n_units compat tier (12 positional args).
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian,
            integration, offset, weights) =
     PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed,
-               hessian, integration, offset, weights, nothing)
+               hessian, integration, offset, _compat_training_units(offset, weights === nothing ? 0 : size(weights, 2)),
+               weights, nothing)
+
+# Offset + n_units without weights (AGHQ return tier, #826).
+PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian,
+           integration, offset, n_units::Integer) =
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed,
+               hessian, integration, offset, n_units, nothing, nothing)
 
 # Pre-weights compat tier (11 positional args): an unweighted fit.
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset) =
-    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset, nothing, nothing)
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, offset,
+               _compat_training_units(offset), nothing, nothing)
 
 # Pre-offset compat tier (10 positional args): no stored training offset.
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration) =
-    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration, nothing)
+    PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, integration,
+               nothing, 0, nothing, nothing)
 
 PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian) =
     PoissonFit(β, Λ, link, loglik, converged, iterations, alpha_lv, theta_packed, hessian, nothing)
@@ -487,7 +503,8 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                                     mask = msk, caller = "fit_poisson_gllvm"),
                    verdict[3])
         return PoissonFit(β̂, Λ̂, link, verdict...,
-                          alpha_hat, collect(Float64, θ̂), hessian, nothing, _stored_offset(offset), nothing,
+                          alpha_hat, collect(Float64, θ̂), hessian, nothing, _stored_offset(offset),
+                          _stored_training_units(Y), nothing,
                           _optimizer_record(optimizer, stages; controls = controls,
                               derivative = derivative_route, actual = actual_optimizer))
     else
@@ -497,7 +514,7 @@ function _fit_poisson_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                    _eta_cap_verdict(verdict[2], link, β̂, offset; mask = msk, caller = "fit_poisson_gllvm"),
                    verdict[3])
         return PoissonFit(β̂, Λ̂, link, verdict..., nothing, Float64[], hessian,
-                          nothing, _stored_offset(offset), weights,
+                          nothing, _stored_offset(offset), _stored_training_units(Y), weights,
                           _optimizer_record(optimizer, stages; controls = controls,
                               derivative = derivative_route, actual = actual_optimizer))
     end

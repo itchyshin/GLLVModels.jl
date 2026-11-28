@@ -83,19 +83,46 @@ end
 # prediction offset `O`, as before. `modes = :training` keeps the training units' modes, searched at
 # the stored training offset, while η still uses `O`: η = β + O_new + Λ ẑ_train. This is gllvmTMB's
 # `predict(fit, newdata)` on the training units, which re-evaluates the stored offset expression on
-# `newdata` and keeps the fitted modes. `Y` must then be the training response. Only its size can be
-# checked: against the stored offset (p×n) on an offset fit; a fit without an offset stores no
-# training unit count, so there only the response count p (rows of Λ) is checked.
+# `newdata` and keeps the fitted modes. `Y` must then be the training response. Its size is
+# checked against the stored offset (p×n) on an offset fit, or against the stored training unit
+# count when the fit had no offset (#826).
 _check_prediction_modes(modes::Symbol) = modes in (:refit, :training) ||
     throw(ArgumentError("predict: modes must be :refit or :training; got :$modes"))
+
+function _fit_training_n(fit)
+    if hasfield(typeof(fit), :offset)
+        off = getfield(fit, :offset)
+        off !== nothing && return size(off, 2)
+    end
+    if hasfield(typeof(fit), :weights)
+        w = getfield(fit, :weights)
+        w !== nothing && return size(w, 2)
+    end
+    if hasfield(typeof(fit), :n_units)
+        nu = getfield(fit, :n_units)
+        return nu > 0 ? nu : nothing
+    end
+    return nothing
+end
 
 function _prediction_mode_offset(fit, Y::AbstractMatrix, O, modes::Symbol)
     _check_prediction_modes(modes)
     modes === :refit && return O
     stored = fit.offset
     ptrain = size(fit.Λ, 1)
-    trainsize = stored === nothing ? "$(ptrain)×n" : "$(size(stored, 1))×$(size(stored, 2))"
-    ok = stored === nothing ? size(Y, 1) == ptrain : size(stored) == size(Y)
+    if stored !== nothing
+        trainsize = "$(size(stored, 1))×$(size(stored, 2))"
+        ok = size(stored) == size(Y)
+    else
+        n_train = _fit_training_n(fit)
+        if n_train !== nothing
+            trainsize = "$(ptrain)×$(n_train)"
+            ok = size(Y) == (ptrain, n_train)
+        else
+            trainsize = "$(ptrain)×n"
+            ok = size(Y, 1) == ptrain
+        end
+    end
     ok || throw(ArgumentError(
         "predict: modes = :training keeps the training units' latent modes, so Y must be the " *
         "training data ($trainsize); got $(size(Y, 1))×$(size(Y, 2))."))

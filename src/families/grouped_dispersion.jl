@@ -564,6 +564,7 @@ struct NBGroupedFit
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group Poisson-limit / degenerate flag (T14 F1)
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
     optimizer_info::Union{Nothing,OptimizerRecord}
 end
 
@@ -580,11 +581,16 @@ NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessia
                 _dispersion_group_boundary(r_group))
 # Pre-offset compat tier (10 positional args, #788): no stored training offset.
 NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
-    NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
+    NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing, 0, nothing)
+# Pre-n_units compat tier (12 positional args).
+NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian::Symbol,
+            dispersion_boundary, offset, optimizer_info) =
+    NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian,
+                 dispersion_boundary, offset, _compat_training_units(offset), optimizer_info)
 NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian::Symbol,
             dispersion_boundary, offset) =
     NBGroupedFit(β, Λ, r_group, group, link, loglik, converged, iterations, hessian,
-                 dispersion_boundary, offset, nothing)
+                 dispersion_boundary, offset, _compat_training_units(offset), nothing)
 
 function Base.show(io::IO, f::NBGroupedFit)
     p, K = size(f.Λ)
@@ -795,7 +801,7 @@ function _fit_nb_gllvm_grouped_start(Y::AbstractMatrix; K::Integer, group::Abstr
     receipt = _optimizer_record(optimizer, stages; controls = stage_controls,
                                 derivative, actual = _last_accepted_optimizer(stages))
     return NBGroupedFit(β̂, Λ̂, r̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
-                        boundary, _stored_offset(offset), receipt)
+                        boundary, _stored_offset(offset), _stored_training_units(Y), receipt)
 end
 
 """
@@ -1267,6 +1273,7 @@ struct BetaGroupedFit
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group near-Bernoulli (lower-end) flag (T14 F1)
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -1278,7 +1285,11 @@ BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian::
                    _dispersion_group_lower_boundary(φ))
 # Pre-offset compat tier (10 positional args, #788): no stored training offset.
 BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
-    BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
+    BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing, 0)
+# Pre-n_units compat tier (11 positional args).
+BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, offset) =
+    BetaGroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, offset,
+                   _compat_training_units(offset))
 
 function Base.show(io::IO, f::BetaGroupedFit)
     p, K = size(f.Λ)
@@ -1501,7 +1512,7 @@ function fit_beta_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     boundary = _dispersion_group_lower_boundary(φ̂g)
     any(boundary) && @warn "Beta grouped-dispersion fit reached the per-group lower boundary (φ below 1e-6) for group(s) $(findall(boundary)); those groups' precision is at the near-Bernoulli limit on this data, and optimizer convergence flags are unreliable for them." maxlog=1
     return BetaGroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
-                          boundary, _stored_offset(offset))
+                          boundary, _stored_offset(offset), _stored_training_units(Y))
 end
 
 """
@@ -1859,6 +1870,7 @@ struct GammaGroupedFit
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group extreme-overdispersion (lower-end) flag (T14 F1)
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
     dispersion_upper::Vector{Bool}   # per-group α > 1e5, informational only (#864)
 end
 
@@ -1872,11 +1884,16 @@ GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian:
 # Pre-offset compat tier (10 positional args, #788): no stored training offset.
 GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
     GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
+# Pre-n_units compat tier (12 positional args, #864): derive the informational upper flag from α.
+GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary,
+                offset, dispersion_upper) =
+    GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary,
+                    offset, _compat_training_units(offset), dispersion_upper)
 # Pre-#864 compat tier (11 positional args): derive the informational upper flag from α.
 GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary,
                 offset) =
     GammaGroupedFit(β, Λ, α, group, link, loglik, converged, iterations, hessian, dispersion_boundary,
-                    offset, _gamma_shape_upper(α))
+                    offset, _compat_training_units(offset), _gamma_shape_upper(α))
 
 function Base.show(io::IO, f::GammaGroupedFit)
     p, K = size(f.Λ)
@@ -1997,7 +2014,7 @@ function fit_gamma_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     loglik, conv, iters = _fit_verdict(res)
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_gamma_gllvm_grouped")
     return GammaGroupedFit(β̂, Λ̂, α̂g, gidx, link, loglik, conv && !any(boundary), iters, hessian,
-                           boundary, _stored_offset(offset), upper)
+                           boundary, _stored_offset(offset), _stored_training_units(Y), upper)
 end
 
 """
@@ -2380,6 +2397,7 @@ struct NB1GroupedFit
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     dispersion_boundary::Vector{Bool}   # per-group Poisson-limit / flat-overdispersion flag (T14 F1)
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none (#788)
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
 end
 
 # Positional compatibility constructors (2026-08-28 hessian; T14 F1 dispersion_boundary,
@@ -2391,7 +2409,11 @@ NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian::S
                  _dispersion_group_boundary(φ))
 # Pre-offset compat tier (10 positional args, #788): no stored training offset.
 NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary) =
-    NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing)
+    NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, nothing, 0)
+# Pre-n_units compat tier (11 positional args).
+NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, offset) =
+    NB1GroupedFit(β, Λ, φ, group, link, loglik, converged, iterations, hessian, dispersion_boundary, offset,
+                  _compat_training_units(offset))
 
 function Base.show(io::IO, f::NB1GroupedFit)
     p, K = size(f.Λ)
@@ -2540,7 +2562,7 @@ function fit_nb1_gllvm_grouped(Y::AbstractMatrix; K::Integer,
     loglik, conv, iters = _fit_verdict(nll, conv0, iters0)   # conv0 includes the #485 gradient test
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm_grouped")
     return NB1GroupedFit(β̂, Λ̂, φ̂g, gidx, link, loglik, conv && !any(lowb), iters, hessian,
-                         boundary, _stored_offset(offset))
+                         boundary, _stored_offset(offset), _stored_training_units(Y))
 end
 
 """

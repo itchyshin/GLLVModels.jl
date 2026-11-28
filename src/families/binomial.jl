@@ -169,10 +169,15 @@ struct BinomialFit
     integration::Union{Nothing,AGHQFitInfo}
     loading_ridge::Float64   # the fit's `loading_ridge` kwarg; `Inf` = ridge off
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
 end
+# Pre-n_units compat tier (13 positional args).
+BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,offset)=
+    BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,offset,
+        _compat_training_units(offset))
 # Pre-offset compat tier (12 positional args): no stored training offset.
 BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge)=
-    BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,nothing)
+    BinomialFit(β,Λ,link,loglik,converged,iterations,alpha_lv,theta_packed,hessian,saturation,integration,loading_ridge,nothing,0)
 # Pre-ridge compat tier (11 positional args, the prior full field list):
 # defaults the new `loading_ridge` field to `Inf` (ridge off), matching every
 # pre-existing construction site's implicit behaviour.
@@ -586,7 +591,7 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
         _warn_runaway_loadings(Λ̂)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters,
                            alpha_hat, collect(Float64, θ̂), hessian, sat, nothing, loading_ridge,
-                           _stored_offset(offset))
+                           _stored_offset(offset), _stored_training_units(Y))
     else
         β̂ = θ̂[1:p]
         Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
@@ -606,6 +611,6 @@ function _fit_binomial_gllvm_laplace(Y::AbstractMatrix; K::Integer,
                                                         mask = msk), link, Λ̂) : nothing
         _warn_runaway_loadings(Λ̂)
         return BinomialFit(β̂, Λ̂, link, ll, conv, iters, nothing, Float64[], hessian, sat, nothing, loading_ridge,
-                           _stored_offset(offset))
+                           _stored_offset(offset), _stored_training_units(Y))
     end
 end

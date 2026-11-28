@@ -236,11 +236,17 @@ struct GP1Fit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
 end
 
 # Pre-offset compat tier (8 positional args): no stored training offset.
 GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian) =
-    GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian, nothing)
+    GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian, nothing, 0)
+
+# Pre-n_units compat tier (9 positional args).
+GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian, offset) =
+    GP1Fit(β, Λ, α, link, loglik, converged, iterations, hessian, offset,
+          _compat_training_units(offset))
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -398,5 +404,5 @@ function fit_gp1_gllvm(Y::AbstractMatrix; K::Integer,
     conv = _eta_cap_verdict(fit_star.converged, link, fit_star.β, offset; mask = msk,
                             caller = "fit_gp1_gllvm")   # #869
     return GP1Fit(fit_star.β, fit_star.Λ, fit_star.α, link, -fit_star.nll,
-                  conv, fit_star.iters, hessian, _stored_offset(offset))
+                  conv, fit_star.iters, hessian, _stored_offset(offset), _stored_training_units(Y))
 end

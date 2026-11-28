@@ -188,11 +188,17 @@ struct NB1Fit
     iterations::Int
     hessian::Symbol   # the Laplace log-det curvature this fit's objective used
     offset::Union{Nothing,Matrix{Float64}}   # training offset (p×n); `nothing` = none
+    n_units::Int                             # training unit count when `offset === nothing` (#826)
 end
 
 # Pre-offset compat tier (8 positional args): no stored training offset.
 NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian) =
-    NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian, nothing)
+    NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian, nothing, 0)
+
+# Pre-n_units compat tier (9 positional args).
+NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian, offset) =
+    NB1Fit(β, Λ, φ, link, loglik, converged, iterations, hessian, offset,
+          _compat_training_units(offset))
 
 # Positional compatibility constructor (2026-08-28): every pre-existing
 # construction site builds a default-curvature fit; the `hessian` field
@@ -313,5 +319,6 @@ function fit_nb1_gllvm(Y::AbstractMatrix; K::Integer,
     ll, conv, iters = _fit_verdict(Optim.minimum(res),
         Optim.converged(res) && _nb1_grouped_g_met(res, g_tol), Optim.iterations(res))
     conv = _eta_cap_verdict(conv, link, β̂, offset; mask = msk, caller = "fit_nb1_gllvm")
-    return NB1Fit(β̂, Λ̂, φ̂, link, ll, conv, iters, hessian, _stored_offset(offset))
+    return NB1Fit(β̂, Λ̂, φ̂, link, ll, conv, iters, hessian, _stored_offset(offset),
+                  _stored_training_units(Y))
 end
