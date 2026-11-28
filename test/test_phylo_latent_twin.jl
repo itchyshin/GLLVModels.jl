@@ -53,6 +53,18 @@ end
 
 const _PL_A14_NEWICK = "(((s1:2,s2:2):1,(s3:1,s4:1):2):1,((s5:1.5,s6:1.5):1,(s7:1,s8:1):1.5):1.5);"
 
+# Issue 1218: one cherry with 1e-8 terminal branches; dense log-det recompute
+# disagrees with the shipped analytic value by >1e-8 while sparse agrees.
+const _PL_SHORT_TIP_NEWICK =
+    "((sp1:0.0312843803360069,sp2:0.0312843803360069):1.82811617149751," *
+    "(((sp3:0.0723973674403446,sp4:0.0723973674403446):0.277370583187702," *
+    "((sp5:0.101533163181724,sp6:0.101533163181724):0.0867522384912867," *
+    "sp7:0.188285401673011):0.161482548955035):0.840851567022713," *
+    "((sp8:1e-08,sp9:1e-08):0.148282053775651," *
+    "((sp10:0.0525874294207355,sp11:0.0525874294207355):0.0526004537596974," *
+    "sp12:0.105187883180433):0.0430941805952179):1.04233745387511):" *
+    "0.668781034182757);"
+
 @testset "phylo_latent twin (gllvmTMB P1)" begin
     newick50 = _pl_coalescent_newick(50, StableRNG(7))
     Y50, sp50, C50, tips50 = _pl_simulate(newick50, 4, 1, [0.7 0.0; 0.3 0.5; -0.4 0.2; 0.5 -0.3]; seed = 7)
@@ -115,6 +127,19 @@ const _PL_A14_NEWICK = "(((s1:2,s2:2):1,(s3:1,s4:1):2):1,((s5:1.5,s6:1.5):1,(s7:
         @test isapprox(phy.log_det, 14 * log(4) - sum(log, edges); atol = 1e-12)
         recomputed, shipped, diff = precision_logdet_check(phy)
         @test diff <= 1e-8
+    end
+
+    @testset "short terminal branches: precision log-det gate and fit admission" begin
+        phy, _ = GLLVModels._phylo_latent_tree_precision(_PL_SHORT_TIP_NEWICK)
+        _, _, diff = precision_logdet_check(phy)
+        @test diff <= 1e-8
+        admitted = GLLVModels._validate_precision_fit_input(phy)
+        @test admitted.log_det == phy.log_det
+        rng = MersenneTwister(1)
+        sp = repeat(["sp$i" for i in 1:12], inner = 2)
+        Y = randn(rng, 4, 24)
+        fit = fit_phylo_latent_gllvm(Y, sp; d = 1, tree = _PL_SHORT_TIP_NEWICK)
+        @test isfinite(fit.loglik)
     end
 
     @testset "test-phylo-tree-precision.R:42 species-to-node map by label" begin

@@ -541,12 +541,21 @@ For positive-continuous data with Var = μ²/α (constant coefficient of variati
 the no-X public default remains shared-shape [`fit_gamma_gllvm`](@ref) /
 `fit_gllvm(...; family = Gamma())`. With shared site covariates, the public /
 bridge default is [`fit_gamma_gllvm_grouped_cov`](@ref) (per-trait shape `α` +
-shared `γ`; twin API B). Shared-α + X remains the opt-in
-[`fit_gllvm_cov`](@ref). Per-species shape without X is available via
+shared `γ`; twin API B) — including the [`gllvm`](@ref) `@formula` route with
+covariates. Shared-α + X remains the opt-in
+[`fit_gllvm_cov`](@ref) (one scalar `φ` in `GllvmCovFit.dispersion`). Those two
++X routes estimate different numbers of dispersion parameters (`1` vs `p` when
+each species has its own group); both can converge on the same `Y` and `X` but
+report different `loglik`. Per-species shape without X is available via
 [`fit_gamma_gllvm_grouped`](@ref) / `disp_group`.
 
 ```julia
 fit = fit_gllvm(Yp; family = Gamma(), K = 2)   # Yp > 0; shared α (no-X)
+
+# +X: per-trait α (default) vs shared φ (opt-in)
+fit_trait  = fit_gamma_gllvm_grouped_cov(Yp; X = X, K = 2)   # length(fit_trait.α) == p
+fit_shared = fit_gllvm_cov(Yp; family = Gamma(), X = X, K = 2)   # single fit_shared.dispersion
+gllvm(@formula(y ~ 1 + temp), Yp, (temp = temp,); family = Gamma(), K = 2)  # same estimand as fit_trait
 ```
 
 !!! warning "Cloglog fits can saturate the Laplace approximation (diagnostic added 2026-08-28)"

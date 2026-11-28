@@ -321,6 +321,67 @@ function _tweedie_sample(μ::Real, φ::Real, p::Real, rng::AbstractRNG)
 end
 
 """
+    simulate(fit::LognormalFit, n; rng=Random.default_rng()) -> p×n matrix
+
+Draw fresh positive responses from the fitted one-part Lognormal GLLVM.
+"""
+function simulate(fit::LognormalFit, n::Integer; rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λ)
+    Y = Matrix{Float64}(undef, p, n)
+    σ = fit.σ
+    @inbounds for s in 1:n
+        η = fit.β .+ fit.Λ * randn(rng, K)
+        for t in 1:p
+            Y[t, s] = rand(rng, LogNormal(η[t], σ))
+        end
+    end
+    return Y
+end
+
+"""
+    simulate(fit::DeltaLogNormalFit, n; rng=Random.default_rng()) -> p×n matrix
+"""
+function simulate(fit::DeltaLogNormalFit, n::Integer; rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λc)
+    Y = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n
+        ηc = fit.βc .+ fit.Λc * randn(rng, K)
+        π = _delta_occurrence(fit, reshape(ηc, p, 1))
+        for t in 1:p
+            if rand(rng) > π[t]
+                Y[t, s] = 0.0
+            else
+                σt = fit.σ isa Real ? fit.σ : fit.σ[t]
+                Y[t, s] = rand(rng, LogNormal(ηc[t], σt))
+            end
+        end
+    end
+    return Y
+end
+
+"""
+    simulate(fit::DeltaGammaFit, n; rng=Random.default_rng()) -> p×n matrix
+"""
+function simulate(fit::DeltaGammaFit, n::Integer; rng::AbstractRNG = default_rng())
+    p, K = size(fit.Λc)
+    Y = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n
+        ηc = fit.βc .+ fit.Λc * randn(rng, K)
+        π = _delta_occurrence(fit, reshape(ηc, p, 1))
+        for t in 1:p
+            if rand(rng) > π[t]
+                Y[t, s] = 0.0
+            else
+                αt = fit.α isa Real ? fit.α : fit.α[t]
+                μ = exp(ηc[t])
+                Y[t, s] = rand(rng, Gamma(αt, μ / αt))
+            end
+        end
+    end
+    return Y
+end
+
+"""
     simulate(fit::TweedieFit, n; rng=Random.default_rng()) -> p×n matrix
 
 Simulate a fresh response matrix from a fitted Tweedie GLLVM (compound Poisson–
