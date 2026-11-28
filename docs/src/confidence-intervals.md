@@ -208,7 +208,7 @@ runs one set of refits per requested quantity, as gllvmTMB does, so ask for the
 traits you need. gllvmTMB withdrew its profile interval for icc, communality,
 rho and proportion; `confint(...; method = :profile)` refuses those `parm`
 values with an `ArgumentError`, as in gllvmTMB (the penalty-based
-[`profile_ci_derived`](@ref) function remains available as an exploratory
+`profile_ci_derived` function remains available as an exploratory
 internal call, but not through `confint`). A fit made with `lambda_constraint`
 pins takes `method = :wald` only, and its Wald intervals use the covariance of
 the free parameters, as gllvmTMB's `cov.fixed` does: a pinned loading has
