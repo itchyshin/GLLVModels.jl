@@ -345,22 +345,6 @@ function getLV(fit::BinomialFit, Y::AbstractMatrix;
     return rotate ? Zout * _svd_rotation(fit.Λ) : Zout
 end
 
-"""
-    predict(fit::GllvmFit, y; type=:response, X=nothing, X_lv=nothing,
-            mask=nothing, offset=nothing) -> p×n matrix
-
-In-sample fitted values at the conditional latent scores `ẑ` (see [`getLV`](@ref)):
-`type=:link` returns the linear predictor `η = μ + Λ ẑ` (`μ` the fixed-effect
-mean, `0` when the fit has no fixed effects); `type=:response` applies the inverse
-link (identity for the Gaussian family, so both types coincide). No `newdata` — `y`
-(and `X`) must match the fit; a fit that estimated `β` throws when `X` is omitted.
-
-`mask` and `offset` follow the same rules as in [`getLV`](@ref): only Gaussian fits
-that retained their integration data accept them, and any other `GllvmFit` throws an
-`ArgumentError`; new units from a fit made with a non-zero offset need an explicit
-`offset`.
-"""
-
 # Post-fit routes share the Laplace fitters' response-domain checks (#1548; #1503 elsewhere).
 function _check_postfit_response_support(fit, Y::AbstractMatrix, mask;
         caller::AbstractString)
@@ -382,6 +366,21 @@ function _check_twopart_postfit_support(Y::AbstractMatrix, ok, caller::AbstractS
     return nothing
 end
 
+"""
+    predict(fit::GllvmFit, y; type=:response, X=nothing, X_lv=nothing,
+            mask=nothing, offset=nothing) -> p×n matrix
+
+In-sample fitted values at the conditional latent scores `ẑ` (see [`getLV`](@ref)):
+`type=:link` returns the linear predictor `η = μ + Λ ẑ` (`μ` the fixed-effect
+mean, `0` when the fit has no fixed effects); `type=:response` applies the inverse
+link (identity for the Gaussian family, so both types coincide). No `newdata` — `y`
+(and `X`) must match the fit; a fit that estimated `β` throws when `X` is omitted.
+
+`mask` and `offset` follow the same rules as in [`getLV`](@ref): only Gaussian fits
+that retained their integration data accept them, and any other `GllvmFit` throws an
+`ArgumentError`; new units from a fit made with a non-zero offset need an explicit
+`offset`.
+"""
 function predict(fit::GllvmFit, y::AbstractMatrix;
                  type::Symbol = :response,
                  X::Union{Nothing, AbstractArray{<:Real, 3}} = nothing,
