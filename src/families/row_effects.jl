@@ -113,6 +113,13 @@ function Base.show(io::IO, f::RowEffectFit)
     print(io, ", loglik=", round(f.loglik; sigdigits = 7), f.converged ? "" : ", NOT CONVERGED", ")")
 end
 
+function _refuse_row_route_family(family, caller::AbstractString)
+    family isa Union{Poisson, NegativeBinomial, Binomial, Beta, Gamma} && return nothing
+    throw(ArgumentError(
+        "$caller: family must be Poisson(), NegativeBinomial(), Binomial(), Beta(), or " *
+        "Gamma(); got $(typeof(family))"))
+end
+
 """
     fit_roweffect_gllvm(Y; family, K, link=nothing, N=nothing, …) -> RowEffectFit
 
@@ -156,7 +163,11 @@ function fit_roweffect_gllvm(Y::AbstractMatrix; family,
 
     # NA handling: derive the observation mask and a sanitized response matrix.
     msk = _resolve_obs_mask(mask, Y)
+    # Support first: an out-of-support cell must still name Y[t, i] (#730).
+    # NB1 and other families outside the row-route set are refused after that,
+    # before any fit (#1238).
     _check_family_response_support(family, Y, msk; caller = "fit_roweffect_gllvm", N = N)
+    _refuse_row_route_family(family, "fit_roweffect_gllvm")
     Yc = _sanitize_missing(Y, _cov_placeholder(family))
 
     # warm start: per-species link-scale row means for β, zeros for ρfree, SVD for Λ
