@@ -827,7 +827,9 @@ For a fit made from a response vector (`PhyloGaussianFit`, `BranchREFit`, `Multi
 For fit structs that store observation/level counts instead of a response
 matrix (e.g. two-level, random-slope, SPDE), `nobs(fit)` returns the
 cell-count analogue (`p` times the stored unit count) so the convention holds
-without requiring `Y`.
+without requiring `Y`. A [`GllvmFit`](@ref) from [`fit_gaussian_gllvm`](@ref)
+stores the training site count on `pars.n_sites` (masked/offset fits use the
+stored training mask when present).
 """
 function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     mask !== nothing && return count(mask)
@@ -849,6 +851,17 @@ StatsAPI.nobs(fit::SPDEGaussianFit) = size(fit.nodes, 1)   # univariate spatial 
 # A fit built without `N` (the hand-built dummy constructor) falls back to the mesh-node count.
 StatsAPI.nobs(fit::SPDELatentFit) =
     size(fit.N, 2) > 0 ? size(fit.N, 1) * size(fit.N, 2) : size(fit.Λ, 1) * size(fit.nodes, 1)
+function StatsAPI.nobs(fit::GllvmFit)
+    p = fit.model.p
+    if fit.integration !== nothing && fit.integration.data isa AGHQGaussianData
+        return count(fit.integration.data.mask)
+    end
+    if hasproperty(fit.pars, :n_sites) && fit.pars.n_sites isa Integer
+        return p * fit.pars.n_sites
+    end
+    throw(ArgumentError("nobs for GllvmFit requires the response: nobs(fit, Y), " *
+                        "or nobs(fit, y) when the fit was made from a vector y"))
+end
 function StatsAPI.nobs(fit::AnyGllvmFit)
     if hasfield(typeof(fit), :nindiv)
         return fit.nindiv
