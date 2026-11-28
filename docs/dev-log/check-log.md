@@ -1,3 +1,9 @@
+2026-11-22: #1215 ForwardDiff Cholesky diagonal-start gradient. Julia 1.12.7,
+`JULIA_NUM_THREADS=1`. `test/test_forwarddiff_cholesky_diagonal_start.jl`: 2/2;
+`test/test_lowrank_cholesky.jl`: 12/12; `test/test_likelihood.jl`: 4/4;
+`test/test_profile_quad_cancellation.jl`: (included in run below). Full
+`Pkg.test` not run.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:

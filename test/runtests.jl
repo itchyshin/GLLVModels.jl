@@ -203,7 +203,8 @@ _register_shard_table!(4, (
     ),
     (
         "test_likelihood.jl", "test_packing.jl", "test_docstring_animal_dep_twin.jl",
-        "test_spatial_dep.jl", "test_fit.jl", "test_laplace_K_bounds.jl",
+        "test_spatial_dep.jl", "test_fit.jl", "test_forwarddiff_cholesky_diagonal_start.jl",
+        "test_laplace_K_bounds.jl",
         "test_fixed_effects.jl", "test_reml.jl", "test_lv_predictor.jl",
         "test_sparse_phy.jl", "test_grouped_profile_inversion.jl", "test_grouped_profile_dense_oracle.jl",
         "test_grouped_profile_public.jl", "test_marginal_target_intervals.jl", "test_lowrank_cholesky.jl",
@@ -574,6 +575,7 @@ println(_SHARD === nothing ?
     _shard_include("test_kernel_dep.jl")
     _shard_include("test_kernel_latent.jl")
     _shard_include("test_fit.jl")
+    _shard_include("test_forwarddiff_cholesky_diagonal_start.jl")
     _shard_include("test_gaussian_K_bounds.jl")
     _shard_include("test_laplace_K_bounds.jl")
     _shard_include("test_fixed_effects.jl")

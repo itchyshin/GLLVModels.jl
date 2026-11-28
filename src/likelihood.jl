@@ -210,7 +210,7 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
         #   Σ⁻¹ r = D⁻¹ r - D⁻¹ Λ_U z
         Dinv_r = d_inv .* resid                          # p × n
         ΛtDr   = Λ_U' * Dinv_r                           # K × n
-        z      = cA \ ΛtDr                               # K × n
+        z      = _chol_solve(cA, ΛtDr)                    # K × n
         DinvΛz = DinvΛ * z                               # p × n
         Σinv_r = Dinv_r .- DinvΛz                        # p × n
         quad   = sum(resid .* Σinv_r)
@@ -250,9 +250,9 @@ function gaussian_marginal_loglik(y::AbstractMatrix, Λ_B::AbstractMatrix, σ_ep
         # Quadratic form via the rotation trick:
         #   y' Σ⁻¹ y = n · m' (A + n·B)⁻¹ m + tr(Y_c' A⁻¹ Y_c)
         # Solve (A + n·B) x = m and A X = Y_c, then accumulate.
-        v_mean = cAnB \ m                              # length p
+        v_mean = _chol_solve(cAnB, m)                  # length p
         quad_mean = n * dot(m, v_mean)
-        V_c = cA_sym \ Y_centered                      # p × n
+        V_c = _chol_solve(cA_sym, Y_centered)          # p × n
         quad_centered = sum(Y_centered .* V_c)
 
         logdet_Σ_full = logdet(cAnB) + (n - 1) * logdet(cA_sym)
