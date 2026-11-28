@@ -3234,6 +3234,40 @@ fitted(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:Real, 3};
     predict(fit, Y, X; type = :response, N = N)
 
 """
+    residuals(fit::GllvmCovFit, Y, X; type=:response, N=nothing,
+              rng=Random.default_rng()) -> p×n matrix
+
+In-sample residuals for a covariate fit at the Laplace mode. `type=:response` returns
+`Y − μ` with `μ` the fitted mean on the response scale
+([`fitted`](@ref) / [`predict`](@ref) with `type=:response`). `type=:pearson` returns
+Pearson residuals — Poisson: `(Y − μ)/√μ`; Binomial (counts `Y`, fitted probability
+`μ`): `(Y − Nμ)/√(Nμ(1−μ))`. Only `Poisson` and `Binomial` families are supported on
+this route; pass `N` for Binomial trial counts as in [`predict`](@ref).
+"""
+function residuals(fit::GllvmCovFit, Y::AbstractMatrix{<:Real},
+                   X::AbstractArray{<:Real, 3};
+                   type::Symbol = :response,
+                   N::Union{Nothing, AbstractMatrix} = nothing,
+                   rng::AbstractRNG = Random.default_rng())
+    type in (:response, :pearson) ||
+        throw(ArgumentError("type must be :response or :pearson; got :$type"))
+    μ = predict(fit, Y, X; type = :response, N = N)
+    if type === :response
+        return Y .- μ
+    end
+    fam = fit.family
+    if fam isa Poisson
+        return (Y .- μ) ./ sqrt.(μ)
+    elseif fam isa Binomial
+        p, n = size(Y)
+        Nm = N === nothing ? fill(1, p, n) : N
+        return (Y .- Nm .* μ) ./ sqrt.(Nm .* μ .* (1 .- μ))
+    end
+    throw(ArgumentError(
+        "GllvmCovFit residuals support Poisson and Binomial families; got $(nameof(typeof(fam)))"))
+end
+
+"""
     predict(fit::GllvmCovFit, X; type=:response) -> p×n matrix
 
 Population-level (new-site) prediction at a covariate design `X` (`(p, n, q)`) with
