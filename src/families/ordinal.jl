@@ -957,6 +957,34 @@ function convergence_status(fit::_OrdinalAnyFit)
     return :converged
 end
 
+# `Union{Missing,Integer}` matrices (e.g. from CSV reads) and `missing` in Y: derive a mask and
+# sanitize to `Matrix{Int}` before the integer-typed fitters, as on the Poisson Laplace route (#1191).
+function _ordinal_resolve_integer_y(Y::AbstractMatrix, mask, caller::AbstractString)
+    msk = if mask !== nothing
+        _resolve_obs_mask(mask, Y)
+    elseif any(ismissing, Y)
+        @info "$caller: derived the observation mask from missing entries in Y" maxlog=1
+        observed_mask(Y)
+    else
+        nothing
+    end
+    Yint = Matrix{Int}(_sanitize_unobserved(Y, msk, 1))
+    return Yint, msk
+end
+
+function fit_ordinal_gllvm(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...)
+    Yint, msk = _ordinal_resolve_integer_y(Y, mask, "fit_ordinal_gllvm")
+    return fit_ordinal_gllvm(Yint; mask = msk, kwargs...)
+end
+function fit_ordinal_gllvm_pertrait(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...)
+    Yint, msk = _ordinal_resolve_integer_y(Y, mask, "fit_ordinal_gllvm_pertrait")
+    return fit_ordinal_gllvm_pertrait(Yint; mask = msk, kwargs...)
+end
+function fit_ordinal_gllvm_pertrait_cov(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...)
+    Yint, msk = _ordinal_resolve_integer_y(Y, mask, "fit_ordinal_gllvm_pertrait_cov")
+    return fit_ordinal_gllvm_pertrait_cov(Yint; mask = msk, kwargs...)
+end
+
 # Integer-valued float codes: convert once, then run the integer method (#1191).
 fit_ordinal_gllvm(Y::AbstractMatrix{<:AbstractFloat}; mask = nothing, kwargs...) =
     fit_ordinal_gllvm(_ordinal_float_to_int(Y, mask; caller = "fit_ordinal_gllvm");
