@@ -120,6 +120,7 @@ _register_shard_table!(4, (
         "test_zib_x_identity.jl", "test_ordinal_fit.jl", "test_ordinal_logit_twin.jl",
         "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_pervar_design.jl", "test_gaussian_fixed_residual.jl",
         "test_formula_pervar.jl", "test_formula_default_x_guard.jl", "test_statsapi.jl",
+        "test_issue_1481_poisson_mask_nobs.jl",
         "test_postfit_zib_tweedie.jl", "test_extract_latent_scores.jl", "test_select_lv_759.jl",
         "test_select_lv_p1_twin.jl", "test_issue_108_anova_docs.jl", "test_cross_kernel.jl",
         "test_source_covariance.jl", "test_grouped_gaussian.jl", "test_destination_b_public.jl",
@@ -821,6 +822,7 @@ println(_SHARD === nothing ?
     _shard_include("test_postfit.jl")
     _shard_include("test_issue_737_omega_doc.jl")
     _shard_include("test_statsapi.jl")
+    _shard_include("test_issue_1481_poisson_mask_nobs.jl")
     _shard_include("test_vcov_full_covariance.jl")
     _shard_include("test_gaussian_wald_pd_hessian.jl")
     _shard_include("test_postfit_zib_tweedie.jl")

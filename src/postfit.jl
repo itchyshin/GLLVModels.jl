@@ -793,6 +793,19 @@ StatsAPI.bic(fit::AnyGllvmFit, n::Integer) = StatsAPI.dof(fit) * log(n) - 2 * St
 StatsAPI.bic(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing) =
     StatsAPI.bic(fit, StatsAPI.nobs(fit, Y; mask = mask))
 
+function _fit_stored_obs_mask(fit)
+    hasproperty(fit, :obs_mask) && fit.obs_mask !== nothing && return fit.obs_mask
+    if hasproperty(fit, :integration) && fit.integration !== nothing &&
+       hasproperty(fit.integration, :data)
+        d = fit.integration.data
+        if hasproperty(d, :mask)
+            m = d.mask
+            m !== nothing && !all(m) && return m
+        end
+    end
+    return nothing
+end
+
 """
     nobs(fit, [Y]; mask = nothing) -> Integer
 
@@ -803,9 +816,9 @@ which counts `is_y_observed == 1` cells rather than the number of sites.
 If `Y` is provided, returns `count(mask)` when `mask` is given, otherwise
 `count(!ismissing, Y)` when `Y`'s eltype allows `missing`, otherwise
 `length(Y)` (== `p * n`, complete data). `mask` is `p×n` with `true` meaning
-*observed* (the same convention as `fit_*_gllvm(...; mask)`); a fit struct
-does not retain the mask it was fitted with, so pass it explicitly here for a
-masked fit.
+*observed* (the same convention as `fit_*_gllvm(...; mask)`). When `mask` is
+omitted, masked Poisson fits use the training mask retained on the fit; other
+routes may still require an explicit `mask`.
 
 For a fit made from a response vector (`PhyloGaussianFit`, `BranchREFit`, `MultinomialFit`),
 `y` may be that vector: it is counted as one column, by the same rule. There is no
@@ -818,6 +831,8 @@ without requiring `Y`.
 """
 function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     mask !== nothing && return count(mask)
+    stored = _fit_stored_obs_mask(fit)
+    stored !== nothing && return count(stored)
     Missing <: eltype(Y) && return count(!ismissing, Y)
     return length(Y)
 end

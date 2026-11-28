@@ -1,3 +1,8 @@
+2026-11-26: #1481 Poisson `mask=` fit retains training mask for `nobs`/`bic`.
+`PoissonFit.obs_mask` plus `_fit_stored_obs_mask` in `nobs(fit, Y)` when `mask`
+is omitted; unmasked fits unchanged. Test `test_issue_1481_poisson_mask_nobs.jl`
+7/7; `test_statsapi.jl` 74/74.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
