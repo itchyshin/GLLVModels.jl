@@ -72,6 +72,43 @@ class Syntax(unittest.TestCase):
         self.assertEqual(bad("fixes a&#35; and src/a#b"), [])
 
 
+class FalsePositiveGuards(unittest.TestCase):
+    """Regression: joined identifiers and adjective 'fixed' must not trip the guard."""
+
+    def test_fixed_coefficients_in_backticks(self):
+        txt = "rank 13 `fixed_coefficients.jl` is in #1580."
+        self.assertEqual(bad(txt), [])
+
+    def test_fixed_coefficients_in_pr_list(self):
+        txt = ("Scanned open coverage PRs **#1385–#1397** ... including **#1397** "
+               "(`fixed_coefficients`, ...)")
+        self.assertEqual(bad(txt), [])
+
+    def test_fixed_shape_adjective(self):
+        txt = "use the `family` object's fixed shape/precision (#1227)."
+        self.assertEqual(bad(txt), [])
+
+    def test_hyphenated_wrong_close_identifier(self):
+        txt = "**wrong-close guard** ... #1186"
+        self.assertEqual(bad(txt), [])
+
+
+class TruePositiveStillCaught(unittest.TestCase):
+    def test_strict_closes_gap(self):
+        self.assertEqual(bad("Closes the gap in #1466"), [(None, 1466)])
+
+    def test_fixes_and_fixed_strict(self):
+        self.assertEqual(bad("Fixes #12"), [(None, 12)])
+        self.assertEqual(bad("fixed #12"), [(None, 12)])
+
+    def test_loose_fix_verb(self):
+        self.assertEqual(bad("Fix vcov error (refs #1555)"), [(None, 1555)])
+
+    def test_resolves_owner_repo(self):
+        self.assertEqual(bad("resolves itchyshin/GLLVModels.jl#5"),
+                         [("itchyshin/gllvmodels.jl", 5)])
+
+
 class Review(unittest.TestCase):
     def test_commit_text_not_markdown_stripped(self):
         r = g.check([("c", "<!-- Closes #5 -->\n```\nCloses #6\n```", False)], set())
