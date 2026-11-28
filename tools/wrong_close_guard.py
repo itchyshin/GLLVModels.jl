@@ -14,7 +14,10 @@ What counts as a possible closure (case-insensitive):
     `Closes: itchyshin/GLLVModels.jl#12`, `resolved https://github.com/o/r/issues/12`;
   * loose form (flagged on purpose, because the incidents above were loose or
     negated): any reference later on the same line as a keyword, e.g.
-    `fix(scope): text (refs #149)` or `Does not fix #142`.
+    `fix(derived-ci): … (#142)` or `Does not fix #142`.
+  * explicit `ref` / `refs` (optional colon) immediately before a reference is
+    skipped, e.g. `fix(scope): text (refs #149)`; another ref on the same line
+    with a real closing keyword is still flagged (`Fixes #3, refs #4` → #3).
 Keywords are GitHub's documented list: close, closes, closed, fix, fixes,
 fixed, resolve, resolves, resolved. A keyword inside a longer word
 (`prefix`, `fixture`, `unresolved`, `fixed_coefficients`, `wrong-close`) is
@@ -67,6 +70,14 @@ STRICT_RE = re.compile(
     + _JOINED_ID + _STRICT_TAIL + r"(?=" + REF_RE.pattern + ")",
     re.I,
 )
+
+
+_EXPLICIT_REFS_RE = re.compile(r"(?:^|[\s(,;`\[*])(refs?)\s*:?\s*$", re.I)
+
+
+def _explicit_refs_only(line, ref_start):
+    """True when the reference is only cited via ref/refs, not a closing keyword."""
+    return bool(_EXPLICIT_REFS_RE.search(line[:ref_start].rstrip()))
 
 
 def _spurious_close_keyword(line, start, keyword):
@@ -138,6 +149,8 @@ def find_refs(text, strip=True, repo=None):
             strict_ends.add(m.end())
         for m in REF_RE.finditer(line):
             if m.start() < first:
+                continue
+            if _explicit_refs_only(line, m.start()):
                 continue
             form = "strict" if m.start() in strict_ends else "loose"
             key = _ref_key(m) + (line,)
