@@ -202,6 +202,7 @@ function fit_gllvm_speciescov(Y::AbstractMatrix; family, X::AbstractArray{<:Real
         end
         return isfinite(v) ? v : 1e12
     end
+    _rescue_disp_start!(negll, θ0, has_disp, family)   # #1200
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
     res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
                          autodiff = :finite)
