@@ -2694,7 +2694,8 @@ function fit_nb1_gllvm_grouped_cov(Y::AbstractMatrix; X::AbstractArray{<:Real, 3
     # NB1's Poisson limit is φ → 0: a non-converged fit crawling there is refit with those
     # groups fixed at φ = 1e-10 (the NB2 polish mirrored; #615 NB1 follow-up).
     θ̂, nll, conv0, iters0 = _nb_poisson_ridge_polish(negll, res, ls, opts, p + q + rr + 1;
-        at_limit = <(1e-3), limit_log = log(1e-10))
+        at_limit = <(1e-3), limit_log = log(1e-10),
+        conv_test = r -> Optim.converged(r) && _nb1_grouped_g_met(r, g_tol))
     β̂ = θ̂[1:p]
     γ̂_free = θ̂[(p + 1):(p + q)]
     γ̂ = collect(Float64, _expand_fixed_zero(γ̂_free, γ_fixed_mask))
