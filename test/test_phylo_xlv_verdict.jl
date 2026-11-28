@@ -187,6 +187,22 @@ Base.getindex(::_XlvInterruptY, ::Int, ::Int) = throw(InterruptException())
     @test GLLVModels._phylo_gamma_xlv_nll_guarded(th, Yg, p, K, phy, X; q_lv = q) == 1e12
 end
 
+@testset "phylo poisson xlv: guarded objective returns the sentinel, rethrows Interrupt (#947)" begin
+    phy = GLLVModels.augmented_phy(_XLV_V_TREE)
+    p, n, K, q = 6, 30, 1, 1
+    Y = [(t + s) % 6 for t in 1:p, s in 1:n]
+    X = reshape(collect(range(-1.0, 1.0; length = n)), n, 1)
+    rr = GLLVModels.rr_theta_len(p, K)
+    th = zeros(p + q * K + rr + 1)
+    @test GLLVModels._phylo_poisson_xlv_nll_guarded(th, Y, p, K, phy, X; q_lv = q) ==
+          GLLVModels._phylo_poisson_xlv_nll_packed(th, Y, p, K, phy, X; q_lv = q)
+    th[end] = 1000.0
+    @test GLLVModels._phylo_poisson_xlv_nll_guarded(th, Y, p, K, phy, X; q_lv = q) == 1e12
+    th0 = zeros(p + q * K + rr + 1)
+    @test_throws InterruptException GLLVModels._phylo_poisson_xlv_nll_guarded(
+        th0, _XlvInterruptY((p, n)), p, K, phy, X; q_lv = q)
+end
+
 @testset "phylo binomial xlv: default start works without beta_init (#943)" begin
     # The default beta start called an undefined `logit`, so a call without `beta_init`
     # threw UndefVarError before the optimiser ran. Only finiteness is asserted: the
