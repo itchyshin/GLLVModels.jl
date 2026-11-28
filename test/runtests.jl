@@ -1239,12 +1239,11 @@ println(_SHARD === nothing ?
     _shard_include("test_zero_column_warning.jl")
     # Gated (see `_shard_include_if`); keep last so no other position shifts.
     _shard_include_if(_RUN_SPARSE_PHY_GRAD, "test_sparse_phy_grad.jl")
-    _shard_include_if(_IS_JULIA_110, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
+    _shard_include_if(true, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
     # New test files go in test/auto/ and are picked up here; no line to add.
     for _f in _AUTO_FILES
         _auto_in_shard(_f) && include(joinpath("auto", _f))
     end
-    _shard_include_if(true, "test_destination_b_a4_s4_fixed_coordinate_evaluator.jl")
 end
 # README examples: shard 1 only. The blocks include Poisson fits and a Gaussian
 # CI trio; they must not run on every CI shard.
