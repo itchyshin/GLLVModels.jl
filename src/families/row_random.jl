@@ -149,8 +149,10 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family 
         Λ0[:, j] = F.U[:, j] .* (F.S[j] / sqrt(n))
     end
 
-    θ0 = has_disp ? vcat(β0, pack_lambda(Λ0), log(σ_row_init), log(_cov_disp_init(family))) :
-                    vcat(β0, pack_lambda(Λ0), log(σ_row_init))
+    function θ_start(σ0)
+        return has_disp ? vcat(β0, pack_lambda(Λ0), log(σ0), log(_cov_disp_init(family))) :
+                          vcat(β0, pack_lambda(Λ0), log(σ0))
+    end
     function negll(θ)
         β = θ[1:p]
         Λ = unpack_lambda(θ[(p + 1):(p + rr)], p, K)
@@ -166,8 +168,20 @@ function fit_row_random_gllvm(Y::AbstractMatrix{<:Real}; mask = nothing, family 
         return isfinite(v) ? v : 1e12
     end
     ls = Optim.LBFGS(linesearch = Optim.LineSearches.BackTracking(order = 3))
-    res = Optim.optimize(negll, θ0, ls, Optim.Options(g_tol = g_tol, iterations = iterations);
+    # The marginal can have a second mode near σ_row ≈ 0 (e.g. Bernoulli, K = 2) that a
+    # single start at σ_row_init = 1 misses while still reporting convergence. Run the
+    # requested start plus a small-σ_row start (0.05); prefer a converged start, then the
+    # better log-likelihood among starts with the same convergence status.
+    res = Optim.optimize(negll, θ_start(σ_row_init), ls,
+                         Optim.Options(g_tol = g_tol, iterations = iterations);
                          autodiff = :finite)
+    if σ_row_init > 0.05
+        res2 = Optim.optimize(negll, θ_start(0.05), ls,
+                              Optim.Options(g_tol = g_tol, iterations = iterations);
+                              autodiff = :finite)
+        c1, c2 = Optim.converged(res), Optim.converged(res2)
+        (c2 > c1 || (c2 == c1 && Optim.minimum(res2) < Optim.minimum(res))) && (res = res2)
+    end
     θ̂ = Optim.minimizer(res)
     β̂ = θ̂[1:p]
     Λ̂ = unpack_lambda(θ̂[(p + 1):(p + rr)], p, K)
