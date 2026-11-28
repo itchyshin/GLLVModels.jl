@@ -248,4 +248,24 @@ end
         @test ff isa OrderedBetaFit
         @test ff.loglik ≈ direct.loglik atol = 1e-8
     end
+
+    @testset "constant interior guard (#1583)" begin
+        Y_const = fill(0.5, 3, 12)
+        err = @test_throws ArgumentError fit_ordered_beta_gllvm(Y_const; K = 1, iterations = 80)
+        msg = sprint(showerror, err.value)
+        @test occursin("interior", lowercase(msg))
+        @test occursin("identical", msg)
+        @test_throws ArgumentError fit_gllvm(Y_const; family = OrderedBeta(), K = 1, iterations = 80)
+
+        Y_varied = [0.3 0.5; 0.4 0.6]
+        @test !GLLVModels._ordered_beta_constant_interior(Y_varied, nothing)
+        @test GLLVModels._ordered_beta_convergence_veto(Y_varied, nothing, true)
+
+        @test GLLVModels._ordered_beta_constant_interior(Y_const, nothing)
+        @test !GLLVModels._ordered_beta_convergence_veto(Y_const, nothing, true)
+        @test !GLLVModels._ordered_beta_convergence_veto(Y_const, nothing, false)
+
+        Y_mass = [0.0 1.0; 0.0 1.0]
+        @test !GLLVModels._ordered_beta_constant_interior(Y_mass, nothing)
+    end
 end
