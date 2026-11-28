@@ -1026,6 +1026,7 @@ println(_SHARD === nothing ?
     _shard_include("test_species_covariates.jl")
     _shard_include("test_fourthcorner.jl")
     _shard_include("test_row_effects.jl")
+    _shard_include("test_cursor_1127fx_1564.jl")
     _shard_include("test_row_random.jl")
     _shard_include("test_constrained_ordination.jl")
     _shard_include("test_rrr.jl")
