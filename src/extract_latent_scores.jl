@@ -52,9 +52,9 @@
 # `MethodError` on `_extract_latent_scores_unit` (same failure mode as
 # calling `getLV` on them directly today), which is the correct behaviour —
 # there is nothing to twin for a fit type this package cannot ordinate at
-# all. Likewise, `QuadraticFit`, `OrderedBetaFit`, and `MixedFamilyFit` have
-# `getLV` methods but are not part of `AnyGllvmFit`, so `extract_latent_scores`
-# cannot reach them either (see the PR body's "not covered" list).
+# all. Likewise, `QuadraticFit` and `MixedFamilyFit` have `getLV` methods but are
+# not part of `AnyGllvmFit`, so `extract_latent_scores` cannot reach them either
+# (see the PR body's "not covered" list).
 
 const _ComponentAwareGllvmFit = Union{
     GllvmFit, BinomialFit, PoissonFit, NBFit, BetaFit, OrdinalFit, GammaFit,
@@ -63,7 +63,7 @@ const _ComponentAwareGllvmFit = Union{
 const _PlainGllvmFit = Union{
     NB1Fit, GP1Fit, ExponentialFit, DeltaLogNormalFit, HurdlePoissonFit,
     HurdleNBFit, DeltaGammaFit, ZIPFit, ZINBFit, ZIBFit, TweedieFit,
-    COMPoissonFit, BetaBinomialFit, BetaBinomialGroupedFit, BetaHurdleFit,
+    COMPoissonFit, OrderedBetaFit, BetaBinomialFit, BetaBinomialGroupedFit, BetaHurdleFit,
     GammaGroupedFit, NB1GroupedFit, NBGroupedFit, BetaGroupedFit,
     OrdinalPerTraitFit, RowEffectFit, RowRandomFit,
 }
