@@ -91,7 +91,7 @@ _register_shard_table!(4, (
         "test_derived_ci_surfaces.jl", "test_extractors.jl", "test_namespace_numeric_p1_twin_b.jl",
         "test_postfit_twins_p1.jl", "test_diagnostics_p1.jl", "test_off_predict_twin_p1.jl",
         "test_temporal_likelihood_internals.jl", "test_isdm_cloglog_internals.jl", "test_convergence_sweep.jl",
-        "test_zinb_observed_laplace.jl", "test_input_validation.jl", "test_response_support_730.jl",
+        "test_zinb_observed_laplace.jl", "test_bool_k_1291.jl", "test_input_validation.jl", "test_response_support_730.jl",
         "test_k_argument_check.jl",
         "test_dup_tip_names.jl",
         "test_zero_sites_check.jl",
@@ -387,7 +387,7 @@ _register_shard_table!(8, (
         "test_relaxed_clock.jl", "test_cv_unsupported_773.jl", "test_loading_profile_confirmatory.jl",
         "test_predict_delta_shared_820.jl", "test_postfit_communality_confint_default_parity.jl", "test_temporal_helpers.jl",
         "test_temporal_composed.jl", "test_temporal_composed_receipts.jl", "test_convergence_sweep.jl",
-        "test_zip_betaz_wald_926.jl", "test_input_validation.jl", "test_eta_clamp_869.jl",
+        "test_zip_betaz_wald_926.jl", "test_bool_k_1291.jl", "test_input_validation.jl", "test_eta_clamp_869.jl",
         "test_truncpois_boot_782.jl", "test_nb_mite_multistart_1022.jl",
     ),
     (
@@ -1183,6 +1183,7 @@ println(_SHARD === nothing ?
     _shard_include("test_spde_orphan_mesh_node.jl")
     # w2-structured: NaN/Inf response refused by fit_phylo_gaussian, fit_spde_gaussian, fit_relaxed_clock.
     _shard_include("test_nonfinite_y_phylo_spde_relaxed.jl")
+    _shard_include("test_bool_k_1291.jl")
     _shard_include("test_input_validation.jl")
     _shard_include("test_robustness_sweep.jl")
     _shard_include("test_derived_ci_sweep.jl")

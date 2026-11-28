@@ -284,6 +284,13 @@ _refuse_weights(caller::AbstractString, what::AbstractString) = throw(ArgumentEr
     "Observation weights are available on the Poisson Laplace route " *
     "(fit_gllvm(Y; family = Poisson(), K, weights)) only."))
 
+# Julia `Integer` includes `Bool`; latent dimension K must be an ordinary integer (#1291).
+function _refuse_bool_K(K; caller::AbstractString = "fit_gllvm")
+    (K === nothing || !(K isa Bool)) && return nothing
+    throw(ArgumentError(
+        "$caller: K must be a non-negative integer (got K = $K of type Bool)"))
+end
+
 # The one route that takes weights is the default Poisson Laplace fit. Everything else is
 # refused here, naming what blocks it, so no route silently ignores weights and none hits a
 # raw MethodError. `nothing` = admitted.
@@ -336,6 +343,8 @@ function _fit_gllvm_per_column(Y, family::AbstractVector; K, num_lv, row_eff, di
             "fit_gllvm: K=$K and num_lv=$num_lv disagree; pass only one"))
         K = num_lv
     end
+    _refuse_bool_K(K)
+    _refuse_bool_K(num_lv)
     K === nothing && throw(ArgumentError("fit_gllvm: K (or num_lv) is required"))
     kw = NamedTuple(kwargs)
     # `offset = nothing` means no offset, as on the single-family routes.
@@ -727,6 +736,8 @@ function fit_gllvm(Y::AbstractMatrix; family = Normal(), K = nothing,
         end
         K = num_lv
     end
+    _refuse_bool_K(K)
+    _refuse_bool_K(num_lv)
     _check_K_argument(K, "fit_gllvm"; family = family)
 
     # --- K omitted: estimate it (lane auto-d-20260926; docs/design/74). -------
