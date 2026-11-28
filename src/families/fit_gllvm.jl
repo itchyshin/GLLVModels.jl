@@ -879,6 +879,7 @@ function _fit_gllvm(::OrdinalLogit, Y::AbstractMatrix; kwargs...)
 end
 _fit_gllvm(::Gamma,    Y::AbstractMatrix; kwargs...) = fit_gamma_gllvm(Y; kwargs...)
 _fit_gllvm(::Exponential, Y::AbstractMatrix; kwargs...) = fit_exponential_gllvm(Y; kwargs...)
+_fit_gllvm(::TweedieED, Y::AbstractMatrix; kwargs...) = fit_tweedie_gllvm(Y; kwargs...)
 # `StudentTFamily` carries the degrees-of-freedom policy: numeric ν is fixed;
 # nothing requests estimation. This model control travels on
 # the family instance (as `ZIB`'s trials count does) and is forwarded as `nu`. A
@@ -953,7 +954,7 @@ _fit_gllvm(::Multinomial, Y::AbstractMatrix; kwargs...) =
 # Clear error for families not yet implemented.
 _fit_gllvm(family, Y::AbstractMatrix; kwargs...) = throw(ArgumentError(
     "fit_gllvm: family $(nameof(typeof(family))) is not implemented yet " *
-    "(available: Normal, Binomial, Poisson, TruncatedPoisson, CensoredPoisson, TruncatedNegBin2, Lognormal, Multinomial, NegativeBinomial, NB1, Beta, BetaBinom, Ordinal, Gamma, Exponential, StudentTFamily, DeltaLogNormal, DeltaGamma, HurdlePoisson, HurdleNB, BetaHurdle, COMPoisson, OrderedBeta, GeneralizedPoisson1, ZIPoisson, ZINegBin, ZIB)"))
+    "(available: Normal, Binomial, Poisson, TruncatedPoisson, CensoredPoisson, TruncatedNegBin2, Lognormal, Multinomial, NegativeBinomial, NB1, Beta, BetaBinom, Ordinal, Gamma, Exponential, TweedieED, StudentTFamily, DeltaLogNormal, DeltaGamma, HurdlePoisson, HurdleNB, BetaHurdle, COMPoisson, OrderedBeta, GeneralizedPoisson1, ZIPoisson, ZINegBin, ZIB)"))
 
 # --- grouped-dispersion routing keyed on the family marker. ------------------
 function _fit_gllvm_grouped(::TruncatedNegBin2, Y::AbstractMatrix; group, kwargs...)

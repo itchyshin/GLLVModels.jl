@@ -685,6 +685,15 @@ end
 # Model-selection criteria + display + StatsAPI extractors.
 # ---------------------------------------------------------------------------
 
+function _warn_ic_not_converged!(fit)
+    hasfield(typeof(fit), :converged) || return
+    fit.converged && return
+    @warn "loglikelihood, aic, and bic are computed from a fit with converged == false; " *
+        "the returned information criteria may not be at a reliable optimum." maxlog = 1 _id =
+        Symbol("ic_not_converged:", objectid(fit))
+    return
+end
+
 _loglik(fit::GllvmFit)         = fit.logLik
 _loglik(fit::GaussianREMLFit)  = fit.reml_loglik
 _loglik(fit::PhyloGaussianFit) = -fit.negll
@@ -780,7 +789,11 @@ StatsAPI.dof(fit::AnyGllvmFit) = _nparams(fit)
 
 Return the maximized marginal log-likelihood of `fit`.
 """
-StatsAPI.loglikelihood(fit::AnyGllvmFit) = _loglik(fit)
+function StatsAPI.loglikelihood(fit::AnyGllvmFit)
+    ll = _loglik(fit)
+    _warn_ic_not_converged!(fit)
+    return ll
+end
 
 """
     aic(fit) -> Float64
