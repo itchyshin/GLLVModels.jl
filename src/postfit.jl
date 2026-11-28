@@ -3273,7 +3273,6 @@ function residuals(fit::GllvmCovFit, Y::AbstractMatrix{<:Real};
     type in (:dunnsmyth, :pearson) ||
         throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
     p, n = size(Y)
-    fam = _cov_family(fit.family, fit.dispersion)
     Nm = N === nothing ? fill(1, p, n) : N
     μ = predict(fit, Y; X = X, type = :response, N = N)
     if type === :pearson
@@ -3283,12 +3282,13 @@ function residuals(fit::GllvmCovFit, Y::AbstractMatrix{<:Real};
             r = fit.dispersion
             return (Y .- μ) ./ sqrt.(μ .+ μ .^ 2 ./ r)
         elseif fit.family isa NB1
-            return (Y .- μ) ./ sqrt.(μ .* (1 .+ fit.dispersion .* μ))
+            φ = fit.dispersion
+            return (Y .- μ) ./ sqrt.(μ .* (1 .+ φ))
         elseif fit.family isa Binomial
-            return (Y ./ Nm .- μ) ./ sqrt.(μ .* (1 .- μ) ./ Nm)
+            return (Y .- Nm .* μ) ./ sqrt.(Nm .* μ .* (1 .- μ))
         elseif fit.family isa Beta
             φ = fit.dispersion
-            return (Y .- μ) ./ sqrt.(μ .* (1 .- μ) ./ (φ .* (1 .+ φ)))
+            return (Y .- μ) ./ sqrt.(μ .* (1 .- μ) ./ (1 .+ φ))
         elseif fit.family isa Gamma
             α = fit.dispersion
             return (Y .- μ) ./ sqrt.(μ .^ 2 ./ α)
