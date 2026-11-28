@@ -116,6 +116,23 @@ function _grouped_warn_identification(terms, p::Integer)
     return nothing
 end
 
+# Binomial with one trial per cell: the unique (trait-specific) variance next to
+# a latent term is not identified from binary data. R gllvmTMB drops it with a
+# message; do the same here (the latent term is kept, `unique` is cleared).
+function _grouped_drop_binary_unique(terms, trials::AbstractMatrix, kind::Symbol)
+    kind === :binomial && all(==(1.0), trials) || return terms
+    any(term -> term.mode === :latent && term.unique, terms) || return terms
+    out = GroupingTerm[]
+    for term in terms
+        if term.mode === :latent && term.unique
+            @info "Binomial with one trial per cell: dropping the unique variances (unique=true) next to the latent term; they are not identified from binary data. The fit is the latent-only model, as in R gllvmTMB." source=term.name
+            term = GroupingTerm(term.name, term.mode, term.rank, false, false)
+        end
+        push!(out, term)
+    end
+    return out
+end
+
 function _warn_covariance_redundancy(source, parameter_count, covariance_dimension)
     parameter_count > covariance_dimension || return nothing
     @warn "Covariance is structurally non-identifiable in its current coordinates; loadings and unique variances cannot be separated. Total covariance may still be identifiable. Use a non-redundant supported covariance representation; full-coordinate Wald intervals may be unavailable." source parameter_count covariance_dimension

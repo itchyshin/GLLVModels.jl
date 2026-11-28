@@ -758,6 +758,7 @@ function fit_grouped_nongaussian(Y::AbstractMatrix{<:Real}; mask = nothing, fami
     end
     all(isfinite, data) || throw(ArgumentError("responses exceed Float64 range"))
     trials = _grouped_nongaussian_trials(data, N, kind)
+    termvec = _grouped_drop_binary_unique(termvec, trials, kind)
     default_means = X === nothing
     D = default_means ? _trait_mean_design(p, n) : _source_mean_design(X, p, n)
     q = size(D, 2)
