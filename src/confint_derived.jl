@@ -1071,6 +1071,7 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
 
     cutoff = quantile(Chisq(1), level)
     ll_full = fit.logLik
+    warned_better = Ref(false)
 
     step_init = if initial_step === nothing
         max(0.05 * abs(g_hat), 0.01)
@@ -1088,7 +1089,7 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
             penalty_weight = penalty_weight)
         if ok
             θ_warm_lower = θ_new
-            return 2.0 * (ll_full - ll_c)
+            return _profile_deviance(ll_full, ll_c, "profile_ci_derived", warned_better)
         else
             return NaN
         end
@@ -1100,7 +1101,7 @@ function profile_ci_derived(fit::GllvmFit, derived_fn::Function;
             penalty_weight = penalty_weight)
         if ok
             θ_warm_upper = θ_new
-            return 2.0 * (ll_full - ll_c)
+            return _profile_deviance(ll_full, ll_c, "profile_ci_derived", warned_better)
         else
             return NaN
         end

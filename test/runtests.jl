@@ -105,7 +105,7 @@ _register_shard_table!(4, (
     (
         "test_shard_selection.jl", "test_animal_latent.jl", "test_precision_multivariate.jl",
         "test_destination_b_reference.jl", "test_destination_b_kernel_crosscheck.jl", "test_joint_phylo_grouped_alias_public.jl",
-        "test_joint_phylo_grouped_postfit.jl", "test_confint_bootstrap.jl", "test_confint_derived.jl",
+        "test_joint_phylo_grouped_postfit.jl", "test_confint_bootstrap.jl", "test_confint_derived.jl", "test_profile_better_optimum.jl",
         "test_confint_derived_wald.jl", "test_takahashi_selinv.jl", "test_em_observed_information_pd.jl",
         "test_aghq_multistart.jl", "test_aghq_nb2.jl", "test_aghq_tweedie.jl",
         "test_aghq_delta_gamma.jl", "test_aghq_public_binomial.jl", "test_truncated_poisson.jl",
@@ -316,7 +316,7 @@ _register_shard_table!(8, (
     (
         "test_shard_selection.jl", "test_kernel_indep.jl", "test_laplace_K_bounds.jl",
         "test_grouped_profile_inversion.jl", "test_lowrank_cholesky.jl", "test_confint_profile.jl",
-        "test_confint_derived.jl", "test_takahashi_selinv.jl", "test_fit_phylo.jl",
+        "test_confint_derived.jl", "test_profile_better_optimum.jl", "test_takahashi_selinv.jl", "test_fit_phylo.jl",
         "test_cloglog_likelihood.jl", "test_aghq_binomial.jl", "test_laplace_curvature_contract.jl",
         "test_grouped_analytic_grad.jl", "test_destination_b_joint_identification.jl", "test_gp1_verdict.jl",
         "test_studentt_boundary.jl", "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_wald_pd_hessian.jl",
@@ -618,6 +618,7 @@ println(_SHARD === nothing ?
     _shard_include("test_profile_rootfind.jl")
     _shard_include("test_confint_bootstrap.jl")
     _shard_include("test_confint_derived.jl")
+    _shard_include("test_profile_better_optimum.jl")
     _shard_include("test_confint_derived_wald.jl")
     _shard_include("test_confint_method_routes.jl")
     _shard_include("test_profile_derived_fix.jl")
