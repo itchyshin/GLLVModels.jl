@@ -221,3 +221,13 @@ end
     @test gmax <= 10 * max(1e-5, 1e-5 * abs(nll))
     @test fit.converged == true
 end
+
+@testset "fit_ordinal_gllvm (shared cutpoints): converged requires a small gradient (#1290)" begin
+    # g_tol far below the finite-difference noise floor: the optimiser stops on a zero-length
+    # step (Optim.converged = true) with the gradient test unmet. Before #1290 this reported true.
+    fit = GM.fit_ordinal_gllvm(_ORD_CONTROL_60x10; K = 1, g_tol = 1e-14)
+    @test isfinite(fit.loglik)
+    @test fit.converged == false
+    # An ordinary fit is still reported converged.
+    @test GM.fit_ordinal_gllvm(_ORD_CONTROL_60x10; K = 1).converged == true
+end

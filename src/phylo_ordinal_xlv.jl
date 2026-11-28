@@ -360,10 +360,11 @@ function _fit_phylo_ordinal_xlv(Y::AbstractMatrix, phy::AugmentedPhy;
     theta_hat = Optim.minimizer(res)
     Lambda_hat, alpha_hat, tau_hat, sigma2_hat =
         _phylo_ordinal_xlv_unpack_packed(theta_hat, p, K, q_lv, C)
+    verdict = _phylo_xlv_verdict(res, g_tol)   # gradient test, as the other phylo xlv fitters (#1290)
     return (Lambda = Matrix(Lambda_hat), alpha_lv = Matrix(alpha_hat),
             tau = Vector{Float64}(tau_hat), C = C, sigma2_phy = sigma2_hat,
-            loglik = _fit_verdict(res)[1], converged = _fit_verdict(res)[2],
-            iterations = Optim.iterations(res), theta_packed = collect(theta_hat))
+            loglik = verdict.loglik, converged = verdict.converged,
+            iterations = verdict.iterations, theta_packed = collect(theta_hat))
 end
 
 function _phylo_ordinal_xlv_profile_indices(indices, nb::Integer)
