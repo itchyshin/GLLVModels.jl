@@ -58,6 +58,9 @@ fit_gaussian_gllvm
 fit_gaussian_pervar_gllvm
 fit_gaussian_sources
 optimizer_info
+convergence_status
+boundary_params
+heywood_traits
 OptimizerRecord
 OptimizerStage
 GroupingTerm

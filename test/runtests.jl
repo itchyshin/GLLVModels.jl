@@ -821,6 +821,9 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_fixed_residual.jl")
     _shard_include("test_gaussian_pervar_fallback.jl")
     _shard_include("test_gaussian_pervar_heywood_736.jl")   # #736
+    _shard_include("test_gaussian_heywood_status_1284.jl")   # #1284
+    _shard_include("test_gaussian_convergence_rule_1120.jl")   # #1120
+    _shard_include("test_ordinal_cutpoint_boundary_1120.jl")   # #1120 ordinal
     _shard_include("test_formula_pervar.jl")
     _shard_include("test_formula_default_x_guard.jl")
     _shard_include("test_aicbic_newfits.jl")
