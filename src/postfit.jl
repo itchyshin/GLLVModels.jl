@@ -3238,6 +3238,90 @@ function predict(fit::GllvmCovFit, X::AbstractArray{<:Real, 3}; type::Symbol = :
     return linkinv.(Ref(fit.link), _clamp_eta.(η))
 end
 
+function getLV(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3},
+               kwargs...)
+    getLV(fit, Y, X; kwargs...)
+end
+
+function predict(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3},
+                 kwargs...)
+    predict(fit, Y, X; kwargs...)
+end
+
+fitted(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}; X::AbstractArray{<:Real, 3}, kwargs...) =
+    predict(fit, Y; X = X, type = :response, kwargs...)
+
+"""
+    residuals(fit::GllvmCovFit, Y; X, type=:dunnsmyth, rng=..., N=nothing) -> p×n matrix
+
+Conditional residuals for a covariate fit at `η = β + Xγ + Λẑ`. Pass the same
+`(p, n, q)` design `X` as at fit time (positional `residuals(fit, Y, X; …)` or
+keyword `X = X`).
+"""
+function residuals(fit::GllvmCovFit, Y::AbstractMatrix{<:Real}, X::AbstractArray{<:Real, 3};
+                   type::Symbol = :dunnsmyth,
+                   rng::AbstractRNG = Random.default_rng(),
+                   N::Union{Nothing, AbstractMatrix} = nothing)
+    residuals(fit, Y; X = X, type = type, rng = rng, N = N)
+end
+
+function residuals(fit::GllvmCovFit, Y::AbstractMatrix{<:Real};
+                   X::AbstractArray{<:Real, 3},
+                   type::Symbol = :dunnsmyth,
+                   rng::AbstractRNG = Random.default_rng(),
+                   N::Union{Nothing, AbstractMatrix} = nothing)
+    type in (:dunnsmyth, :pearson) ||
+        throw(ArgumentError("type must be :dunnsmyth or :pearson; got :$type"))
+    p, n = size(Y)
+    Nm = N === nothing ? fill(1, p, n) : N
+    μ = predict(fit, Y; X = X, type = :response, N = N)
+    if type === :pearson
+        if fit.family isa Poisson
+            return (Y .- μ) ./ sqrt.(μ)
+        elseif fit.family isa NegativeBinomial
+            r = fit.dispersion
+            return (Y .- μ) ./ sqrt.(μ .+ μ .^ 2 ./ r)
+        elseif fit.family isa NB1
+            φ = fit.dispersion
+            return (Y .- μ) ./ sqrt.(μ .* (1 .+ φ))
+        elseif fit.family isa Binomial
+            return (Y .- Nm .* μ) ./ sqrt.(Nm .* μ .* (1 .- μ))
+        elseif fit.family isa Beta
+            φ = fit.dispersion
+            return (Y .- μ) ./ sqrt.(μ .* (1 .- μ) ./ (1 .+ φ))
+        elseif fit.family isa Gamma
+            α = fit.dispersion
+            return (Y .- μ) ./ sqrt.(μ .^ 2 ./ α)
+        else
+            return (Y .- μ) ./ μ
+        end
+    end
+    R = Matrix{Float64}(undef, p, n)
+    @inbounds for s in 1:n, t in 1:p
+        y, mu = Y[t, s], μ[t, s]
+        if fit.family isa Poisson
+            R[t, s] = _ds_z_discrete(Poisson(mu), y, rand(rng))
+        elseif fit.family isa NegativeBinomial
+            r = fit.dispersion
+            R[t, s] = _ds_z_discrete(NegativeBinomial(r, r / (r + mu)), y, rand(rng))
+        elseif fit.family isa NB1
+            R[t, s] = _ds_z_discrete(NegativeBinomial(mu / fit.dispersion, 1 / (1 + fit.dispersion)), y, rand(rng))
+        elseif fit.family isa Binomial
+            d = Binomial(Nm[t, s], clamp(mu, 1e-12, 1 - 1e-12))
+            R[t, s] = _ds_z_discrete(d, y, rand(rng))
+        elseif fit.family isa Beta
+            φ = fit.dispersion
+            mc = clamp(mu, 1e-6, 1 - 1e-6)
+            R[t, s] = _ds_z_continuous(Beta(mc * φ, (1 - mc) * φ), clamp(y, 1e-6, 1 - 1e-6))
+        elseif fit.family isa Gamma
+            R[t, s] = _ds_z_continuous(Gamma(fit.dispersion, mu / fit.dispersion), max(float(y), 1e-300))
+        else
+            R[t, s] = _ds_z_continuous(Exponential(mu), max(float(y), 1e-300))
+        end
+    end
+    return R
+end
+
 function Base.show(io::IO, ::MIME"text/plain", fit::GllvmCovFit)
     p, K = size(fit.Λ); q = length(fit.γ)
     println(io, "GLLVM fit with covariates (", nameof(typeof(fit.family)), ", Laplace)")
