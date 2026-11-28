@@ -6,7 +6,7 @@ using Test, GLLVModels, Random, Distributions
     Random.seed!(3)
     Y = rand(Poisson(3), 5, 60)
     fit = fit_poisson_gllvm(Y; K = 1, iterations = 2)
-    @test convergence_status(fit) === :not_converged
+    @test fit.converged == false
 
     @test_logs (:warn,) confint(fit, Y; method = :wald)
     ci = confint(fit, Y; method = :wald)
