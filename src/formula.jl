@@ -54,6 +54,42 @@ function _extract_formula_symbols(term)
     return syms
 end
 
+# Columns that enter the formula RHS as bare terms, alone or in an interaction. Arguments of a
+# function term are not included: the function sees the raw column and owns its `missing`.
+function _formula_bare_symbols(term)
+    term isa Term && return Symbol[term.sym]
+    parts = term isa InteractionTerm ? term.terms : term isa Tuple ? term : ()
+    return Symbol[s for t in parts for s in _formula_bare_symbols(t)]
+end
+
+# Covariate columns used as bare terms in the formula RHS. A bare column holding a `missing`
+# stopped with `KeyError: key missing not found` inside StatsModels; `gllvm` does not drop or
+# impute sites, so it refuses such a column with a message that names it. A column used only
+# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. A column whose
+# type allows `Missing` but holds none is passed through unchanged (how it is read is a
+# separate, undecided question), and columns the formula does not use are not looked at.
+# `long_route` names a long-data fitter (one data row per observation); its message speaks of
+# rows of the data instead of `gllvm`, `Y` and sites.
+function _formula_covariate_columns(rhs, cols::NamedTuple; long_route::Union{Nothing, String} = nothing)
+    for s in unique(_formula_bare_symbols(rhs))
+        haskey(cols, s) || continue
+        v = cols[s]
+        Missing <: eltype(v) || continue
+        nmiss = count(ismissing, v)
+        nmiss == 0 && continue
+        i1 = findfirst(ismissing, v)
+        long_route === nothing && throw(ArgumentError(
+            "covariate `$s` in the formula has $nmiss `missing` value(s) (first at site " *
+            "$i1); `gllvm` does not drop or impute sites. Remove those " *
+            "sites from `Y` and `data`, or fill the covariate, before fitting"))
+        throw(ArgumentError(
+            "covariate `$s` in the formula has $nmiss `missing` value(s) (first at row $i1); " *
+            "`$long_route` does not drop or impute rows. Remove those rows from the data, or " *
+            "fill the covariate, before fitting"))
+    end
+    return cols
+end
+
 # Extract site-level model matrix mm (n × q) and coefficient names from formula RHS.
 function _build_site_modelmatrix(rhs, data; contrasts::AbstractDict = Dict{Symbol, Any}())
     cols = Tables.columntable(data)
@@ -174,8 +210,14 @@ beta-binomial route also threads a binomial-style `N` trial-count kwarg), to
 shared site-X), to [`fit_zip_gllvm_cov`](@ref) for `ZIPoisson()` (separate
 `γz`/`γc`, `Λz=0`; Julia-forward), to [`fit_zinb_gllvm_cov`](@ref) for
 `ZINegBin()` (separate `γz`/`γc`, `Λz=0`, shared scalar `r`; Julia-forward),
-and to [`fit_gllvm_cov`](@ref) for the other non-Gaussian families (shared
-dispersion + X). Returns that fitter's result.
+and to [`fit_gllvm_cov`](@ref) for the other non-Gaussian families with
+covariates (Poisson, Binomial, … — **shared** dispersion + X where applicable).
+With covariates, `Gamma()`, `Beta()`, `NegativeBinomial()`, `NB1()`, and
+beta-binomial **do not** use `fit_gllvm_cov`; they use the grouped covariate
+fitters above (per-trait φ/α/`r` + shared `γ`). A direct matrix call
+`fit_gllvm_cov(Y; family = Gamma(), X = X, …)` keeps one shared Gamma shape and
+is a different estimand — compare `loglik` only within the same route. Returns
+that fitter's result.
 For `Normal()`, `pervar=true` instead selects
 [`fit_gaussian_pervar_gllvm`](@ref). This route constructs the complete mean:
 `y ~ 1 + x` (or `y ~ x`) has trait-specific intercepts and a shared slope;
@@ -255,6 +297,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
         length(column) == n || throw(DimensionMismatch(
             "`data` column `$name` has $(length(column)) rows but Y has $n sites (columns)"))
     end
+    _formula_covariate_columns(formula.rhs, cols)
     if grouping !== nothing || get(kwargs, :phylo, nothing) !== nothing
         sources === nothing || throw(ArgumentError("do not combine grouping with explicit sources"))
         K === _FORMULA_K_UNSET || throw(ArgumentError("grouping terms own their ranks; do not supply K"))
@@ -287,6 +330,7 @@ function gllvm(formula::FormulaTerm, Y::AbstractMatrix, data;
             coefficient_names=coefficient_names, kwargs...)
     end
     K === _FORMULA_K_UNSET && throw(UndefKeywordError(:K))
+    _check_K_argument(K, "gllvm"; family = family)
     # The formula builds the design below and splats `kwargs...` after it, so a caller `X`
     # would silently win over the formula covariates (#742).
     haskey(kwargs, :X) && throw(ArgumentError(
@@ -414,6 +458,14 @@ function gllvm(formula::FormulaTerm, long_data; family = Normal(),
                K::Union{Integer, _FormulaKUnset} = _FORMULA_K_UNSET,
                species::Symbol = :species, site::Symbol = :site,
                contrasts::AbstractDict = Dict{Symbol, Any}(), kwargs...)
+    if long_data isa AbstractMatrix
+        throw(ArgumentError(
+            "a wide species×sites response matrix was passed to the long-format " *
+            "`gllvm(formula, long_data)` entry point; long data must be a table with " *
+            "response, species, and site columns. For a wide matrix `Y`, use " *
+            "`fit_gllvm(Y; ...)` or supply a site table as the third argument, e.g. " *
+            "`gllvm(formula, Y, (site = collect(1:size(Y, 2)),; ...)`."))
+    end
     cols = Tables.columntable(long_data)
     formula.lhs isa Term || throw(ArgumentError(
         "long-format gllvm needs a single response column on the formula LHS; got $(formula.lhs)"))

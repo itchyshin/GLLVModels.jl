@@ -675,6 +675,15 @@ end
 # Model-selection criteria + display + StatsAPI extractors.
 # ---------------------------------------------------------------------------
 
+function _warn_ic_not_converged!(fit)
+    hasfield(typeof(fit), :converged) || return
+    fit.converged && return
+    @warn "loglikelihood, aic, and bic are computed from a fit with converged == false; " *
+        "the returned information criteria may not be at a reliable optimum." maxlog = 1 _id =
+        Symbol("ic_not_converged:", objectid(fit))
+    return
+end
+
 _loglik(fit::GllvmFit)         = fit.logLik
 _loglik(fit::GaussianREMLFit)  = fit.reml_loglik
 _loglik(fit::PhyloGaussianFit) = -fit.negll
@@ -770,7 +779,11 @@ StatsAPI.dof(fit::AnyGllvmFit) = _nparams(fit)
 
 Return the maximized marginal log-likelihood of `fit`.
 """
-StatsAPI.loglikelihood(fit::AnyGllvmFit) = _loglik(fit)
+function StatsAPI.loglikelihood(fit::AnyGllvmFit)
+    ll = _loglik(fit)
+    _warn_ic_not_converged!(fit)
+    return ll
+end
 
 """
     aic(fit) -> Float64
@@ -807,6 +820,10 @@ If `Y` is provided, returns `count(mask)` when `mask` is given, otherwise
 does not retain the mask it was fitted with, so pass it explicitly here for a
 masked fit.
 
+For a fit made from a response vector (`PhyloGaussianFit`, `BranchREFit`, `MultinomialFit`),
+`y` may be that vector: it is counted as one column, by the same rule. There is no
+`bic(fit, y)` vector form; use `bic(fit, nobs(fit, y))`.
+
 For fit structs that store observation/level counts instead of a response
 matrix (e.g. two-level, random-slope, SPDE), `nobs(fit)` returns the
 cell-count analogue (`p` times the stored unit count) so the convention holds
@@ -817,6 +834,12 @@ function StatsAPI.nobs(fit::AnyGllvmFit, Y::AbstractMatrix; mask = nothing)
     Missing <: eltype(Y) && return count(!ismissing, Y)
     return length(Y)
 end
+# Fits made from a response VECTOR (`fit_phylo_gaussian`, `fit_branch_re`, `fit_branch_re_dense`,
+# a length-n `fit_multinomial_gllvm`): the fallback error below tells the user to call
+# `nobs(fit, Y)`, and a vector `y` has no such method (#1164). Count it as the single column
+# it is; same rule as the matrix method (mask, then `missing`, then `length`).
+StatsAPI.nobs(fit::Union{PhyloGaussianFit, BranchREFit, MultinomialFit}, y::AbstractVector;
+              mask = nothing) = StatsAPI.nobs(fit, reshape(y, :, 1); mask = mask)
 StatsAPI.nobs(fit::TwoLevelFit) = size(fit.Λ_B, 1) * fit.nindiv
 StatsAPI.nobs(fit::GaussianRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
 StatsAPI.nobs(fit::PoissonRandomSlopeFit) = size(fit.Λ, 1) * fit.nlevels
@@ -836,7 +859,8 @@ function StatsAPI.nobs(fit::AnyGllvmFit)
     elseif hasfield(typeof(fit), :ρ)
         return length(fit.ρ)
     else
-        throw(ArgumentError("nobs for $(typeof(fit)) requires the response matrix Y: nobs(fit, Y)"))
+        throw(ArgumentError("nobs for $(typeof(fit)) requires the response: nobs(fit, Y), " *
+                                "or nobs(fit, y) when the fit was made from a vector y"))
     end
 end
 
