@@ -923,6 +923,16 @@ function _ordinal_resolve_integer_y(Y::AbstractMatrix, mask, caller::AbstractStr
     return Yint, msk
 end
 
+# Post-fit `predict` / `fitted` / `residuals` / `getLV` use the same Y eltypes and conversions
+# as the ordinal fitters (#1191, #1432).
+_ordinal_prepare_postfit_y(Y::AbstractMatrix{<:Integer}, mask, caller::AbstractString) = (Y, mask)
+function _ordinal_prepare_postfit_y(Y::AbstractMatrix{<:AbstractFloat}, mask, caller::AbstractString)
+    return (_ordinal_float_to_int(Y, mask; caller = caller), mask)
+end
+function _ordinal_prepare_postfit_y(Y::AbstractMatrix{<:Union{Missing, Integer}}, mask, caller::AbstractString)
+    return _ordinal_resolve_integer_y(Y, mask, caller)
+end
+
 function fit_ordinal_gllvm(Y::AbstractMatrix{<:Union{Missing, Integer}}; mask = nothing, kwargs...)
     Yint, msk = _ordinal_resolve_integer_y(Y, mask, "fit_ordinal_gllvm")
     return fit_ordinal_gllvm(Yint; mask = msk, kwargs...)

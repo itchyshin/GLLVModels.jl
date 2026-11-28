@@ -1,3 +1,8 @@
+2026-11-26: #1432 ordinal post-fit eltype parity. `predict`/`fitted`/`residuals`/`getLV`
+for `OrdinalFit`, `OrdinalPerTraitFit`, and `OrdinalPerTraitCovFit` call
+`_ordinal_prepare_postfit_y` (same conversions as fit: integer `Float64`, `Union{Missing,Int}`).
+`julia --project=. test/test_ordinal_postfit_eltype.jl`: 7/7 pass.
+
 2026-11-18: Plan A draft CI (Shinichi approved 18 Nov 2026). No Julia tests:
 the change is workflow YAML only. `actionlint` 1.7.7 on
 `.github/workflows/{CI,Documenter,parity-p1-twin,true-parity-check,wrong-close-guard,TagBot}.yml`:
