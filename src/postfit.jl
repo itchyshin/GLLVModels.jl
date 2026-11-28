@@ -126,19 +126,26 @@ end
 """
     rotation(fit) -> K×K orthogonal matrix
 
-Canonical rotation `R` of the latent space (sign-fixed SVD of the loadings):
+Loading-based canonical rotation `R` (sign-fixed SVD of the loadings Λ):
 `getLoadings(fit; rotate=true) == getLoadings(fit; rotate=false) * R` and
 `getLV(fit, y; rotate=true) == getLV(fit, y; rotate=false) * R`. `R'R == I`.
+
+Pair [`getLV`](@ref) with [`getLoadings`](@ref) for biplots. [`ordination`](@ref)
+uses a different default rotation (principal axes of centred site scores); use
+`ordination(...).sites` with `ordination(...).species` there.
 """
 rotation(fit) = _svd_rotation(_loadings(fit))
 
 """
     getLoadings(fit; rotate=true) -> p×K matrix
 
-Species loadings. `rotate=true` (default) returns them in the canonical
-ordination orientation (`Λ R`, columns ordered by decreasing variance, signs
-fixed); `rotate=false` returns the raw fitted `Λ`. Rotation leaves `Λ Λᵀ` (and
-`Σ_y`) unchanged.
+Species loadings. `rotate=true` (default) returns `Λ R` where `R` is the loading
+SVD rotation from [`rotation`](@ref) (columns ordered by decreasing variance in
+Λ, signs fixed); `rotate=false` returns the raw fitted `Λ`. Rotation leaves
+`Λ Λᵀ` (and `Σ_y`) unchanged.
+
+Use with [`getLV`](@ref) for biplots. [`ordination`](@ref) applies a different
+default rotation to both sites and species.
 """
 function getLoadings(fit; rotate::Bool = true)
     Λ = _loadings(fit)
@@ -237,8 +244,10 @@ passed to `fit_gaussian_gllvm` — the fit does not store the data.
 
 For fits with `X_lv`, `component` chooses which latent-score layer to return:
 `:mean` is `X_lv * alpha_lv`, `:innovation` is the zero-mean posterior latent
-score, and `:total` is their sum. `rotate=true` applies the canonical
-[`rotation`](@ref) to whichever component is returned.
+score, and `:total` is their sum. `rotate=true` applies the loading SVD
+[`rotation`](@ref) to whichever component is returned (pair with
+[`getLoadings`](@ref); [`ordination`](@ref) uses principal rotation of centred
+scores instead).
 
 These are scores for the unit-tier loadings `Λ` only; with a W tier,
 `Λ_W Λ_Wᵀ` is part of `Ψ`. With `K_W > 0`, each column of `y` is one unit
@@ -295,8 +304,9 @@ Fisher-scoring solve of the marginal). `Y` is the p×n integer response matrix;
 
 For fits with `X_lv`, `component` chooses which latent-score layer to return:
 `:mean` is `X_lv * alpha_lv`, `:innovation` is the zero-mean Laplace mode, and
-`:total` is their sum. `rotate=true` applies the canonical [`rotation`](@ref)
-to whichever component is returned.
+`:total` is their sum. `rotate=true` applies the loading SVD [`rotation`](@ref)
+to whichever component is returned (pair with [`getLoadings`](@ref);
+[`ordination`](@ref) uses principal rotation of centred scores).
 
 On a fit made with an `offset` the mode search uses it (η = β + offset + Λz): the
 stored training offset (`fit.offset`) when `Y` has the training size, otherwise the

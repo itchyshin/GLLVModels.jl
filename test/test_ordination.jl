@@ -105,6 +105,27 @@ end
         @test_throws ArgumentError ordiplot(fit, Y)
     end
 
+    @testset "loading vs principal rotation pairing (#1487)" begin
+        # Documented: getLV+getLoadings and ordination(...).sites+species each
+        # reconstruct S₀Λᵀ; mixing ordination sites with getLoadings does not.
+        Random.seed!(200)
+        pb, Kb, nb = 6, 2, 50
+        beta = log.(rand(pb) .* 3 .+ 2)
+        Lambda = 0.35 .* randn(pb, Kb)
+        eta = beta .+ Lambda * randn(Kb, nb)
+        Yb = [rand(Poisson(exp(eta[t, s]))) for t in 1:pb, s in 1:nb]
+        fb = fit_poisson_gllvm(Yb; K = Kb)
+        o = ordination(fb, Yb)
+        Slv = getLV(fb, Yb)
+        Lg = getLoadings(fb)
+        S0 = getLV(fb, Yb; rotate = false)
+        truth = S0 * fb.Λ'
+        @test Slv * Lg' ≈ truth atol = 1e-10
+        @test o.sites * o.species' ≈ truth atol = 1e-8
+        @test norm(o.rotation - rotation(fb)) > 0.1
+        @test norm(o.sites * Lg' - truth) > 0.1
+    end
+
     @testset "Binomial trials N reach getLV" begin
         Random.seed!(8)
         pb, nb = 5, 60
