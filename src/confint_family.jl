@@ -3541,6 +3541,7 @@ function _family_confint_setup(fit, Y; method, level, N, X, mask, objective, new
     if objective === :va && mask !== nothing
         throw(ArgumentError("objective=:va is not routed for masked confidence intervals; use objective=:laplace"))
     end
+    objective === :va && _va_check_response("confint(objective = :va)", Y)
     O = nothing
     if offset !== nothing
         fit isa _OffsetCIFit || throw(ArgumentError(
@@ -3708,6 +3709,13 @@ confint(fit, Y; method = :profile, parm = "beta[1]")
 confint(fit, Y; method = :bootstrap, n_boot = 500, parallel = true)
 ```
 """
+function confint(fit::_CIFit; y, kwargs...)
+    throw(ArgumentError(
+        "confint for Laplace and family GLLVM fits takes the response matrix as the second " *
+        "positional argument (confint(fit, Y)), not the keyword y used on Gaussian GllvmFit " *
+        "(confint(fit; y = y))."))
+end
+
 function confint(fit::_CIFit, Y::AbstractMatrix;
                  method::Symbol = :wald,
                  level::Real = 0.95,

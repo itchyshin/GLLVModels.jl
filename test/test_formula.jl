@@ -116,6 +116,18 @@ using GLLVModels, Test, Random, Distributions, Statistics, StatsModels
     end
 
     @testset "long-format validation errors" begin
+        # refs #1438: two-arg call must not fall through to Tables.columntable on a wide matrix
+        Random.seed!(1438)
+        Ywide = [Float64(rand(Poisson(2))) for _ in 1:6, _ in 1:10]
+        err = try
+            gllvm(@formula(y ~ 1), Ywide; family = Poisson(), K = 1, iterations = 5)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("fit_gllvm(Y;", err.msg)
+        @test occursin("site = collect(1:size(Y, 2))", err.msg)
         # incomplete species×site grid (missing the (2,2) cell)
         long_bad = (y = [1.0, 2.0, 3.0], species = [1, 2, 1], site = [1, 1, 2])
         @test_throws ArgumentError gllvm(@formula(y ~ 1), long_bad; family = Normal(), K = 1)

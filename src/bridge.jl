@@ -66,7 +66,7 @@
 #   ci_estimate    :: Vector{Float64} — point estimates (raw scale for dispersions)
 #   ci_lower       :: Vector{Float64} — lower CI bounds
 #   ci_upper       :: Vector{Float64} — upper CI bounds
-#   ci_note        :: String          — caveats (empty unless CIs were skipped)
+#   ci_note        :: String          — caveats (empty unless CIs were skipped or every bound is NaN)
 #
 # v1 scope: the one-part families main provides a fitter for (gaussian,
 # poisson, binomial, negbinomial/nb2, nb1, beta, gamma, ordinal,
@@ -345,7 +345,12 @@ function _bridge_ci_nboot(options)
     end
     return Int(raw)
 end
-_bridge_ci_seed(options)  = Int(_bridge_get(options, "ci_seed", 0))
+function _bridge_ci_seed(options)
+    raw = _bridge_get(options, "ci_seed", 0)
+    (raw isa Real && isfinite(raw) && isinteger(raw)) || throw(ArgumentError(
+        "bridge_fit: ci_seed must be an integer (got $(repr(raw)))"))
+    return Int(raw)
+end
 
 # Empty CI payload (the "none" default and the skip-with-note cases).
 function _bridge_ci_payload(method::AbstractString, level::Real, note::AbstractString)
@@ -360,9 +365,24 @@ function _bridge_ci_payload(method::AbstractString, level::Real, note::AbstractS
     )
 end
 
+# Reason to put in `ci_note` when a native CI table has bounds but every one is NaN and no note
+# was given, so a caller can tell "not computed" from "computed" (#1157). Text only: no bound
+# changes. Returns "" when any bound is finite (or the table is empty), keeping the old payload.
+function _bridge_ci_all_nan_note(method::AbstractString, ci)
+    (isempty(ci.lower) || any(!isnan, ci.lower) || any(!isnan, ci.upper)) && return ""
+    if method == "bootstrap"
+        used = hasproperty(ci, :n_converged) ? " (" * string(ci.n_converged) * " converged)" : ""
+        return "every interval bound is NaN: fewer than 10 usable bootstrap replicates" * used *
+               ", the minimum needed to form a percentile bound; raise ci_nboot or check that " *
+               "the replicate refits converge."
+    end
+    return "every interval bound is NaN: the $method interval could not be computed for any parameter."
+end
+
 # Build the CI payload from a native CI NamedTuple (term/estimate/lower/upper).
 function _bridge_ci_from_native(method::AbstractString, level::Real, ci;
                                 note::AbstractString = "")
+    isempty(note) && (note = _bridge_ci_all_nan_note(method, ci))
     return (
         ci_method      = String(method),
         ci_level       = Float64(level),
@@ -438,7 +458,7 @@ function _bridge_compute_ci_gaussian(fit::GllvmFit, ydata, method::AbstractStrin
             ci_estimate    = Vector{Float64}(wald.estimate),
             ci_lower       = lo,
             ci_upper       = hi,
-            ci_note        = "",
+            ci_note        = _bridge_ci_all_nan_note("profile", (lower = lo, upper = hi)),
         )
     end
 end
