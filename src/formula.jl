@@ -89,18 +89,27 @@ end
 # Covariate columns used as bare terms in the formula RHS. A bare column holding a `missing`
 # stopped with `KeyError: key missing not found` inside StatsModels; `gllvm` does not drop or
 # impute sites, so it refuses such a column with a message that names it. A column used only
-# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. Columns the
-# formula does not use are not looked at.
-function _formula_covariate_columns(rhs, cols::NamedTuple)
+# inside a function term (e.g. `coalesce(x, 0.0)`) is left to that function. A column whose
+# type allows `Missing` but holds none is passed through unchanged (how it is read is a
+# separate, undecided question), and columns the formula does not use are not looked at.
+# `long_route` names a long-data fitter (one data row per observation); its message speaks of
+# rows of the data instead of `gllvm`, `Y` and sites.
+function _formula_covariate_columns(rhs, cols::NamedTuple; long_route::Union{Nothing, String} = nothing)
     for s in unique(_formula_bare_symbols(rhs))
         haskey(cols, s) || continue
         v = cols[s]
         Missing <: eltype(v) || continue
         nmiss = count(ismissing, v)
-        nmiss == 0 || throw(ArgumentError(
+        nmiss == 0 && continue
+        i1 = findfirst(ismissing, v)
+        long_route === nothing && throw(ArgumentError(
             "covariate `$s` in the formula has $nmiss `missing` value(s) (first at site " *
-            "$(findfirst(ismissing, v))); `gllvm` does not drop or impute sites. Remove those " *
+            "$i1); `gllvm` does not drop or impute sites. Remove those " *
             "sites from `Y` and `data`, or fill the covariate, before fitting"))
+        throw(ArgumentError(
+            "covariate `$s` in the formula has $nmiss `missing` value(s) (first at row $i1); " *
+            "`$long_route` does not drop or impute rows. Remove those rows from the data, or " *
+            "fill the covariate, before fitting"))
     end
     return cols
 end
