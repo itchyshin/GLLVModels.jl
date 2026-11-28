@@ -159,7 +159,7 @@ _register_shard_table!(4, (
         "test_em_fa.jl", "test_confint.jl", "test_confint_profile.jl",
         "test_profile_rootfind.jl", "test_em_louis.jl", "test_em_sparse_estep_default.jl",
         "test_node_gradient.jl", "test_families.jl", "test_binomial_laplace.jl",
-        "test_aghq_adapt.jl", "test_aghq_poisson.jl", "test_aghq_binomial.jl",
+        "test_aghq_adapt.jl", "test_aghq_poisson.jl", "test_aghq_binomial.jl", "test_aghq_simulate_n_size.jl",
         "test_censored_poisson.jl", "test_truncnb2_laplace_breakdown.jl", "test_gamma_laplace.jl",
         "test_gamma_curvature_cross_kernel.jl", "test_phylo_beta_xlv.jl", "test_phylo_binomial_xlv.jl",
         "test_boundary_inference.jl", "test_grouped_laplace_identity.jl", "test_grouped_identification_diagnostics.jl",
@@ -315,7 +315,7 @@ _register_shard_table!(8, (
         "test_shard_selection.jl", "test_kernel_indep.jl", "test_laplace_K_bounds.jl",
         "test_grouped_profile_inversion.jl", "test_lowrank_cholesky.jl", "test_confint_profile.jl",
         "test_confint_derived.jl", "test_takahashi_selinv.jl", "test_fit_phylo.jl",
-        "test_cloglog_likelihood.jl", "test_aghq_binomial.jl", "test_laplace_curvature_contract.jl",
+        "test_cloglog_likelihood.jl", "test_aghq_binomial.jl", "test_aghq_simulate_n_size.jl", "test_laplace_curvature_contract.jl",
         "test_grouped_analytic_grad.jl", "test_destination_b_joint_identification.jl", "test_gp1_verdict.jl",
         "test_studentt_boundary.jl", "test_issue_749_fit_gllvm_doc.jl", "test_gaussian_wald_pd_hessian.jl",
         "test_model_selection.jl", "test_source_covariance.jl", "test_destination_b_public.jl",
@@ -643,6 +643,7 @@ println(_SHARD === nothing ?
     _shard_include("test_gaussian_empty_design.jl")
     _shard_include("test_profile_failure_bounds.jl")
     _shard_include("test_aghq_binomial.jl")
+    _shard_include("test_aghq_simulate_n_size.jl")
     # P1 numeric twins of the aghq policy rows vs gllvmTMB (Poisson / binomial / Gaussian fits).
     _shard_include("test_aghq_p1_twin.jl")
     _shard_include("test_aghq_public_binomial.jl")
